@@ -117,6 +117,26 @@ td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vert
 tr:last-child td{border-bottom:none}
 .form-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
 #sync-bar{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:999}
+.pill-sm{font-size:11px;padding:4px 10px}
+#ver-badge{position:fixed;left:8px;bottom:calc(68px + env(safe-area-inset-bottom));z-index:90;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:5px 10px;font-size:10px;color:var(--text2);cursor:pointer;box-shadow:var(--shadow);-webkit-user-select:none;user-select:none;line-height:1.3;text-align:left}
+#ver-badge:active{transform:scale(.95)}
+#ver-badge .vb-ver{font-weight:600;color:var(--text)}
+#ver-badge .vb-sync{display:flex;align-items:center;gap:3px;margin-top:1px;font-size:10px}
+#ver-badge .vb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.vb-dot.ok{background:var(--green)}
+.vb-dot.syncing{background:#EF9F27;animation:pulse 1s infinite}
+.vb-dot.err{background:var(--red)}
+.vb-dot.offline{background:#999}
+.vb-dot.stale{background:#3C8DD9}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(min-width:700px){#ver-badge{bottom:10px;left:10px}}
+#pull-banner{background:#FFF8E1;border:1px solid #F0C674;color:#6B4E0C;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px}
+#pull-banner .pb-txt{flex:1}
+#pull-banner .pb-close{background:none;border:none;color:#6B4E0C;font-size:18px;cursor:pointer;padding:0 4px}
+@media(prefers-color-scheme:dark){#pull-banner{background:#3a3320;border-color:#8a6d2a;color:#e6c878}#pull-banner .pb-close{color:#e6c878}}
+#ver-toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:300;background:var(--green);color:#fff;padding:10px 16px;border-radius:var(--radius);font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none;max-width:90vw}
+#ver-toast.show{display:block;animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 #sync-bar.syncing{background:linear-gradient(90deg,var(--green) 0%,var(--green-l) 50%,var(--green) 100%);background-size:200% 100%;animation:shimmer 1s infinite}
 #sync-bar.err{background:var(--red)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -145,6 +165,11 @@ tr:last-child td{border-bottom:none}
 <body>
 
 <div id="sync-bar"></div>
+<div id="ver-badge" onclick="showVerMenu()">
+  <div class="vb-ver" id="vb-ver">v...</div>
+  <div class="vb-sync"><span class="vb-dot offline" id="vb-dot"></span><span id="vb-sync">—</span></div>
+</div>
+<div id="ver-toast"></div>
 <div id="sync-status"></div>
 
 <nav id="app-nav">
@@ -175,13 +200,18 @@ tr:last-child td{border-bottom:none}
 <!-- ═══ CLIENTS ═══ -->
 <div class="panel on" id="panel-clients">
   <div id="view-list">
-    <div class="toolbar">
+    <div id="pull-banner" style="display:none"><span>🌥</span><div class="pb-txt">今天還沒從雲端拉最新資料，可能不是最新版本</div><button class="btn btn-primary btn-xs" onclick="pullAndDismiss()">拉最新</button><button class="pb-close" onclick="dismissPullBanner()">×</button></div>
+        <div class="toolbar">
       <div class="toolbar-left" id="status-pills"></div>
+    </div>
+    <div class="toolbar-left" id="region-bar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div style="display:none">
       <button class="btn btn-primary btn-sm" onclick="openCF(-1)">+ 新增</button>
     </div>
     <div class="search-bar">
       <input id="csearch" placeholder="搜尋客戶..." oninput="renderClients()">
       <select id="csort" onchange="renderClients()" style="width:auto">
+        <option value="trial">試用日</option>
         <option value="nextdate">下次拜訪</option>
         <option value="status">狀態</option>
         <option value="updated">最後更新</option>
@@ -208,10 +238,11 @@ tr:last-child td{border-bottom:none}
           <select id="cf-type"><option value="">-</option><option>餐廳</option><option>診所</option><option>寵物</option><option>工廠</option><option>汽車</option><option>眼鏡行</option><option>接待中心</option><option>房仲</option><option>補習班</option><option>美容美甲</option><option>零售店</option><option>辦公室</option><option>遊樂場</option><option>其他</option></select>
         </div>
       </div>
-      <div class="g2">
+      <div class="g3">
         <div class="f"><label class="lbl">狀態</label>
-          <select id="cf-status"><option>未拜訪</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已結案</option></select>
+          <select id="cf-status"><option>未拜訪</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>拒絕</option></select>
         </div>
+        <div class="f"><label class="lbl">試用日</label><input id="cf-trialdate" type="date"></div>
         <div class="f"><label class="lbl">下次拜訪日</label><input id="cf-nextdate" type="date"></div>
       </div>
       <div class="f"><label class="lbl">提案商品（自動帶入）</label><input id="cf-product" readonly style="background:var(--bg2);color:var(--text2)"></div>
@@ -286,7 +317,7 @@ tr:last-child td{border-bottom:none}
         <div class="g2">
           <div class="f"><label class="lbl">拜訪日期</label><input id="vl-date" type="date"></div>
           <div class="f"><label class="lbl">狀態更新</label>
-            <select id="vl-status"><option value="">不更新</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已結案</option></select>
+            <select id="vl-status"><option value="">不更新</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>拒絕</option></select>
           </div>
         </div>
         <div class="f"><label class="lbl" style="margin-bottom:6px">心情</label>
@@ -406,6 +437,19 @@ tr:last-child td{border-bottom:none}
 <div class="panel" id="panel-settings">
   <div class="page-title">設定</div>
   <div class="card">
+    <div class="form-section">版本資訊</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--green-d)" id="st-ver">v...</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">目前使用的版本</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="forceReload()">🔄 強制重新載入</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      💡 每天打開時確認此版本號是否為最新。若顯示舊版，按「強制重新載入」清除快取。
+    </div>
+  </div>
+  <div class="card">
     <div class="form-section">Google Sheets 同步</div>
     <div id="sheet-status-box" class="alert alert-info" style="margin-bottom:12px">尚未設定 Google Sheets。</div>
     <div class="f"><label class="lbl">Apps Script Web App URL</label>
@@ -498,6 +542,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
+const APP_VERSION='v2026.04.08-e';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -768,15 +813,20 @@ const SEED=[
 // ═══════════════════════════════════════════════════════════
 const SO=['未拜訪','初訪','複訪','試用中','報價','將成約','已成約','已結案'];
 const MOODS=['','😞','😐','😊','😄'];
-const SS_STYLE={'未拜訪':['#F1EFE8','#444441'],'初訪':['#E6F1FB','#0C447C'],'複訪':['#FAEEDA','#633806'],'試用中':['#E6F1FB','#0C447C'],'報價':['#FAEEDA','#633806'],'將成約':['#EEEDFE','#3C3489'],'已成約':['#E1F5EE','#085041'],'已結案':['#F1EFE8','#666']};
+const SS_STYLE={'未拜訪':['#F1EFE8','#444441'],'初訪':['#E6F1FB','#0C447C'],'複訪':['#FAEEDA','#633806'],'試用中':['#E6F1FB','#0C447C'],'報價':['#FAEEDA','#633806'],'將成約':['#EEEDFE','#3C3489'],'已成約':['#E1F5EE','#085041'],'已結案':['#FCEBEB','#A32D2D'],'拒絕':['#FCEBEB','#A32D2D']};
+// 舊狀態顯示文字對應（新舊並存）
+function displayStatus(s){return s==='已結案'?'拒絕':(s||'未拜訪');}
+// 判定兩個 status 是否語意相同（拒絕=已結案）
+function statusEq(a,b){const n=s=>s==='已結案'?'拒絕':s;return n(a)===n(b);}
 const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
-function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL}));}catch(e){}}
+function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));}catch(e){}}
 
 let DB={clients:[],inventory:INV_INIT.map(p=>({name:p.n,stock:p.s,std:p.st})),products:[]};
 let SHEET_URL='';
+const SYNC={state:'offline',lastSyncAt:0,lastPullAt:0,pending:0};
 
 const local=loadLocal();
 if(local){
@@ -784,6 +834,9 @@ if(local){
   DB.inventory=local.inventory||INV_INIT.map(p=>({name:p.n,stock:p.s,std:p.st}));
   DB.products=local.products&&local.products.length?local.products:JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
   SHEET_URL=local.sheetUrl||'';
+  SYNC.lastSyncAt=local.lastSyncAt||0;
+  SYNC.lastPullAt=local.lastPullAt||0;
+  SYNC.pending=local.pending||0;
 }else{
   DB.clients=JSON.parse(JSON.stringify(SEED));
   DB.products=JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
@@ -890,9 +943,18 @@ function activeProducts(){return DB.products.filter(p=>p.active&&p.price>0&&!isF
 // 根據代號查商品
 function getProd(code){return DB.products.find(p=>p.code===code)||null;}
 
-// 計費：2W週期 × 2 = 4W原價；4W週期 × 1
+// 計費：2W週期 × 2 = 4W原價；4W週期 × 1（報表／統計用：永遠 2W 核心）
 function fw4(code,qty=1){
   const p=getProd(code);if(!p||!p.price)return 0;
+  return p.price*(p.cycle==='2W'?2:1)*qty;
+}
+// 試用品項編輯畫面顯示用：地墊選 4W 換時套 0.8 折扣
+// （僅影響編輯畫面的「4W原價」欄與清單總計，不影響任何報表計算）
+function displayFw4(code,qty=1,cycle='2W'){
+  const p=getProd(code);if(!p||!p.price)return 0;
+  if(p.cat==='地墊'&&cycle==='4W'){
+    return Math.round(p.price*2*0.8*qty);
+  }
   return p.price*(p.cycle==='2W'?2:1)*qty;
 }
 // 9折參考
@@ -926,8 +988,21 @@ async function api(body){
   const json=await res.json();if(json.error)throw new Error(json.error);return json;
 }
 async function autoSync(action,payload){
-  if(!SHEET_URL)return;setSyncBar('sync');
-  try{await api({action,...payload});setSyncBar('ok');}catch(e){setSyncBar('err');}
+  if(!SHEET_URL){SYNC.state='offline';renderVerBadge();return;}
+  SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
+  try{
+    await api({action,...payload});
+    SYNC.lastSyncAt=Date.now();
+    SYNC.pending=0;
+    SYNC.state='ok';
+    setSyncBar('ok');
+  }catch(e){
+    SYNC.pending=(SYNC.pending||0)+1;
+    SYNC.state='err';
+    setSyncBar('err');
+  }
+  saveLocal();
+  renderVerBadge();
 }
 async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
@@ -936,28 +1011,46 @@ async function testConnection(){
   try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);alert('✅ 連線成功！');}
   catch(e){setSyncBar('err');alert('❌ 連線失敗：'+e.message);}
 }
-async function syncFromSheet(){
-  if(!SHEET_URL){alert('請先設定 URL');return;}
-  if(!confirm('從雲端拉取資料？這會覆蓋本機的客戶、商品資料。'))return;
-  setSyncBar('sync');
+async function syncFromSheet(silent){
+  if(!SHEET_URL){if(!silent)alert('請先設定 URL');return false;}
+  if(!silent&&!confirm('從雲端拉取資料？這會覆蓋本機的客戶、商品資料。'))return false;
+  SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
     const res=await api({action:'getAll'});DB.clients=res.clients||[];
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
     const prods=await api({action:'getProducts'});if(prods.products)DB.products=prods.products;
+    SYNC.lastPullAt=Date.now();
+    SYNC.lastSyncAt=Date.now();
+    SYNC.pending=0;
+    SYNC.state='ok';
     saveLocal();renderClients();renderProducts();setSyncBar('ok');
-    alert('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料');
-  }catch(e){setSyncBar('err');alert('❌ 拉取失敗：'+e.message);}
+    renderVerBadge();
+    dismissPullBanner();
+    if(!silent)alert('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料');
+    return true;
+  }catch(e){
+    SYNC.state='err';setSyncBar('err');renderVerBadge();
+    if(!silent)alert('❌ 拉取失敗：'+e.message);
+    return false;
+  }
 }
 async function pushAllToSheet(){
   if(!SHEET_URL){alert('請先設定 URL');return;}
   if(!confirm('將所有資料推送到 Google Sheets？'))return;
-  setSyncBar('sync');
+  SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
     for(let i=0;i<DB.clients.length;i++)await api({action:'save',client:DB.clients[i],idx:i});
     await api({action:'saveInventory',inventory:DB.inventory});
     await api({action:'saveProducts',products:DB.products});
-    saveLocal();setSyncBar('ok');alert('✅ 已推送 '+DB.clients.length+' 筆資料');
-  }catch(e){setSyncBar('err');alert('❌ 推送失敗：'+e.message);}
+    SYNC.lastSyncAt=Date.now();
+    SYNC.pending=0;
+    SYNC.state='ok';
+    saveLocal();setSyncBar('ok');renderVerBadge();
+    alert('✅ 已推送 '+DB.clients.length+' 筆資料');
+  }catch(e){
+    SYNC.state='err';setSyncBar('err');renderVerBadge();
+    alert('❌ 推送失敗：'+e.message);
+  }
 }
 function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();}
 function updateSheetStatus(ok){
@@ -1109,17 +1202,60 @@ function deleteProd(){
 // ═══════════════════════════════════════════════════════════
 // STATUS PILLS
 // ═══════════════════════════════════════════════════════════
-let activeSt=new Set();
+// 分類定義（新系統）
+const CATEGORIES=['銷售紀錄','未拜訪','試用中未報價','複訪順序','已成約','拒絕','全部'];
+let activeCat='銷售紀錄';
+let activeRegion=''; // 「未拜訪」分類時的區域篩選
 function initPills(){
-  document.getElementById('status-pills').innerHTML=['全部',...SO].map(s=>
-    `<button class="pill${s==='全部'?' on':''}" onclick="toggleSt('${s}',this)">${s}</button>`
+  document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
+    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}',this)">${s}</button>`
   ).join('');
 }
-function toggleSt(s,el){
-  if(s==='全部'){activeSt.clear();}else{activeSt.has(s)?activeSt.delete(s):activeSt.add(s);}
+function toggleCat(s,el){
+  activeCat=s;
+  activeRegion=''; // 切換分類時清空區域篩選
   document.querySelectorAll('#status-pills .pill').forEach(p=>p.classList.remove('on'));
-  if(activeSt.size===0)document.querySelector('#status-pills .pill').classList.add('on');
-  else el.classList.add('on');
+  if(el)el.classList.add('on');
+  else{
+    const btn=[...document.querySelectorAll('#status-pills .pill')].find(p=>p.textContent===s);
+    if(btn)btn.classList.add('on');
+  }
+  renderRegionBar();
+  renderClients();
+}
+// 從地址字串抽出「XX區」
+function parseRegion(addr){
+  if(!addr)return '';
+  const m=addr.match(/([\u4e00-\u9fa5]{1,3}區)/);
+  return m?m[1]:'';
+}
+// 蒐集所有未拜訪客戶的區域清單
+function collectRegions(){
+  const regions=new Set();
+  DB.clients.forEach(c=>{
+    if((c.visits||[]).length>0)return;
+    const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    if(mains.length>0)return; // 有試用品項也算拜訪過，不列入未拜訪池
+    const r=parseRegion(c.addr);
+    if(r)regions.add(r);
+  });
+  return [...regions].sort();
+}
+// 渲染「未拜訪」分類下的區域 sub-bar
+function renderRegionBar(){
+  const bar=document.getElementById('region-bar');
+  if(!bar)return;
+  if(activeCat!=='未拜訪'){bar.style.display='none';bar.innerHTML='';return;}
+  const regions=collectRegions();
+  if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
+  bar.style.display='flex';
+  bar.innerHTML='<button class="pill pill-sm'+(activeRegion===''?' on':'')+'" onclick="setRegion(\'\',this)">全部區域</button>'+
+    regions.map(r=>`<button class="pill pill-sm${activeRegion===r?' on':''}" onclick="setRegion('${r}',this)">${r}</button>`).join('');
+}
+function setRegion(r,el){
+  activeRegion=r;
+  document.querySelectorAll('#region-bar .pill').forEach(p=>p.classList.remove('on'));
+  if(el)el.classList.add('on');
   renderClients();
 }
 
@@ -1127,13 +1263,84 @@ function toggleSt(s,el){
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
 function calcFW4(c){return c.fw4>0?c.fw4:(c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);}
+// 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
+function trialStartDate(c){
+  if(c.trialDate)return c.trialDate;
+  const vs=(c.visits||[]).filter(v=>v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const trial=vs.find(v=>v.statusChange==='試用中');
+  if(trial)return trial.date;
+  if(vs.length)return vs[0].date;
+  const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  return '';
+}
+// 分類篩選判定
+function matchCategory(c){
+  const visitsN=(c.visits||[]).length;
+  const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+  const hasUnquoted=mains.length>0&&mains.some(it=>!it.quoted||it.quoted==0);
+  const isRefused=statusEq(c.status,'拒絕');
+  const isDeal=c.status==='已成約';
+  switch(activeCat){
+    case '銷售紀錄': return visitsN>0||mains.length>0;
+    case '未拜訪': {
+      if(visitsN>0)return false;
+      if(mains.length>0)return false; // 有試用品項也算拜訪過
+      if(activeRegion){
+        return parseRegion(c.addr)===activeRegion;
+      }
+      return true;
+    }
+    case '試用中未報價': return mains.length>0&&hasUnquoted&&!isRefused;
+    case '複訪順序': return !!c.nextdate;
+    case '已成約': return isDeal;
+    case '拒絕': return isRefused;
+    case '全部': return true;
+  }
+  return true;
+}
 function renderClients(){
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
   let list=DB.clients.map((c,i)=>({c,i}));
-  if(activeSt.size>0)list=list.filter(({c})=>activeSt.has(c.status));
-  if(q)list=list.filter(({c})=>(c.name+c.addr+(c.type||'')+c.contact).toLowerCase().includes(q));
+  list=list.filter(({c})=>matchCategory(c));
+  if(q)list=list.filter(({c})=>(c.name+(c.addr||'')+(c.type||'')+(c.contact||'')).toLowerCase().includes(q));
+  // 分類預設排序（覆蓋 sort 下拉，除非使用者明確選其他）
+  const useDefault=(sort==='trial'); // trial 是預設值，若使用者沒換過，就用分類預設
   list.sort((a,b)=>{
+    if(useDefault){
+      if(activeCat==='銷售紀錄'){
+        // 最近 updatedAt 降序
+        return(b.c.updatedAt||0)-(a.c.updatedAt||0);
+      }
+      if(activeCat==='未拜訪'){
+        // 區域 → 名稱
+        const ra=parseRegion(a.c.addr),rb=parseRegion(b.c.addr);
+        if(ra!==rb)return ra.localeCompare(rb,'zh-Hant');
+        return a.c.name.localeCompare(b.c.name,'zh-Hant');
+      }
+      if(activeCat==='複訪順序'){
+        return(a.c.nextdate||'9999')>(b.c.nextdate||'9999')?1:-1;
+      }
+      if(activeCat==='試用中未報價'){
+        return(b.c.updatedAt||0)-(a.c.updatedAt||0);
+      }
+      // 全部 / 已成約 / 拒絕 → 試用日降序（空值在上）
+      const da=trialStartDate(a.c);
+      const db=trialStartDate(b.c);
+      if(!da&&!db)return a.c.name.localeCompare(b.c.name,'zh-Hant');
+      if(!da)return -1;
+      if(!db)return 1;
+      return da<db?1:da>db?-1:0;
+    }
+    // 使用者手動選的排序
+    if(sort==='trial'){
+      const da=trialStartDate(a.c),db=trialStartDate(b.c);
+      if(!da&&!db)return a.c.name.localeCompare(b.c.name,'zh-Hant');
+      if(!da)return -1;
+      if(!db)return 1;
+      return da<db?1:da>db?-1:0;
+    }
     if(sort==='nextdate')return(a.c.nextdate||'9999')>(b.c.nextdate||'9999')?1:-1;
     if(sort==='status')return SO.indexOf(a.c.status)-SO.indexOf(b.c.status);
     if(sort==='updated')return(b.c.updatedAt||0)-(a.c.updatedAt||0);
@@ -1146,15 +1353,17 @@ function renderClients(){
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
     const prod=autoProd(c.trialItems)||'';
+    const td=trialStartDate(c);
     return`<div class="cc" onclick="openCD(${i})">
       <div class="cc-name">${c.name}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${c.type}</span>`:''}</div>
       <div class="cc-sub">${[c.contact,c.addr].filter(Boolean).join(' · ')}</div>
       <div class="cc-badges">
-        ${bdg(c.status||'未拜訪')}
+        ${bdg(displayStatus(c.status))}
         ${fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:''}
         ${pTodos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${pTodos}待辦</span>`:''}
       </div>
       <div class="cc-meta">
+        ${td?`<span>試用日：${td}</span>`:''}
         ${prod?`<span>提案：${prod}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
@@ -1181,6 +1390,8 @@ function openCF(idx){
   document.getElementById('cf-addr').value=c?.addr||'';
   document.getElementById('cf-type').value=c?.type||'';
   document.getElementById('cf-status').value=c?.status||'未拜訪';
+  // 試用日：優先用存的 c.trialDate，否則 fallback 自動推算
+  document.getElementById('cf-trialdate').value=c?.trialDate||(c?trialStartDate(c):'')||'';
   document.getElementById('cf-nextdate').value=c?.nextdate||'';
   document.getElementById('cf-env').value=c?.env||'';
   document.getElementById('cf-note').value=c?.note||'';
@@ -1204,7 +1415,7 @@ function buildOpts(sel){
 }
 
 function addItem(){S.cfItems.push({product:'',qty:1,cycle:'2W',quoted:0});renderItems();updProd();}
-function updCfTotal(){document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0)).toLocaleString();}
+function updCfTotal(){document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+displayFw4(it.product,it.qty,it.cycle||'2W'),0)).toLocaleString();}
 function renderItems(){
   const cont=document.getElementById('cf-items');
   if(!S.cfItems.length){cont.innerHTML='';document.getElementById('cf-total').textContent='$0';return;}
@@ -1240,7 +1451,7 @@ function renderItems(){
     }
     // ── 主商品 row ──
     const p=getProd(it.product);const isMat=p?.cat==='地墊';
-    const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
+    const f=displayFw4(it.product,it.qty,it.cycle||'2W');const r=ref9(it.product,it.qty,it.cycle||'2W');
     const isLow=it.quoted>0&&r>0&&it.quoted<r;
     return`<div class="ti-row">
       <div class="ti-top">
@@ -1264,7 +1475,7 @@ function renderItems(){
       </div>
     </div>`;
   }).join('');
-  document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0)).toLocaleString();
+  document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+displayFw4(it.product,it.qty,it.cycle||'2W'),0)).toLocaleString();
 }
 // 刪除主商品：連同其 bundled 配件一起刪
 function removeMain(i){
@@ -1368,6 +1579,9 @@ async function saveClient(){
     todos:JSON.parse(JSON.stringify(S.cfTodos)),
     updatedAt:Date.now(),
   };
+  // 試用日：使用者填了就存；沒填就不寫此欄（繼續交由 trialStartDate() 動態計算）
+  const tdVal=document.getElementById('cf-trialdate').value;
+  if(tdVal)c.trialDate=tdVal;
   const isEdit=S.editIdx>=0;
   if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
   else{c.visits=[];DB.clients.push(c);}
@@ -1458,11 +1672,20 @@ function showVLForm(){
 function setMood(n){S.curMood=n;updMoodUI();}
 function updMoodUI(){for(let i=1;i<=4;i++)document.getElementById('vm'+i).classList.toggle('on',i===S.curMood);}
 function saveVL(){
-  const ns=document.getElementById('vl-status').value;const nd=document.getElementById('vl-next').value;
-  const v={date:document.getElementById('vl-date').value,mood:S.curMood,note:document.getElementById('vl-note').value,insight:document.getElementById('vl-ins').value,statusChange:ns||null,nextdate:nd||null};
+  const ns=document.getElementById('vl-status').value;
+  let nd=document.getElementById('vl-next').value;
+  // 若使用者沒手動填 nextdate，自動設拜訪日 +7 天
+  if(!nd){
+    const base=document.getElementById('vl-date').value||today();
+    const d=new Date(base+'T00:00:00');
+    d.setDate(d.getDate()+7);
+    nd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  const v={date:document.getElementById('vl-date').value,mood:S.curMood,note:document.getElementById('vl-note').value,insight:document.getElementById('vl-ins').value,statusChange:ns||null,nextdate:nd};
   if(!DB.clients[S.curIdx].visits)DB.clients[S.curIdx].visits=[];
   DB.clients[S.curIdx].visits.push(v);
-  if(ns)DB.clients[S.curIdx].status=ns;if(nd)DB.clients[S.curIdx].nextdate=nd;
+  if(ns)DB.clients[S.curIdx].status=ns;
+  DB.clients[S.curIdx].nextdate=nd;
   DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();
   autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});
   document.getElementById('vl-form').style.display='none';renderVisits();renderClients();openCD(S.curIdx);
@@ -1500,7 +1723,7 @@ function renderDaily(){
     return`<div class="cc" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
       <div class="cc-name">${c.name} ${v?MOODS[v.mood]||'':''}</div>
       <div class="cc-sub">${c.contact||''}</div>
-      <div class="cc-badges">${bdg(c.status||'未拜訪')}${v?.statusChange?bdg(v.statusChange):''}</div>
+      <div class="cc-badges">${bdg(displayStatus(c.status))}${v?.statusChange?bdg(v.statusChange):''}</div>
       ${v?.note?`<div style="font-size:13px;color:var(--text2)">${v.note}</div>`:''}
       ${v?.insight?`<div style="font-size:12px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:4px 8px;margin-top:4px">${v.insight}</div>`:''}
     </div>`;
@@ -1760,10 +1983,116 @@ function copyExport(){
   navigator.clipboard.writeText(document.getElementById('ex-out').textContent).then(()=>alert('已複製'));
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// VERSION TRACKING
+// ═══════════════════════════════════════════════════════════
+function initVersion(){
+  renderVerBadge();
+  // 偵測更新：比對 localStorage 上次存的版本
+  try{
+    const prev=localStorage.getItem('app_version');
+    if(prev&&prev!==APP_VERSION){
+      showVerToast('📦 已更新至 '+APP_VERSION);
+    }
+    localStorage.setItem('app_version',APP_VERSION);
+  }catch(e){}
+  // 每日拉雲端提醒
+  checkDailyPull();
+}
+function showVerToast(msg){
+  const t=document.getElementById('ver-toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+function relTime(ts){
+  if(!ts)return '從未';
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return '剛剛';
+  if(s<3600)return Math.floor(s/60)+' 分前';
+  if(s<86400)return Math.floor(s/3600)+' 時前';
+  return Math.floor(s/86400)+' 天前';
+}
+function renderVerBadge(){
+  const vv=document.getElementById('vb-ver');
+  if(vv)vv.textContent=APP_VERSION;
+  const dot=document.getElementById('vb-dot');
+  const txt=document.getElementById('vb-sync');
+  if(!dot||!txt)return;
+  let dotClass='', syncText='';
+  if(!SHEET_URL){dotClass='offline';syncText='未連接雲端';}
+  else if(SYNC.state==='syncing'){dotClass='syncing';syncText='同步中...';}
+  else if(SYNC.state==='err'||SYNC.pending>0){dotClass='err';syncText=SYNC.pending>0?SYNC.pending+' 筆待推送':'同步失敗';}
+  else if(SYNC.lastSyncAt){dotClass='ok';syncText='已同步 · '+relTime(SYNC.lastSyncAt);}
+  else{dotClass='stale';syncText='本地讀取';}
+  dot.className='vb-dot '+dotClass;
+  txt.textContent=syncText;
+  const stv=document.getElementById('st-ver');
+  if(stv)stv.textContent=APP_VERSION;
+}
+function showVerMenu(){
+  const lines=[`程式版本：${APP_VERSION}`];
+  if(SHEET_URL){
+    lines.push('');
+    lines.push(`資料狀態：${SYNC.state==='syncing'?'同步中...':SYNC.state==='err'||SYNC.pending>0?('⚠ '+(SYNC.pending>0?SYNC.pending+' 筆待推送':'同步失敗')):SYNC.lastSyncAt?'● 已同步 · '+relTime(SYNC.lastSyncAt):'尚未同步'}`);
+    if(SYNC.lastPullAt)lines.push(`上次拉雲端：${relTime(SYNC.lastPullAt)}`);
+  }else{
+    lines.push('');
+    lines.push('⚠ 尚未連接 Google Sheets');
+  }
+  lines.push('');
+  lines.push('1 = 從雲端拉最新（每日開工建議）');
+  lines.push('2 = 推送全部到雲端');
+  lines.push('3 = 強制重新載入程式');
+  lines.push('其他 = 關閉');
+  const choice=prompt(lines.join('\n'),'1');
+  if(choice==='1')syncFromSheet();
+  else if(choice==='2')pushAllToSheet();
+  else if(choice==='3')forceReload();
+}
+// Pull banner (每日提醒從雲端拉最新)
+function todayDateStr(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function checkDailyPull(){
+  const b=document.getElementById('pull-banner');
+  if(!b)return;
+  if(!SHEET_URL){b.style.display='none';return;}
+  // 今天是否已手動拉過
+  const dismissed=localStorage.getItem('pull_banner_dismissed')===todayDateStr();
+  if(dismissed){b.style.display='none';return;}
+  // 上次拉雲端是否為今日
+  if(SYNC.lastPullAt){
+    const last=new Date(SYNC.lastPullAt);
+    const lastStr=last.getFullYear()+'-'+String(last.getMonth()+1).padStart(2,'0')+'-'+String(last.getDate()).padStart(2,'0');
+    if(lastStr===todayDateStr()){b.style.display='none';return;}
+  }
+  b.style.display='flex';
+}
+function dismissPullBanner(){
+  try{localStorage.setItem('pull_banner_dismissed',todayDateStr());}catch(e){}
+  const b=document.getElementById('pull-banner');
+  if(b)b.style.display='none';
+}
+async function pullAndDismiss(){
+  const ok=await syncFromSheet();
+  if(ok)dismissPullBanner();
+}
+// 每分鐘刷新相對時間
+setInterval(()=>{renderVerBadge();},60000);
+function forceReload(){
+  // 加時間戳參數繞過瀏覽器快取
+  const url=new URL(window.location.href);
+  url.searchParams.set('v',Date.now());
+  window.location.href=url.toString();
+}
+
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-initPills();initProdCats();renderClients();
+initVersion();initPills();initProdCats();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL)updateSheetStatus(true);
 </script>
