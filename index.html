@@ -65,6 +65,9 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .form-section{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px}
 .form-section:first-child{margin-top:0}
 .ti-row{background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
+.ti-row.ti-acc{background:transparent;border:1px dashed var(--border2);padding:6px 10px 6px 20px;margin-top:-4px;margin-bottom:6px;opacity:.75}
+.ti-row.ti-acc .ti-top{margin-bottom:0}
+.ti-acc-mark{font-size:11px;color:var(--text3);white-space:nowrap;margin-right:2px}
 .ti-top{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .ti-bot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ti-label{font-size:11px;color:var(--text2);white-space:nowrap}
@@ -312,13 +315,61 @@ tr:last-child td{border-bottom:none}
 <!-- ═══ DAILY ═══ -->
 <div class="panel" id="panel-daily">
   <div class="page-title">今日日報</div>
-  <div style="margin-bottom:12px"><input id="daily-date" type="date" style="width:auto" onchange="renderDaily()"></div>
+  <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="daily-date" type="date" style="width:auto" onchange="renderDaily()">
+    <button class="btn btn-outline btn-sm" onclick="openReportModal()">📋 產出報表</button>
+  </div>
   <div class="stat-grid">
     <div class="scard"><div class="snum" id="ds-v">0</div><div class="slbl">拜訪軒數</div><div class="prog"><div class="prog-f" id="dp-v" style="width:0%"></div></div><div class="prog-hint">目標 15</div></div>
     <div class="scard"><div class="snum" id="ds-t">0</div><div class="slbl">試用軒數</div><div class="prog"><div class="prog-f" id="dp-t" style="width:0%"></div></div><div class="prog-hint">目標 2</div></div>
     <div class="scard"><div class="snum" id="ds-a">$0</div><div class="slbl">試用金額</div><div class="prog"><div class="prog-f" id="dp-a" style="width:0%"></div></div><div class="prog-hint">目標 $1,600</div></div>
   </div>
   <div id="daily-list"></div>
+</div>
+
+<!-- ═══ REPORT MODAL ═══ -->
+<div id="report-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:16px">
+  <div style="background:var(--bg);max-width:960px;margin:10px auto;border-radius:var(--radius);padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:17px;font-weight:700">產出日報／4W推進表</div>
+      <button class="btn btn-outline btn-sm" onclick="closeReportModal()">關閉</button>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="f"><label class="lbl">起始日</label><input id="rpt-from" type="date"></div>
+      <div class="f"><label class="lbl">結束日</label><input id="rpt-to" type="date"></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-outline btn-xs" onclick="setRptRange('today')">今天</button>
+      <button class="btn btn-outline btn-xs" onclick="setRptRange('week')">本週</button>
+      <button class="btn btn-outline btn-xs" onclick="setRptRange('lastweek')">上週</button>
+      <button class="btn btn-outline btn-xs" onclick="setRptRange('month')">本月</button>
+      <button class="btn btn-outline btn-xs" onclick="setRptRange('lastmonth')">上月</button>
+      <button class="btn btn-primary btn-sm" onclick="genReport()" style="margin-left:auto">產出</button>
+    </div>
+    <div id="rpt-output" style="display:none">
+      <div class="form-section" style="margin-bottom:6px">
+        4W 推進表
+        <span style="font-weight:400;font-size:11px;color:var(--text3)">（未回收試用＋區間內有拜訪且有試用品項的店家）</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-4w')">📋 複製</button>
+        <span id="rpt-4w-cnt" style="font-size:11px;color:var(--text3)"></span>
+        <span id="rpt-4w-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
+      </div>
+      <textarea id="rpt-4w" readonly style="width:100%;min-height:180px;font-family:'Courier New',monospace;font-size:11px;margin-bottom:16px;white-space:pre;tab-size:4"></textarea>
+
+      <div class="form-section" style="margin-bottom:6px">
+        日報 SERVE 拜訪進度
+        <span style="font-weight:400;font-size:11px;color:var(--text3)">（有拜訪紀錄的日期才會出現區塊）</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">📋 複製全部</button>
+        <span id="rpt-daily-cnt" style="font-size:11px;color:var(--text3)"></span>
+        <span id="rpt-daily-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
+      </div>
+      <textarea id="rpt-daily" readonly style="width:100%;min-height:280px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ TODOS ═══ -->
@@ -533,6 +584,7 @@ const DEFAULT_PRODUCTS=[
   {code:'SHH',cat:'拖把',desc:'家庭用握把式抹布',price:140,cycle:'4W',note:'',active:true},
   {code:'SHB',cat:'拖把',desc:'握把式抹布把手',price:0,cycle:'',note:'配件',active:false},
   {code:'NFM-DS',cat:'拖把',desc:'紫色除塵抹布',price:120,cycle:'2W',note:'',active:true},
+  {code:'NHS-B',cat:'拖把',desc:'紫色除塵抹布桿',price:0,cycle:'',note:'配件',active:false},
   {code:'N-AC',cat:'拖把',desc:'業務用除塵大拖把',price:210,cycle:'2W',note:'',active:true},
   {code:'M-90',cat:'拖把',desc:'業務用除塵特大拖把',price:220,cycle:'2W',note:'',active:true},
   {code:'M-120',cat:'拖把',desc:'業務用除塵超大拖把',price:280,cycle:'2W',note:'',active:true},
@@ -585,78 +637,107 @@ const DEFAULT_PRODUCTS=[
   {code:'MWOSR',cat:'地墊',desc:'男女辨識地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
   // 芳香
   {code:'DOME',cat:'芳香',desc:'大型香水芳香劑 300ml',price:220,cycle:'4W',note:'',active:true},
-  {code:'AF-BP',cat:'芳香',desc:'大型香水芳香劑 藍嬰粟',price:400,cycle:'4W',note:'',active:true},
-  {code:'AF-IT',cat:'芳香',desc:'大型香水芳香劑 麝香薄荷',price:400,cycle:'4W',note:'',active:true},
-  {code:'AFDW',cat:'芳香',desc:'大型香水芳香機台',price:0,cycle:'',note:'機台',active:false},
-  {code:'BF-W',cat:'芳香',desc:'複方精油芳香機 松柚',price:200,cycle:'4W',note:'',active:true},
-  {code:'BF-PC',cat:'芳香',desc:'複方精油芳香機 松果',price:200,cycle:'4W',note:'',active:true},
-  {code:'BFDW',cat:'芳香',desc:'BF複方精油芳香機台',price:0,cycle:'',note:'機台',active:false},
-  {code:'FNWT',cat:'芳香',desc:'Prime D氛香機（白）',price:350,cycle:'4W',note:'',active:true},
-  {code:'FNBK',cat:'芳香',desc:'Prime D氛香機（黑）',price:350,cycle:'4W',note:'',active:true},
-  {code:'FNPS2-K',cat:'芳香',desc:'Prime D氛香 沉穩',price:350,cycle:'4W',note:'',active:true},
+  {code:'AF-BP',cat:'芳香',desc:'藍罌粟 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AF-IT',cat:'芳香',desc:'麝香薄荷 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AFDW',cat:'芳香',desc:'大型香水芳香機台 300ml',price:400,cycle:'4W',note:'含BT3×4',active:true},
+  {code:'BF-W',cat:'芳香',desc:'松柚 (BFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BF-PC',cat:'芳香',desc:'松果 (BFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BFDW',cat:'芳香',desc:'BF複方精油芳香機台 240ml',price:200,cycle:'4W',note:'含BT3×4',active:true},
+  {code:'FNWT',cat:'芳香',desc:'Prime D氛香機 白 80ml',price:350,cycle:'4W',note:'含BT1×1',active:true},
+  {code:'FNBK',cat:'芳香',desc:'Prime D氛香機 黑 80ml',price:350,cycle:'4W',note:'含BT1×1',active:true},
+  {code:'FNPS2-K',cat:'芳香',desc:'沉穩 (Prime D口味)',price:0,cycle:'',note:'口味',active:false},
   {code:'BT1',cat:'芳香',desc:'BT1電池',price:0,cycle:'',note:'配件',active:false},
   {code:'BT3',cat:'芳香',desc:'BT3電池',price:0,cycle:'',note:'配件',active:false},
   {code:'BT4',cat:'芳香',desc:'BT4電池',price:0,cycle:'',note:'配件',active:false},
-  {code:'AMDW',cat:'芳香',desc:'小型擴香機台',price:0,cycle:'',note:'機台',active:false},
-  {code:'AMMK',cat:'芳香',desc:'小型擴香機香氛 木質',price:0,cycle:'',note:'配件',active:false},
-  {code:'AMWT',cat:'芳香',desc:'小型擴香機香氛 白茶',price:0,cycle:'',note:'配件',active:false},
-  {code:'AMOB',cat:'芳香',desc:'小型擴香機香氛 橙花',price:0,cycle:'',note:'配件',active:false},
+  {code:'AMDW',cat:'芳香',desc:'小型擴香機台',price:500,cycle:'4W',note:'含BT4×4',active:true},
+  {code:'AMMK',cat:'芳香',desc:'木質 (AMDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AMWT',cat:'芳香',desc:'白茶 (AMDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AMOB',cat:'芳香',desc:'橙花 (AMDW口味)',price:0,cycle:'',note:'口味',active:false},
+  // === 新增口味 ===
+  {code:'AF-L',cat:'芳香',desc:'檸檬 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AF-D',cat:'芳香',desc:'薰衣草 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AF-G',cat:'芳香',desc:'綠茶 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AF-N',cat:'芳香',desc:'鈴蘭 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AF-FC',cat:'芳香',desc:'青檸羅勒 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BF-P',cat:'芳香',desc:'水蜜桃 (BFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BF-R',cat:'芳香',desc:'迷迭香 (BFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BF-C',cat:'芳香',desc:'櫻花 (BFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BF-G',cat:'芳香',desc:'香茅草 (BFDW口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'BFDW-D',cat:'芳香',desc:'BFDW底座',price:0,cycle:'',note:'配件',active:false},
+  {code:'FNBN',cat:'芳香',desc:'Prime D氛香機 咖啡 80ml',price:350,cycle:'4W',note:'含BT1×1',active:true},
+  {code:'FNPF2-K',cat:'芳香',desc:'清新 (Prime D口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'FNPE2-K',cat:'芳香',desc:'優雅 (Prime D口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'FNPC2-K',cat:'芳香',desc:'柔和 (Prime D口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'FNPR2-K',cat:'芳香',desc:'果漾 (Prime D口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'FNPD2-K',cat:'芳香',desc:'自然 (Prime D口味)',price:0,cycle:'',note:'口味',active:false},
+  // === AL 香氛擴香系列 ===
+  {code:'AL-360',cat:'芳香',desc:'香氛擴香機 400ml',price:2200,cycle:'4W',note:'含口味',active:true},
+  {code:'AL-CD',cat:'芳香',desc:'魅惑野果 (AL-360口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AL-SP',cat:'芳香',desc:'浪漫雪松 (AL-360口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AL-GT',cat:'芳香',desc:'微風青檸 (AL-360口味)',price:0,cycle:'',note:'口味',active:false},
+  {code:'AL-FR',cat:'芳香',desc:'典雅蘭花 (AL-360口味)',price:0,cycle:'',note:'口味',active:false},
+  // === 自動酒精系列 (新類別歸在 芳香) ===
+  {code:'WA350',cat:'芳香',desc:'自動酒精 (補充包350ml+機台+立架)',price:300,cycle:'4W',note:'含F7400A+FST-01+BT2×3；補充包$250+立架$50',active:true},
+  {code:'FST-01C',cat:'芳香',desc:'自動酒精機台立架使用費',price:50,cycle:'4W',note:'已含在WA350',active:false},
+  {code:'F7400A',cat:'芳香',desc:'自動酒精機台',price:0,cycle:'',note:'配件',active:false},
+  {code:'FST-01',cat:'芳香',desc:'自動酒精機台立架',price:0,cycle:'',note:'配件',active:false},
+  {code:'BT2',cat:'芳香',desc:'BT2鹼性3號電池',price:0,cycle:'',note:'配件',active:false},
 ];
 
 const INV_INIT=[{n:'S-20',s:5,st:5},{n:'SHH',s:10,st:10},{n:'NFM-DS',s:2,st:2},{n:'N-AC',s:2,st:2},{n:'M-120',s:2,st:2},{n:'M120-H',s:2,st:2},{n:'M-90',s:2,st:2},{n:'NSAC',s:2,st:2},{n:'SHB',s:15,st:15},{n:'BS-H',s:2,st:2},{n:'BM-H',s:2,st:2},{n:'P-B',s:4,st:4},{n:'M90-H',s:2,st:2},{n:'M-PA',s:4,st:4},{n:'TJSR',s:1,st:1},{n:'TJSH',s:1,st:1},{n:'TJLH',s:1,st:1},{n:'2SN2',s:1,st:1},{n:'GSH',s:1,st:1},{n:'GSB',s:1,st:1},{n:'EXSLH',s:1,st:1},{n:'GLH',s:1,st:1},{n:'EXLH',s:1,st:1},{n:'EXSH',s:1,st:1},{n:'MANSB',s:1,st:1},{n:'MWOSR',s:1,st:1},{n:'FFSK',s:2,st:2},{n:'FFSLK',s:1,st:1},{n:'FFLK',s:1,st:1},{n:'TJSLH',s:1,st:1},{n:'DWSR',s:1,st:1},{n:'DWSH',s:2,st:2},{n:'DWSLH',s:2,st:2},{n:'DWLH',s:1,st:1},{n:'DWLLH',s:1,st:1},{n:'DW3MH',s:1,st:1},{n:'BSH',s:2,st:2},{n:'BSR',s:1,st:1},{n:'BSLH',s:1,st:1},{n:'BSLR',s:1,st:1},{n:'FSSK',s:1,st:1},{n:'UQSH',s:1,st:1},{n:'UQSLH',s:1,st:1},{n:'UQLH',s:1,st:1},{n:'DECSR',s:2,st:2},{n:'DECSLR',s:2,st:2},{n:'DECLR',s:2,st:2},{n:'DECLLR',s:1,st:1},{n:'DECTR',s:1,st:1},{n:'DWSSH',s:2,st:2},{n:'KKSN',s:1,st:1},{n:'KKSLN',s:1,st:1},{n:'KKLN',s:1,st:1},{n:'DOME',s:30,st:30},{n:'FNWT',s:2,st:2},{n:'FNBK',s:2,st:2},{n:'FNPS2-K',s:4,st:4},{n:'BT3',s:24,st:24},{n:'BFDW',s:4,st:4},{n:'BF-W',s:4,st:4},{n:'AFDW',s:2,st:2},{n:'BT1',s:4,st:4},{n:'BF-PC',s:4,st:4},{n:'AF-BP',s:2,st:2},{n:'AF-IT',s:2,st:2},{n:'AMDW',s:4,st:4},{n:'AMMK',s:2,st:2},{n:'AMWT',s:2,st:2},{n:'AMOB',s:2,st:2},{n:'BT4',s:16,st:16}];
 
 // ── SEED CLIENTS ──────────────────────────────────────────
 const SEED=[
-  {name:'烏瓦牛排',addr:'永康區中山南路642號',type:'餐廳',status:'試用中',contact:'',nextdate:'2026-04-21',fw4:0,env:'門口菜口飲料無',note:'之前試用過，剛開幕覺得太貴',trialItems:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'TJSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-07',mood:3,note:'介紹折價價格810→550',insight:'試用TJMR DWLH',statusChange:'試用中',nextdate:'2026-04-21'}],updatedAt:1712476800000},
+  {name:'烏瓦牛排',addr:'永康區中山南路642號',type:'餐廳',status:'試用中',contact:'',nextdate:'2026-04-21',fw4:1620,env:'門口菜口飲料無',note:'之前試用過，剛開幕覺得太貴',trialItems:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'TJMR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-07',mood:3,note:'介紹折價價格810→550',insight:'試用TJMR DWLH',statusChange:'試用中',nextdate:'2026-04-21'}],updatedAt:1712476800000},
   {name:'越情小吃部',addr:'新市區光華街',type:'',status:'未拜訪',contact:'',nextdate:'2026-04-07',fw4:0,env:'門口無',note:'',trialItems:[],todos:[],visits:[],updatedAt:1712476000000},
-  {name:'喜多鐵板燒中華東店',addr:'東區中華東路三段236號',type:'餐廳',status:'試用中',contact:'賴老闆',nextdate:'2026-04-09',fw4:1060,env:'門口菜口無，有飲料機有小便',note:'Line 老闆edm',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DECSLR',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-02',mood:2,note:'飲料台、門口',insight:'試用dwsh/decslr/dome',statusChange:'試用中',nextdate:'2026-04-09'}],updatedAt:1712044800000},
-  {name:'檸檬黃醫療用品',addr:'永康區復國一路94號',type:'零售店',status:'試用中',contact:'',nextdate:'',fw4:0,env:'門口無',note:'記得加賴',trialItems:[],todos:[],visits:[{date:'2026-03-20',mood:2,note:'怕被偷走',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742457600000},
-  {name:'顏式齒模',addr:'',type:'工廠',status:'試用中',contact:'王先生',nextdate:'2026-04-14',fw4:1000,env:'門口無',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:'2026-04-14'}],updatedAt:1743385200000},
-  {name:'思多利國際美語',addr:'永康區中山路12號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:0,env:'門口草，有小便',note:'之前有業務來過',trialItems:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-02',mood:2,note:'主任在忙',insight:'試用shh dome',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743562800000},
+  {name:'喜多鐵板燒中華東店',addr:'東區中華東路三段236號',type:'餐廳',status:'試用中',contact:'賴老闆',nextdate:'2026-04-09',fw4:1060,env:'門口菜口無，有飲料機有小便',note:'Line 老闆edm',trialItems:[{product:'DECSLR',qty:1,cycle:'2W',quoted:0},{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-02',mood:2,note:'飲料台、門口',insight:'試用dwsh/decslr/dome',statusChange:'試用中',nextdate:'2026-04-09'}],updatedAt:1712044800000},
+  {name:'檸檬黃醫療用品',addr:'永康區復國一路94號',type:'零售店',status:'試用中',contact:'',nextdate:'',fw4:340,env:'門口無',note:'記得加賴',trialItems:[{product:'TJSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'怕被偷走',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742457600000},
+  {name:'顏式齒模',addr:'',type:'工廠',status:'試用中',contact:'王先生',nextdate:'2026-04-14',fw4:1100,env:'門口無',note:'',trialItems:[{product:'DOME',qty:5,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:'2026-04-14'}],updatedAt:1743385200000},
+  {name:'思多利國際美語',addr:'永康區中山路12號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:360,env:'門口草，有小便',note:'之前有業務來過',trialItems:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-02',mood:2,note:'主任在忙',insight:'試用shh dome',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743562800000},
   {name:'戀練健身',addr:'東區自由路二段51號',type:'接待中心',status:'複訪',contact:'',nextdate:'2026-04-08',fw4:0,env:'門口無',note:'',trialItems:[],todos:[],visits:[{date:'2026-04-01',mood:3,note:'',insight:'',statusChange:'複訪',nextdate:'2026-04-08'}],updatedAt:1743476400000},
-  {name:'大台南駕訓班',addr:'仁德區文華路三段366號',type:'辦公室',status:'試用中',contact:'顏老闆',nextdate:'2026-04-08',fw4:600,env:'門口無吸水',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:1,note:'顏老闆不在',insight:'',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
-  {name:'LOFT 樂飛運動餐酒',addr:'仁德區文華路3段440號',type:'餐廳',status:'試用中',contact:'蘇老闆',nextdate:'',fw4:2280,env:'門口菜口無',note:'',trialItems:[{product:'DWLLH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:2,cycle:'4W',quoted:0},{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'NSAC',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
-  {name:'芽米食堂',addr:'善化區中正路609號',type:'餐廳',status:'試用中',contact:'郭老闆',nextdate:'2026-03-31',fw4:0,env:'門口有 菜口無 有廁所',note:'報價報錯成350',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:4,note:'媽媽後面有ktv包廂',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1742860800000},
-  {name:'吉祥園素食超市仁和店',addr:'東區仁和路366號',type:'零售店',status:'試用中',contact:'王闆娘',nextdate:'2026-04-07',fw4:320,env:'門口有破紅',note:'可以寄賣',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，可以寄賣',insight:'試用BSH',statusChange:'試用中',nextdate:'2026-04-07'}],updatedAt:1743476400000},
-  {name:'KUMON東橋五路教室',addr:'永康區東橋五路',type:'補習班',status:'試用中',contact:'張主任',nextdate:'2026-04-01',fw4:0,env:'門口無，教室約十人大小',note:'近快去貼膠帶',trialItems:[{product:'GSH',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0}],todos:[{text:'去貼膠帶',dueDate:'2026-04-08',done:false}],visits:[{date:'2026-03-30',mood:4,note:'有需要，但怕跌倒',insight:'試用GSH SHH',statusChange:'試用中',nextdate:'2026-04-01'}],updatedAt:1743307200000},
+  {name:'大台南駕訓班',addr:'仁德區文華路三段366號',type:'辦公室',status:'試用中',contact:'顏老闆',nextdate:'2026-04-08',fw4:660,env:'門口無吸水',note:'',trialItems:[{product:'DOME',qty:3,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:1,note:'顏老闆不在',insight:'',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
+  {name:'LOFT 樂飛運動餐酒',addr:'仁德區文華路3段440號',type:'餐廳',status:'試用中',contact:'蘇老闆',nextdate:'',fw4:3260,env:'門口菜口無',note:'',trialItems:[{product:'NSAC',qty:1,cycle:'2W',quoted:0},{product:'DWLLH',qty:1,cycle:'2W',quoted:0},{product:'BM-H',qty:1,cycle:'2W',quoted:0},{product:'P-B',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:2,cycle:'4W',quoted:0},{product:'UQSH',qty:1,cycle:'2W',quoted:0},{product:'ELLH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
+  {name:'芽米食堂',addr:'善化區中正路609號',type:'餐廳',status:'試用中',contact:'郭老闆',nextdate:'2026-03-31',fw4:780,env:'門口有 菜口無 有廁所',note:'報價報錯成350',trialItems:[{product:'AMDW',qty:1,cycle:'4W',quoted:0},{product:'AMMK',qty:1,cycle:'4W',quoted:0},{product:'FSSK',qty:1,cycle:'2W',quoted:0},{product:'BT4',qty:4,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:4,note:'媽媽後面有ktv包廂',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1742860800000},
+  {name:'吉祥園素食超市仁和店',addr:'東區仁和路366號',type:'零售店',status:'試用中',contact:'王闆娘',nextdate:'2026-04-07',fw4:340,env:'門口有破紅',note:'可以寄賣',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，可以寄賣',insight:'試用BSH',statusChange:'試用中',nextdate:'2026-04-07'}],updatedAt:1743476400000},
+  {name:'KUMON東橋五路教室',addr:'永康區東橋五路',type:'補習班',status:'試用中',contact:'張主任',nextdate:'2026-04-01',fw4:480,env:'門口無，教室約十人大小',note:'近快去貼膠帶',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[{text:'去貼膠帶',dueDate:'2026-04-08',done:false}],visits:[{date:'2026-03-30',mood:4,note:'有需要，但怕跌倒',insight:'試用GSH SHH',statusChange:'試用中',nextdate:'2026-04-01'}],updatedAt:1743307200000},
   {name:'國光營造',addr:'',type:'',status:'試用中',contact:'邱小姐',nextdate:'',fw4:220,env:'門口無',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:3,note:'',insight:'邱小姐 dome',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
-  {name:'大媽活蝦東和',addr:'',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'',fw4:1220,env:'',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-31',mood:2,note:'',insight:'補bf dwslr',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
+  {name:'大媽活蝦東和',addr:'',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'',fw4:2260,env:'',note:'',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DWSLH',qty:1,cycle:'2W',quoted:0},{product:'BT3',qty:4,cycle:'4W',quoted:0},{product:'BFDW',qty:1,cycle:'4W',quoted:0},{product:'BF-W',qty:1,cycle:'4W',quoted:0},{product:'BSLR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:2,note:'',insight:'補bf dwslr',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
   {name:'Crema cafe',addr:'東區信德街37號',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'2026-04-08',fw4:440,env:'門口無 無小便',note:'',trialItems:[{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，莊老闆願意試用',insight:'試用FFSLK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
-  {name:'漢光消防',addr:'仁德區文華路三段428巷61號',type:'工廠',status:'試用中',contact:'羅老闆',nextdate:'',fw4:0,env:'粉塵多，原本用水拖',note:'拖把希望有用',trialItems:[{product:'NSAC',qty:2,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'陳闆娘對賣斷品有興趣',insight:'拖把希望有用',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
-  {name:'喜樂福麵店',addr:'永康區復國一路293號',type:'餐廳',status:'試用中',contact:'左老闆',nextdate:'2026-04-02',fw4:0,env:'菜口沒地墊，門口有紅色網狀地墊',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-17',mood:4,note:'門口沒興趣，廁所芳香老闆有興趣',insight:'Dwsh 180不需要 bf可能可以續用',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742860800000},
+  {name:'漢光消防',addr:'仁德區文華路三段428巷61號',type:'工廠',status:'試用中',contact:'羅老闆',nextdate:'',fw4:980,env:'粉塵多，原本用水拖',note:'拖把希望有用',trialItems:[{product:'NSAC',qty:2,cycle:'2W',quoted:0},{product:'BS-H',qty:2,cycle:'2W',quoted:0},{product:'P-B',qty:2,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'陳闆娘對賣斷品有興趣',insight:'拖把希望有用',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
+  {name:'喜樂福麵店',addr:'永康區復國一路293號',type:'餐廳',status:'試用中',contact:'左老闆',nextdate:'2026-04-02',fw4:600,env:'菜口沒地墊，門口有紅色網狀地墊',note:'',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'BT3',qty:4,cycle:'4W',quoted:0},{product:'BFDW',qty:1,cycle:'4W',quoted:0},{product:'BF-W',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-17',mood:4,note:'門口沒興趣，廁所芳香老闆有興趣',insight:'Dwsh 180不需要 bf可能可以續用',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742860800000},
   {name:'康時診所',addr:'東區莊敬路100號',type:'診所',status:'初訪',contact:'',nextdate:'',fw4:0,env:'新裝潢，四月開幕',note:'再來拜訪',trialItems:[],todos:[{text:'四月開幕後再拜訪',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-12',mood:3,note:'沒遇到醫生',insight:'',statusChange:'初訪',nextdate:null}],updatedAt:1741783200000},
   {name:'賀鮮生魚片',addr:'永康區永興路111號',type:'餐廳',status:'初訪',contact:'',nextdate:'',fw4:0,env:'沒有地墊',note:'可以主動再聯絡',trialItems:[],todos:[{text:'主動再聯絡',dueDate:'',done:false}],visits:[{date:'2026-03-10',mood:3,note:'有需要再聯絡',insight:'',statusChange:'初訪',nextdate:null}],updatedAt:1741565200000},
   {name:'何嘉仁台南東橋',addr:'永康區東橋七路217號',type:'補習班',status:'複訪',contact:'',nextdate:'',fw4:0,env:'門口無，有小便斗',note:'早上來拜訪',trialItems:[],todos:[],visits:[{date:'2026-03-18',mood:2,note:'主任不在',insight:'早上來拜訪',statusChange:'複訪',nextdate:null}],updatedAt:1742256000000},
   {name:'愛兒運動遊戲診所',addr:'永康區東橋五路319號',type:'診所',status:'複訪',contact:'',nextdate:'',fw4:0,env:'門口要脫鞋',note:'下次帶賣斷品DM',trialItems:[],todos:[{text:'帶賣斷品DM拜訪',dueDate:'',done:false}],visits:[{date:'2026-03-10',mood:3,note:'老闆在忙',insight:'',statusChange:'複訪',nextdate:null}],updatedAt:1741565200000},
   {name:'典陸社區教育',addr:'永康區東橋十街',type:'補習班',status:'初訪',contact:'',nextdate:'',fw4:0,env:'新裝潢',note:'可能下午時段拜訪',trialItems:[],todos:[{text:'下午時段再拜訪',dueDate:'',done:false}],visits:[{date:'2026-03-10',mood:3,note:'',insight:'主任說有需要聯絡',statusChange:'初訪',nextdate:null}],updatedAt:1741565200000},
   {name:'貝森朵夫接待會館',addr:'',type:'接待中心',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無',note:'堅決拒絕',trialItems:[],todos:[],visits:[{date:'2026-04-01',mood:1,note:'主管不在，怕麻煩，堅決拒絕',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743476400000},
-  {name:'老虎蜜蜂娃娃機',addr:'仁德區中山路310號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'',note:'3/24追蹤後結案',trialItems:[],todos:[],visits:[{date:'2026-03-11',mood:1,note:'老闆對地墊沒興趣',insight:'老闆臉很臭',statusChange:'已結案',nextdate:null}],updatedAt:1743307200000},
-  {name:'集鮮良品',addr:'永康區新民街27號',type:'零售店',status:'已結案',contact:'黃小姐',nextdate:'',fw4:0,env:'有自備小地墊',note:'試用結束，太貴無效',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:3,note:'試用小黃跟decsr',insight:'不確定成效；3/26回收',statusChange:'已結案',nextdate:null}],updatedAt:1741783200000},
+  {name:'老虎蜜蜂娃娃機',addr:'仁德區中山路310號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:440,env:'',note:'3/24追蹤後結案',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-11',mood:1,note:'老闆對地墊沒興趣',insight:'老闆臉很臭',statusChange:'已結案',nextdate:null}],updatedAt:1743307200000},
+  {name:'集鮮良品',addr:'永康區新民街27號',type:'零售店',status:'已結案',contact:'黃小姐',nextdate:'',fw4:480,env:'有自備小地墊',note:'試用結束，太貴無效',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:3,note:'試用小黃跟decsr',insight:'不確定成效；3/26回收',statusChange:'已結案',nextdate:null}],updatedAt:1741783200000},
   {name:'放鬆鴨甜點｜早午餐',addr:'東區立德二路54巷28號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'有用過廁所芳香',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-09',mood:3,note:'推洗碗精，賣斷品',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741478400000},
   {name:'皮諾丘早午餐',addr:'永康區東橋三路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'已自己買地墊',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:3,note:'介紹地墊跟賣斷品，老闆娘有興趣聽',insight:'沒有問老闆娘姓名',statusChange:'已結案',nextdate:null}],updatedAt:1741565200000},
   {name:'木熙企業社',addr:'東區大同路1段173號8樓',type:'辦公室',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無',note:'地板貼皮木地板、濕拖',trialItems:[],todos:[],visits:[{date:'2026-03-30',mood:1,note:'地墊不需要，地板貼皮木地板',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743307200000},
   // ── 從 Notion 補匯入（第二批）
-  {name:'瓜瓜園地瓜生態故事館',addr:'新化區中正路65號',type:'接待中心',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:1020,env:'需要吸塵吸水地墊，灰色',note:'老闆認識樂清，知道廁所產品很貴',trialItems:[{product:'FFLK',qty:2,cycle:'2W',quoted:0}],todos:[{text:'一下雨馬上送兩張FFLK',dueDate:'',done:false}],visits:[{date:'2026-03-27',mood:3,note:'老闆認識樂清，知道廁所產品很貴',insight:'試用FFLK*2 280',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743559627000},
-  {name:'身活皮拉提斯東橋館',addr:'永康區東橋五路112號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-08',fw4:0,env:'門口有破黑',note:'倍速同股東',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'倍速同股東',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743501611000},
+  {name:'瓜瓜園地瓜生態故事館',addr:'新化區中正路65號',type:'接待中心',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:1120,env:'需要吸塵吸水地墊，灰色',note:'老闆認識樂清，知道廁所產品很貴',trialItems:[{product:'FFLK',qty:2,cycle:'2W',quoted:0}],todos:[{text:'一下雨馬上送兩張FFLK',dueDate:'',done:false}],visits:[{date:'2026-03-27',mood:3,note:'老闆認識樂清，知道廁所產品很貴',insight:'試用FFLK*2 280',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743559627000},
+  {name:'身活皮拉提斯東橋館',addr:'永康區東橋五路112號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-08',fw4:280,env:'門口有破黑',note:'倍速同股東',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'倍速同股東',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743501611000},
   {name:'衣美學院台南德昌店',addr:'東區德昌路183號',type:'零售店',status:'試用中',contact:'莊老闆',nextdate:'2026-04-15',fw4:340,env:'門口有不吸水，地板乾淨，莊老闆住隔壁很常打掃',note:'老闆不好意思用',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'老闆不好意思用',insight:'試用DECSR',statusChange:'試用中',nextdate:'2026-04-15'}],updatedAt:1743501431000},
-  {name:'嘉餚土雞肉飯舖',addr:'永康區復國一路65號',type:'餐廳',status:'試用中',contact:'鄭小姐',nextdate:'',fw4:0,env:'門口有自備吸水，菜口無，無廁所',note:'TJSH報160',trialItems:[{product:'TJSH',qty:1,cycle:'2W',quoted:160}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'鄭小姐以前有聽過嫌太貴，TJSH報160',insight:'試用TJSH',statusChange:'試用中',nextdate:null}],updatedAt:1742457973000},
-  {name:'大台南網路購物服務人員職業工會',addr:'永康區東橋七路381號',type:'接待中心',status:'試用中',contact:'楊小姐',nextdate:'',fw4:0,env:'門口有，室內灰磁磚',note:'楊小姐欣然接受試用，會詢問老闆意願',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:3,note:'楊小姐欣然接受試用，會詢問老闆意願',insight:'試用decsr',statusChange:'試用中',nextdate:null}],updatedAt:1742286567000},
-  {name:'奧斯汀美語台南東光',addr:'東區怡東路107號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-02',fw4:0,env:'門口無，無小便斗',note:'主任不在，有給名片',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-26',mood:2,note:'主任不在，有給名片',insight:'試用小黃',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742954350000},
-  {name:'力揚國際運通',addr:'仁德區文華路三段428巷31號',type:'工廠',status:'已結案',contact:'',nextdate:'',fw4:0,env:'有廁所，沒什麼打掃',note:'採購不在，試用dome；再次聯絡時找採購推拖把',trialItems:[],todos:[{text:'再次聯絡時找採購推拖把',dueDate:'',done:false}],visits:[{date:'2026-03-19',mood:2,note:'採購不在，試用dome',insight:'',statusChange:'複訪',nextdate:null}],updatedAt:1742345399000},
-  {name:'集雅社台南復國',addr:'永康區復國路52號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無，清潔用靜電抹布；直營店無法決定',note:'主管可能不想看到統一的地墊，清潔用品要自掏腰包買',trialItems:[],todos:[],visits:[{date:'2026-03-17',mood:2,note:'主管可能不想看到統一的地墊',insight:'試用SHH',statusChange:'已結案',nextdate:null}],updatedAt:1742825374000},
+  {name:'嘉餚土雞肉飯舖',addr:'永康區復國一路65號',type:'餐廳',status:'已結案',contact:'鄭小姐',nextdate:'',fw4:340,env:'門口有自備吸水，菜口無，無廁所',note:'TJSH報160',trialItems:[{product:'TJSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'鄭小姐以前有聽過嫌太貴，TJSH報160',insight:'試用TJSH',statusChange:'試用中',nextdate:null}],updatedAt:1742457973000},
+  {name:'大台南網路購物服務人員職業工會',addr:'永康區東橋七路381號',type:'接待中心',status:'試用中',contact:'楊小姐',nextdate:'',fw4:340,env:'門口有，室內灰磁磚',note:'楊小姐欣然接受試用，會詢問老闆意願',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:3,note:'楊小姐欣然接受試用，會詢問老闆意願',insight:'試用decsr',statusChange:'試用中',nextdate:null}],updatedAt:1742286567000},
+  {name:'奧斯汀美語台南東光',addr:'東區怡東路107號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-02',fw4:200,env:'門口無，無小便斗',note:'主任不在，有給名片',trialItems:[{product:'S-20',qty:1,cycle:'2W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-26',mood:2,note:'主任不在，有給名片',insight:'試用小黃',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742954350000},
+  {name:'力揚國際運通',addr:'仁德區文華路三段428巷31號',type:'工廠',status:'已結案',contact:'',nextdate:'',fw4:220,env:'有廁所，沒什麼打掃',note:'採購不在，試用dome；再次聯絡時找採購推拖把',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[{text:'再次聯絡時找採購推拖把',dueDate:'',done:false}],visits:[{date:'2026-03-19',mood:2,note:'採購不在，試用dome',insight:'',statusChange:'複訪',nextdate:null}],updatedAt:1742345399000},
+  {name:'集雅社台南復國',addr:'永康區復國路52號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:140,env:'門口無，清潔用靜電抹布；直營店無法決定',note:'主管可能不想看到統一的地墊，清潔用品要自掏腰包買',trialItems:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-17',mood:2,note:'主管可能不想看到統一的地墊',insight:'試用SHH',statusChange:'已結案',nextdate:null}],updatedAt:1742825374000},
   {name:'巨星電子遊樂',addr:'東區大同路一段109號',type:'遊樂場',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口有破，室內煙味',note:'有配合、不想試用',trialItems:[],todos:[],visits:[{date:'2026-03-30',mood:2,note:'有配合、不想試用',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743303727000},
-  {name:'弘洲建材行',addr:'仁德區中山路442號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'磁磚地板，老闆娘覺得地墊會妨礙大理石透氣',note:'老闆娘喜歡擦手紙，想推lala；記得送清潔液',trialItems:[],todos:[{text:'記得送清潔液',dueDate:'',done:false}],visits:[{date:'2026-03-11',mood:2,note:'老闆娘喜歡擦手紙，想推lala',insight:'試用結束，不需要',statusChange:'已結案',nextdate:null}],updatedAt:1742258167000},
+  {name:'弘洲建材行',addr:'仁德區中山路442號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:170,env:'磁磚地板，老闆娘覺得地墊會妨礙大理石透氣',note:'老闆娘喜歡擦手紙，想推lala；記得送清潔液',trialItems:[{product:'NFM-DS',qty:1,cycle:'2W',quoted:0}],todos:[{text:'記得送清潔液',dueDate:'',done:false}],visits:[{date:'2026-03-11',mood:2,note:'老闆娘喜歡擦手紙，想推lala',insight:'試用結束，不需要',statusChange:'已結案',nextdate:null}],updatedAt:1742258167000},
   {name:'金鈴花藝',addr:'永康區東橋八街179號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有地墊',note:'老闆說上次有人來過了',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:2,note:'老闆說上次有人來過了',insight:'忘記問有沒有試用',statusChange:'已結案',nextdate:null}],updatedAt:1741596408000},
   {name:'S color 智能染髮',addr:'永康區東橋五路',type:'美容美甲',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有小便斗，沒有地墊',note:'老闆不想試用地墊；有成功推賣斷品',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:2,note:'老闆不想試用地墊',insight:'有成功推賣斷品',statusChange:'已結案',nextdate:null}],updatedAt:1741593550000},
   // ── 從 Notion 補匯入（第三批）
-  {name:'有巢氏台南總圖東橋加盟店',addr:'永康區東橋十街168號',type:'房仲',status:'試用中',contact:'許秘書',nextdate:'',fw4:0,env:'門口有破紅，已購一年。廁所有芳香，沒小便斗',note:'許秘書對免費試用有興趣，店長女生',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0},{product:'BF-W',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:2,note:'許秘書對免費試用有興趣，店長女生',insight:'試用decsr、bf',statusChange:'試用中',nextdate:null}],updatedAt:1742262486000},
-  {name:'仁善社區長照',addr:'善化區溪尾216-28號',type:'診所',status:'複訪',contact:'',nextdate:'2026-04-07',fw4:0,env:'不需要地墊，廁所還乾淨',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-24',mood:2,note:'不需要地墊，廁所還乾淨',insight:'',statusChange:'複訪',nextdate:'2026-04-07'}],updatedAt:1742953293000},
-  {name:'街役場古蹟餐坊',addr:'新化區中正路500號',type:'餐廳',status:'試用中',contact:'高老闆',nextdate:'2026-03-31',fw4:0,env:'有自備硬地墊，有廁所，香精重但感覺偏髒',note:'高老闆對訂製地墊有興趣，設計報價350-450',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[{text:'設計訂製地墊報價350-450給高老闆',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'介紹自製地墊，王品；洞試用。老闆下週回國',insight:'高老闆對訂製地墊有興趣',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1741830533000},
-  {name:'梅林沙龍spa',addr:'永康區新民街140號',type:'美容美甲',status:'已成約',contact:'',nextdate:'2026-04-10',fw4:0,env:'沒地墊，店內很香，老闆很愛美',note:'老闆店門口只能用SS，基本上只有FF能選；若收回殘膠要清乾淨',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:3,note:'老闆勉為其難試試看，只能選FF',insight:'',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741783108000},
+  {name:'有巢氏台南總圖東橋加盟店',addr:'永康區東橋十街168號',type:'房仲',status:'試用中',contact:'許秘書',nextdate:'',fw4:540,env:'門口有破紅，已購一年。廁所有芳香，沒小便斗',note:'許秘書對免費試用有興趣，店長女生',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0},{product:'BT3',qty:4,cycle:'4W',quoted:0},{product:'BFDW',qty:1,cycle:'4W',quoted:0},{product:'BF-PC',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:2,note:'許秘書對免費試用有興趣，店長女生',insight:'試用decsr、bf',statusChange:'試用中',nextdate:null}],updatedAt:1742262486000},
+  {name:'仁善社區長照',addr:'善化區溪尾216-28號',type:'診所',status:'已結案',contact:'',nextdate:'2026-04-07',fw4:220,env:'不需要地墊，廁所還乾淨',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:2,note:'不需要地墊，廁所還乾淨',insight:'',statusChange:'複訪',nextdate:'2026-04-07'}],updatedAt:1742953293000},
+  {name:'街役場古蹟餐坊',addr:'新化區中正路500號',type:'餐廳',status:'已結案',contact:'高老闆',nextdate:'2026-03-31',fw4:440,env:'有自備硬地墊，有廁所，香精重但感覺偏髒',note:'高老闆對訂製地墊有興趣，設計報價350-450',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[{text:'設計訂製地墊報價350-450給高老闆',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'介紹自製地墊，王品；洞試用。老闆下週回國',insight:'高老闆對訂製地墊有興趣',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1741830533000},
+  {name:'梅林沙龍spa',addr:'永康區新民街140號',type:'美容美甲',status:'已成約',contact:'',nextdate:'2026-04-10',fw4:280,env:'沒地墊，店內很香，老闆很愛美',note:'老闆店門口只能用SS，基本上只有FF能選；若收回殘膠要清乾淨',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:3,note:'老闆勉為其難試試看，只能選FF',insight:'',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741783108000},
   {name:'秀秀阿美',addr:'永康區東橋十街178號',type:'零售店',status:'已成約',contact:'陳小姐',nextdate:'2026-04-10',fw4:0,env:'門口有自備的小地墊。老闆想要灰色',note:'SS地墊偏小；一週後主動聯絡闆娘陳小姐',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0},{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'主動聯絡陳小姐',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-10',mood:3,note:'老闆對試用有興趣，有問了價錢，還額外問了玻璃清潔',insight:'SS地墊偏小',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741593711000},
-  {name:'耀學堡新化店',addr:'新化區中山路160號',type:'補習班',status:'試用中',contact:'Susan 蔡小姐',nextdate:'',fw4:220,env:'門口有自備地墊、要脫鞋，有小便斗，廁所很香，學生不多。有其他分校',note:'需要繼續追蹤到老闆，可以推薦訂製地墊',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[{text:'繼續追蹤老闆，推薦訂製地墊',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'主任不在，Susan蔡小姐友善，推薦訂製地墊',insight:'試用dome',statusChange:'試用中',nextdate:null}],updatedAt:1741830981000},
-  {name:'林宜瑾服務處',addr:'永康區中山南路473號',type:'接待中心',status:'試用中',contact:'',nextdate:'',fw4:0,env:'門口無，面積大，有小便斗',note:'門口要推車運貨不想要太大地墊，有需要打電話；忘記問主任姓名',trialItems:[],todos:[],visits:[{date:'2026-03-20',mood:2,note:'門口要推車運貨不想要太大地墊，有需要打電話',insight:'忘記問主任姓名，試用洞',statusChange:'試用中',nextdate:null}],updatedAt:1742457077000},
-  {name:'愛洛奇國際貿易',addr:'永康區永大路一段287巷133號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有地墊，很多層架，老闆喜歡咖啡',note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用；試用結束，太貴',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用',insight:'老闆像馬東石。試用結束，太貴',statusChange:'已結案',nextdate:null}],updatedAt:1742258188000},
+  {name:'耀學堡新化店',addr:'新化區中山路160號',type:'補習班',status:'已結案',contact:'Susan 蔡小姐',nextdate:'',fw4:220,env:'門口有自備地墊、要脫鞋，有小便斗，廁所很香，學生不多。有其他分校',note:'需要繼續追蹤到老闆，可以推薦訂製地墊',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[{text:'繼續追蹤老闆，推薦訂製地墊',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'主任不在，Susan蔡小姐友善，推薦訂製地墊',insight:'試用dome',statusChange:'試用中',nextdate:null}],updatedAt:1741830981000},
+  {name:'林宜瑾服務處',addr:'永康區中山南路473號',type:'接待中心',status:'已結案',contact:'',nextdate:'',fw4:440,env:'門口無，面積大，有小便斗',note:'門口要推車運貨不想要太大地墊，有需要打電話；忘記問主任姓名',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'門口要推車運貨不想要太大地墊，有需要打電話',insight:'忘記問主任姓名，試用洞',statusChange:'試用中',nextdate:null}],updatedAt:1742457077000},
+  {name:'愛洛奇國際貿易',addr:'永康區永大路一段287巷133號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:480,env:'沒有地墊，很多層架，老闆喜歡咖啡',note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用；試用結束，太貴',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用',insight:'老闆像馬東石。試用結束，太貴',statusChange:'已結案',nextdate:null}],updatedAt:1742258188000},
   {name:'蔬食好巳多餐包',addr:'新化區中山路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒門沒地墊',note:'老闆不在，不給留資料',trialItems:[],todos:[],visits:[{date:'2026-03-13',mood:2,note:'老闆不在，不給留資料',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741831540000},
   {name:'金凱鐵板燒',addr:'新化區中山路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口地墊很破',note:'在餐期進入，沒受到友善對待；老闆沒興趣',trialItems:[],todos:[],visits:[{date:'2026-03-13',mood:1,note:'在餐期進入，沒受到友善對待',insight:'老闆沒興趣',statusChange:'已結案',nextdate:null}],updatedAt:1741830450000},
   {name:'Calm ice',addr:'永康區新民街11號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒地墊、有養貓、有廁所',note:'本來感覺要成功接受試用，但最後拒絕。沒給到資料',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'本來感覺要成功接受試用，但最後拒絕',insight:'沒給到資料',statusChange:'已結案',nextdate:null}],updatedAt:1741783126000},
@@ -664,6 +745,22 @@ const SEED=[
   {name:'東星眼鏡',addr:'永康區',type:'眼鏡行',status:'已結案',contact:'',nextdate:'',fw4:0,env:'地墊破舊，綠底黃字歡迎光臨',note:'First blood。應該至少要留資料和推酒精',trialItems:[],todos:[],visits:[{date:'2026-03-09',mood:1,note:'老闆直接拒絕',insight:'First blood。應該至少要留資料和推酒精',statusChange:'已結案',nextdate:null}],updatedAt:1741478143000},
   {name:'錢都 永康文化店',addr:'永康區文化路155號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'',note:'已被登記（其他業務）',trialItems:[],todos:[],visits:[],updatedAt:1741478053000},
   {name:'豚將永康店',addr:'永康區中正七街76號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口沒地墊，菜口有自己的，沒小便斗',note:'老闆覺得不需要；沒有更努力介紹菜口地墊',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得不需要',insight:'沒有更努力介紹菜口地墊',statusChange:'已結案',nextdate:null}],updatedAt:1741783554000},
+  {name:'熙茂精品鮮果社',addr:'',type:'',status:'已成約',contact:'',nextdate:'',fw4:420,env:'',note:'來源: SERVE 2026/3/10',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'金球獎釣龍蝦娛樂城',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:660,env:'',note:'來源: SERVE 2026/3/13',trialItems:[{product:'DOME',qty:3,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'全化釣蝦',addr:'',type:'',status:'已結案',contact:'',nextdate:'',fw4:620,env:'',note:'來源: SERVE 2026/3/13',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'永興日間照顧中心',addr:'',type:'',status:'已結案',contact:'',nextdate:'',fw4:220,env:'',note:'來源: SERVE 2026/3/17',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'悟飯食堂',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:1200,env:'',note:'來源: SERVE 2026/3/18',trialItems:[{product:'DWSR',qty:3,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'羅偉仲(漢光消防)(家)',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:720,env:'',note:'來源: SERVE 2026/3/19',trialItems:[{product:'UQLH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'星天地KTV',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:3470,env:'',note:'來源: SERVE 2026/3/24',trialItems:[{product:'DWSLH',qty:1,cycle:'2W',quoted:0},{product:'FNBK',qty:7,cycle:'4W',quoted:0},{product:'FNPS2-K',qty:7,cycle:'4W',quoted:0},{product:'BT3',qty:8,cycle:'4W',quoted:0},{product:'BFDW',qty:2,cycle:'4W',quoted:0},{product:'BT1',qty:7,cycle:'4W',quoted:0},{product:'BF-PC',qty:2,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'林志展服務處',addr:'',type:'',status:'已結案',contact:'',nextdate:'',fw4:440,env:'',note:'來源: SERVE 2026/3/24',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'光復里活動中心',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:1460,env:'',note:'來源: SERVE 2026/3/26',trialItems:[{product:'DWSH',qty:2,cycle:'2W',quoted:0},{product:'DOME',qty:3,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'新化區東榮社區發展協會',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:440,env:'',note:'來源: SERVE 2026/3/27',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'愛生育生活科技',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:220,env:'',note:'來源: SERVE 2026/3/30',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'植上東門接待中心',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:220,env:'',note:'來源: SERVE 2026/3/31',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'莉志藥局',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:340,env:'',note:'來源: SERVE 2026/3/31',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'舍予律師事務所',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:280,env:'',note:'來源: SERVE 2026/4/7',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'本職人鐵板燒',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:400,env:'',note:'來源: SERVE 2026/4/8',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'肇輝挺憲後援會',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:340,env:'',note:'來源: SERVE 2026/4/8',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -692,8 +789,104 @@ if(local){
   DB.products=JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
 }
 
+// 商品組合規則：主商品 → { accs:[固定配件], flavorPrefix:口味代號前綴, flavorExclude:排除自身的機台代號 }
+// 配件皆為免費（price:0），數量依規則計算
+const BUNDLE_MAP={
+  // 拖把類：固定配件，無口味
+  'S-20':   {accs:[{code:'SHB',qty:1}]},
+  'SHH':    {accs:[{code:'SHB',qty:1}]},
+  'NFM-DS': {accs:[{code:'NHS-B',qty:1}]},
+  'NSAC':   {accs:[{code:'P-B',qty:1},{code:'BS-H',qty:1}]},
+  'N-AC':   {accs:[{code:'P-B',qty:1},{code:'BM-H',qty:1}]},
+  'M-90':   {accs:[{code:'M-PA',qty:1},{code:'M90-H',qty:1}]},
+  'M-120':  {accs:[{code:'M-PA',qty:1},{code:'M120-H',qty:1}]},
+  // 芳香機台：固定配件（電池）+ 口味可選
+  'AFDW':   {accs:[{code:'BT3',qty:4}], flavorPrefix:'AF-', flavorLabel:'口味'},
+  'BFDW':   {accs:[{code:'BT3',qty:4}], flavorPrefix:'BF-', flavorLabel:'口味', flavorExclude:['BFDW-D']},
+  'FNWT':   {accs:[{code:'BT1',qty:1}], flavorPrefix:'FN',  flavorLabel:'口味', flavorExclude:['FNWT','FNBK','FNBN']},
+  'FNBK':   {accs:[{code:'BT1',qty:1}], flavorPrefix:'FN',  flavorLabel:'口味', flavorExclude:['FNWT','FNBK','FNBN']},
+  'FNBN':   {accs:[{code:'BT1',qty:1}], flavorPrefix:'FN',  flavorLabel:'口味', flavorExclude:['FNWT','FNBK','FNBN']},
+  'AMDW':   {accs:[{code:'BT4',qty:4}], flavorPrefix:'AM',  flavorLabel:'口味', flavorExclude:['AMDW']},
+  'AL-360': {accs:[],                    flavorPrefix:'AL-', flavorLabel:'口味', flavorExclude:['AL-360']},
+  'WA350':  {accs:[{code:'F7400A',qty:1},{code:'FST-01',qty:1},{code:'BT2',qty:3}]},
+};
+// 查某主商品的可選口味清單
+function getFlavorChoices(mainCode){
+  const b=BUNDLE_MAP[mainCode]; if(!b||!b.flavorPrefix) return [];
+  const ex=new Set(b.flavorExclude||[]);
+  ex.add(mainCode);
+  return DB.products.filter(p=>p.code.startsWith(b.flavorPrefix)&&!ex.has(p.code)&&p.cat==='芳香');
+}
+// 對 cfItems 重建某主商品 index 的附屬配件（bundled）
+// 呼叫時機：新選主商品 / 變更主商品數量
+function rebuildBundle(mainIdx){
+  const main=S.cfItems[mainIdx]; if(!main||!main.product) return;
+  const b=BUNDLE_MAP[main.product];
+  // 先刪掉原本掛在這個主商品下的所有 bundled 項目
+  // 從後往前刪，避免 index 位移
+  for(let i=S.cfItems.length-1;i>=0;i--){
+    if(S.cfItems[i].bundledTo===main.product&&i!==mainIdx){
+      S.cfItems.splice(i,1);
+      if(i<mainIdx) mainIdx--;
+    }
+  }
+  if(!b) return;
+  // 依序在 main 後面插入配件
+  let pos=mainIdx+1;
+  (b.accs||[]).forEach(a=>{
+    S.cfItems.splice(pos++,0,{product:a.code,qty:a.qty*(main.qty||1),cycle:'',quoted:0,bundledTo:main.product,bundleRole:'acc'});
+  });
+  if(b.flavorPrefix){
+    const choices=getFlavorChoices(main.product);
+    // 如果本來已有使用者選過的口味（存在 main.flavorCode），沿用；否則空白讓使用者選
+    const existing=main.flavorCode&&choices.find(c=>c.code===main.flavorCode)?main.flavorCode:'';
+    S.cfItems.splice(pos++,0,{product:existing,qty:1,cycle:existing?(getProd(existing)?.cycle||'4W'):'4W',quoted:0,bundledTo:main.product,bundleRole:'flavor'});
+  }
+}
+// 判斷某代號是不是「被某個 BUNDLE 規則當作固定配件」的
+function isBundleAcc(code){
+  for(const k in BUNDLE_MAP){
+    if((BUNDLE_MAP[k].accs||[]).some(a=>a.code===code)) return true;
+  }
+  return false;
+}
+// 全部重建（載入舊資料時呼叫，確保配件齊備）
+// 流程：1) 清掉所有 bundled 標記項目  2) 清掉舊資料裡「孤兒配件/口味」(無 bundledTo 但其實是配件/口味代號)
+//      3) 對剩下的主商品逐一重建 bundle
+function rebuildAllBundles(){
+  // 先把孤兒口味代號回補到其對應主商品的 flavorCode，避免 rebuild 時遺失使用者的口味選擇
+  S.cfItems.forEach(it=>{
+    if(it.bundledTo||!it.product) return;
+    if(!isFlavorOnly(it.product)) return;
+    // 找一個能吃這個口味的主商品
+    for(const other of S.cfItems){
+      if(other===it||other.bundledTo||!other.product) continue;
+      const choices=getFlavorChoices(other.product);
+      if(choices.some(c=>c.code===it.product)){ other.flavorCode=it.product; break; }
+    }
+  });
+  S.cfItems=S.cfItems.filter(it=>{
+    if(it.bundledTo) return false; // 清掉舊的 bundled
+    if(!it.product) return true;   // 空白 row 保留
+    if(isBundleAcc(it.product)) return false;  // 孤兒配件
+    if(isFlavorOnly(it.product)) return false; // 孤兒口味（稍後重建時會被當 flavor row 的預設值還原）
+    return true;
+  });
+  for(let i=0;i<S.cfItems.length;i++){
+    if(BUNDLE_MAP[S.cfItems[i].product]) rebuildBundle(i);
+  }
+}
 // 取得啟用商品（給試用品項選單用）
-function activeProducts(){return DB.products.filter(p=>p.active&&p.price>0);}
+function isFlavorOnly(code){
+  for(const k in BUNDLE_MAP){
+    const b=BUNDLE_MAP[k]; if(!b.flavorPrefix) continue;
+    if(code===k) continue;
+    const ex=new Set(b.flavorExclude||[]); if(ex.has(code)) continue;
+    if(code.startsWith(b.flavorPrefix)) return true;
+  }
+  return false;
+}
+function activeProducts(){return DB.products.filter(p=>p.active&&p.price>0&&!isFlavorOnly(p.code));}
 // 根據代號查商品
 function getProd(code){return DB.products.find(p=>p.code===code)||null;}
 
@@ -710,7 +903,7 @@ function ref9(code,qty=1,cycle='2W'){
 }
 // 提案商品自動帶入
 function autoProd(items){
-  const cats=new Set((items||[]).filter(it=>it.product&&getProd(it.product)).map(it=>getProd(it.product).cat));
+  const cats=new Set((items||[]).filter(it=>it.product&&!it.bundledTo&&getProd(it.product)).map(it=>getProd(it.product).cat));
   if(!cats.size)return '';
   const MAP={'拖把':'拖把','地墊':'MAT','芳香':'芳香'};
   return cats.size===1?(MAP[[...cats][0]]||[...cats][0]):'ALL';
@@ -992,6 +1185,7 @@ function openCF(idx){
   document.getElementById('cf-env').value=c?.env||'';
   document.getElementById('cf-note').value=c?.note||'';
   S.cfItems=JSON.parse(JSON.stringify(c?.trialItems||[]));
+  rebuildAllBundles();
   S.cfTodos=JSON.parse(JSON.stringify(c?.todos||[]));
   renderItems();renderTodoFields();updProd();
   showView('view-form');
@@ -1010,10 +1204,41 @@ function buildOpts(sel){
 }
 
 function addItem(){S.cfItems.push({product:'',qty:1,cycle:'2W',quoted:0});renderItems();updProd();}
+function updCfTotal(){document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0)).toLocaleString();}
 function renderItems(){
   const cont=document.getElementById('cf-items');
   if(!S.cfItems.length){cont.innerHTML='';document.getElementById('cf-total').textContent='$0';return;}
   cont.innerHTML=S.cfItems.map((it,i)=>{
+    // ── 配件 row (bundled) ──
+    if(it.bundledTo){
+      const p=getProd(it.product);
+      const isFlavor=it.bundleRole==='flavor';
+      if(isFlavor){
+        // 口味 row：顯示下拉，預設 main 的 flavorCode；可選
+        // 找 main
+        let mainIdx=-1;
+        for(let k=i-1;k>=0;k--){if(!S.cfItems[k].bundledTo&&S.cfItems[k].product===it.bundledTo){mainIdx=k;break;}}
+        const choices=mainIdx>=0?getFlavorChoices(S.cfItems[mainIdx].product):[];
+        return`<div class="ti-row ti-acc">
+          <div class="ti-top">
+            <span class="ti-acc-mark">└ 口味</span>
+            <select style="flex:1;min-width:0;font-size:12px" onchange="setFlavor(${mainIdx},this.value)">
+              <option value=""${!it.product?' selected':''}>請選擇口味</option>
+              ${choices.map(c=>`<option value="${c.code}"${c.code===it.product?' selected':''}>${c.code} ${c.desc}</option>`).join('')}
+            </select>
+          </div>
+        </div>`;
+      }
+      // 固定配件 row：顯示代號+數量，灰階、不可刪
+      return`<div class="ti-row ti-acc">
+        <div class="ti-top">
+          <span class="ti-acc-mark">└ 配件</span>
+          <span style="flex:1;min-width:0;font-size:12px;color:var(--text2)">${it.product}${p?' '+p.desc:''}</span>
+          <span style="font-size:12px;color:var(--text3)">×${it.qty}</span>
+        </div>
+      </div>`;
+    }
+    // ── 主商品 row ──
     const p=getProd(it.product);const isMat=p?.cat==='地墊';
     const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
     const isLow=it.quoted>0&&r>0&&it.quoted<r;
@@ -1022,30 +1247,92 @@ function renderItems(){
         <select style="flex:1;min-width:0;font-size:13px" onchange="setItemProd(${i},this.value)">
           <option value=""${!it.product?' selected':''}>選擇商品</option>${buildOpts(it.product)}
         </select>
-        <input type="number" min="1" value="${it.qty||1}" style="width:52px;text-align:center;font-size:14px" oninput="S.cfItems[${i}].qty=Math.max(1,+this.value||1);renderItems()">
+        <input type="number" min="1" value="${it.qty||1}" style="width:52px;text-align:center;font-size:14px" oninput="setMainQty(${i},this.value);updCfTotal()" onblur="renderItems()">
         ${isMat?`<select class="csel" onchange="S.cfItems[${i}].cycle=this.value;renderItems()">
           <option value="2W"${(it.cycle||'2W')==='2W'?' selected':''}>2W換</option>
           <option value="4W"${it.cycle==='4W'?' selected':''}>4W換</option>
         </select>`:''}
-        <button onclick="S.cfItems.splice(${i},1);renderItems();updProd()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
+        <button onclick="removeMain(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
       </div>
       <div class="ti-bot">
         <span class="ti-label">4W原價</span>
         <span style="font-size:13px;font-weight:600;color:#085041">${f>0?'$'+f.toLocaleString():'-'}</span>
         <span class="ti-label" style="margin-left:8px">報價</span>
         <input type="number" class="price-inp${isLow?' low':''}" value="${it.quoted||''}" placeholder="${r>0?r:''}"
-          oninput="S.cfItems[${i}].quoted=+this.value||0;renderItems()">
+          oninput="S.cfItems[${i}].quoted=+this.value||0" onblur="renderItems()">
         ${isLow?`<span style="font-size:11px;color:var(--yellow);font-weight:600">低於9折</span>`:r>0&&!it.quoted?`<span style="font-size:11px;color:var(--text3)">9折 $${r}</span>`:''}
       </div>
     </div>`;
   }).join('');
   document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0)).toLocaleString();
 }
+// 刪除主商品：連同其 bundled 配件一起刪
+function removeMain(i){
+  const main=S.cfItems[i]; if(!main) return;
+  const mainCode=main.product;
+  S.cfItems.splice(i,1);
+  if(mainCode){
+    for(let j=S.cfItems.length-1;j>=0;j--){
+      if(S.cfItems[j].bundledTo===mainCode) S.cfItems.splice(j,1);
+    }
+  }
+  renderItems();updProd();
+}
 function setItemProd(i,code){
   const p=getProd(code);
+  // 若原本是主商品，先清掉它原有的 bundled 配件
+  const old=S.cfItems[i].product;
+  if(old&&BUNDLE_MAP[old]){
+    for(let j=S.cfItems.length-1;j>=0;j--){
+      if(S.cfItems[j].bundledTo===old&&j!==i) S.cfItems.splice(j,1);
+    }
+  }
   S.cfItems[i].product=code;
   S.cfItems[i].cycle=p?.cat==='地墊'?'2W':(p?.cycle||'2W');
   S.cfItems[i].quoted=0;
+  delete S.cfItems[i].bundledTo;
+  delete S.cfItems[i].bundleRole;
+  delete S.cfItems[i].flavorCode;
+  // 若新選的是有組合規則的主商品，建立配件
+  if(code&&BUNDLE_MAP[code]){
+    // 重新定位 i (可能因刪除而變)
+    i=S.cfItems.indexOf(S.cfItems[i]);
+    rebuildBundle(i);
+  }
+  renderItems();updProd();
+}
+// 改主商品數量時：更新其 bundled 配件數量（固定配件單位數 × 主數量）
+function setMainQty(i,q){
+  const main=S.cfItems[i]; if(!main) return;
+  q=Math.max(1,+q||1);
+  main.qty=q;
+  const b=BUNDLE_MAP[main.product]; if(!b) return;
+  // 找出緊接著的 bundled rows，依 BUNDLE_MAP 更新 acc 數量
+  let accIdx=0;
+  for(let j=i+1;j<S.cfItems.length;j++){
+    const it=S.cfItems[j];
+    if(it.bundledTo!==main.product) break;
+    if(it.bundleRole==='acc'&&b.accs[accIdx]){
+      it.qty=b.accs[accIdx].qty*q;
+      accIdx++;
+    }
+  }
+}
+// 使用者選擇口味
+function setFlavor(mainIdx,flavorCode){
+  const main=S.cfItems[mainIdx]; if(!main) return;
+  main.flavorCode=flavorCode;
+  // 找那個 flavor row 並更新
+  for(let j=mainIdx+1;j<S.cfItems.length;j++){
+    const it=S.cfItems[j];
+    if(it.bundledTo!==main.product) break;
+    if(it.bundleRole==='flavor'){
+      it.product=flavorCode;
+      const p=getProd(flavorCode);
+      it.cycle=p?.cycle||'4W';
+      break;
+    }
+  }
   renderItems();updProd();
 }
 
@@ -1110,13 +1397,19 @@ function openCD(i){
   const tw=document.getElementById('cd-tri-w');
   if(c.trialItems?.length){
     tw.style.display='block';
-    document.getElementById('cd-tri').innerHTML=c.trialItems.filter(it=>it.product).map(it=>{
+    // 只顯示主商品（非 bundled），配件以 +配件 方式附加
+    const mains=c.trialItems.filter(it=>it.product&&!it.bundledTo);
+    document.getElementById('cd-tri').innerHTML=mains.map(it=>{
       const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
       const isLow=it.quoted>0&&it.quoted<r;const p=getProd(it.product);const isMat=p?.cat==='地墊';
+      // 找此主商品對應的 bundled 配件/口味
+      const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
+      const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
       return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:4px">
         <b>${it.product}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${it.cycle||'2W'}換</span>`:''}
         <span style="color:#085041">4W $${f.toLocaleString()}</span>
         ${it.quoted>0?`<span style="color:${isLow?'var(--yellow)':'var(--text3)'}">報價$${it.quoted}${isLow?' ⚠':''}</span>`:''}
+        ${accTxt}
       </div>`;
     }).join('');
   }else tw.style.display='none';
@@ -1212,6 +1505,197 @@ function renderDaily(){
       ${v?.insight?`<div style="font-size:12px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:4px 8px;margin-top:4px">${v.insight}</div>`:''}
     </div>`;
   }).join(''):'<div class="empty">此日無拜訪記錄</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// REPORT GENERATOR
+// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// REPORT GENERATOR (4W 推進表 + 日報)
+// ═══════════════════════════════════════════════════════════
+function openReportModal(){
+  // 預設：本週
+  setRptRange('week');
+  document.getElementById('rpt-output').style.display='none';
+  document.getElementById('report-modal').style.display='block';
+}
+function closeReportModal(){document.getElementById('report-modal').style.display='none';}
+
+// 日期工具
+function rptFmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function setRptRange(kind){
+  const d=new Date(), y=d.getFullYear(), m=d.getMonth();
+  let from, to;
+  if(kind==='today'){from=to=rptFmt(d);}
+  else if(kind==='week'){
+    // 週一為起（ISO）
+    const dow=(d.getDay()+6)%7;
+    const mon=new Date(d); mon.setDate(d.getDate()-dow);
+    const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+    from=rptFmt(mon); to=rptFmt(sun);
+  }else if(kind==='lastweek'){
+    const dow=(d.getDay()+6)%7;
+    const mon=new Date(d); mon.setDate(d.getDate()-dow-7);
+    const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+    from=rptFmt(mon); to=rptFmt(sun);
+  }else if(kind==='month'){
+    from=rptFmt(new Date(y,m,1));
+    to=rptFmt(new Date(y,m+1,0));
+  }else if(kind==='lastmonth'){
+    from=rptFmt(new Date(y,m-1,1));
+    to=rptFmt(new Date(y,m,0));
+  }
+  document.getElementById('rpt-from').value=from;
+  document.getElementById('rpt-to').value=to;
+}
+
+// 月報「提案商品」欄位的代號：DOME單獨=DOME；地墊=MAT；拖把=拖把；芳香=芳香；多類=ALL
+function rptProd(items){
+  const mains=(items||[]).filter(it=>it.product&&!it.bundledTo&&getProd(it.product));
+  if(!mains.length) return '';
+  const cats=new Set(mains.map(it=>getProd(it.product).cat));
+  const codes=mains.map(it=>it.product);
+  if(cats.size===1){
+    const cat=[...cats][0];
+    if(cat==='地墊') return 'MAT';
+    if(cat==='拖把') return '拖把';
+    if(cat==='芳香'){
+      if(codes.every(c=>c==='DOME')) return 'DOME';
+      return '芳香';
+    }
+  }
+  return 'ALL';
+}
+
+// 取該客戶第一次 visit 的月份 (1-12)；沒有 visits 則回傳 null
+function rptFirstMonth(c){
+  const vs=(c.visits||[]).filter(v=>v.date).map(v=>v.date).sort();
+  if(!vs.length) return null;
+  return parseInt(vs[0].split('-')[1],10);
+}
+
+function rptVisitsInRange(c,from,to){
+  return (c.visits||[]).filter(v=>v.date&&v.date>=from&&v.date<=to);
+}
+
+function genReport(){
+  const from=document.getElementById('rpt-from').value;
+  const to=document.getElementById('rpt-to').value;
+  if(!from||!to||from>to){alert('請選擇正確的日期區間');return;}
+
+  // ─── 4W 推進表 ───
+  // A: status ∈ {試用中, 報價, 將成約}
+  // B: 區間內有 visits 且有試用品項
+  // 聯集 A ∪ B
+  const STATUS_A=new Set(['試用中','報價','將成約']);
+  const rows4w=[];
+  const picked=DB.clients.filter(c=>{
+    const a=STATUS_A.has(c.status);
+    const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    const hasMain=mains.length>0;
+    if(a) return true;
+    const b=rptVisitsInRange(c,from,to).length>0;
+    if(b&&hasMain) return true;
+    return false;
+  });
+  // 依第一次 visit 日期排序
+  picked.sort((a,b)=>{
+    const va=(a.visits||[]).filter(v=>v.date).map(v=>v.date).sort()[0]||'9999';
+    const vb=(b.visits||[]).filter(v=>v.date).map(v=>v.date).sort()[0]||'9999';
+    return va<vb?-1:va>vb?1:0;
+  });
+  picked.forEach((c,i)=>{
+    const fw=calcFW4(c);
+    const prod=rptProd(c.trialItems);
+    const mon=rptFirstMonth(c);
+    // 欄位（依照月報 RS sheet 結構）: NO, 客戶名稱, (空=C欄), 窗口/職位, 提案商品, 1月, 2月, 3月, 4月, 5月, 6月, 拜訪進度說明
+    const cols=[String(i+1), c.name, '', c.contact||'', prod];
+    for(let m=1;m<=6;m++){
+      cols.push((m===mon&&fw>0)?String(fw):'');
+    }
+    // 拜訪進度說明：預填 note，讓使用者自行修改
+    cols.push((c.note||'').replace(/[\t\n\r]/g,' '));
+    rows4w.push(cols.join('\t'));
+  });
+  document.getElementById('rpt-4w').value=rows4w.join('\n');
+  document.getElementById('rpt-4w-cnt').textContent=`共 ${rows4w.length} 筆`;
+
+  // ─── 日報區塊 ───
+  // 依日期聚合：區間內所有 visits
+  const byDate={};
+  DB.clients.forEach(c=>{
+    (c.visits||[]).forEach(v=>{
+      if(v.date&&v.date>=from&&v.date<=to){
+        if(!byDate[v.date]) byDate[v.date]=[];
+        byDate[v.date].push({c,v});
+      }
+    });
+  });
+  const dates=Object.keys(byDate).sort();
+  const dowArr=['日','一','二','三','四','五','六'];
+  const blocks=[];
+  let totalVisits=0;
+  dates.forEach(date=>{
+    const entries=byDate[date];
+    totalVisits+=entries.length;
+    const dow=dowArr[new Date(date+'T00:00:00').getDay()];
+    blocks.push(`=== ${date} (週${dow}) ===`);
+    entries.forEach((e,i)=>{
+      const c=e.c, v=e.v;
+      // 拜訪內容說明 = note 與 insight 合併
+      const note=[v.note,v.insight].filter(x=>x&&x.trim()).join('；').replace(/[\t\n\r]/g,' ');
+      // 勾選邏輯
+      const sc=v.statusChange||'';
+      const isInit=sc==='初訪';
+      const isRe=sc==='複訪';
+      const isQuote=sc==='報價';
+      // 有報價就自動勾試用；「試用中/將成約/已成約」也算試用
+      const isTrial=isQuote||sc==='試用中'||sc==='將成約'||sc==='已成約';
+      // 初訪/複訪 互斥，擇一
+      const initMark=isInit&&!isRe?'✓':'';
+      const reMark=isRe&&!isInit?'✓':'';
+      const qMark=isQuote?'✓':'';
+      const tMark=isTrial?'✓':'';
+      // 試用金額 = 4W 原價（只有勾試用才填）
+      const fw=isTrial?calcFW4(c):0;
+      const prod=rptProd(c.trialItems);
+      // 欄位：NO, 時間, 客戶名稱, 姓名/職稱, 提案商品, 拜訪內容說明, 初訪, 複訪, 報價, 試用, 試用金額, 預估4W(空)
+      const cols=[
+        String(i+1),
+        '',           // 時間（留空）
+        c.name,
+        c.contact||'',
+        prod,
+        note,
+        initMark, reMark, qMark, tMark,
+        fw>0?String(fw):'',
+        ''            // 預估4W，使用者自填
+      ];
+      blocks.push(cols.join('\t'));
+    });
+    blocks.push(''); // 空行分隔
+  });
+  document.getElementById('rpt-daily').value=blocks.join('\n').replace(/\n+$/,'');
+  document.getElementById('rpt-daily-cnt').textContent=`${dates.length} 天・${totalVisits} 軒`;
+
+  document.getElementById('rpt-output').style.display='block';
+}
+
+function copyRpt(id){
+  const ta=document.getElementById(id);
+  ta.focus(); ta.select();
+  let ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  if(!ok&&navigator.clipboard){
+    navigator.clipboard.writeText(ta.value).then(()=>{
+      const m=document.getElementById(id+'-msg');
+      if(m){m.textContent='✓ 已複製';setTimeout(()=>m.textContent='',2000);}
+    });
+    return;
+  }
+  const m=document.getElementById(id+'-msg');
+  if(m){m.textContent=ok?'✓ 已複製':'複製失敗，請手動選取';setTimeout(()=>m.textContent='',2000);}
+  window.getSelection().removeAllRanges();
 }
 
 // ═══════════════════════════════════════════════════════════
