@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>DUSKIN 銷售系統</title>
+<style>
+:root{
+  --green:#1D9E75;--green-d:#085041;--green-l:#E1F5EE;--green-b:#9FE1CB;
+  --blue-l:#E6F1FB;--blue-d:#0C447C;
+  --amber-l:#FAEEDA;--amber-d:#633806;
+  --purple-l:#EEEDFE;--purple-d:#3C3489;
+  --red:#A32D2D;--red-l:#FCEBEB;
+  --yellow:#BA7517;--yellow-b:#EF9F27;
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#efefed;
+  --text:#1a1a1a;--text2:#666660;--text3:#999994;
+  --border:#e0e0da;--border2:#ccccc6;
+  --radius:10px;--radius-sm:7px;
+  --shadow:0 1px 3px rgba(0,0,0,.08);
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1f1f1e;--bg2:#2c2c2b;--bg3:#383837;--text:#e8e8e4;--text2:#a0a09a;--text3:#666660;--border:#3a3a38;--border2:#505050;}
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:var(--bg2);color:var(--text);font-size:15px;min-height:100vh}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;width:100%;outline:none;transition:border .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.15)}
+textarea{resize:vertical;min-height:72px}
+select{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500}
+.f{margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:500px){.g2,.g3{grid-template-columns:1fr}}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;font-size:14px;font-weight:500;border-radius:var(--radius-sm);cursor:pointer;border:none;transition:all .15s;font-family:inherit;gap:5px;white-space:nowrap;-webkit-user-select:none;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--green);color:#fff}.btn-primary:hover{background:var(--green-d)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2)}.btn-outline:hover{background:var(--bg3)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red)}.btn-danger:hover{background:var(--red-l)}
+.btn-sm{padding:6px 12px;font-size:13px}
+.btn-xs{padding:4px 9px;font-size:12px}
+.card{background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+#app-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;cursor:pointer;border:none;background:none;color:var(--text2);font-size:10px;font-family:inherit;transition:color .15s}
+.nav-btn.on{color:var(--green)}
+.nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#content{padding:0 0 calc(70px + env(safe-area-inset-bottom)) 0}
+@media(min-width:700px){
+  #app-nav{position:sticky;top:0;bottom:auto;border-top:none;border-bottom:1px solid var(--border);padding-bottom:0;z-index:100}
+  .nav-btn{flex-direction:row;gap:6px;padding:14px 16px;font-size:13px;justify-content:center}
+  .nav-btn svg{width:18px;height:18px}
+  #content{max-width:820px;margin:0 auto;padding:16px 16px 32px}
+  body{background:var(--bg3)}
+}
+.panel{display:none}.panel.on{display:block}
+.cc{background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;box-shadow:var(--shadow)}
+.cc:hover{border-color:var(--border2)}
+.cc:active{background:var(--bg2)}
+.cc-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.cc-sub{font-size:12px;color:var(--text2);margin-bottom:7px}
+.cc-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.cc-meta{font-size:12px;color:var(--text3);display:flex;flex-wrap:wrap;gap:8px}
+.form-section{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px}
+.form-section:first-child{margin-top:0}
+.ti-row{background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
+.ti-top{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.ti-bot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ti-label{font-size:11px;color:var(--text2);white-space:nowrap}
+.price-inp{border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);padding:6px 9px;font-size:13px;width:90px;text-align:right;font-family:inherit;outline:none}
+.price-inp:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(29,158,117,.12)}
+.price-inp.low{border-color:var(--yellow-b);color:var(--yellow)}
+.csel{border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);padding:6px 9px;font-size:12px;font-family:inherit;outline:none}
+.detail-label{font-size:12px;color:var(--text2);margin-bottom:2px}
+.detail-val{font-size:14px;color:var(--text);margin-bottom:10px}
+.visit-log{padding:10px 0;border-bottom:1px solid var(--border)}
+.visit-log:last-child{border-bottom:none}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.scard{background:var(--bg);border-radius:var(--radius-sm);padding:12px;text-align:center;border:1px solid var(--border)}
+.snum{font-size:22px;font-weight:700}
+.slbl{font-size:11px;color:var(--text2);margin-top:2px}
+.prog{height:4px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:5px}
+.prog-f{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+.prog-hint{font-size:10px;color:var(--text3);margin-top:3px}
+.todo-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.todo-row:last-child{border-bottom:none}
+.todo-row input[type=checkbox]{width:18px;height:18px;margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:var(--green)}
+.todo-done{text-decoration:line-through;color:var(--text2)}
+.mood-row{display:flex;gap:8px}
+.mood-btn{font-size:20px;padding:6px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border2);background:var(--bg);cursor:pointer}
+.mood-btn.on{border-color:var(--green);background:var(--green-l)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.toolbar-left{display:flex;gap:6px;flex-wrap:wrap}
+.pill{padding:5px 12px;font-size:12px;border:1px solid var(--border2);border-radius:20px;cursor:pointer;background:transparent;color:var(--text2);font-family:inherit;white-space:nowrap}
+.pill.on{background:var(--green-l);color:var(--green-d);border-color:var(--green-b);font-weight:600}
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-bar input{flex:1}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3);font-size:14px}
+.back-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.back-btn{display:flex;align-items:center;gap:4px;color:var(--green);font-size:14px;cursor:pointer;font-weight:500;background:none;border:none;font-family:inherit;padding:0}
+.back-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.page-title{font-size:20px;font-weight:700;margin-bottom:14px}
+.page-subtitle{font-size:13px;color:var(--text2);margin-bottom:14px}
+.alert{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px}
+.alert-ok{background:var(--green-l);color:var(--green-d);border:1px solid var(--green-b)}
+.alert-warn{background:#FAEEDA;color:#633806;border:1px solid #FAC775}
+.alert-err{background:var(--red-l);color:var(--red);border:1px solid #F7C1C1}
+.alert-info{background:var(--blue-l);color:var(--blue-d);border:1px solid #B5D4F4}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:8px 10px;text-align:left;font-weight:600;font-size:11px;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.form-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+#sync-bar{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:999}
+#sync-bar.syncing{background:linear-gradient(90deg,var(--green) 0%,var(--green-l) 50%,var(--green) 100%);background-size:200% 100%;animation:shimmer 1s infinite}
+#sync-bar.err{background:var(--red)}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+#sync-status{position:fixed;top:6px;right:12px;font-size:11px;color:var(--text3);z-index:999}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:14px;font-weight:500}
+.setting-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* 商品資料庫 */
+.prod-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.prod-row:last-child{border-bottom:none}
+.prod-code{font-weight:600;font-size:14px;min-width:80px}
+.prod-desc{font-size:12px;color:var(--text2);flex:1}
+.prod-price{font-size:13px;color:var(--green-d);font-weight:500;white-space:nowrap}
+.prod-cycle{font-size:11px;color:var(--text3);white-space:nowrap}
+.prod-inactive{opacity:.4}
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-bg.on{display:flex}
+.modal{background:var(--bg);border-radius:var(--radius);padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div id="sync-bar"></div>
+<div id="sync-status"></div>
+
+<nav id="app-nav">
+  <button class="nav-btn on" onclick="navTo('clients',this)" id="nav-clients">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    客戶
+  </button>
+  <button class="nav-btn" onclick="navTo('daily',this)" id="nav-daily">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    日報
+  </button>
+  <button class="nav-btn" onclick="navTo('todos',this)" id="nav-todos">
+    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    待辦
+  </button>
+  <button class="nav-btn" onclick="navTo('products',this)" id="nav-products">
+    <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    商品
+  </button>
+  <button class="nav-btn" onclick="navTo('settings',this)" id="nav-settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    設定
+  </button>
+</nav>
+
+<div id="content">
+
+<!-- ═══ CLIENTS ═══ -->
+<div class="panel on" id="panel-clients">
+  <div id="view-list">
+    <div class="toolbar">
+      <div class="toolbar-left" id="status-pills"></div>
+      <button class="btn btn-primary btn-sm" onclick="openCF(-1)">+ 新增</button>
+    </div>
+    <div class="search-bar">
+      <input id="csearch" placeholder="搜尋客戶..." oninput="renderClients()">
+      <select id="csort" onchange="renderClients()" style="width:auto">
+        <option value="nextdate">下次拜訪</option>
+        <option value="status">狀態</option>
+        <option value="updated">最後更新</option>
+        <option value="name">名稱</option>
+      </select>
+    </div>
+    <div id="clients-list"></div>
+  </div>
+
+  <div id="view-form" style="display:none">
+    <div class="back-header">
+      <button class="back-btn" onclick="closeForm()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>返回</button>
+      <span id="form-title" style="font-size:16px;font-weight:600">新增客戶</span>
+    </div>
+    <div class="card">
+      <div class="form-section">基本資料</div>
+      <div class="g2">
+        <div class="f"><label class="lbl">客戶名稱</label><input id="cf-name"></div>
+        <div class="f"><label class="lbl">窗口/職稱</label><input id="cf-contact" placeholder="陳小姐 / 老闆"></div>
+      </div>
+      <div class="g2">
+        <div class="f"><label class="lbl">地址</label><input id="cf-addr"></div>
+        <div class="f"><label class="lbl">類型</label>
+          <select id="cf-type"><option value="">-</option><option>餐廳</option><option>診所</option><option>寵物</option><option>工廠</option><option>汽車</option><option>眼鏡行</option><option>接待中心</option><option>房仲</option><option>補習班</option><option>美容美甲</option><option>零售店</option><option>辦公室</option><option>遊樂場</option><option>其他</option></select>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="f"><label class="lbl">狀態</label>
+          <select id="cf-status"><option>未拜訪</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已結案</option></select>
+        </div>
+        <div class="f"><label class="lbl">下次拜訪日</label><input id="cf-nextdate" type="date"></div>
+      </div>
+      <div class="f"><label class="lbl">提案商品（自動帶入）</label><input id="cf-product" readonly style="background:var(--bg2);color:var(--text2)"></div>
+      <div class="g2">
+        <div class="f"><label class="lbl">環境觀察</label><input id="cf-env" placeholder="門口有無地墊、廁所..."></div>
+        <div class="f"><label class="lbl">備註</label><input id="cf-note" placeholder="客戶特徵、注意事項..."></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3)">4W原價・9折報價參考・黃=低於9折</span></div>
+      <div id="cf-items"></div>
+      <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
+        <span style="color:var(--text2)">4W 原價合計</span>
+        <span style="font-size:16px;font-weight:700;color:var(--green-d)" id="cf-total">$0</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form-section">待辦事項</div>
+      <div id="cf-todos"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="cf-todo-inp" placeholder="新增待辦..." style="flex:1" onkeydown="if(event.key==='Enter')addTodoField()">
+        <input id="cf-todo-due" type="date" style="width:140px">
+        <button class="btn btn-outline btn-sm" onclick="addTodoField()">新增</button>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveClient()" id="save-btn">儲存客戶</button>
+      <button class="btn btn-outline" onclick="closeForm()">取消</button>
+    </div>
+  </div>
+
+  <div id="view-detail" style="display:none">
+    <div class="back-header">
+      <button class="back-btn" onclick="closeDetail()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>返回</button>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-size:18px;font-weight:700" id="cd-name"></div>
+          <div style="font-size:13px;color:var(--text2);margin-top:3px" id="cd-sub"></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px">
+          <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
+          <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
+        </div>
+      </div>
+      <div id="cd-badges" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
+      <div class="g2">
+        <div><div class="detail-label">提案商品</div><div class="detail-val" id="cd-product">-</div></div>
+        <div><div class="detail-label">預估4W</div><div style="font-size:15px;font-weight:700;color:var(--green-d);margin-bottom:10px" id="cd-fw4">-</div></div>
+        <div><div class="detail-label">下次拜訪</div><div class="detail-val" id="cd-next">-</div></div>
+        <div><div class="detail-label">地址</div><div class="detail-val" id="cd-addr">-</div></div>
+      </div>
+      <div id="cd-env-w" style="display:none"><div class="detail-label">環境觀察</div><div class="detail-val" id="cd-env"></div></div>
+      <div id="cd-note-w" style="display:none"><div class="detail-label">備註</div><div class="detail-val" id="cd-note"></div></div>
+      <div id="cd-tri-w" style="display:none"><div class="detail-label">試用品項</div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--text2)">待辦事項</div>
+        <button class="btn btn-outline btn-xs" onclick="addDetTodo()">+ 新增</button>
+      </div>
+      <div id="cd-todos"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--text2)">拜訪記錄</div>
+        <button class="btn btn-primary btn-sm" onclick="showVLForm()">+ 新增拜訪</button>
+      </div>
+      <div id="vl-form" style="display:none;background:var(--bg2);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
+        <div class="g2">
+          <div class="f"><label class="lbl">拜訪日期</label><input id="vl-date" type="date"></div>
+          <div class="f"><label class="lbl">狀態更新</label>
+            <select id="vl-status"><option value="">不更新</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已結案</option></select>
+          </div>
+        </div>
+        <div class="f"><label class="lbl" style="margin-bottom:6px">心情</label>
+          <div class="mood-row">
+            <button class="mood-btn" id="vm1" onclick="setMood(1)">😞</button>
+            <button class="mood-btn" id="vm2" onclick="setMood(2)">😐</button>
+            <button class="mood-btn on" id="vm3" onclick="setMood(3)">😊</button>
+            <button class="mood-btn" id="vm4" onclick="setMood(4)">😄</button>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="f"><label class="lbl">拜訪說明</label><textarea id="vl-note" placeholder="對話、客戶反應..." style="min-height:60px"></textarea></div>
+          <div class="f"><label class="lbl">其他心得</label><textarea id="vl-ins" placeholder="觀察、感想..." style="min-height:60px"></textarea></div>
+        </div>
+        <div class="f"><label class="lbl">下次拜訪日</label><input id="vl-next" type="date" style="max-width:180px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="saveVL()">儲存記錄</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('vl-form').style.display='none'">取消</button>
+        </div>
+      </div>
+      <div id="cd-visits"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DAILY ═══ -->
+<div class="panel" id="panel-daily">
+  <div class="page-title">今日日報</div>
+  <div style="margin-bottom:12px"><input id="daily-date" type="date" style="width:auto" onchange="renderDaily()"></div>
+  <div class="stat-grid">
+    <div class="scard"><div class="snum" id="ds-v">0</div><div class="slbl">拜訪軒數</div><div class="prog"><div class="prog-f" id="dp-v" style="width:0%"></div></div><div class="prog-hint">目標 15</div></div>
+    <div class="scard"><div class="snum" id="ds-t">0</div><div class="slbl">試用軒數</div><div class="prog"><div class="prog-f" id="dp-t" style="width:0%"></div></div><div class="prog-hint">目標 2</div></div>
+    <div class="scard"><div class="snum" id="ds-a">$0</div><div class="slbl">試用金額</div><div class="prog"><div class="prog-f" id="dp-a" style="width:0%"></div></div><div class="prog-hint">目標 $1,600</div></div>
+  </div>
+  <div id="daily-list"></div>
+</div>
+
+<!-- ═══ TODOS ═══ -->
+<div class="panel" id="panel-todos">
+  <div class="page-title">待辦事項</div>
+  <div class="page-subtitle">所有客戶的待辦，依截止日排序</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <select id="tf" onchange="renderGT()" style="width:auto">
+      <option value="all">全部</option><option value="pending">未完成</option>
+      <option value="done">已完成</option><option value="overdue">已過期</option>
+    </select>
+    <input id="ts" placeholder="搜尋待辦..." oninput="renderGT()" style="flex:1">
+  </div>
+  <div id="gt-list"></div>
+</div>
+
+<!-- ═══ PRODUCTS ═══ -->
+<div class="panel" id="panel-products">
+  <div class="toolbar">
+    <div class="page-title" style="margin:0">商品資料庫</div>
+    <button class="btn btn-primary btn-sm" onclick="openProdModal(-1)">+ 新增商品</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <div class="toolbar-left" id="prod-cat-pills"></div>
+    <input id="prod-search" placeholder="搜尋代號/品名..." oninput="renderProducts()" style="flex:1;max-width:200px;margin-left:auto">
+  </div>
+  <div class="alert-info alert" style="font-size:12px;margin-bottom:10px">
+    ✏️ 點任一商品可編輯；停用的商品不會出現在試用品項選單中
+  </div>
+  <div id="prod-list"></div>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div class="panel" id="panel-settings">
+  <div class="page-title">設定</div>
+  <div class="card">
+    <div class="form-section">Google Sheets 同步</div>
+    <div id="sheet-status-box" class="alert alert-info" style="margin-bottom:12px">尚未設定 Google Sheets。</div>
+    <div class="f"><label class="lbl">Apps Script Web App URL</label>
+      <input id="sheet-url" placeholder="https://script.google.com/macros/s/...../exec" oninput="saveSheetUrl()">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="testConnection()">測試連線</button>
+      <button class="btn btn-outline btn-sm" onclick="syncFromSheet()">從雲端拉取</button>
+      <button class="btn btn-outline btn-sm" onclick="pushAllToSheet()">全部推送</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-section">設定步驟</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.9">
+      <b style="color:var(--text)">Step 1</b>　開啟 <a href="https://sheets.google.com" target="_blank" style="color:var(--green)">Google Sheets</a>，新增空白試算表<br>
+      <b style="color:var(--text)">Step 2</b>　「擴充功能」→「Apps Script」，開啟編輯器<br>
+      <b style="color:var(--text)">Step 3</b>　貼入程式碼（按下方按鈕複製），存檔<br>
+      <b style="color:var(--text)">Step 4</b>　「部署」→「新增部署作業」→ 網頁應用程式 → 執行身分：我 → 誰可以存取：任何人 → 部署<br>
+      <b style="color:var(--text)">Step 5</b>　複製部署 URL 貼入上方，按「測試連線」<br>
+      <b style="color:var(--text)">Step 6</b>　連線成功後按「全部推送」完成
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="copyScript()" style="margin-top:12px">複製 Apps Script 程式碼</button>
+  </div>
+  <div class="card">
+    <div class="form-section">資料管理</div>
+    <div class="setting-row">
+      <div><div class="setting-label">匯出 JSON 備份</div><div class="setting-sub">下載所有資料的備份檔案</div></div>
+      <button class="btn btn-outline btn-sm" onclick="exportJSON()">匯出</button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">匯入 JSON 備份</div><div class="setting-sub">從備份檔案還原資料</div></div>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">匯入</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
+    </div>
+  </div>
+  <!-- 月報 -->
+  <div class="card">
+    <div class="form-section">月報產生</div>
+    <div class="g2">
+      <div class="f"><label class="lbl">月份</label><select id="ex-month" style="width:auto"><option value="3">3月</option><option value="4" selected>4月</option><option value="5">5月</option></select></div>
+      <div class="f"><label class="lbl">本月推估 (元)</label><input id="ex-est" type="number"></div>
+    </div>
+    <button class="btn btn-primary" onclick="genExport()" style="width:100%">產生報表預覽</button>
+    <div style="margin-top:10px;font-family:'Menlo','Monaco',monospace;font-size:12px;color:var(--text2);white-space:pre-wrap;line-height:1.8;overflow-x:auto" id="ex-out"></div>
+    <button class="btn btn-outline btn-sm" onclick="copyExport()" style="margin-top:8px;display:none" id="copy-btn">複製全文</button>
+  </div>
+</div>
+
+</div><!-- #content -->
+
+<!-- ═══ PRODUCT MODAL ═══ -->
+<div class="modal-bg" id="prod-modal" onclick="if(event.target===this)closeProdModal()">
+  <div class="modal">
+    <div class="modal-title" id="prod-modal-title">新增商品</div>
+    <div class="g2">
+      <div class="f"><label class="lbl">代號 *</label><input id="pm-code" placeholder="如 DOME、DWSH"></div>
+      <div class="f"><label class="lbl">分類 *</label>
+        <select id="pm-cat">
+          <option value="拖把">拖把</option>
+          <option value="地墊">地墊</option>
+          <option value="芳香">芳香</option>
+        </select>
+      </div>
+    </div>
+    <div class="f"><label class="lbl">品名說明</label><input id="pm-desc" placeholder="如 吸塵吸水地墊 SL"></div>
+    <div class="g2">
+      <div class="f"><label class="lbl">單價（元）</label><input id="pm-price" type="number" min="0" placeholder="0 = 配件/免費"></div>
+      <div class="f"><label class="lbl">計費週期</label>
+        <select id="pm-cycle">
+          <option value="2W">2W（雙週）</option>
+          <option value="4W">4W（四週）</option>
+          <option value="">無（配件）</option>
+        </select>
+      </div>
+    </div>
+    <div class="f"><label class="lbl">備註</label><input id="pm-note" placeholder="尺寸、顏色等補充說明"></div>
+    <div class="f" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="pm-active" style="width:18px;height:18px;accent-color:var(--green)" checked>
+      <label for="pm-active" style="font-size:14px;cursor:pointer">啟用（出現在試用品項選單）</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveProd()">儲存</button>
+      <button class="btn btn-outline" onclick="closeProdModal()">取消</button>
+      <button class="btn btn-danger" id="pm-del-btn" onclick="deleteProd()" style="margin-left:auto;display:none">刪除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// APPS SCRIPT CODE
+// ═══════════════════════════════════════════════════════════
+const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
+const INV_SHEET_NAME='inventory';
+const PROD_SHEET_NAME='products';
+
+function doGet(e){return handleRequest(e);}
+function doPost(e){return handleRequest(e);}
+
+function handleRequest(e){
+  try{
+    const action=e.parameter.action||(e.postData?JSON.parse(e.postData.contents).action:null);
+    const body=e.postData?JSON.parse(e.postData.contents):{};
+    let result;
+    switch(action){
+      case 'getAll':        result=getAllClients();break;
+      case 'save':          result=saveClient(body.client,body.idx);break;
+      case 'delete':        result=deleteClient(body.idx);break;
+      case 'getInventory':  result=getInventory();break;
+      case 'saveInventory': result=saveInventory(body.inventory);break;
+      case 'getProducts':   result=getProducts();break;
+      case 'saveProducts':  result=saveProducts(body.products);break;
+      case 'ping':          result={ok:true};break;
+      default:              result={error:'Unknown action'};
+    }
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  }catch(err){
+    return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let sheet=ss.getSheetByName(SHEET_NAME);
+  if(!sheet){sheet=ss.insertSheet(SHEET_NAME);sheet.getRange(1,1).setValue('data');}
+  return sheet;
+}
+function getAllClients(){
+  const sheet=getSheet();const lastRow=sheet.getLastRow();
+  if(lastRow<2)return{clients:[]};
+  const data=sheet.getRange(2,1,lastRow-1,1).getValues();
+  return{clients:data.map(r=>r[0]).filter(c=>c!=='').map(c=>JSON.parse(c))};
+}
+function saveClient(client,idx){
+  const sheet=getSheet();const json=JSON.stringify(client);
+  if(idx===-1||idx===undefined){sheet.getRange(sheet.getLastRow()+1,1).setValue(json);return{ok:true};}
+  const row=Number(idx)+2;
+  if(row>sheet.getLastRow())sheet.getRange(sheet.getLastRow()+1,1).setValue(json);
+  else sheet.getRange(row,1).setValue(json);
+  return{ok:true};
+}
+function deleteClient(idx){getSheet().deleteRow(Number(idx)+2);return{ok:true};}
+
+function getInvSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let sheet=ss.getSheetByName(INV_SHEET_NAME);
+  if(!sheet){sheet=ss.insertSheet(INV_SHEET_NAME);sheet.getRange(1,1).setValue('data');}
+  return sheet;
+}
+function getInventory(){
+  const sheet=getInvSheet();if(sheet.getLastRow()<2)return{inventory:null};
+  const val=sheet.getRange(2,1).getValue();
+  return{inventory:val?JSON.parse(val):null};
+}
+function saveInventory(inv){getInvSheet().getRange(2,1).setValue(JSON.stringify(inv));return{ok:true};}
+
+function getProdSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let sheet=ss.getSheetByName(PROD_SHEET_NAME);
+  if(!sheet){sheet=ss.insertSheet(PROD_SHEET_NAME);sheet.getRange(1,1).setValue('data');}
+  return sheet;
+}
+function getProducts(){
+  const sheet=getProdSheet();if(sheet.getLastRow()<2)return{products:null};
+  const val=sheet.getRange(2,1).getValue();
+  return{products:val?JSON.parse(val):null};
+}
+function saveProducts(products){getProdSheet().getRange(2,1).setValue(JSON.stringify(products));return{ok:true};}`;
+
+// ═══════════════════════════════════════════════════════════
+// 預設商品資料（啟動時若 localStorage 無資料則載入）
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_PRODUCTS=[
+  // 拖把
+  {code:'S-20',cat:'拖把',desc:'業務用握把式抹布',price:100,cycle:'2W',note:'',active:true},
+  {code:'SHH',cat:'拖把',desc:'家庭用握把式抹布',price:140,cycle:'4W',note:'',active:true},
+  {code:'SHB',cat:'拖把',desc:'握把式抹布把手',price:0,cycle:'',note:'配件',active:false},
+  {code:'NFM-DS',cat:'拖把',desc:'紫色除塵抹布',price:120,cycle:'2W',note:'',active:true},
+  {code:'N-AC',cat:'拖把',desc:'業務用除塵大拖把',price:210,cycle:'2W',note:'',active:true},
+  {code:'M-90',cat:'拖把',desc:'業務用除塵特大拖把',price:220,cycle:'2W',note:'',active:true},
+  {code:'M-120',cat:'拖把',desc:'業務用除塵超大拖把',price:280,cycle:'2W',note:'',active:true},
+  {code:'NSAC',cat:'拖把',desc:'業務用除塵拖把',price:190,cycle:'2W',note:'',active:true},
+  {code:'M90-H',cat:'拖把',desc:'大拖把托架',price:0,cycle:'',note:'配件',active:false},
+  {code:'M120-H',cat:'拖把',desc:'超大拖把托架',price:0,cycle:'',note:'配件',active:false},
+  {code:'BS-H',cat:'拖把',desc:'拖把托架S',price:0,cycle:'',note:'配件',active:false},
+  {code:'BM-H',cat:'拖把',desc:'拖把托架M',price:0,cycle:'',note:'配件',active:false},
+  {code:'P-B',cat:'拖把',desc:'除塵拖把桿',price:0,cycle:'',note:'配件',active:false},
+  {code:'M-PA',cat:'拖把',desc:'拖把桿',price:0,cycle:'',note:'配件',active:false},
+  // 地墊
+  {code:'DECSR',cat:'地墊',desc:'中英歡迎地墊 S 71x85',price:170,cycle:'2W',note:'',active:true},
+  {code:'DECSLR',cat:'地墊',desc:'中英歡迎地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'DECLR',cat:'地墊',desc:'中英歡迎地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'DECLLR',cat:'地墊',desc:'中英歡迎地墊 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'DECTR',cat:'地墊',desc:'中英歡迎地墊 T 150x240',price:720,cycle:'2W',note:'',active:true},
+  {code:'TJSR',cat:'地墊',desc:'豪華地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
+  {code:'TJSH',cat:'地墊',desc:'豪華地墊 S（灰）',price:170,cycle:'2W',note:'',active:true},
+  {code:'2SN2',cat:'地墊',desc:'豪華地墊 S（咖啡）',price:170,cycle:'2W',note:'',active:true},
+  {code:'TJSLH',cat:'地墊',desc:'豪華地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'TJLH',cat:'地墊',desc:'豪華地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'DWSH',cat:'地墊',desc:'吸塵吸水地墊 S（灰）',price:200,cycle:'2W',note:'',active:true},
+  {code:'DWSR',cat:'地墊',desc:'吸塵吸水地墊 S（紅）',price:200,cycle:'2W',note:'',active:true},
+  {code:'DWSSH',cat:'地墊',desc:'吸塵吸水地墊 SS',price:200,cycle:'2W',note:'',active:true},
+  {code:'DWSLH',cat:'地墊',desc:'吸塵吸水地墊 SL',price:310,cycle:'2W',note:'',active:true},
+  {code:'DWLH',cat:'地墊',desc:'吸塵吸水地墊 L',price:390,cycle:'2W',note:'',active:true},
+  {code:'DWLLH',cat:'地墊',desc:'吸塵吸水地墊 M 115x180',price:530,cycle:'2W',note:'',active:true},
+  {code:'DW3MH',cat:'地墊',desc:'吸塵吸水地墊 3M 150x240',price:680,cycle:'2W',note:'',active:true},
+  {code:'FFSK',cat:'地墊',desc:'FOREVER地墊 SS 60x85',price:140,cycle:'2W',note:'',active:true},
+  {code:'FFSLK',cat:'地墊',desc:'FOREVER地墊 S 71x85',price:170,cycle:'2W',note:'',active:true},
+  {code:'FFLK',cat:'地墊',desc:'FOREVER地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'FSSK',cat:'地墊',desc:'FOREVER地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'BSH',cat:'地墊',desc:'BASIC地墊 S（灰）',price:170,cycle:'2W',note:'',active:true},
+  {code:'BSR',cat:'地墊',desc:'BASIC地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
+  {code:'BSLH',cat:'地墊',desc:'BASIC地墊 SL（灰）',price:220,cycle:'2W',note:'',active:true},
+  {code:'BSLR',cat:'地墊',desc:'BASIC地墊 SL（紅）',price:220,cycle:'2W',note:'',active:true},
+  {code:'GSH',cat:'地墊',desc:'雅緻地墊 S（灰）',price:190,cycle:'2W',note:'',active:true},
+  {code:'GSB',cat:'地墊',desc:'雅緻地墊 S（棕）',price:190,cycle:'2W',note:'',active:true},
+  {code:'GLH',cat:'地墊',desc:'雅緻地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'EXSH',cat:'地墊',desc:'強力刮沙地墊 S',price:190,cycle:'2W',note:'',active:true},
+  {code:'EXSLH',cat:'地墊',desc:'強力刮沙地墊 SL',price:280,cycle:'2W',note:'',active:true},
+  {code:'EXLH',cat:'地墊',desc:'強力刮沙地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'UQSH',cat:'地墊',desc:'薄型吸塵地墊 S',price:190,cycle:'2W',note:'',active:true},
+  {code:'UQSLH',cat:'地墊',desc:'薄型吸塵地墊 SL',price:280,cycle:'2W',note:'',active:true},
+  {code:'UQLH',cat:'地墊',desc:'薄型吸塵地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'KKSN',cat:'地墊',desc:'KK地墊 S',price:170,cycle:'2W',note:'',active:true},
+  {code:'KKSLN',cat:'地墊',desc:'KK地墊 SL',price:220,cycle:'2W',note:'',active:true},
+  {code:'KKLN',cat:'地墊',desc:'KK地墊 L',price:280,cycle:'2W',note:'',active:true},
+  {code:'MANSB',cat:'地墊',desc:'男女辨識地墊 S（藍）',price:170,cycle:'2W',note:'',active:true},
+  {code:'MWOSR',cat:'地墊',desc:'男女辨識地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
+  // 芳香
+  {code:'DOME',cat:'芳香',desc:'大型香水芳香劑 300ml',price:220,cycle:'4W',note:'',active:true},
+  {code:'AF-BP',cat:'芳香',desc:'大型香水芳香劑 藍嬰粟',price:400,cycle:'4W',note:'',active:true},
+  {code:'AF-IT',cat:'芳香',desc:'大型香水芳香劑 麝香薄荷',price:400,cycle:'4W',note:'',active:true},
+  {code:'AFDW',cat:'芳香',desc:'大型香水芳香機台',price:0,cycle:'',note:'機台',active:false},
+  {code:'BF-W',cat:'芳香',desc:'複方精油芳香機 松柚',price:200,cycle:'4W',note:'',active:true},
+  {code:'BF-PC',cat:'芳香',desc:'複方精油芳香機 松果',price:200,cycle:'4W',note:'',active:true},
+  {code:'BFDW',cat:'芳香',desc:'BF複方精油芳香機台',price:0,cycle:'',note:'機台',active:false},
+  {code:'FNWT',cat:'芳香',desc:'Prime D氛香機（白）',price:350,cycle:'4W',note:'',active:true},
+  {code:'FNBK',cat:'芳香',desc:'Prime D氛香機（黑）',price:350,cycle:'4W',note:'',active:true},
+  {code:'FNPS2-K',cat:'芳香',desc:'Prime D氛香 沉穩',price:350,cycle:'4W',note:'',active:true},
+  {code:'BT1',cat:'芳香',desc:'BT1電池',price:0,cycle:'',note:'配件',active:false},
+  {code:'BT3',cat:'芳香',desc:'BT3電池',price:0,cycle:'',note:'配件',active:false},
+  {code:'BT4',cat:'芳香',desc:'BT4電池',price:0,cycle:'',note:'配件',active:false},
+  {code:'AMDW',cat:'芳香',desc:'小型擴香機台',price:0,cycle:'',note:'機台',active:false},
+  {code:'AMMK',cat:'芳香',desc:'小型擴香機香氛 木質',price:0,cycle:'',note:'配件',active:false},
+  {code:'AMWT',cat:'芳香',desc:'小型擴香機香氛 白茶',price:0,cycle:'',note:'配件',active:false},
+  {code:'AMOB',cat:'芳香',desc:'小型擴香機香氛 橙花',price:0,cycle:'',note:'配件',active:false},
+];
+
+const INV_INIT=[{n:'S-20',s:5,st:5},{n:'SHH',s:10,st:10},{n:'NFM-DS',s:2,st:2},{n:'N-AC',s:2,st:2},{n:'M-120',s:2,st:2},{n:'M120-H',s:2,st:2},{n:'M-90',s:2,st:2},{n:'NSAC',s:2,st:2},{n:'SHB',s:15,st:15},{n:'BS-H',s:2,st:2},{n:'BM-H',s:2,st:2},{n:'P-B',s:4,st:4},{n:'M90-H',s:2,st:2},{n:'M-PA',s:4,st:4},{n:'TJSR',s:1,st:1},{n:'TJSH',s:1,st:1},{n:'TJLH',s:1,st:1},{n:'2SN2',s:1,st:1},{n:'GSH',s:1,st:1},{n:'GSB',s:1,st:1},{n:'EXSLH',s:1,st:1},{n:'GLH',s:1,st:1},{n:'EXLH',s:1,st:1},{n:'EXSH',s:1,st:1},{n:'MANSB',s:1,st:1},{n:'MWOSR',s:1,st:1},{n:'FFSK',s:2,st:2},{n:'FFSLK',s:1,st:1},{n:'FFLK',s:1,st:1},{n:'TJSLH',s:1,st:1},{n:'DWSR',s:1,st:1},{n:'DWSH',s:2,st:2},{n:'DWSLH',s:2,st:2},{n:'DWLH',s:1,st:1},{n:'DWLLH',s:1,st:1},{n:'DW3MH',s:1,st:1},{n:'BSH',s:2,st:2},{n:'BSR',s:1,st:1},{n:'BSLH',s:1,st:1},{n:'BSLR',s:1,st:1},{n:'FSSK',s:1,st:1},{n:'UQSH',s:1,st:1},{n:'UQSLH',s:1,st:1},{n:'UQLH',s:1,st:1},{n:'DECSR',s:2,st:2},{n:'DECSLR',s:2,st:2},{n:'DECLR',s:2,st:2},{n:'DECLLR',s:1,st:1},{n:'DECTR',s:1,st:1},{n:'DWSSH',s:2,st:2},{n:'KKSN',s:1,st:1},{n:'KKSLN',s:1,st:1},{n:'KKLN',s:1,st:1},{n:'DOME',s:30,st:30},{n:'FNWT',s:2,st:2},{n:'FNBK',s:2,st:2},{n:'FNPS2-K',s:4,st:4},{n:'BT3',s:24,st:24},{n:'BFDW',s:4,st:4},{n:'BF-W',s:4,st:4},{n:'AFDW',s:2,st:2},{n:'BT1',s:4,st:4},{n:'BF-PC',s:4,st:4},{n:'AF-BP',s:2,st:2},{n:'AF-IT',s:2,st:2},{n:'AMDW',s:4,st:4},{n:'AMMK',s:2,st:2},{n:'AMWT',s:2,st:2},{n:'AMOB',s:2,st:2},{n:'BT4',s:16,st:16}];
+
+// ── SEED CLIENTS ──────────────────────────────────────────
+const SEED=[
+  {name:'烏瓦牛排',addr:'永康區中山南路642號',type:'餐廳',status:'試用中',contact:'',nextdate:'2026-04-21',fw4:0,env:'門口菜口飲料無',note:'之前試用過，剛開幕覺得太貴',trialItems:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'TJSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-07',mood:3,note:'介紹折價價格810→550',insight:'試用TJMR DWLH',statusChange:'試用中',nextdate:'2026-04-21'}],updatedAt:1712476800000},
+  {name:'越情小吃部',addr:'新市區光華街',type:'',status:'未拜訪',contact:'',nextdate:'2026-04-07',fw4:0,env:'門口無',note:'',trialItems:[],todos:[],visits:[],updatedAt:1712476000000},
+  {name:'喜多鐵板燒中華東店',addr:'東區中華東路三段236號',type:'餐廳',status:'試用中',contact:'賴老闆',nextdate:'2026-04-09',fw4:1060,env:'門口菜口無，有飲料機有小便',note:'Line 老闆edm',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DECSLR',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-02',mood:2,note:'飲料台、門口',insight:'試用dwsh/decslr/dome',statusChange:'試用中',nextdate:'2026-04-09'}],updatedAt:1712044800000},
+  {name:'檸檬黃醫療用品',addr:'永康區復國一路94號',type:'零售店',status:'試用中',contact:'',nextdate:'',fw4:0,env:'門口無',note:'記得加賴',trialItems:[],todos:[],visits:[{date:'2026-03-20',mood:2,note:'怕被偷走',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742457600000},
+  {name:'顏式齒模',addr:'',type:'工廠',status:'試用中',contact:'王先生',nextdate:'2026-04-14',fw4:1000,env:'門口無',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:'2026-04-14'}],updatedAt:1743385200000},
+  {name:'思多利國際美語',addr:'永康區中山路12號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:0,env:'門口草，有小便',note:'之前有業務來過',trialItems:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-02',mood:2,note:'主任在忙',insight:'試用shh dome',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743562800000},
+  {name:'戀練健身',addr:'東區自由路二段51號',type:'接待中心',status:'複訪',contact:'',nextdate:'2026-04-08',fw4:0,env:'門口無',note:'',trialItems:[],todos:[],visits:[{date:'2026-04-01',mood:3,note:'',insight:'',statusChange:'複訪',nextdate:'2026-04-08'}],updatedAt:1743476400000},
+  {name:'大台南駕訓班',addr:'仁德區文華路三段366號',type:'辦公室',status:'試用中',contact:'顏老闆',nextdate:'2026-04-08',fw4:600,env:'門口無吸水',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:1,note:'顏老闆不在',insight:'',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
+  {name:'LOFT 樂飛運動餐酒',addr:'仁德區文華路3段440號',type:'餐廳',status:'試用中',contact:'蘇老闆',nextdate:'',fw4:2280,env:'門口菜口無',note:'',trialItems:[{product:'DWLLH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:2,cycle:'4W',quoted:0},{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'NSAC',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
+  {name:'芽米食堂',addr:'善化區中正路609號',type:'餐廳',status:'試用中',contact:'郭老闆',nextdate:'2026-03-31',fw4:0,env:'門口有 菜口無 有廁所',note:'報價報錯成350',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:4,note:'媽媽後面有ktv包廂',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1742860800000},
+  {name:'吉祥園素食超市仁和店',addr:'東區仁和路366號',type:'零售店',status:'試用中',contact:'王闆娘',nextdate:'2026-04-07',fw4:320,env:'門口有破紅',note:'可以寄賣',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，可以寄賣',insight:'試用BSH',statusChange:'試用中',nextdate:'2026-04-07'}],updatedAt:1743476400000},
+  {name:'KUMON東橋五路教室',addr:'永康區東橋五路',type:'補習班',status:'試用中',contact:'張主任',nextdate:'2026-04-01',fw4:0,env:'門口無，教室約十人大小',note:'近快去貼膠帶',trialItems:[{product:'GSH',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0}],todos:[{text:'去貼膠帶',dueDate:'2026-04-08',done:false}],visits:[{date:'2026-03-30',mood:4,note:'有需要，但怕跌倒',insight:'試用GSH SHH',statusChange:'試用中',nextdate:'2026-04-01'}],updatedAt:1743307200000},
+  {name:'國光營造',addr:'',type:'',status:'試用中',contact:'邱小姐',nextdate:'',fw4:220,env:'門口無',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:3,note:'',insight:'邱小姐 dome',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
+  {name:'大媽活蝦東和',addr:'',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'',fw4:1220,env:'',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-31',mood:2,note:'',insight:'補bf dwslr',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
+  {name:'Crema cafe',addr:'東區信德街37號',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'2026-04-08',fw4:440,env:'門口無 無小便',note:'',trialItems:[{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，莊老闆願意試用',insight:'試用FFSLK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
+  {name:'漢光消防',addr:'仁德區文華路三段428巷61號',type:'工廠',status:'試用中',contact:'羅老闆',nextdate:'',fw4:0,env:'粉塵多，原本用水拖',note:'拖把希望有用',trialItems:[{product:'NSAC',qty:2,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'陳闆娘對賣斷品有興趣',insight:'拖把希望有用',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
+  {name:'喜樂福麵店',addr:'永康區復國一路293號',type:'餐廳',status:'試用中',contact:'左老闆',nextdate:'2026-04-02',fw4:0,env:'菜口沒地墊，門口有紅色網狀地墊',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-17',mood:4,note:'門口沒興趣，廁所芳香老闆有興趣',insight:'Dwsh 180不需要 bf可能可以續用',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742860800000},
+  {name:'康時診所',addr:'東區莊敬路100號',type:'診所',status:'初訪',contact:'',nextdate:'',fw4:0,env:'新裝潢，四月開幕',note:'再來拜訪',trialItems:[],todos:[{text:'四月開幕後再拜訪',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-12',mood:3,note:'沒遇到醫生',insight:'',statusChange:'初訪',nextdate:null}],updatedAt:1741783200000},
+  {name:'賀鮮生魚片',addr:'永康區永興路111號',type:'餐廳',status:'初訪',contact:'',nextdate:'',fw4:0,env:'沒有地墊',note:'可以主動再聯絡',trialItems:[],todos:[{text:'主動再聯絡',dueDate:'',done:false}],visits:[{date:'2026-03-10',mood:3,note:'有需要再聯絡',insight:'',statusChange:'初訪',nextdate:null}],updatedAt:1741565200000},
+  {name:'何嘉仁台南東橋',addr:'永康區東橋七路217號',type:'補習班',status:'複訪',contact:'',nextdate:'',fw4:0,env:'門口無，有小便斗',note:'早上來拜訪',trialItems:[],todos:[],visits:[{date:'2026-03-18',mood:2,note:'主任不在',insight:'早上來拜訪',statusChange:'複訪',nextdate:null}],updatedAt:1742256000000},
+  {name:'愛兒運動遊戲診所',addr:'永康區東橋五路319號',type:'診所',status:'複訪',contact:'',nextdate:'',fw4:0,env:'門口要脫鞋',note:'下次帶賣斷品DM',trialItems:[],todos:[{text:'帶賣斷品DM拜訪',dueDate:'',done:false}],visits:[{date:'2026-03-10',mood:3,note:'老闆在忙',insight:'',statusChange:'複訪',nextdate:null}],updatedAt:1741565200000},
+  {name:'典陸社區教育',addr:'永康區東橋十街',type:'補習班',status:'初訪',contact:'',nextdate:'',fw4:0,env:'新裝潢',note:'可能下午時段拜訪',trialItems:[],todos:[{text:'下午時段再拜訪',dueDate:'',done:false}],visits:[{date:'2026-03-10',mood:3,note:'',insight:'主任說有需要聯絡',statusChange:'初訪',nextdate:null}],updatedAt:1741565200000},
+  {name:'貝森朵夫接待會館',addr:'',type:'接待中心',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無',note:'堅決拒絕',trialItems:[],todos:[],visits:[{date:'2026-04-01',mood:1,note:'主管不在，怕麻煩，堅決拒絕',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743476400000},
+  {name:'老虎蜜蜂娃娃機',addr:'仁德區中山路310號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'',note:'3/24追蹤後結案',trialItems:[],todos:[],visits:[{date:'2026-03-11',mood:1,note:'老闆對地墊沒興趣',insight:'老闆臉很臭',statusChange:'已結案',nextdate:null}],updatedAt:1743307200000},
+  {name:'集鮮良品',addr:'永康區新民街27號',type:'零售店',status:'已結案',contact:'黃小姐',nextdate:'',fw4:0,env:'有自備小地墊',note:'試用結束，太貴無效',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:3,note:'試用小黃跟decsr',insight:'不確定成效；3/26回收',statusChange:'已結案',nextdate:null}],updatedAt:1741783200000},
+  {name:'放鬆鴨甜點｜早午餐',addr:'東區立德二路54巷28號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'有用過廁所芳香',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-09',mood:3,note:'推洗碗精，賣斷品',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741478400000},
+  {name:'皮諾丘早午餐',addr:'永康區東橋三路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'已自己買地墊',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:3,note:'介紹地墊跟賣斷品，老闆娘有興趣聽',insight:'沒有問老闆娘姓名',statusChange:'已結案',nextdate:null}],updatedAt:1741565200000},
+  {name:'木熙企業社',addr:'東區大同路1段173號8樓',type:'辦公室',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無',note:'地板貼皮木地板、濕拖',trialItems:[],todos:[],visits:[{date:'2026-03-30',mood:1,note:'地墊不需要，地板貼皮木地板',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743307200000},
+  // ── 從 Notion 補匯入（第二批）
+  {name:'瓜瓜園地瓜生態故事館',addr:'新化區中正路65號',type:'接待中心',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:1020,env:'需要吸塵吸水地墊，灰色',note:'老闆認識樂清，知道廁所產品很貴',trialItems:[{product:'FFLK',qty:2,cycle:'2W',quoted:0}],todos:[{text:'一下雨馬上送兩張FFLK',dueDate:'',done:false}],visits:[{date:'2026-03-27',mood:3,note:'老闆認識樂清，知道廁所產品很貴',insight:'試用FFLK*2 280',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743559627000},
+  {name:'身活皮拉提斯東橋館',addr:'永康區東橋五路112號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-08',fw4:0,env:'門口有破黑',note:'倍速同股東',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'倍速同股東',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743501611000},
+  {name:'衣美學院台南德昌店',addr:'東區德昌路183號',type:'零售店',status:'試用中',contact:'莊老闆',nextdate:'2026-04-15',fw4:340,env:'門口有不吸水，地板乾淨，莊老闆住隔壁很常打掃',note:'老闆不好意思用',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'老闆不好意思用',insight:'試用DECSR',statusChange:'試用中',nextdate:'2026-04-15'}],updatedAt:1743501431000},
+  {name:'嘉餚土雞肉飯舖',addr:'永康區復國一路65號',type:'餐廳',status:'試用中',contact:'鄭小姐',nextdate:'',fw4:0,env:'門口有自備吸水，菜口無，無廁所',note:'TJSH報160',trialItems:[{product:'TJSH',qty:1,cycle:'2W',quoted:160}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'鄭小姐以前有聽過嫌太貴，TJSH報160',insight:'試用TJSH',statusChange:'試用中',nextdate:null}],updatedAt:1742457973000},
+  {name:'大台南網路購物服務人員職業工會',addr:'永康區東橋七路381號',type:'接待中心',status:'試用中',contact:'楊小姐',nextdate:'',fw4:0,env:'門口有，室內灰磁磚',note:'楊小姐欣然接受試用，會詢問老闆意願',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:3,note:'楊小姐欣然接受試用，會詢問老闆意願',insight:'試用decsr',statusChange:'試用中',nextdate:null}],updatedAt:1742286567000},
+  {name:'奧斯汀美語台南東光',addr:'東區怡東路107號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-02',fw4:0,env:'門口無，無小便斗',note:'主任不在，有給名片',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-26',mood:2,note:'主任不在，有給名片',insight:'試用小黃',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742954350000},
+  {name:'力揚國際運通',addr:'仁德區文華路三段428巷31號',type:'工廠',status:'已結案',contact:'',nextdate:'',fw4:0,env:'有廁所，沒什麼打掃',note:'採購不在，試用dome；再次聯絡時找採購推拖把',trialItems:[],todos:[{text:'再次聯絡時找採購推拖把',dueDate:'',done:false}],visits:[{date:'2026-03-19',mood:2,note:'採購不在，試用dome',insight:'',statusChange:'複訪',nextdate:null}],updatedAt:1742345399000},
+  {name:'集雅社台南復國',addr:'永康區復國路52號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無，清潔用靜電抹布；直營店無法決定',note:'主管可能不想看到統一的地墊，清潔用品要自掏腰包買',trialItems:[],todos:[],visits:[{date:'2026-03-17',mood:2,note:'主管可能不想看到統一的地墊',insight:'試用SHH',statusChange:'已結案',nextdate:null}],updatedAt:1742825374000},
+  {name:'巨星電子遊樂',addr:'東區大同路一段109號',type:'遊樂場',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口有破，室內煙味',note:'有配合、不想試用',trialItems:[],todos:[],visits:[{date:'2026-03-30',mood:2,note:'有配合、不想試用',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743303727000},
+  {name:'弘洲建材行',addr:'仁德區中山路442號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'磁磚地板，老闆娘覺得地墊會妨礙大理石透氣',note:'老闆娘喜歡擦手紙，想推lala；記得送清潔液',trialItems:[],todos:[{text:'記得送清潔液',dueDate:'',done:false}],visits:[{date:'2026-03-11',mood:2,note:'老闆娘喜歡擦手紙，想推lala',insight:'試用結束，不需要',statusChange:'已結案',nextdate:null}],updatedAt:1742258167000},
+  {name:'金鈴花藝',addr:'永康區東橋八街179號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有地墊',note:'老闆說上次有人來過了',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:2,note:'老闆說上次有人來過了',insight:'忘記問有沒有試用',statusChange:'已結案',nextdate:null}],updatedAt:1741596408000},
+  {name:'S color 智能染髮',addr:'永康區東橋五路',type:'美容美甲',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有小便斗，沒有地墊',note:'老闆不想試用地墊；有成功推賣斷品',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:2,note:'老闆不想試用地墊',insight:'有成功推賣斷品',statusChange:'已結案',nextdate:null}],updatedAt:1741593550000},
+  // ── 從 Notion 補匯入（第三批）
+  {name:'有巢氏台南總圖東橋加盟店',addr:'永康區東橋十街168號',type:'房仲',status:'試用中',contact:'許秘書',nextdate:'',fw4:0,env:'門口有破紅，已購一年。廁所有芳香，沒小便斗',note:'許秘書對免費試用有興趣，店長女生',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0},{product:'BF-W',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:2,note:'許秘書對免費試用有興趣，店長女生',insight:'試用decsr、bf',statusChange:'試用中',nextdate:null}],updatedAt:1742262486000},
+  {name:'仁善社區長照',addr:'善化區溪尾216-28號',type:'診所',status:'複訪',contact:'',nextdate:'2026-04-07',fw4:0,env:'不需要地墊，廁所還乾淨',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-24',mood:2,note:'不需要地墊，廁所還乾淨',insight:'',statusChange:'複訪',nextdate:'2026-04-07'}],updatedAt:1742953293000},
+  {name:'街役場古蹟餐坊',addr:'新化區中正路500號',type:'餐廳',status:'試用中',contact:'高老闆',nextdate:'2026-03-31',fw4:0,env:'有自備硬地墊，有廁所，香精重但感覺偏髒',note:'高老闆對訂製地墊有興趣，設計報價350-450',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[{text:'設計訂製地墊報價350-450給高老闆',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'介紹自製地墊，王品；洞試用。老闆下週回國',insight:'高老闆對訂製地墊有興趣',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1741830533000},
+  {name:'梅林沙龍spa',addr:'永康區新民街140號',type:'美容美甲',status:'已成約',contact:'',nextdate:'2026-04-10',fw4:0,env:'沒地墊，店內很香，老闆很愛美',note:'老闆店門口只能用SS，基本上只有FF能選；若收回殘膠要清乾淨',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:3,note:'老闆勉為其難試試看，只能選FF',insight:'',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741783108000},
+  {name:'秀秀阿美',addr:'永康區東橋十街178號',type:'零售店',status:'已成約',contact:'陳小姐',nextdate:'2026-04-10',fw4:0,env:'門口有自備的小地墊。老闆想要灰色',note:'SS地墊偏小；一週後主動聯絡闆娘陳小姐',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0},{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'主動聯絡陳小姐',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-10',mood:3,note:'老闆對試用有興趣，有問了價錢，還額外問了玻璃清潔',insight:'SS地墊偏小',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741593711000},
+  {name:'耀學堡新化店',addr:'新化區中山路160號',type:'補習班',status:'試用中',contact:'Susan 蔡小姐',nextdate:'',fw4:220,env:'門口有自備地墊、要脫鞋，有小便斗，廁所很香，學生不多。有其他分校',note:'需要繼續追蹤到老闆，可以推薦訂製地墊',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[{text:'繼續追蹤老闆，推薦訂製地墊',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'主任不在，Susan蔡小姐友善，推薦訂製地墊',insight:'試用dome',statusChange:'試用中',nextdate:null}],updatedAt:1741830981000},
+  {name:'林宜瑾服務處',addr:'永康區中山南路473號',type:'接待中心',status:'試用中',contact:'',nextdate:'',fw4:0,env:'門口無，面積大，有小便斗',note:'門口要推車運貨不想要太大地墊，有需要打電話；忘記問主任姓名',trialItems:[],todos:[],visits:[{date:'2026-03-20',mood:2,note:'門口要推車運貨不想要太大地墊，有需要打電話',insight:'忘記問主任姓名，試用洞',statusChange:'試用中',nextdate:null}],updatedAt:1742457077000},
+  {name:'愛洛奇國際貿易',addr:'永康區永大路一段287巷133號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有地墊，很多層架，老闆喜歡咖啡',note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用；試用結束，太貴',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用',insight:'老闆像馬東石。試用結束，太貴',statusChange:'已結案',nextdate:null}],updatedAt:1742258188000},
+  {name:'蔬食好巳多餐包',addr:'新化區中山路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒門沒地墊',note:'老闆不在，不給留資料',trialItems:[],todos:[],visits:[{date:'2026-03-13',mood:2,note:'老闆不在，不給留資料',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741831540000},
+  {name:'金凱鐵板燒',addr:'新化區中山路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口地墊很破',note:'在餐期進入，沒受到友善對待；老闆沒興趣',trialItems:[],todos:[],visits:[{date:'2026-03-13',mood:1,note:'在餐期進入，沒受到友善對待',insight:'老闆沒興趣',statusChange:'已結案',nextdate:null}],updatedAt:1741830450000},
+  {name:'Calm ice',addr:'永康區新民街11號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒地墊、有養貓、有廁所',note:'本來感覺要成功接受試用，但最後拒絕。沒給到資料',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'本來感覺要成功接受試用，但最後拒絕',insight:'沒給到資料',statusChange:'已結案',nextdate:null}],updatedAt:1741783126000},
+  {name:'日初接待中心',addr:'永康區',type:'房仲',status:'已結案',contact:'陳經理',nextdate:'',fw4:0,env:'有地墊，比SS小',note:'櫃檯說經理才能決定；陳經理不在，下午會出現',trialItems:[],todos:[],visits:[{date:'2026-03-09',mood:2,note:'有點結巴，櫃檯說經理才能決定',insight:'陳經理不在，下午會出現',statusChange:'已結案',nextdate:null}],updatedAt:1741478271000},
+  {name:'東星眼鏡',addr:'永康區',type:'眼鏡行',status:'已結案',contact:'',nextdate:'',fw4:0,env:'地墊破舊，綠底黃字歡迎光臨',note:'First blood。應該至少要留資料和推酒精',trialItems:[],todos:[],visits:[{date:'2026-03-09',mood:1,note:'老闆直接拒絕',insight:'First blood。應該至少要留資料和推酒精',statusChange:'已結案',nextdate:null}],updatedAt:1741478143000},
+  {name:'錢都 永康文化店',addr:'永康區文化路155號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'',note:'已被登記（其他業務）',trialItems:[],todos:[],visits:[],updatedAt:1741478053000},
+  {name:'豚將永康店',addr:'永康區中正七街76號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口沒地墊，菜口有自己的，沒小便斗',note:'老闆覺得不需要；沒有更努力介紹菜口地墊',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得不需要',insight:'沒有更努力介紹菜口地墊',statusChange:'已結案',nextdate:null}],updatedAt:1741783554000},
+];
+
+// ═══════════════════════════════════════════════════════════
+// STATE & PERSISTENCE
+// ═══════════════════════════════════════════════════════════
+const SO=['未拜訪','初訪','複訪','試用中','報價','將成約','已成約','已結案'];
+const MOODS=['','😞','😐','😊','😄'];
+const SS_STYLE={'未拜訪':['#F1EFE8','#444441'],'初訪':['#E6F1FB','#0C447C'],'複訪':['#FAEEDA','#633806'],'試用中':['#E6F1FB','#0C447C'],'報價':['#FAEEDA','#633806'],'將成約':['#EEEDFE','#3C3489'],'已成約':['#E1F5EE','#085041'],'已結案':['#F1EFE8','#666']};
+const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
+function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
+
+function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
+function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL}));}catch(e){}}
+
+let DB={clients:[],inventory:INV_INIT.map(p=>({name:p.n,stock:p.s,std:p.st})),products:[]};
+let SHEET_URL='';
+
+const local=loadLocal();
+if(local){
+  DB.clients=local.clients||[];
+  DB.inventory=local.inventory||INV_INIT.map(p=>({name:p.n,stock:p.s,std:p.st}));
+  DB.products=local.products&&local.products.length?local.products:JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+  SHEET_URL=local.sheetUrl||'';
+}else{
+  DB.clients=JSON.parse(JSON.stringify(SEED));
+  DB.products=JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+}
+
+// 取得啟用商品（給試用品項選單用）
+function activeProducts(){return DB.products.filter(p=>p.active&&p.price>0);}
+// 根據代號查商品
+function getProd(code){return DB.products.find(p=>p.code===code)||null;}
+
+// 計費：2W週期 × 2 = 4W原價；4W週期 × 1
+function fw4(code,qty=1){
+  const p=getProd(code);if(!p||!p.price)return 0;
+  return p.price*(p.cycle==='2W'?2:1)*qty;
+}
+// 9折參考
+function ref9(code,qty=1,cycle='2W'){
+  const p=getProd(code);if(!p||!p.price)return 0;
+  const base=p.cat==='地墊'?(cycle==='4W'?Math.round(p.price*2*0.8):p.price*2):p.price*(p.cycle==='2W'?2:1);
+  return Math.round(base*qty*0.9);
+}
+// 提案商品自動帶入
+function autoProd(items){
+  const cats=new Set((items||[]).filter(it=>it.product&&getProd(it.product)).map(it=>getProd(it.product).cat));
+  if(!cats.size)return '';
+  const MAP={'拖把':'拖把','地墊':'MAT','芳香':'芳香'};
+  return cats.size===1?(MAP[[...cats][0]]||[...cats][0]):'ALL';
+}
+
+// ═══════════════════════════════════════════════════════════
+// SYNC
+// ═══════════════════════════════════════════════════════════
+function setSyncBar(s){
+  const bar=document.getElementById('sync-bar');const st=document.getElementById('sync-status');
+  bar.className=s==='sync'?'syncing':s==='err'?'err':'';
+  if(s==='ok'){st.textContent='✓ 已同步';setTimeout(()=>st.textContent='',3000);}
+  else if(s==='err'){st.textContent='⚠ 同步失敗';setTimeout(()=>st.textContent='',5000);}
+  else if(s==='sync')st.textContent='同步中...';
+  else st.textContent='';
+}
+async function api(body){
+  if(!SHEET_URL)throw new Error('未設定URL');
+  const res=await fetch(SHEET_URL,{method:'POST',body:JSON.stringify(body)});
+  const json=await res.json();if(json.error)throw new Error(json.error);return json;
+}
+async function autoSync(action,payload){
+  if(!SHEET_URL)return;setSyncBar('sync');
+  try{await api({action,...payload});setSyncBar('ok');}catch(e){setSyncBar('err');}
+}
+async function testConnection(){
+  const url=document.getElementById('sheet-url').value.trim();
+  if(!url){alert('請先填入 URL');return;}
+  SHEET_URL=url;saveLocal();setSyncBar('sync');
+  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);alert('✅ 連線成功！');}
+  catch(e){setSyncBar('err');alert('❌ 連線失敗：'+e.message);}
+}
+async function syncFromSheet(){
+  if(!SHEET_URL){alert('請先設定 URL');return;}
+  if(!confirm('從雲端拉取資料？這會覆蓋本機的客戶、商品資料。'))return;
+  setSyncBar('sync');
+  try{
+    const res=await api({action:'getAll'});DB.clients=res.clients||[];
+    const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
+    const prods=await api({action:'getProducts'});if(prods.products)DB.products=prods.products;
+    saveLocal();renderClients();renderProducts();setSyncBar('ok');
+    alert('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料');
+  }catch(e){setSyncBar('err');alert('❌ 拉取失敗：'+e.message);}
+}
+async function pushAllToSheet(){
+  if(!SHEET_URL){alert('請先設定 URL');return;}
+  if(!confirm('將所有資料推送到 Google Sheets？'))return;
+  setSyncBar('sync');
+  try{
+    for(let i=0;i<DB.clients.length;i++)await api({action:'save',client:DB.clients[i],idx:i});
+    await api({action:'saveInventory',inventory:DB.inventory});
+    await api({action:'saveProducts',products:DB.products});
+    saveLocal();setSyncBar('ok');alert('✅ 已推送 '+DB.clients.length+' 筆資料');
+  }catch(e){setSyncBar('err');alert('❌ 推送失敗：'+e.message);}
+}
+function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();}
+function updateSheetStatus(ok){
+  const box=document.getElementById('sheet-status-box');
+  if(ok||SHEET_URL){box.className='alert alert-ok';box.textContent='✓ 已設定 Google Sheets 同步，每次修改自動儲存到雲端。';}
+}
+function exportJSON(){
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,exportedAt:new Date().toISOString()},null,2));
+  a.download='duskin_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function importJSON(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.clients)throw new Error('格式不正確');
+      if(!confirm('匯入 '+data.clients.length+' 筆資料？'))return;
+      DB.clients=data.clients;
+      if(data.inventory)DB.inventory=data.inventory;
+      if(data.products)DB.products=data.products;
+      saveLocal();renderClients();renderProducts();alert('✅ 匯入成功');
+    }catch(err){alert('❌ 匯入失敗：'+err.message);}
+  };reader.readAsText(file);input.value='';
+}
+function copyScript(){
+  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(()=>alert('✅ 已複製 Apps Script 程式碼'));
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════
+function navTo(id,el){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  (el.classList?el:document.getElementById('nav-'+id)).classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('panel-'+id).classList.add('on');
+  if(id==='daily'){const d=document.getElementById('daily-date');if(!d.value)d.value=today();renderDaily();}
+  if(id==='todos')renderGT();
+  if(id==='products')renderProducts();
+  if(id==='settings')initSettings();
+  window.scrollTo(0,0);
+}
+function today(){return new Date().toISOString().slice(0,10);}
+function initSettings(){
+  document.getElementById('sheet-url').value=SHEET_URL;
+  if(SHEET_URL)updateSheetStatus(true);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRODUCTS PANEL
+// ═══════════════════════════════════════════════════════════
+let prodCatFilter='全部';
+let prodEditIdx=-1;
+
+function initProdCats(){
+  document.getElementById('prod-cat-pills').innerHTML=['全部','拖把','地墊','芳香'].map(c=>
+    `<button class="pill${c==='全部'?' on':''}" onclick="setProdCat('${c}',this)">${c}</button>`
+  ).join('');
+}
+function setProdCat(c,el){
+  prodCatFilter=c;
+  document.querySelectorAll('#prod-cat-pills .pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');renderProducts();
+}
+
+function renderProducts(){
+  const q=(document.getElementById('prod-search')?.value||'').toLowerCase();
+  let list=DB.products.map((p,i)=>({...p,_i:i}));
+  if(prodCatFilter!=='全部')list=list.filter(p=>p.cat===prodCatFilter);
+  if(q)list=list.filter(p=>(p.code+p.desc+p.note).toLowerCase().includes(q));
+
+  // Group by cat
+  const cats=['拖把','地墊','芳香'];
+  let html='';
+  for(const cat of cats){
+    const items=list.filter(p=>p.cat===cat);
+    if(!items.length)continue;
+    const[cbg,cfg]=CB_STYLE[cat]||['#F1EFE8','#666'];
+    html+=`<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
+      <span class="badge" style="background:${cbg};color:${cfg}">${cat}</span>
+      <span style="font-size:12px;color:var(--text3)">${items.length} 項</span>
+    </div>`;
+    html+='<div class="card" style="padding:0 14px;margin-bottom:14px">';
+    html+=items.map(p=>`
+      <div class="prod-row${p.active?'':' prod-inactive'}" onclick="openProdModal(${p._i})">
+        <div>
+          <div class="prod-code">${p.code}</div>
+          <div class="prod-desc">${p.desc}${p.note?` <span style="color:var(--text3)">${p.note}</span>`:''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${p.cycle||'-'}</div>`:'<div class="prod-cycle">配件/機台</div>'}
+        </div>
+        ${!p.active?'<span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:10px;flex-shrink:0">停用</span>':''}
+      </div>`).join('');
+    html+='</div>';
+  }
+  if(!html)html='<div class="empty">沒有符合的商品</div>';
+  document.getElementById('prod-list').innerHTML=html;
+}
+
+function openProdModal(idx){
+  prodEditIdx=idx;
+  const p=idx>=0?DB.products[idx]:null;
+  document.getElementById('prod-modal-title').textContent=idx>=0?'編輯商品':'新增商品';
+  document.getElementById('pm-code').value=p?.code||'';
+  document.getElementById('pm-code').readOnly=idx>=0; // 編輯時代號唯讀
+  document.getElementById('pm-cat').value=p?.cat||'拖把';
+  document.getElementById('pm-desc').value=p?.desc||'';
+  document.getElementById('pm-price').value=p?.price??'';
+  document.getElementById('pm-cycle').value=p?.cycle??'2W';
+  document.getElementById('pm-note').value=p?.note||'';
+  document.getElementById('pm-active').checked=p?.active!==false;
+  document.getElementById('pm-del-btn').style.display=idx>=0?'':'none';
+  document.getElementById('prod-modal').classList.add('on');
+}
+function closeProdModal(){document.getElementById('prod-modal').classList.remove('on');}
+
+function saveProd(){
+  const code=document.getElementById('pm-code').value.trim().toUpperCase();
+  if(!code){alert('請填入代號');return;}
+  // 新增時檢查重複
+  if(prodEditIdx<0&&DB.products.find(p=>p.code===code)){alert('代號「'+code+'」已存在');return;}
+  const prod={
+    code,
+    cat:document.getElementById('pm-cat').value,
+    desc:document.getElementById('pm-desc').value.trim(),
+    price:+document.getElementById('pm-price').value||0,
+    cycle:document.getElementById('pm-cycle').value,
+    note:document.getElementById('pm-note').value.trim(),
+    active:document.getElementById('pm-active').checked,
+  };
+  if(prodEditIdx>=0)DB.products[prodEditIdx]=prod;
+  else DB.products.push(prod);
+  saveLocal();
+  autoSync('saveProducts',{products:DB.products});
+  closeProdModal();renderProducts();
+}
+function deleteProd(){
+  if(prodEditIdx<0)return;
+  const code=DB.products[prodEditIdx].code;
+  if(!confirm(`確認刪除商品「${code}」？已新增到試用品項的不受影響。`))return;
+  DB.products.splice(prodEditIdx,1);
+  saveLocal();autoSync('saveProducts',{products:DB.products});
+  closeProdModal();renderProducts();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATUS PILLS
+// ═══════════════════════════════════════════════════════════
+let activeSt=new Set();
+function initPills(){
+  document.getElementById('status-pills').innerHTML=['全部',...SO].map(s=>
+    `<button class="pill${s==='全部'?' on':''}" onclick="toggleSt('${s}',this)">${s}</button>`
+  ).join('');
+}
+function toggleSt(s,el){
+  if(s==='全部'){activeSt.clear();}else{activeSt.has(s)?activeSt.delete(s):activeSt.add(s);}
+  document.querySelectorAll('#status-pills .pill').forEach(p=>p.classList.remove('on'));
+  if(activeSt.size===0)document.querySelector('#status-pills .pill').classList.add('on');
+  else el.classList.add('on');
+  renderClients();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT LIST
+// ═══════════════════════════════════════════════════════════
+function calcFW4(c){return c.fw4>0?c.fw4:(c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);}
+function renderClients(){
+  const q=(document.getElementById('csearch').value||'').toLowerCase();
+  const sort=document.getElementById('csort').value;
+  let list=DB.clients.map((c,i)=>({c,i}));
+  if(activeSt.size>0)list=list.filter(({c})=>activeSt.has(c.status));
+  if(q)list=list.filter(({c})=>(c.name+c.addr+(c.type||'')+c.contact).toLowerCase().includes(q));
+  list.sort((a,b)=>{
+    if(sort==='nextdate')return(a.c.nextdate||'9999')>(b.c.nextdate||'9999')?1:-1;
+    if(sort==='status')return SO.indexOf(a.c.status)-SO.indexOf(b.c.status);
+    if(sort==='updated')return(b.c.updatedAt||0)-(a.c.updatedAt||0);
+    return a.c.name.localeCompare(b.c.name,'zh-Hant');
+  });
+  const el=document.getElementById('clients-list');
+  if(!list.length){el.innerHTML='<div class="empty">尚無符合的客戶</div>';return;}
+  el.innerHTML=list.map(({c,i})=>{
+    const fw=calcFW4(c);
+    const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
+    const pTodos=(c.todos||[]).filter(t=>!t.done).length;
+    const prod=autoProd(c.trialItems)||'';
+    return`<div class="cc" onclick="openCD(${i})">
+      <div class="cc-name">${c.name}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${c.type}</span>`:''}</div>
+      <div class="cc-sub">${[c.contact,c.addr].filter(Boolean).join(' · ')}</div>
+      <div class="cc-badges">
+        ${bdg(c.status||'未拜訪')}
+        ${fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:''}
+        ${pTodos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${pTodos}待辦</span>`:''}
+      </div>
+      <div class="cc-meta">
+        ${prod?`<span>提案：${prod}</span>`:''}
+        ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
+        ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT FORM
+// ═══════════════════════════════════════════════════════════
+let S={curIdx:-1,editIdx:-1,cfItems:[],cfTodos:[],curMood:3};
+
+function showView(id){
+  ['view-list','view-form','view-detail'].forEach(v=>document.getElementById(v).style.display='none');
+  document.getElementById(id).style.display='block';window.scrollTo(0,0);
+}
+function openCF(idx){
+  S.editIdx=idx;S.cfItems=[];S.cfTodos=[];
+  document.getElementById('form-title').textContent=idx>=0?'編輯客戶':'新增客戶';
+  const c=idx>=0?DB.clients[idx]:null;
+  document.getElementById('cf-name').value=c?.name||'';
+  document.getElementById('cf-contact').value=c?.contact||'';
+  document.getElementById('cf-addr').value=c?.addr||'';
+  document.getElementById('cf-type').value=c?.type||'';
+  document.getElementById('cf-status').value=c?.status||'未拜訪';
+  document.getElementById('cf-nextdate').value=c?.nextdate||'';
+  document.getElementById('cf-env').value=c?.env||'';
+  document.getElementById('cf-note').value=c?.note||'';
+  S.cfItems=JSON.parse(JSON.stringify(c?.trialItems||[]));
+  S.cfTodos=JSON.parse(JSON.stringify(c?.todos||[]));
+  renderItems();renderTodoFields();updProd();
+  showView('view-form');
+}
+function closeForm(){showView('view-list');}
+function updProd(){document.getElementById('cf-product').value=autoProd(S.cfItems);}
+
+// 商品選單 options
+function buildOpts(sel){
+  const cats=['拖把','地墊','芳香'];
+  return cats.map(cat=>{
+    const items=activeProducts().filter(p=>p.cat===cat);
+    if(!items.length)return'';
+    return`<optgroup label="${cat}">${items.map(p=>`<option value="${p.code}"${p.code===sel?' selected':''}>${p.code} ($${p.price}/${p.cycle})</option>`).join('')}</optgroup>`;
+  }).join('');
+}
+
+function addItem(){S.cfItems.push({product:'',qty:1,cycle:'2W',quoted:0});renderItems();updProd();}
+function renderItems(){
+  const cont=document.getElementById('cf-items');
+  if(!S.cfItems.length){cont.innerHTML='';document.getElementById('cf-total').textContent='$0';return;}
+  cont.innerHTML=S.cfItems.map((it,i)=>{
+    const p=getProd(it.product);const isMat=p?.cat==='地墊';
+    const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
+    const isLow=it.quoted>0&&r>0&&it.quoted<r;
+    return`<div class="ti-row">
+      <div class="ti-top">
+        <select style="flex:1;min-width:0;font-size:13px" onchange="setItemProd(${i},this.value)">
+          <option value=""${!it.product?' selected':''}>選擇商品</option>${buildOpts(it.product)}
+        </select>
+        <input type="number" min="1" value="${it.qty||1}" style="width:52px;text-align:center;font-size:14px" oninput="S.cfItems[${i}].qty=Math.max(1,+this.value||1);renderItems()">
+        ${isMat?`<select class="csel" onchange="S.cfItems[${i}].cycle=this.value;renderItems()">
+          <option value="2W"${(it.cycle||'2W')==='2W'?' selected':''}>2W換</option>
+          <option value="4W"${it.cycle==='4W'?' selected':''}>4W換</option>
+        </select>`:''}
+        <button onclick="S.cfItems.splice(${i},1);renderItems();updProd()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
+      </div>
+      <div class="ti-bot">
+        <span class="ti-label">4W原價</span>
+        <span style="font-size:13px;font-weight:600;color:#085041">${f>0?'$'+f.toLocaleString():'-'}</span>
+        <span class="ti-label" style="margin-left:8px">報價</span>
+        <input type="number" class="price-inp${isLow?' low':''}" value="${it.quoted||''}" placeholder="${r>0?r:''}"
+          oninput="S.cfItems[${i}].quoted=+this.value||0;renderItems()">
+        ${isLow?`<span style="font-size:11px;color:var(--yellow);font-weight:600">低於9折</span>`:r>0&&!it.quoted?`<span style="font-size:11px;color:var(--text3)">9折 $${r}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0)).toLocaleString();
+}
+function setItemProd(i,code){
+  const p=getProd(code);
+  S.cfItems[i].product=code;
+  S.cfItems[i].cycle=p?.cat==='地墊'?'2W':(p?.cycle||'2W');
+  S.cfItems[i].quoted=0;
+  renderItems();updProd();
+}
+
+function addTodoField(){
+  const inp=document.getElementById('cf-todo-inp');const due=document.getElementById('cf-todo-due').value;
+  if(!inp.value.trim())return;
+  S.cfTodos.push({text:inp.value.trim(),dueDate:due||'',done:false});
+  inp.value='';document.getElementById('cf-todo-due').value='';renderTodoFields();
+}
+function renderTodoFields(){
+  document.getElementById('cf-todos').innerHTML=S.cfTodos.length?S.cfTodos.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="checkbox" ${t.done?'checked':''} style="width:18px;height:18px;accent-color:var(--green)" onchange="S.cfTodos[${i}].done=this.checked">
+      <input value="${t.text}" style="flex:1;font-size:13px" oninput="S.cfTodos[${i}].text=this.value">
+      <input type="date" value="${t.dueDate||''}" style="width:140px;font-size:12px" onchange="S.cfTodos[${i}].dueDate=this.value">
+      <button onclick="S.cfTodos.splice(${i},1);renderTodoFields()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0;flex-shrink:0">×</button>
+    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);margin-bottom:8px">尚無待辦</div>';
+}
+async function saveClient(){
+  const btn=document.getElementById('save-btn');btn.disabled=true;btn.textContent='儲存中...';
+  const autofw=S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0);
+  const c={
+    name:document.getElementById('cf-name').value||'(未命名)',
+    contact:document.getElementById('cf-contact').value,
+    addr:document.getElementById('cf-addr').value,
+    type:document.getElementById('cf-type').value,
+    status:document.getElementById('cf-status').value,
+    product:autoProd(S.cfItems),
+    nextdate:document.getElementById('cf-nextdate').value,
+    fw4:autofw,env:document.getElementById('cf-env').value,
+    note:document.getElementById('cf-note').value,
+    trialItems:JSON.parse(JSON.stringify(S.cfItems)),
+    todos:JSON.parse(JSON.stringify(S.cfTodos)),
+    updatedAt:Date.now(),
+  };
+  const isEdit=S.editIdx>=0;
+  if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
+  else{c.visits=[];DB.clients.push(c);}
+  saveLocal();autoSync('save',{client:c,idx:isEdit?S.editIdx:-1});
+  S.editIdx=-1;btn.disabled=false;btn.textContent='儲存客戶';
+  closeForm();renderClients();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENT DETAIL
+// ═══════════════════════════════════════════════════════════
+function openCD(i){
+  S.curIdx=i;const c=DB.clients[i];
+  const fw=calcFW4(c);const prod=autoProd(c.trialItems)||c.product||'-';
+  document.getElementById('cd-name').textContent=c.name;
+  document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
+  document.getElementById('cd-badges').innerHTML=
+    bdg(c.status||'未拜訪')+
+    (fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:'')+
+    ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
+  document.getElementById('cd-product').textContent=prod;
+  document.getElementById('cd-fw4').textContent=fw>0?'$'+fw.toLocaleString():'-';
+  document.getElementById('cd-next').textContent=c.nextdate||'-';
+  document.getElementById('cd-addr').textContent=c.addr||'-';
+  const ew=document.getElementById('cd-env-w');c.env?(ew.style.display='block',document.getElementById('cd-env').textContent=c.env):ew.style.display='none';
+  const nw=document.getElementById('cd-note-w');c.note?(nw.style.display='block',document.getElementById('cd-note').textContent=c.note):nw.style.display='none';
+  const tw=document.getElementById('cd-tri-w');
+  if(c.trialItems?.length){
+    tw.style.display='block';
+    document.getElementById('cd-tri').innerHTML=c.trialItems.filter(it=>it.product).map(it=>{
+      const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
+      const isLow=it.quoted>0&&it.quoted<r;const p=getProd(it.product);const isMat=p?.cat==='地墊';
+      return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:4px">
+        <b>${it.product}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${it.cycle||'2W'}換</span>`:''}
+        <span style="color:#085041">4W $${f.toLocaleString()}</span>
+        ${it.quoted>0?`<span style="color:${isLow?'var(--yellow)':'var(--text3)'}">報價$${it.quoted}${isLow?' ⚠':''}</span>`:''}
+      </div>`;
+    }).join('');
+  }else tw.style.display='none';
+  document.getElementById('vl-form').style.display='none';
+  renderCDTodos();renderVisits();showView('view-detail');
+}
+function closeDetail(){showView('view-list');}
+function editCur(){if(S.curIdx<0)return;const i=S.curIdx;closeDetail();openCF(i);}
+async function delCur(){
+  if(S.curIdx<0)return;
+  if(!confirm(`確認刪除「${DB.clients[S.curIdx].name}」？`))return;
+  const idx=S.curIdx;DB.clients.splice(idx,1);saveLocal();autoSync('delete',{idx});
+  S.curIdx=-1;closeDetail();renderClients();
+}
+
+// TODOS
+function isOD(t){return t.dueDate&&!t.done&&t.dueDate<today();}
+function renderCDTodos(){
+  const todos=DB.clients[S.curIdx]?.todos||[];
+  document.getElementById('cd-todos').innerHTML=todos.length?todos.map((t,i)=>`
+    <div class="todo-row">
+      <input type="checkbox" ${t.done?'checked':''} onchange="togCDTodo(${i})">
+      <div style="flex:1">
+        <div class="${t.done?'todo-done':''}">${t.text}</div>
+        ${t.dueDate?`<div style="font-size:11px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'⚠ ':''}${t.dueDate}</div>`:''}
+      </div>
+      <button onclick="delCDTodo(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">×</button>
+    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦</div>';
+}
+function togCDTodo(i){DB.clients[S.curIdx].todos[i].done=!DB.clients[S.curIdx].todos[i].done;DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});renderCDTodos();renderClients();}
+function delCDTodo(i){DB.clients[S.curIdx].todos.splice(i,1);DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});renderCDTodos();renderClients();}
+function addDetTodo(){
+  const text=prompt(`新增待辦（${DB.clients[S.curIdx].name}）：`);if(!text?.trim())return;
+  const due=prompt('截止日期（選填，YYYY-MM-DD）：')||'';
+  DB.clients[S.curIdx].todos.push({text:text.trim(),dueDate:due,done:false});
+  DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});
+  renderCDTodos();renderClients();
+}
+
+// VISIT LOG
+function showVLForm(){
+  document.getElementById('vl-date').value=today();document.getElementById('vl-status').value='';
+  document.getElementById('vl-note').value='';document.getElementById('vl-ins').value='';document.getElementById('vl-next').value='';
+  S.curMood=3;updMoodUI();document.getElementById('vl-form').style.display='block';
+}
+function setMood(n){S.curMood=n;updMoodUI();}
+function updMoodUI(){for(let i=1;i<=4;i++)document.getElementById('vm'+i).classList.toggle('on',i===S.curMood);}
+function saveVL(){
+  const ns=document.getElementById('vl-status').value;const nd=document.getElementById('vl-next').value;
+  const v={date:document.getElementById('vl-date').value,mood:S.curMood,note:document.getElementById('vl-note').value,insight:document.getElementById('vl-ins').value,statusChange:ns||null,nextdate:nd||null};
+  if(!DB.clients[S.curIdx].visits)DB.clients[S.curIdx].visits=[];
+  DB.clients[S.curIdx].visits.push(v);
+  if(ns)DB.clients[S.curIdx].status=ns;if(nd)DB.clients[S.curIdx].nextdate=nd;
+  DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();
+  autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});
+  document.getElementById('vl-form').style.display='none';renderVisits();renderClients();openCD(S.curIdx);
+}
+function renderVisits(){
+  const vs=[...(DB.clients[S.curIdx]?.visits||[])].reverse();
+  document.getElementById('cd-visits').innerHTML=vs.length?vs.map(v=>`
+    <div class="visit-log">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-weight:600;font-size:14px">${v.date} ${MOODS[v.mood]||''}</span>
+        ${v.statusChange?bdg(v.statusChange):''}
+      </div>
+      ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${v.note}</div>`:''}
+      ${v.insight?`<div style="font-size:13px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:5px 10px">${v.insight}</div>`:''}
+      ${v.nextdate?`<div style="font-size:12px;color:var(--text3);margin-top:4px">下次：${v.nextdate}</div>`:''}
+    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無拜訪記錄</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// DAILY
+// ═══════════════════════════════════════════════════════════
+function renderDaily(){
+  const date=document.getElementById('daily-date').value;
+  const vis=DB.clients.filter(c=>(c.visits||[]).some(v=>v.date===date));
+  const tri=vis.filter(c=>c.status==='試用中'||(c.visits||[]).some(v=>v.date===date&&v.statusChange==='試用中'));
+  const amt=tri.reduce((s,c)=>s+calcFW4(c),0);
+  document.getElementById('ds-v').textContent=vis.length;
+  document.getElementById('ds-t').textContent=tri.length;
+  document.getElementById('ds-a').textContent='$'+amt.toLocaleString();
+  document.getElementById('dp-v').style.width=Math.min(vis.length/15*100,100)+'%';
+  document.getElementById('dp-t').style.width=Math.min(tri.length/2*100,100)+'%';
+  document.getElementById('dp-a').style.width=Math.min(amt/1600*100,100)+'%';
+  document.getElementById('daily-list').innerHTML=vis.length?vis.map(c=>{
+    const v=(c.visits||[]).find(v=>v.date===date);const ci=DB.clients.indexOf(c);
+    return`<div class="cc" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
+      <div class="cc-name">${c.name} ${v?MOODS[v.mood]||'':''}</div>
+      <div class="cc-sub">${c.contact||''}</div>
+      <div class="cc-badges">${bdg(c.status||'未拜訪')}${v?.statusChange?bdg(v.statusChange):''}</div>
+      ${v?.note?`<div style="font-size:13px;color:var(--text2)">${v.note}</div>`:''}
+      ${v?.insight?`<div style="font-size:12px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:4px 8px;margin-top:4px">${v.insight}</div>`:''}
+    </div>`;
+  }).join(''):'<div class="empty">此日無拜訪記錄</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// GLOBAL TODOS
+// ═══════════════════════════════════════════════════════════
+function renderGT(){
+  const filter=document.getElementById('tf').value;const q=(document.getElementById('ts').value||'').toLowerCase();
+  let all=[];
+  DB.clients.forEach((c,ci)=>(c.todos||[]).forEach((t,ti)=>all.push({...t,cn:c.name,ci,ti})));
+  if(filter==='pending')all=all.filter(t=>!t.done);
+  if(filter==='done')all=all.filter(t=>t.done);
+  if(filter==='overdue')all=all.filter(t=>!t.done&&t.dueDate&&t.dueDate<today());
+  if(q)all=all.filter(t=>t.text.toLowerCase().includes(q)||t.cn.toLowerCase().includes(q));
+  all.sort((a,b)=>{if(!a.dueDate&&!b.dueDate)return 0;if(!a.dueDate)return 1;if(!b.dueDate)return -1;return a.dueDate>b.dueDate?1:-1;});
+  const el=document.getElementById('gt-list');
+  if(!all.length){el.innerHTML='<div class="empty">沒有符合的待辦</div>';return;}
+  el.innerHTML='<div class="card" style="padding:0 14px">'+all.map(t=>{
+    const od=isOD(t);
+    return`<div class="todo-row">
+      <input type="checkbox" ${t.done?'checked':''} onchange="togGT(${t.ci},${t.ti})">
+      <div style="flex:1">
+        <div class="${t.done?'todo-done':''}">
+          ${t.text}
+          <span style="font-size:11px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
+            onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${t.cn}</span>
+        </div>
+        ${t.dueDate?`<div style="font-size:11px;color:${od?'var(--red)':'var(--text3)'};">${od?'⚠ ':''}${t.dueDate}</div>`:''}
+      </div>
+      <button onclick="delGT(${t.ci},${t.ti})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">×</button>
+    </div>`;
+  }).join('')+'</div>';
+}
+function togGT(ci,ti){DB.clients[ci].todos[ti].done=!DB.clients[ci].todos[ti].done;saveLocal();autoSync('save',{client:DB.clients[ci],idx:ci});renderGT();}
+function delGT(ci,ti){DB.clients[ci].todos.splice(ti,1);saveLocal();autoSync('save',{client:DB.clients[ci],idx:ci});renderGT();}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════
+function genExport(){
+  const mo=document.getElementById('ex-month').value;const est=document.getElementById('ex-est').value||0;
+  const trialing=DB.clients.filter(c=>c.status==='試用中');
+  const ta=trialing.reduce((s,c)=>s+calcFW4(c),0);
+  let out=`=== RS 主報表填入 ===\n月份：${mo}月　本月推估：${est} 元\n\n`;
+  out+=`【試用軒數】累計：${trialing.length} 軒\n【試用金額（4W原價）】累計：$${ta.toLocaleString()} 元\n\n`;
+  out+=`=== 客戶狀態 ===\n`;
+  SO.forEach(s=>{const n=DB.clients.filter(c=>c.status===s).length;if(n)out+=`${s}：${n} 位\n`;});
+  out+=`\n=== 4W推進表 ===\n`;
+  DB.clients.filter(c=>c.status!=='已結案'&&(c.trialItems?.length||c.fw4>0)).forEach((c,i)=>{
+    const fw=calcFW4(c);const prod=autoProd(c.trialItems)||c.product||'';
+    out+=`${i+1}. ${c.name}　${prod}　${c.status}　4W $${fw.toLocaleString()}\n`;
+    (c.trialItems||[]).filter(it=>it.product).forEach(it=>{
+      const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
+      const p=getProd(it.product);const isMat=p?.cat==='地墊';
+      out+=`   ${it.product}×${it.qty}${isMat?` (${it.cycle||'2W'}換)`:''} 原價$${f}${it.quoted?` 報價$${it.quoted}`:` 9折$${r}`}\n`;
+    });
+  });
+  out+=`\n=== 日報欄位對應 ===\nC客戶名稱/D窗口職稱/E提案商品/F拜訪說明\nG初訪 H複訪 I報價 J試用(○) / K試用金額 / L預估4W`;
+  document.getElementById('ex-out').textContent=out;
+  document.getElementById('copy-btn').style.display='';
+}
+function copyExport(){
+  navigator.clipboard.writeText(document.getElementById('ex-out').textContent).then(()=>alert('已複製'));
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+initPills();initProdCats();renderClients();
+document.getElementById('daily-date').value=today();
+if(SHEET_URL)updateSheetStatus(true);
+</script>
+</body>
+</html>
