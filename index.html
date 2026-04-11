@@ -88,6 +88,9 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .csel{border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);padding:6px 9px;font-size:12px;font-family:inherit;outline:none}
 .detail-label{font-size:12px;color:var(--text2);margin-bottom:2px}
 .detail-val{font-size:14px;color:var(--text);margin-bottom:10px}
+.vl-edit-btn{background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;opacity:.6;transition:opacity .15s;border-radius:4px}
+.vl-edit-btn:hover{opacity:1;background:var(--bg3)}
+.vl-edit-btn:active{transform:scale(.95)}
 .visit-log{padding:10px 0;border-bottom:1px solid var(--border)}
 .visit-log:last-child{border-bottom:none}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
@@ -271,6 +274,8 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
     <div class="card">
+      <div class="form-section">已成約品項</div>
+      <div id="cf-contracted-list" style="margin-bottom:12px"></div>
       <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3)">4W原價・9折報價參考・黃=低於9折</span></div>
       <div id="cf-items"></div>
       <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
@@ -330,31 +335,31 @@ tr:last-child td{border-bottom:none}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div style="font-size:13px;font-weight:600;color:var(--text2)">拜訪記錄</div>
-        <button class="btn btn-primary btn-sm" onclick="showVLForm()">+ 新增拜訪</button>
+        <button class="btn btn-primary btn-sm" onclick="showVLForm()">+ 記錄拜訪 / 排下次</button>
       </div>
       <div id="vl-form" style="display:none;background:var(--bg2);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
-        <div class="g2">
-          <div class="f"><label class="lbl">拜訪日期</label><input id="vl-date" type="date"></div>
+        <div class="f"><label class="lbl">拜訪日期</label><input id="vl-date" type="date" onchange="updVLMode()"></div>
+        <div id="vl-future-hint" style="display:none;font-size:13px;color:var(--green-d);background:var(--green-l);border-radius:6px;padding:8px 12px;margin-bottom:10px">🗓️ 未來日期 → 將設為下次拜訪日</div>
+        <div id="vl-extra">
           <div class="f"><label class="lbl">狀態更新</label>
             <select id="vl-status"><option value="">不更新</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已轉交</option><option>拒絕</option></select>
           </div>
-        </div>
-        <div class="f"><label class="lbl" style="margin-bottom:6px">心情</label>
-          <div class="mood-row">
-            <button class="mood-btn" id="vm1" onclick="setMood(1)">😞</button>
-            <button class="mood-btn" id="vm2" onclick="setMood(2)">😐</button>
-            <button class="mood-btn on" id="vm3" onclick="setMood(3)">😊</button>
-            <button class="mood-btn" id="vm4" onclick="setMood(4)">😄</button>
+          <div class="f"><label class="lbl" style="margin-bottom:6px">心情</label>
+            <div class="mood-row">
+              <button class="mood-btn" id="vm1" onclick="setMood(1)">😞</button>
+              <button class="mood-btn" id="vm2" onclick="setMood(2)">😐</button>
+              <button class="mood-btn on" id="vm3" onclick="setMood(3)">😊</button>
+              <button class="mood-btn" id="vm4" onclick="setMood(4)">😄</button>
+            </div>
+          </div>
+          <div class="g2">
+            <div class="f"><label class="lbl">拜訪說明</label><textarea id="vl-note" placeholder="對話、客戶反應..." style="min-height:60px"></textarea></div>
+            <div class="f"><label class="lbl">其他心得</label><textarea id="vl-ins" placeholder="觀察、感想..." style="min-height:60px"></textarea></div>
           </div>
         </div>
-        <div class="g2">
-          <div class="f"><label class="lbl">拜訪說明</label><textarea id="vl-note" placeholder="對話、客戶反應..." style="min-height:60px"></textarea></div>
-          <div class="f"><label class="lbl">其他心得</label><textarea id="vl-ins" placeholder="觀察、感想..." style="min-height:60px"></textarea></div>
-        </div>
-        <div class="f"><label class="lbl">下次拜訪日</label><input id="vl-next" type="date" style="max-width:180px"></div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-primary btn-sm" onclick="saveVL()">儲存記錄</button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('vl-form').style.display='none'">取消</button>
+          <button class="btn btn-primary btn-sm" onclick="saveVL()">儲存</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('vl-form').style.display='none';S.editVisitIdx=-1">取消</button>
         </div>
       </div>
       <div id="cd-visits"></div>
@@ -516,6 +521,10 @@ tr:last-child td{border-bottom:none}
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">匯入</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
     </div>
+    <div class="setting-row">
+      <div><div class="setting-label">🔄 重算所有客戶金額</div><div class="setting-sub">以當前商品庫價格重算每個客戶的 4W 金額並推上雲端</div></div>
+      <button class="btn btn-outline btn-sm" onclick="recalcAllFw4()">重算</button>
+    </div>
   </div>
   <!-- 月報 -->
   <div class="card">
@@ -574,7 +583,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.08-j';
+const APP_VERSION='v2026.04.08-q';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -690,30 +699,81 @@ const DEFAULT_PRODUCTS=[
   {code:'2SN2',cat:'地墊',desc:'豪華地墊 S（咖啡）',price:170,cycle:'2W',note:'',active:true},
   {code:'TJSLH',cat:'地墊',desc:'豪華地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
   {code:'TJLH',cat:'地墊',desc:'豪華地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'TJSLR',cat:'地墊',desc:'豪華地墊紅 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'2SLN2',cat:'地墊',desc:'豪華地墊咖啡 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'TJLR',cat:'地墊',desc:'豪華地墊紅 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'2LN2',cat:'地墊',desc:'豪華地墊咖啡 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'TJMH',cat:'地墊',desc:'豪華地墊灰 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'TJMR',cat:'地墊',desc:'豪華地墊紅 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'2MN2',cat:'地墊',desc:'豪華地墊咖啡 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'TJTH',cat:'地墊',desc:'豪華地墊灰 T 150x240',price:720,cycle:'2W',note:'',active:true},
+  {code:'TJTR',cat:'地墊',desc:'豪華地墊紅 T 150x240',price:720,cycle:'2W',note:'',active:true},
+  {code:'TJXH',cat:'地墊',desc:'豪華地墊灰 X 115x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'TJXR',cat:'地墊',desc:'豪華地墊紅 X 115x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'TJ3H',cat:'地墊',desc:'豪華地墊灰 3M 85x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'TJ3R',cat:'地墊',desc:'豪華地墊紅 3M 85x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'TJ5H',cat:'地墊',desc:'豪華地墊灰 5M 85x500',price:880,cycle:'2W',note:'',active:true},
+  {code:'TJ5R',cat:'地墊',desc:'豪華地墊紅 5M 85x500',price:880,cycle:'2W',note:'',active:true},
   {code:'DWSH',cat:'地墊',desc:'吸塵吸水地墊 S（灰）',price:200,cycle:'2W',note:'',active:true},
   {code:'DWSR',cat:'地墊',desc:'吸塵吸水地墊 S（紅）',price:200,cycle:'2W',note:'',active:true},
   {code:'DWSSH',cat:'地墊',desc:'吸塵吸水地墊 SS',price:200,cycle:'2W',note:'',active:true},
   {code:'DWSLH',cat:'地墊',desc:'吸塵吸水地墊 SL',price:310,cycle:'2W',note:'',active:true},
   {code:'DWLH',cat:'地墊',desc:'吸塵吸水地墊 L',price:390,cycle:'2W',note:'',active:true},
-  {code:'DWLLH',cat:'地墊',desc:'吸塵吸水地墊 M 115x180',price:530,cycle:'2W',note:'',active:true},
-  {code:'DW3MH',cat:'地墊',desc:'吸塵吸水地墊 3M 150x240',price:680,cycle:'2W',note:'',active:true},
-  {code:'FFSK',cat:'地墊',desc:'FOREVER地墊 SS 60x85',price:140,cycle:'2W',note:'',active:true},
-  {code:'FFSLK',cat:'地墊',desc:'FOREVER地墊 S 71x85',price:170,cycle:'2W',note:'',active:true},
-  {code:'FFLK',cat:'地墊',desc:'FOREVER地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
-  {code:'FSSK',cat:'地墊',desc:'FOREVER地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'DWLLH',cat:'地墊',desc:'吸塵吸水地墊 M 120x180',price:530,cycle:'2W',note:'',active:true},
+  {code:'DW3MH',cat:'地墊',desc:'吸塵吸水地墊 3M 90x300',price:680,cycle:'2W',note:'',active:true},
+  {code:'DWSLR',cat:'地墊',desc:'吸塵吸水地墊紅 SL 90x120',price:310,cycle:'2W',note:'',active:true},
+  {code:'DWTH',cat:'地墊',desc:'吸塵吸水地墊 T 150x240',price:940,cycle:'2W',note:'',active:true},
+  {code:'DW4MH',cat:'地墊',desc:'吸塵吸水地墊 4M 90x400',price:830,cycle:'2W',note:'',active:true},
+  {code:'DW5MH',cat:'地墊',desc:'吸塵吸水地墊 5M 90x500',price:1050,cycle:'2W',note:'',active:true},
+  {code:'FSSK',cat:'地墊',desc:'FOREVER地墊 SS 60x85',price:140,cycle:'2W',note:'',active:true},
+  {code:'FFSK',cat:'地墊',desc:'FOREVER地墊 S 71x85',price:170,cycle:'2W',note:'',active:true},
+  {code:'FFSLK',cat:'地墊',desc:'FOREVER地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'FFLK',cat:'地墊',desc:'FOREVER地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'FSSR',cat:'地墊',desc:'FOREVER地墊紅 SS 60x85',price:140,cycle:'2W',note:'',active:true},
+  {code:'FFSR',cat:'地墊',desc:'FOREVER地墊紅 S 71x85',price:170,cycle:'2W',note:'',active:true},
+  {code:'FFSLR',cat:'地墊',desc:'FOREVER地墊紅 SL 85x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'FFLR',cat:'地墊',desc:'FOREVER地墊紅 L 85x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'FFMK',cat:'地墊',desc:'FOREVER地墊 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'FFMR',cat:'地墊',desc:'FOREVER地墊紅 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'FFTK',cat:'地墊',desc:'FOREVER地墊 T 150x240',price:720,cycle:'2W',note:'',active:true},
+  {code:'FFXK',cat:'地墊',desc:'FOREVER地墊 X 115x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'FF3MK',cat:'地墊',desc:'FOREVER地墊 3M 85x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'FF5MK',cat:'地墊',desc:'FOREVER地墊 5M 85x500',price:880,cycle:'2W',note:'',active:true},
   {code:'BSH',cat:'地墊',desc:'BASIC地墊 S（灰）',price:170,cycle:'2W',note:'',active:true},
   {code:'BSR',cat:'地墊',desc:'BASIC地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
   {code:'BSLH',cat:'地墊',desc:'BASIC地墊 SL（灰）',price:220,cycle:'2W',note:'',active:true},
   {code:'BSLR',cat:'地墊',desc:'BASIC地墊 SL（紅）',price:220,cycle:'2W',note:'',active:true},
+  {code:'BLH',cat:'地墊',desc:'BASIC地墊灰 L 90x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'BLR',cat:'地墊',desc:'BASIC地墊紅 L 90x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'BLLH',cat:'地墊',desc:'BASIC地墊灰 M 120x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'BLLR',cat:'地墊',desc:'BASIC地墊紅 M 120x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'BTH',cat:'地墊',desc:'BASIC地墊灰 T 150x240',price:720,cycle:'2W',note:'',active:true},
+  {code:'BTR',cat:'地墊',desc:'BASIC地墊紅 T 150x240',price:720,cycle:'2W',note:'',active:true},
+  {code:'B3MH',cat:'地墊',desc:'BASIC地墊灰 3M 90x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'B3MR',cat:'地墊',desc:'BASIC地墊紅 3M 90x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'B5MH',cat:'地墊',desc:'BASIC地墊灰 5M 90x500',price:880,cycle:'2W',note:'',active:true},
+  {code:'B5MR',cat:'地墊',desc:'BASIC地墊紅 5M 90x500',price:880,cycle:'2W',note:'',active:true},
   {code:'GSH',cat:'地墊',desc:'雅緻地墊 S（灰）',price:190,cycle:'2W',note:'',active:true},
   {code:'GSB',cat:'地墊',desc:'雅緻地墊 S（棕）',price:190,cycle:'2W',note:'',active:true},
   {code:'GLH',cat:'地墊',desc:'雅緻地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'GLB',cat:'地墊',desc:'雅緻地墊棕 L 90x150',price:360,cycle:'2W',note:'',active:true},
+  {code:'GLLH',cat:'地墊',desc:'雅緻地墊灰 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'GLLB',cat:'地墊',desc:'雅緻地墊棕 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'GTH',cat:'地墊',desc:'雅緻地墊灰 T 150x240',price:900,cycle:'2W',note:'',active:true},
+  {code:'GTB',cat:'地墊',desc:'雅緻地墊棕 T 150x240',price:900,cycle:'2W',note:'',active:true},
   {code:'EXSH',cat:'地墊',desc:'強力刮沙地墊 S',price:190,cycle:'2W',note:'',active:true},
   {code:'EXSLH',cat:'地墊',desc:'強力刮沙地墊 SL',price:280,cycle:'2W',note:'',active:true},
   {code:'EXLH',cat:'地墊',desc:'強力刮沙地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'ELLH',cat:'地墊',desc:'強力刮沙地墊 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'EXTH',cat:'地墊',desc:'強力刮沙地墊 T 150x240',price:900,cycle:'2W',note:'',active:true},
   {code:'UQSH',cat:'地墊',desc:'薄型吸塵地墊 S',price:190,cycle:'2W',note:'',active:true},
   {code:'UQSLH',cat:'地墊',desc:'薄型吸塵地墊 SL',price:280,cycle:'2W',note:'',active:true},
   {code:'UQLH',cat:'地墊',desc:'薄型吸塵地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'UQLLH',cat:'地墊',desc:'薄型吸塵地墊 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'UQTH',cat:'地墊',desc:'薄型吸塵地墊 T 150x240',price:900,cycle:'2W',note:'',active:true},
+  {code:'UQ3MH',cat:'地墊',desc:'薄型吸塵地墊 3M 90x300',price:580,cycle:'2W',note:'',active:true},
+  {code:'UQ4MH',cat:'地墊',desc:'薄型吸塵地墊 4M 90x400',price:730,cycle:'2W',note:'',active:true},
+  {code:'UQ5MH',cat:'地墊',desc:'薄型吸塵地墊 5M 90x500',price:910,cycle:'2W',note:'',active:true},
   {code:'KKSN',cat:'地墊',desc:'KK地墊 S',price:170,cycle:'2W',note:'',active:true},
   {code:'KKSLN',cat:'地墊',desc:'KK地墊 SL',price:220,cycle:'2W',note:'',active:true},
   {code:'KKLN',cat:'地墊',desc:'KK地墊 L',price:280,cycle:'2W',note:'',active:true},
@@ -781,12 +841,12 @@ const SEED=[
   {name:'戀練健身',addr:'東區自由路二段51號',type:'接待中心',status:'複訪',contact:'',nextdate:'2026-04-08',fw4:0,env:'門口無',note:'',trialItems:[],todos:[],visits:[{date:'2026-04-01',mood:3,note:'',insight:'',statusChange:'複訪',nextdate:'2026-04-08'}],updatedAt:1743476400000},
   {name:'大台南駕訓班',addr:'仁德區文華路三段366號',type:'辦公室',status:'試用中',contact:'顏老闆',nextdate:'2026-04-08',fw4:660,env:'門口無吸水',note:'',trialItems:[{product:'DOME',qty:3,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:1,note:'顏老闆不在',insight:'',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
   {name:'LOFT 樂飛運動餐酒',addr:'仁德區文華路3段440號',type:'餐廳',status:'試用中',contact:'蘇老闆',nextdate:'',fw4:3260,env:'門口菜口無',note:'',trialItems:[{product:'NSAC',qty:1,cycle:'2W',quoted:0},{product:'DWLLH',qty:1,cycle:'2W',quoted:0},{product:'BM-H',qty:1,cycle:'2W',quoted:0},{product:'P-B',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:2,cycle:'4W',quoted:0},{product:'UQSH',qty:1,cycle:'2W',quoted:0},{product:'ELLH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'',insight:'',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
-  {name:'芽米食堂',addr:'善化區中正路609號',type:'餐廳',status:'試用中',contact:'郭老闆',nextdate:'2026-03-31',fw4:780,env:'門口有 菜口無 有廁所',note:'報價報錯成350',trialItems:[{product:'AMDW',qty:1,cycle:'4W',quoted:0},{product:'AMMK',qty:1,cycle:'4W',quoted:0},{product:'FSSK',qty:1,cycle:'2W',quoted:0},{product:'BT4',qty:4,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:4,note:'媽媽後面有ktv包廂',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1742860800000},
+  {name:'芽米食堂',addr:'善化區中正路609號',type:'餐廳',status:'試用中',contact:'郭老闆',nextdate:'2026-03-31',fw4:0,env:'門口有 菜口無 有廁所',note:'報價報錯成350',trialItems:[{product:'AMDW',qty:1,cycle:'4W',quoted:0},{product:'AMMK',qty:1,cycle:'4W',quoted:0},{product:'FSSK',qty:1,cycle:'2W',quoted:0},{product:'BT4',qty:4,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:4,note:'媽媽後面有ktv包廂',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1742860800000},
   {name:'吉祥園素食超市仁和店',addr:'東區仁和路366號',type:'零售店',status:'試用中',contact:'王闆娘',nextdate:'2026-04-07',fw4:340,env:'門口有破紅',note:'可以寄賣',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，可以寄賣',insight:'試用BSH',statusChange:'試用中',nextdate:'2026-04-07'}],updatedAt:1743476400000},
   {name:'KUMON東橋五路教室',addr:'永康區東橋五路',type:'補習班',status:'試用中',contact:'張主任',nextdate:'2026-04-01',fw4:480,env:'門口無，教室約十人大小',note:'近快去貼膠帶',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[{text:'去貼膠帶',dueDate:'2026-04-08',done:false}],visits:[{date:'2026-03-30',mood:4,note:'有需要，但怕跌倒',insight:'試用GSH SHH',statusChange:'試用中',nextdate:'2026-04-01'}],updatedAt:1743307200000},
   {name:'國光營造',addr:'',type:'',status:'試用中',contact:'邱小姐',nextdate:'',fw4:220,env:'門口無',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:3,note:'',insight:'邱小姐 dome',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
   {name:'大媽活蝦東和',addr:'',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'',fw4:2260,env:'',note:'',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DWSLH',qty:1,cycle:'2W',quoted:0},{product:'BT3',qty:4,cycle:'4W',quoted:0},{product:'BFDW',qty:1,cycle:'4W',quoted:0},{product:'BF-W',qty:1,cycle:'4W',quoted:0},{product:'BSLR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-31',mood:2,note:'',insight:'補bf dwslr',statusChange:'試用中',nextdate:null}],updatedAt:1743385200000},
-  {name:'Crema cafe',addr:'東區信德街37號',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'2026-04-08',fw4:440,env:'門口無 無小便',note:'',trialItems:[{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，莊老闆願意試用',insight:'試用FFSLK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
+  {name:'Crema cafe',addr:'東區信德街37號',type:'餐廳',status:'試用中',contact:'莊老闆',nextdate:'2026-04-08',fw4:0,env:'門口無 無小便',note:'',trialItems:[{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:4,note:'下雨牌，莊老闆願意試用',insight:'試用FFSLK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743476400000},
   {name:'漢光消防',addr:'仁德區文華路三段428巷61號',type:'工廠',status:'試用中',contact:'羅老闆',nextdate:'',fw4:980,env:'粉塵多，原本用水拖',note:'拖把希望有用',trialItems:[{product:'NSAC',qty:2,cycle:'2W',quoted:0},{product:'BS-H',qty:2,cycle:'2W',quoted:0},{product:'P-B',qty:2,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-19',mood:4,note:'陳闆娘對賣斷品有興趣',insight:'拖把希望有用',statusChange:'試用中',nextdate:null}],updatedAt:1742342400000},
   {name:'喜樂福麵店',addr:'永康區復國一路293號',type:'餐廳',status:'試用中',contact:'左老闆',nextdate:'2026-04-02',fw4:600,env:'菜口沒地墊，門口有紅色網狀地墊',note:'',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'BT3',qty:4,cycle:'4W',quoted:0},{product:'BFDW',qty:1,cycle:'4W',quoted:0},{product:'BF-W',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-17',mood:4,note:'門口沒興趣，廁所芳香老闆有興趣',insight:'Dwsh 180不需要 bf可能可以續用',statusChange:'試用中',nextdate:'2026-04-02'}],updatedAt:1742860800000},
   {name:'康時診所',addr:'東區莊敬路100號',type:'診所',status:'初訪',contact:'',nextdate:'',fw4:0,env:'新裝潢，四月開幕',note:'再來拜訪',trialItems:[],todos:[{text:'四月開幕後再拜訪',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-12',mood:3,note:'沒遇到醫生',insight:'',statusChange:'初訪',nextdate:null}],updatedAt:1741783200000},
@@ -801,8 +861,8 @@ const SEED=[
   {name:'皮諾丘早午餐',addr:'永康區東橋三路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'已自己買地墊',note:'',trialItems:[],todos:[],visits:[{date:'2026-03-10',mood:3,note:'介紹地墊跟賣斷品，老闆娘有興趣聽',insight:'沒有問老闆娘姓名',statusChange:'已結案',nextdate:null}],updatedAt:1741565200000},
   {name:'木熙企業社',addr:'東區大同路1段173號8樓',type:'辦公室',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口無',note:'地板貼皮木地板、濕拖',trialItems:[],todos:[],visits:[{date:'2026-03-30',mood:1,note:'地墊不需要，地板貼皮木地板',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1743307200000},
   // ── 從 Notion 補匯入（第二批）
-  {name:'瓜瓜園地瓜生態故事館',addr:'新化區中正路65號',type:'接待中心',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:1120,env:'需要吸塵吸水地墊，灰色',note:'老闆認識樂清，知道廁所產品很貴',trialItems:[{product:'FFLK',qty:2,cycle:'2W',quoted:0}],todos:[{text:'一下雨馬上送兩張FFLK',dueDate:'',done:false}],visits:[{date:'2026-03-27',mood:3,note:'老闆認識樂清，知道廁所產品很貴',insight:'試用FFLK*2 280',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743559627000},
-  {name:'身活皮拉提斯東橋館',addr:'永康區東橋五路112號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-08',fw4:280,env:'門口有破黑',note:'倍速同股東',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'倍速同股東',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743501611000},
+  {name:'瓜瓜園地瓜生態故事館',addr:'新化區中正路65號',type:'接待中心',status:'試用中',contact:'',nextdate:'2026-04-16',fw4:0,env:'需要吸塵吸水地墊，灰色',note:'老闆認識樂清，知道廁所產品很貴',trialItems:[{product:'FFLK',qty:2,cycle:'2W',quoted:0}],todos:[{text:'一下雨馬上送兩張FFLK',dueDate:'',done:false}],visits:[{date:'2026-03-27',mood:3,note:'老闆認識樂清，知道廁所產品很貴',insight:'試用FFLK*2 280',statusChange:'試用中',nextdate:'2026-04-16'}],updatedAt:1743559627000},
+  {name:'身活皮拉提斯東橋館',addr:'永康區東橋五路112號',type:'補習班',status:'試用中',contact:'',nextdate:'2026-04-08',fw4:0,env:'門口有破黑',note:'倍速同股東',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'倍速同股東',insight:'試用FSSK',statusChange:'試用中',nextdate:'2026-04-08'}],updatedAt:1743501611000},
   {name:'衣美學院台南德昌店',addr:'東區德昌路183號',type:'零售店',status:'試用中',contact:'莊老闆',nextdate:'2026-04-15',fw4:340,env:'門口有不吸水，地板乾淨，莊老闆住隔壁很常打掃',note:'老闆不好意思用',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-01',mood:3,note:'老闆不好意思用',insight:'試用DECSR',statusChange:'試用中',nextdate:'2026-04-15'}],updatedAt:1743501431000},
   {name:'嘉餚土雞肉飯舖',addr:'永康區復國一路65號',type:'餐廳',status:'已結案',contact:'鄭小姐',nextdate:'',fw4:340,env:'門口有自備吸水，菜口無，無廁所',note:'TJSH報160',trialItems:[{product:'TJSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'鄭小姐以前有聽過嫌太貴，TJSH報160',insight:'試用TJSH',statusChange:'試用中',nextdate:null}],updatedAt:1742457973000},
   {name:'大台南網路購物服務人員職業工會',addr:'永康區東橋七路381號',type:'接待中心',status:'試用中',contact:'楊小姐',nextdate:'',fw4:340,env:'門口有，室內灰磁磚',note:'楊小姐欣然接受試用，會詢問老闆意願',trialItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-18',mood:3,note:'楊小姐欣然接受試用，會詢問老闆意願',insight:'試用decsr',statusChange:'試用中',nextdate:null}],updatedAt:1742286567000},
@@ -818,10 +878,10 @@ const SEED=[
   {name:'仁善社區長照',addr:'善化區溪尾216-28號',type:'診所',status:'已結案',contact:'',nextdate:'2026-04-07',fw4:220,env:'不需要地墊，廁所還乾淨',note:'',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-24',mood:2,note:'不需要地墊，廁所還乾淨',insight:'',statusChange:'複訪',nextdate:'2026-04-07'}],updatedAt:1742953293000},
   {name:'街役場古蹟餐坊',addr:'新化區中正路500號',type:'餐廳',status:'已結案',contact:'高老闆',nextdate:'2026-03-31',fw4:440,env:'有自備硬地墊，有廁所，香精重但感覺偏髒',note:'高老闆對訂製地墊有興趣，設計報價350-450',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[{text:'設計訂製地墊報價350-450給高老闆',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'介紹自製地墊，王品；洞試用。老闆下週回國',insight:'高老闆對訂製地墊有興趣',statusChange:'試用中',nextdate:'2026-03-31'}],updatedAt:1741830533000},
   {name:'梅林沙龍spa',addr:'永康區新民街140號',type:'美容美甲',status:'已成約',contact:'',nextdate:'2026-04-10',fw4:280,env:'沒地墊，店內很香，老闆很愛美',note:'老闆店門口只能用SS，基本上只有FF能選；若收回殘膠要清乾淨',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:3,note:'老闆勉為其難試試看，只能選FF',insight:'',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741783108000},
-  {name:'秀秀阿美',addr:'永康區東橋十街178號',type:'零售店',status:'已成約',contact:'陳小姐',nextdate:'2026-04-10',fw4:0,env:'門口有自備的小地墊。老闆想要灰色',note:'SS地墊偏小；一週後主動聯絡闆娘陳小姐',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0},{product:'FFSLK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'主動聯絡陳小姐',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-10',mood:3,note:'老闆對試用有興趣，有問了價錢，還額外問了玻璃清潔',insight:'SS地墊偏小',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741593711000},
+  {name:'秀秀阿美',addr:'永康區東橋十街178號',type:'零售店',status:'已成約',contact:'陳小姐',nextdate:'2026-04-10',fw4:0,env:'門口有自備的小地墊。老闆想要灰色',note:'SS地墊偏小；一週後主動聯絡闆娘陳小姐',trialItems:[{product:'FFSLK',qty:1,cycle:'2W',quoted:0},{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'主動聯絡陳小姐',dueDate:'2026-04-10',done:false}],visits:[{date:'2026-03-10',mood:3,note:'老闆對試用有興趣，有問了價錢，還額外問了玻璃清潔',insight:'SS地墊偏小',statusChange:'已成約',nextdate:'2026-04-10'}],updatedAt:1741593711000},
   {name:'耀學堡新化店',addr:'新化區中山路160號',type:'補習班',status:'已結案',contact:'Susan 蔡小姐',nextdate:'',fw4:220,env:'門口有自備地墊、要脫鞋，有小便斗，廁所很香，學生不多。有其他分校',note:'需要繼續追蹤到老闆，可以推薦訂製地墊',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[{text:'繼續追蹤老闆，推薦訂製地墊',dueDate:'',done:false}],visits:[{date:'2026-03-13',mood:2,note:'主任不在，Susan蔡小姐友善，推薦訂製地墊',insight:'試用dome',statusChange:'試用中',nextdate:null}],updatedAt:1741830981000},
   {name:'林宜瑾服務處',addr:'永康區中山南路473號',type:'接待中心',status:'已結案',contact:'',nextdate:'',fw4:440,env:'門口無，面積大，有小便斗',note:'門口要推車運貨不想要太大地墊，有需要打電話；忘記問主任姓名',trialItems:[{product:'DOME',qty:2,cycle:'4W',quoted:0}],todos:[],visits:[{date:'2026-03-20',mood:2,note:'門口要推車運貨不想要太大地墊，有需要打電話',insight:'忘記問主任姓名，試用洞',statusChange:'試用中',nextdate:null}],updatedAt:1742457077000},
-  {name:'愛洛奇國際貿易',addr:'永康區永大路一段287巷133號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:480,env:'沒有地墊，很多層架，老闆喜歡咖啡',note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用；試用結束，太貴',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用',insight:'老闆像馬東石。試用結束，太貴',statusChange:'已結案',nextdate:null}],updatedAt:1742258188000},
+  {name:'愛洛奇國際貿易',addr:'永康區永大路一段287巷133號',type:'零售店',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒有地墊，很多層架，老闆喜歡咖啡',note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用；試用結束，太貴',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得地墊沒用，但接受小黃試用後也接受地墊試用',insight:'老闆像馬東石。試用結束，太貴',statusChange:'已結案',nextdate:null}],updatedAt:1742258188000},
   {name:'蔬食好巳多餐包',addr:'新化區中山路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒門沒地墊',note:'老闆不在，不給留資料',trialItems:[],todos:[],visits:[{date:'2026-03-13',mood:2,note:'老闆不在，不給留資料',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741831540000},
   {name:'金凱鐵板燒',addr:'新化區中山路',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口地墊很破',note:'在餐期進入，沒受到友善對待；老闆沒興趣',trialItems:[],todos:[],visits:[{date:'2026-03-13',mood:1,note:'在餐期進入，沒受到友善對待',insight:'老闆沒興趣',statusChange:'已結案',nextdate:null}],updatedAt:1741830450000},
   {name:'Calm ice',addr:'永康區新民街11號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'沒地墊、有養貓、有廁所',note:'本來感覺要成功接受試用，但最後拒絕。沒給到資料',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'本來感覺要成功接受試用，但最後拒絕',insight:'沒給到資料',statusChange:'已結案',nextdate:null}],updatedAt:1741783126000},
@@ -829,7 +889,7 @@ const SEED=[
   {name:'東星眼鏡',addr:'永康區',type:'眼鏡行',status:'已結案',contact:'',nextdate:'',fw4:0,env:'地墊破舊，綠底黃字歡迎光臨',note:'First blood。應該至少要留資料和推酒精',trialItems:[],todos:[],visits:[{date:'2026-03-09',mood:1,note:'老闆直接拒絕',insight:'First blood。應該至少要留資料和推酒精',statusChange:'已結案',nextdate:null}],updatedAt:1741478143000},
   {name:'錢都 永康文化店',addr:'永康區文化路155號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'',note:'已被登記（其他業務）',trialItems:[],todos:[],visits:[],updatedAt:1741478053000},
   {name:'豚將永康店',addr:'永康區中正七街76號',type:'餐廳',status:'已結案',contact:'',nextdate:'',fw4:0,env:'門口沒地墊，菜口有自己的，沒小便斗',note:'老闆覺得不需要；沒有更努力介紹菜口地墊',trialItems:[],todos:[],visits:[{date:'2026-03-12',mood:2,note:'老闆覺得不需要',insight:'沒有更努力介紹菜口地墊',statusChange:'已結案',nextdate:null}],updatedAt:1741783554000},
-  {name:'熙茂精品鮮果社',addr:'',type:'',status:'已成約',contact:'',nextdate:'',fw4:420,env:'',note:'來源: SERVE 2026/3/10',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'熙茂精品鮮果社',addr:'',type:'',status:'已成約',contact:'',nextdate:'',fw4:0,env:'',note:'來源: SERVE 2026/3/10',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0},{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
   {name:'金球獎釣龍蝦娛樂城',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:660,env:'',note:'來源: SERVE 2026/3/13',trialItems:[{product:'DOME',qty:3,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
   {name:'全化釣蝦',addr:'',type:'',status:'已結案',contact:'',nextdate:'',fw4:620,env:'',note:'來源: SERVE 2026/3/13',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
   {name:'永興日間照顧中心',addr:'',type:'',status:'已結案',contact:'',nextdate:'',fw4:220,env:'',note:'來源: SERVE 2026/3/17',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
@@ -842,9 +902,9 @@ const SEED=[
   {name:'愛生育生活科技',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:220,env:'',note:'來源: SERVE 2026/3/30',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
   {name:'植上東門接待中心',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:220,env:'',note:'來源: SERVE 2026/3/31',trialItems:[{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
   {name:'莉志藥局',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:340,env:'',note:'來源: SERVE 2026/3/31',trialItems:[{product:'BSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
-  {name:'舍予律師事務所',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:280,env:'',note:'來源: SERVE 2026/4/7',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'舍予律師事務所',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:0,env:'',note:'來源: SERVE 2026/4/7',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
   {name:'本職人鐵板燒',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:400,env:'',note:'來源: SERVE 2026/4/8',trialItems:[{product:'DWSH',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
-  {name:'肇輝挺憲後援會',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:340,env:'',note:'來源: SERVE 2026/4/8',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
+  {name:'肇輝挺憲後援會',addr:'',type:'',status:'試用中',contact:'',nextdate:'',fw4:0,env:'',note:'來源: SERVE 2026/4/8',trialItems:[{product:'FFSK',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[],updatedAt:1775647950965},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -1138,7 +1198,11 @@ function navTo(id,el){
   if(id==='settings')initSettings();
   window.scrollTo(0,0);
 }
-function today(){return new Date().toISOString().slice(0,10);}
+function today(){
+  // 使用本地時區（不是 UTC），避免 UTC+8 跨日顯示錯誤
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function initSettings(){
   document.getElementById('sheet-url').value=SHEET_URL;
   if(SHEET_URL)updateSheetStatus(true);
@@ -1306,7 +1370,23 @@ function setRegion(r,el){
 // ═══════════════════════════════════════════════════════════
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
-function calcFW4(c){return c.fw4>0?c.fw4:(c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);}
+function calcFW4(c){
+  if(c.fw4>0)return c.fw4;
+  const t=(c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);
+  const k=(c.contractedItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);
+  return t+k;
+}
+// 報表專用：若成約品項的 contractDate 落在 [from,to] 區間則用成約金額，否則用試用金額
+function calcReportAmt(c,from,to){
+  const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo);
+  const inRange=k.filter(it=>it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
+  if(inRange.length){
+    // 有成約在區間內 → 成約品項金額（含其配件，但這裡簡化只算主項）
+    return (c.contractedItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);
+  }
+  // 預設走試用
+  return (c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0)||c.fw4||0;
+}
 // 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
 function trialStartDate(c){
   if(c.trialDate)return c.trialDate;
@@ -1474,6 +1554,7 @@ function renderClients(){
       </div>
       <div class="cc-meta">
         ${td?`<span>試用日：${td}</span>`:''}
+        ${(() => {const t=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo).length;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'試用 '+t:''}</span>`:'';})()}
         ${prod?`<span>提案：${prod}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
@@ -1485,7 +1566,7 @@ function renderClients(){
 // ═══════════════════════════════════════════════════════════
 // CLIENT FORM
 // ═══════════════════════════════════════════════════════════
-let S={curIdx:-1,editIdx:-1,cfItems:[],cfTodos:[],curMood:3};
+let S={curIdx:-1,editIdx:-1,cfItems:[],cfTodos:[],curMood:3,editVisitIdx:-1};
 
 function showView(id){
   ['view-list','view-form','view-detail'].forEach(v=>document.getElementById(v).style.display='none');
@@ -1506,9 +1587,10 @@ function openCF(idx){
   document.getElementById('cf-env').value=c?.env||'';
   document.getElementById('cf-note').value=c?.note||'';
   S.cfItems=JSON.parse(JSON.stringify(c?.trialItems||[]));
+  S.cfContracted=JSON.parse(JSON.stringify(c?.contractedItems||[]));
   rebuildAllBundles();
   S.cfTodos=JSON.parse(JSON.stringify(c?.todos||[]));
-  renderItems();renderTodoFields();updProd();
+  renderItems();renderContracted();renderTodoFields();updProd();
   showView('view-form');
 }
 function closeForm(){showView('view-list');}
@@ -1573,7 +1655,7 @@ function renderItems(){
           <option value="2W"${(it.cycle||'2W')==='2W'?' selected':''}>2W換</option>
           <option value="4W"${it.cycle==='4W'?' selected':''}>4W換</option>
         </select>`:''}
-        <button onclick="removeMain(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
+        <button onclick="promoteToContract(${i})" title="轉為成約" style="background:none;border:1px solid var(--green-b);color:var(--green-d);font-size:11px;padding:3px 7px;border-radius:4px;cursor:pointer;flex-shrink:0">✓成約</button><button onclick="removeMain(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
       </div>
       <div class="ti-bot">
         <span class="ti-label">4W原價</span>
@@ -1587,6 +1669,53 @@ function renderItems(){
   }).join('');
   document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+displayFw4(it.product,it.qty,it.cycle||'2W'),0)).toLocaleString();
 }
+// 把試用品項轉成成約品項（連同配件）
+function promoteToContract(i){
+  const main=S.cfItems[i];if(!main||!main.product)return;
+  if(!confirm('確定要把「'+main.product+'」轉為成約品項？'))return;
+  const mainCode=main.product;
+  // 收集主商品 + 它的配件
+  const moved=[S.cfItems[i]];
+  for(let j=S.cfItems.length-1;j>=0;j--){
+    if(j===i)continue;
+    if(S.cfItems[j].bundledTo===mainCode){moved.unshift(S.cfItems[j]);S.cfItems.splice(j,1);}
+  }
+  // i 可能因為前面刪配件而位移，重新找
+  const newIdx=S.cfItems.indexOf(main);
+  if(newIdx>=0)S.cfItems.splice(newIdx,1);
+  // 加入成約區，標記成約日期
+  if(!S.cfContracted)S.cfContracted=[];
+  moved.forEach(it=>{it.contractDate=today();S.cfContracted.push(it);});
+  renderItems();renderContracted();updProd();
+}
+// 從成約區移除（誤操作救回）
+function removeContracted(i){
+  if(!confirm('從成約區移除這個品項？'))return;
+  const main=S.cfContracted[i];if(!main)return;
+  const mainCode=main.product;
+  for(let j=S.cfContracted.length-1;j>=0;j--){
+    if(S.cfContracted[j].bundledTo===mainCode||j===i)S.cfContracted.splice(j,1);
+  }
+  renderContracted();
+}
+function renderContracted(){
+  const el=document.getElementById('cf-contracted-list');
+  if(!el)return;
+  const items=S.cfContracted||[];
+  if(!items.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">（無）</div>';return;}
+  el.innerHTML=items.map((it,i)=>{
+    const p=getProd(it.product);
+    const isAcc=!!it.bundledTo;
+    const amt=isAcc?'':'$'+fw4(it.product,it.qty).toLocaleString();
+    return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
+      ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
+      <span style="flex:1;font-size:13px">${it.product} ${p?'· '+p.desc:''} ×${it.qty||1}</span>
+      <span style="font-size:13px;color:#085041;font-weight:600">${amt}</span>
+      ${!isAcc?`<button onclick="removeContracted(${i})" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
+    </div></div>`;
+  }).join('');
+}
+
 // 刪除主商品：連同其 bundled 配件一起刪
 function removeMain(i){
   const main=S.cfItems[i]; if(!main) return;
@@ -1686,6 +1815,7 @@ async function saveClient(){
     fw4:autofw,env:document.getElementById('cf-env').value,
     note:document.getElementById('cf-note').value,
     trialItems:JSON.parse(JSON.stringify(S.cfItems)),
+    contractedItems:JSON.parse(JSON.stringify(S.cfContracted||[])),
     todos:JSON.parse(JSON.stringify(S.cfTodos)),
     updatedAt:Date.now(),
   };
@@ -1774,44 +1904,108 @@ function addDetTodo(){
 }
 
 // VISIT LOG
-function showVLForm(){
-  document.getElementById('vl-date').value=today();document.getElementById('vl-status').value='';
-  document.getElementById('vl-note').value='';document.getElementById('vl-ins').value='';document.getElementById('vl-next').value='';
-  S.curMood=3;updMoodUI();document.getElementById('vl-form').style.display='block';
+function showVLForm(visitIdx){
+  S.editVisitIdx=(typeof visitIdx==='number'&&visitIdx>=0)?visitIdx:-1;
+  const c=DB.clients[S.curIdx];
+  if(S.editVisitIdx>=0&&c&&c.visits&&c.visits[S.editVisitIdx]){
+    const v=c.visits[S.editVisitIdx];
+    document.getElementById('vl-date').value=v.date||today();
+    document.getElementById('vl-status').value=v.statusChange||'';
+    document.getElementById('vl-note').value=v.note||'';
+    document.getElementById('vl-ins').value=v.insight||'';
+    S.curMood=v.mood||3;
+  }else{
+    document.getElementById('vl-date').value=today();
+    document.getElementById('vl-status').value='';
+    document.getElementById('vl-note').value='';
+    document.getElementById('vl-ins').value='';
+    S.curMood=3;
+  }
+  updMoodUI();
+  document.getElementById('vl-form').style.display='block';
+  updVLMode();
+  setTimeout(()=>{document.getElementById('vl-form').scrollIntoView({behavior:'smooth',block:'center'});},50);
+}
+// 根據 vl-date 的選擇切換模式：過去/今天=拜訪紀錄，未來=下次拜訪日
+function updVLMode(){
+  const d=document.getElementById('vl-date').value;
+  const isFuture=d&&d>today();
+  document.getElementById('vl-extra').style.display=isFuture?'none':'block';
+  document.getElementById('vl-future-hint').style.display=isFuture?'block':'none';
 }
 function setMood(n){S.curMood=n;updMoodUI();}
 function updMoodUI(){for(let i=1;i<=4;i++)document.getElementById('vm'+i).classList.toggle('on',i===S.curMood);}
 function saveVL(){
-  const ns=document.getElementById('vl-status').value;
-  let nd=document.getElementById('vl-next').value;
-  // 若使用者沒手動填 nextdate，自動設拜訪日 +7 天
-  if(!nd){
-    const base=document.getElementById('vl-date').value||today();
-    const d=new Date(base+'T00:00:00');
-    d.setDate(d.getDate()+7);
-    nd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const selDate=document.getElementById('vl-date').value;
+  if(!selDate){alert('請選擇日期');return;}
+  const c=DB.clients[S.curIdx];
+  const isEdit=S.editVisitIdx>=0;
+  if(isEdit&&selDate>today()){
+    alert('編輯拜訪紀錄時，日期不能改成未來。\n若要排下次拜訪日，請用「+ 記錄拜訪 / 排下次」按鈕新增。');
+    return;
   }
-  const v={date:document.getElementById('vl-date').value,mood:S.curMood,note:document.getElementById('vl-note').value,insight:document.getElementById('vl-ins').value,statusChange:ns||null,nextdate:nd};
-  if(!DB.clients[S.curIdx].visits)DB.clients[S.curIdx].visits=[];
-  DB.clients[S.curIdx].visits.push(v);
-  if(ns)DB.clients[S.curIdx].status=ns;
-  DB.clients[S.curIdx].nextdate=nd;
-  DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();
-  autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});
-  document.getElementById('vl-form').style.display='none';renderVisits();renderClients();openCD(S.curIdx);
+  if(!isEdit&&selDate>today()){
+    c.nextdate=selDate;
+    c.updatedAt=Date.now();
+    saveLocal();
+    autoSync('save',{client:c,idx:S.curIdx});
+    document.getElementById('vl-form').style.display='none';
+    S.editVisitIdx=-1;
+    renderVisits();renderClients();openCD(S.curIdx);
+    showVerToast('🗓️ 已設下次拜訪日為 '+selDate);
+    return;
+  }
+  const ns=document.getElementById('vl-status').value;
+  const noteVal=document.getElementById('vl-note').value;
+  const insVal=document.getElementById('vl-ins').value;
+  if(!c.visits)c.visits=[];
+  if(isEdit){
+    const orig=c.visits[S.editVisitIdx]||{};
+    c.visits[S.editVisitIdx]={
+      date:selDate,
+      mood:S.curMood,
+      note:noteVal,
+      insight:insVal,
+      statusChange:ns||null,
+      nextdate:orig.nextdate||null
+    };
+    if(ns)c.status=ns;
+  }else{
+    const base=new Date(selDate+'T00:00:00');
+    base.setDate(base.getDate()+7);
+    const nd=base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0');
+    const v={date:selDate,mood:S.curMood,note:noteVal,insight:insVal,statusChange:ns||null,nextdate:nd};
+    c.visits.push(v);
+    if(ns)c.status=ns;
+    c.nextdate=nd;
+  }
+  c.updatedAt=Date.now();saveLocal();
+  autoSync('save',{client:c,idx:S.curIdx});
+  document.getElementById('vl-form').style.display='none';
+  S.editVisitIdx=-1;
+  renderVisits();renderClients();openCD(S.curIdx);
+  if(isEdit)showVerToast('✓ 拜訪紀錄已更新');
 }
 function renderVisits(){
-  const vs=[...(DB.clients[S.curIdx]?.visits||[])].reverse();
-  document.getElementById('cd-visits').innerHTML=vs.length?vs.map(v=>`
+  const c=DB.clients[S.curIdx];
+  if(!c||!c.visits||!c.visits.length){
+    document.getElementById('cd-visits').innerHTML='<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無拜訪記錄</div>';
+    return;
+  }
+  const vsWithIdx=c.visits.map((v,i)=>({v,i})).reverse();
+  document.getElementById('cd-visits').innerHTML=vsWithIdx.map(({v,i})=>`
     <div class="visit-log">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <span style="font-weight:600;font-size:14px">${v.date} ${MOODS[v.mood]||''}</span>
-        ${v.statusChange?bdg(v.statusChange):''}
+        <div style="display:flex;align-items:center;gap:6px">
+          ${v.statusChange?bdg(v.statusChange):''}
+          <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯">✏️</button>
+        </div>
       </div>
       ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${v.note}</div>`:''}
       ${v.insight?`<div style="font-size:13px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:5px 10px">${v.insight}</div>`:''}
       ${v.nextdate?`<div style="font-size:12px;color:var(--text3);margin-top:4px">下次：${v.nextdate}</div>`:''}
-    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無拜訪記錄</div>';
+    </div>`).join('');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2220,6 +2414,54 @@ async function pullAndDismiss(){
 }
 // 每分鐘刷新相對時間
 setInterval(()=>{renderVerBadge();},60000);
+async function recalcAllFw4(){
+  if(!confirm('將重算所有 '+DB.clients.length+' 個客戶的 4W 金額，並推上雲端。確定繼續？'))return;
+  let changed=0, same=0;
+  const details=[];
+  for(let i=0;i<DB.clients.length;i++){
+    const c=DB.clients[i];
+    if(!c.trialItems||!c.trialItems.length){continue;}
+    const mains=c.trialItems.filter(it=>it.product&&!it.bundledTo);
+    if(!mains.length){continue;}
+    const newFw4=c.trialItems.reduce((s,it)=>s+fw4(it.product,it.qty),0);
+    const oldFw4=c.fw4||0;
+    if(newFw4!==oldFw4){
+      details.push(c.name+': $'+oldFw4+' → $'+newFw4);
+      c.fw4=newFw4;
+      c.updatedAt=Date.now();
+      changed++;
+    }else{
+      same++;
+    }
+  }
+  if(changed===0){
+    alert('✓ 全部 '+DB.clients.length+' 個客戶金額都正確，無須更新');
+    return;
+  }
+  saveLocal();
+  // 顯示變更清單
+  const msg='已重算 '+changed+' 筆（另 '+same+' 筆不變）:\n\n'+details.slice(0,20).join('\n')+(details.length>20?'\n...(以下省略)':'')+'\n\n是否推上雲端？';
+  if(!confirm(msg)){
+    renderClients();
+    alert('僅本地更新，未推雲端');
+    return;
+  }
+  // 推雲端
+  const btn=event.target;
+  btn.disabled=true;btn.textContent='推送中...';
+  let ok=0,fail=0;
+  for(let i=0;i<DB.clients.length;i++){
+    const c=DB.clients[i];
+    try{
+      await callScript('save',{client:c,idx:i});
+      ok++;
+    }catch(e){fail++;}
+  }
+  btn.disabled=false;btn.textContent='重算';
+  renderClients();
+  alert('完成！本地重算 '+changed+' 筆，雲端推送成功 '+ok+' 筆，失敗 '+fail+' 筆');
+}
+
 function forceReload(){
   // 加時間戳參數繞過瀏覽器快取
   const url=new URL(window.location.href);
