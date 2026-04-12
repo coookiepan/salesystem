@@ -615,7 +615,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.12-h';
+const APP_VERSION='v2026.04.12-i';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -860,7 +860,7 @@ const DEFAULT_PRODUCTS=[
   {code:'BT2',cat:'芳香',desc:'BT2鹼性3號電池',price:0,cycle:'',note:'配件',active:false},
 ];
 
-const INV_INIT=[{n:'S-20',s:5,st:5},{n:'SHH',s:10,st:10},{n:'NFM-DS',s:2,st:2},{n:'N-AC',s:2,st:2},{n:'M-120',s:2,st:2},{n:'M120-H',s:2,st:2},{n:'M-90',s:2,st:2},{n:'NSAC',s:2,st:2},{n:'SHB',s:15,st:15},{n:'BS-H',s:2,st:2},{n:'BM-H',s:2,st:2},{n:'P-B',s:4,st:4},{n:'M90-H',s:2,st:2},{n:'M-PA',s:4,st:4},{n:'TJSR',s:1,st:1},{n:'TJSH',s:1,st:1},{n:'TJLH',s:1,st:1},{n:'2SN2',s:1,st:1},{n:'GSH',s:1,st:1},{n:'GSB',s:1,st:1},{n:'EXSLH',s:1,st:1},{n:'GLH',s:1,st:1},{n:'EXLH',s:1,st:1},{n:'EXSH',s:1,st:1},{n:'MANSB',s:1,st:1},{n:'MWOSR',s:1,st:1},{n:'FFSK',s:2,st:2},{n:'FFSLK',s:1,st:1},{n:'FFLK',s:1,st:1},{n:'TJSLH',s:1,st:1},{n:'DWSR',s:1,st:1},{n:'DWSH',s:2,st:2},{n:'DWSLH',s:2,st:2},{n:'DWLH',s:1,st:1},{n:'DWLLH',s:1,st:1},{n:'DW3MH',s:1,st:1},{n:'BSH',s:2,st:2},{n:'BSR',s:1,st:1},{n:'BSLH',s:1,st:1},{n:'BSLR',s:1,st:1},{n:'FSSK',s:1,st:1},{n:'UQSH',s:1,st:1},{n:'UQSLH',s:1,st:1},{n:'UQLH',s:1,st:1},{n:'DECSR',s:2,st:2},{n:'DECSLR',s:2,st:2},{n:'DECLR',s:2,st:2},{n:'DECLLR',s:1,st:1},{n:'DECTR',s:1,st:1},{n:'DWSSH',s:2,st:2},{n:'KKSN',s:1,st:1},{n:'KKSLN',s:1,st:1},{n:'KKLN',s:1,st:1},{n:'DOME',s:30,st:30},{n:'FNWT',s:2,st:2},{n:'FNBK',s:2,st:2},{n:'FNPS2-K',s:4,st:4},{n:'BT3',s:24,st:24},{n:'BFDW',s:4,st:4},{n:'BF-W',s:4,st:4},{n:'AFDW',s:2,st:2},{n:'BT1',s:4,st:4},{n:'BF-PC',s:4,st:4},{n:'AF-BP',s:2,st:2},{n:'AF-IT',s:2,st:2},{n:'AMDW',s:4,st:4},{n:'AMMK',s:2,st:2},{n:'AMWT',s:2,st:2},{n:'AMOB',s:2,st:2},{n:'BT4',s:16,st:16}];
+const INV_INIT=[{name:'S-20',stock:5,std:5},{name:'SHH',stock:10,std:10},{name:'NFM-DS',stock:2,std:2},{name:'N-AC',stock:2,std:2},{name:'M-120',stock:2,std:2},{name:'M120-H',stock:2,std:2},{name:'M-90',stock:2,std:2},{name:'NSAC',stock:2,std:2},{name:'SHB',stock:15,std:15},{name:'BS-H',stock:2,std:2},{name:'BM-H',stock:2,std:2},{name:'P-B',stock:4,std:4},{name:'M90-H',stock:2,std:2},{name:'M-PA',stock:4,std:4},{name:'TJSR',stock:1,std:1},{name:'TJSH',stock:1,std:1},{name:'TJLH',stock:1,std:1},{name:'2SN2',stock:1,std:1},{name:'GSH',stock:1,std:1},{name:'GSB',stock:1,std:1},{name:'EXSLH',stock:1,std:1},{name:'GLH',stock:1,std:1},{name:'EXLH',stock:1,std:1},{name:'EXSH',stock:1,std:1},{name:'MANSB',stock:1,std:1},{name:'MWOSR',stock:1,std:1},{name:'FFSK',stock:2,std:2},{name:'FFSLK',stock:1,std:1},{name:'FFLK',stock:1,std:1},{name:'TJSLH',stock:1,std:1},{name:'DWSR',stock:1,std:1},{name:'DWSH',stock:2,std:2},{name:'DWSLH',stock:2,std:2},{name:'DWLH',stock:1,std:1},{name:'DWLLH',stock:1,std:1},{name:'DW3MH',stock:1,std:1},{name:'BSH',stock:2,std:2},{name:'BSR',stock:1,std:1},{name:'BSLH',stock:1,std:1},{name:'BSLR',stock:1,std:1},{name:'FSSK',stock:1,std:1},{name:'UQSH',stock:1,std:1},{name:'UQSLH',stock:1,std:1},{name:'UQLH',stock:1,std:1},{name:'DECSR',stock:2,std:2},{name:'DECSLR',stock:2,std:2},{name:'DECLR',stock:2,std:2},{name:'DECLLR',stock:1,std:1},{name:'DECTR',stock:1,std:1},{name:'DWSSH',stock:2,std:2},{name:'KKSN',stock:1,std:1},{name:'KKSLN',stock:1,std:1},{name:'KKLN',stock:1,std:1},{name:'DOME',stock:30,std:30},{name:'FNWT',stock:2,std:2},{name:'FNBK',stock:2,std:2},{name:'FNPS2-K',stock:4,std:4},{name:'BT3',stock:24,std:24},{name:'BFDW',stock:4,std:4},{name:'BF-W',stock:4,std:4},{name:'AFDW',stock:2,std:2},{name:'BT1',stock:4,std:4},{name:'BF-PC',stock:4,std:4},{name:'AF-BP',stock:2,std:2},{name:'AF-IT',stock:2,std:2},{name:'AMDW',stock:4,std:4},{name:'AMMK',stock:2,std:2},{name:'AMWT',stock:2,std:2},{name:'AMOB',stock:2,std:2},{name:'BT4',stock:16,std:16}];
 
 // ── SEED CLIENTS ──────────────────────────────────────────
 const SEED=[
@@ -961,14 +961,14 @@ function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span c
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
 function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));}catch(e){}}
 
-let DB={clients:[],inventory:INV_INIT.map(p=>({name:p.n,stock:p.s,std:p.st})),products:[]};
+let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[]};
 let SHEET_URL='';
 const SYNC={state:'offline',lastSyncAt:0,lastPullAt:0,pending:0};
 
 const local=loadLocal();
 if(local){
   DB.clients=local.clients||[];
-  DB.inventory=local.inventory||INV_INIT.map(p=>({name:p.n,stock:p.s,std:p.st}));
+  DB.inventory=local.inventory||JSON.parse(JSON.stringify(INV_INIT));
   DB.products=local.products&&local.products.length?local.products:JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
   SHEET_URL=local.sheetUrl||'';
   SYNC.lastSyncAt=local.lastSyncAt||0;
@@ -1342,6 +1342,28 @@ function toggleProdSection(){
 // ═══════════════════════════════════════════════════════════
 // MIGRATION 框架
 // ═══════════════════════════════════════════════════════════
+// 資料不變式檢查 — 啟動時掃描所有客戶，列印違反的筆數到 console
+function validateClients(){
+  let warnings=0;
+  (DB.clients||[]).forEach((c,i)=>{
+    if(!c)return;
+    const isDeal=c.status===STATUS.DEAL||c.status===STATUS.TRANSFER;
+    const hasContract=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length>0;
+    // 不變式 1：已成約/已轉交 ↔ contractedItems 至少一筆主項
+    if(isDeal&&!hasContract){
+      console.warn('[validateClients] #'+i+' '+c.name+': status='+c.status+' 但無成約品項');
+      warnings++;
+    }
+    // 不變式 2：status 非未拜訪 → 應有至少一筆 visit
+    if(c.status&&c.status!==STATUS.UNVISITED&&(c.visits||[]).length===0){
+      console.warn('[validateClients] #'+i+' '+c.name+': status='+c.status+' 但 visits 為空');
+      warnings++;
+    }
+  });
+  if(warnings)console.warn('[validateClients] 共 '+warnings+' 筆違反不變式');
+  return warnings;
+}
+
 // 統一 inventory schema：舊格式 {n,s,st} → 新格式 {name,stock,std}
 function normalizeInventory(){
   (DB.inventory||[]).forEach(it=>{
@@ -1569,7 +1591,7 @@ function collectRegions(){
     if((c.visits||[]).length>0)return;
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
     if(mains.length>0)return; // 有試用品項也算拜訪過，不列入未拜訪池
-    if(statusEq(c.status,'拒絕'))return; // 排除已拒絕的
+    if(statusEq(c.status,STATUS.REFUSE))return;
     const r=parseRegion(c.addr);
     if(r)regions.add(r);
   });
@@ -1579,7 +1601,7 @@ function collectRegions(){
 function renderRegionBar(){
   const bar=document.getElementById('region-bar');
   if(!bar)return;
-  if(activeCat!=='未拜訪'){bar.style.display='none';bar.innerHTML='';return;}
+  if(activeCat!==STATUS.UNVISITED){bar.style.display='none';bar.innerHTML='';return;}
   const regions=collectRegions();
   if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
   bar.style.display='flex';
@@ -1694,20 +1716,19 @@ function saveStatusFilter(){
 }
 function statusVisible(status){
   // 未設定狀態 視為「未拜訪」
-  const s=status||'未拜訪';
-  // 已結案 舊標記對應到 拒絕
-  const key=(s==='已結案')?'拒絕':s;
+  const s=status||STATUS.UNVISITED;
+  const key=(s===STATUS.CLOSED)?STATUS.REFUSE:s;
   return statusFilter[key]!==false;
 }
 function openStatusFilterModal(){
   const el=document.getElementById('status-filter-list');
-  el.innerHTML=SO.filter(s=>s!=='已結案').map(s=>{
+  el.innerHTML=SO.filter(s=>s!==STATUS.CLOSED).map(s=>{
     const checked=statusFilter[s]!==false;
     const [bg,fg]=SS_STYLE[s]||['#F1EFE8','#666'];
     return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--bg2)">
       <input type="checkbox" ${checked?'checked':''} onchange="toggleStatusFilter('${s}',this.checked)" style="width:18px;height:18px;cursor:pointer">
       <span class="badge" style="background:${bg};color:${fg}">${s}</span>
-      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||'未拜訪')===s||(s==='拒絕'&&c.status==='已結案')).length} 筆</span>
+      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||STATUS.UNVISITED)===s||(s===STATUS.REFUSE&&c.status===STATUS.CLOSED)).length} 筆</span>
     </label>`;
   }).join('');
   document.getElementById('status-filter-modal').classList.add('on');
@@ -1776,7 +1797,7 @@ function renderClients(){
         if(!db)return -1;
         return da<db?1:da>db?-1:0;
       }
-      if(activeCat==='未拜訪'){
+      if(activeCat===STATUS.UNVISITED){
         // 區域 → 名稱
         const ra=parseRegion(a.c.addr),rb=parseRegion(b.c.addr);
         if(ra!==rb)return ra.localeCompare(rb,'zh-Hant');
@@ -1853,7 +1874,7 @@ function openCF(idx){
   document.getElementById('cf-contact').value=c?.contact||'';
   document.getElementById('cf-addr').value=c?.addr||'';
   document.getElementById('cf-type').value=c?.type||'';
-  document.getElementById('cf-status').value=c?displayStatus(c.status):'未拜訪';
+  document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.UNVISITED;
   // 試用日：優先用存的 c.trialDate，否則 fallback 自動推算
   document.getElementById('cf-trialdate').value=c?.trialDate||(c?trialStartDate(c):'')||'';
   document.getElementById('cf-nextdate').value=c?.nextdate||'';
@@ -1944,22 +1965,23 @@ function renderItems(){
 }
 // 把試用品項轉成成約品項（連同配件）
 function promoteToContract(i){
-  const main=S.cfItems[i];if(!main||!main.product)return;
-  const mainCode=main.product;
-  // 收集主商品 + 它的配件
-  const moved=[S.cfItems[i]];
-  for(let j=S.cfItems.length-1;j>=0;j--){
-    if(j===i)continue;
-    if(S.cfItems[j].bundledTo===mainCode){moved.unshift(S.cfItems[j]);S.cfItems.splice(j,1);}
+  try{
+    const main=S.cfItems[i];if(!main||!main.product)return;
+    const mainCode=main.product;
+    const moved=[S.cfItems[i]];
+    for(let j=S.cfItems.length-1;j>=0;j--){
+      if(j===i)continue;
+      if(S.cfItems[j].bundledTo===mainCode){moved.unshift(S.cfItems[j]);S.cfItems.splice(j,1);}
+    }
+    const newIdx=S.cfItems.indexOf(main);
+    if(newIdx>=0)S.cfItems.splice(newIdx,1);
+    if(!S.cfContracted)S.cfContracted=[];
+    moved.forEach(it=>{it.contractDate=today();S.cfContracted.push(it);});
+    const st=document.getElementById('cf-status');if(st)st.value=STATUS.DEAL;
+    renderItems();renderContracted();updProd();
+  }catch(e){
+    alert('成約操作失敗：'+(e.message||e));
   }
-  // i 可能因為前面刪配件而位移，重新找
-  const newIdx=S.cfItems.indexOf(main);
-  if(newIdx>=0)S.cfItems.splice(newIdx,1);
-  // 加入成約區，標記成約日期
-  if(!S.cfContracted)S.cfContracted=[];
-  moved.forEach(it=>{it.contractDate=today();S.cfContracted.push(it);});
-  const st=document.getElementById('cf-status');if(st)st.value='已成約';
-  renderItems();renderContracted();updProd();
 }
 // 從成約區搬回試用區（改回試用）
 function removeContracted(i){
@@ -1974,7 +1996,7 @@ function removeContracted(i){
   }
   if(!S.cfItems)S.cfItems=[];
   S.cfItems.push(...moved);
-  const st=document.getElementById('cf-status');if(st)st.value='試用中';
+  const st=document.getElementById('cf-status');if(st)st.value=STATUS.TRIAL;
   renderItems();renderContracted();updProd();
 }
 function renderContracted(){
@@ -2105,7 +2127,7 @@ async function saveClient(){
   // 自動寫 visit：status 從「未拜訪/空」變成其他 → 今天補一筆 visit（已存在今天的就更新 statusChange）
   try{
     const oldStatus=isEdit?(DB.clients[S.editIdx]?.status||''):'';
-    const isLeaving=(!oldStatus||oldStatus==='未拜訪')&&c.status&&c.status!=='未拜訪';
+    const isLeaving=(!oldStatus||oldStatus===STATUS.UNVISITED)&&c.status&&c.status!==STATUS.UNVISITED;
     if(isLeaving){
       const td=today();
       const prevVisits=isEdit?(DB.clients[S.editIdx].visits||[]):[];
@@ -2132,7 +2154,7 @@ function openCD(i){
   document.getElementById('cd-name').textContent=c.name;
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
-    bdg(c.status||'未拜訪')+
+    bdg(c.status||STATUS.UNVISITED)+
     (fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:'')+
     ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
@@ -2307,7 +2329,7 @@ function renderVisits(){
 function renderDaily(){
   const date=document.getElementById('daily-date').value;
   const vis=DB.clients.filter(c=>(c.visits||[]).some(v=>v.date===date));
-  const tri=vis.filter(c=>c.status==='試用中'||(c.visits||[]).some(v=>v.date===date&&v.statusChange==='試用中'));
+  const tri=vis.filter(c=>c.status===STATUS.TRIAL||(c.visits||[]).some(v=>v.date===date&&v.statusChange===STATUS.TRIAL));
   const amt=tri.reduce((s,c)=>s+calcFW4(c),0);
   document.getElementById('ds-v').textContent=vis.length;
   document.getElementById('ds-t').textContent=tri.length;
@@ -2466,11 +2488,11 @@ function genReport(){
       const note=[v.note,v.insight].filter(x=>x&&x.trim()).join('；').replace(/[\t\n\r]/g,' ');
       // 勾選邏輯
       const sc=v.statusChange||'';
-      const isInit=sc==='初訪';
-      const isRe=sc==='複訪';
-      const isQuote=sc==='報價';
+      const isInit=sc===STATUS.FIRST;
+      const isRe=sc===STATUS.REVISIT;
+      const isQuote=sc===STATUS.QUOTE;
       // 有報價就自動勾試用；「試用中/將成約/已成約」也算試用
-      const isTrial=isQuote||sc==='試用中'||sc==='將成約'||sc==='已成約';
+      const isTrial=isQuote||sc===STATUS.TRIAL||sc===STATUS.CLOSING||sc===STATUS.DEAL;
       // 初訪/複訪 互斥，擇一
       const initMark=isInit&&!isRe?'✓':'';
       const reMark=isRe&&!isInit?'✓':'';
@@ -2708,7 +2730,7 @@ const MIGRATIONS=[
   });
   if(start!==done)localStorage.setItem('migration_v',String(Math.max(start,done)));
 })();
-autoAddRecycleTodos();renderClients();
+autoAddRecycleTodos();validateClients();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL)updateSheetStatus(true);
 
