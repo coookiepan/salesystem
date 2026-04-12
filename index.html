@@ -942,13 +942,19 @@ const SEED=[
 // ═══════════════════════════════════════════════════════════
 // STATE & PERSISTENCE
 // ═══════════════════════════════════════════════════════════
-const SO=['未拜訪','初訪','複訪','試用中','報價','將成約','已成約','已轉交','拒絕'];
+// 狀態常數表 — 唯一 source of truth，所有狀態判定皆查此表
+const STATUS={
+  UNVISITED:'未拜訪', FIRST:'初訪', REVISIT:'複訪',
+  TRIAL:'試用中', QUOTE:'報價', CLOSING:'將成約',
+  DEAL:'已成約', TRANSFER:'已轉交', REFUSE:'拒絕', CLOSED:'已結案'
+};
+const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
 const MOODS=['','😞','😐','😊','😄'];
 const SS_STYLE={'未拜訪':['#F1EFE8','#444441'],'初訪':['#E6F1FB','#0C447C'],'複訪':['#FAEEDA','#633806'],'試用中':['#E6F1FB','#0C447C'],'報價':['#FAEEDA','#633806'],'將成約':['#EEEDFE','#3C3489'],'已成約':['#E1F5EE','#085041'],'已轉交':['#D4EDDA','#155724'],'已結案':['#FCEBEB','#A32D2D'],'拒絕':['#FCEBEB','#A32D2D']};
 // 舊狀態顯示文字對應（新舊並存）
-function displayStatus(s){return s==='已結案'?'拒絕':(s||'未拜訪');}
+function displayStatus(s){return s===STATUS.CLOSED?STATUS.REFUSE:(s||STATUS.UNVISITED);}
 // 判定兩個 status 是否語意相同（拒絕=已結案）
-function statusEq(a,b){const n=s=>s==='已結案'?'拒絕':s;return n(a)===n(b);}
+function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)===n(b);}
 const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 
@@ -1078,11 +1084,6 @@ function activeProducts(){return DB.products.filter(p=>p.active&&p.price>0&&!isF
 // 根據代號查商品
 function getProd(code){return DB.products.find(p=>p.code===code)||null;}
 
-// 計費：2W週期 × 2 = 4W原價；4W週期 × 1（報表／統計用：永遠 2W 核心）
-function fw4(code,qty=1){
-  const p=getProd(code);if(!p||!p.price)return 0;
-  return p.price*(p.cycle==='2W'?2:1)*qty;
-}
 // 試用品項編輯畫面顯示用：地墊選 4W 換時套 0.8 折扣
 // （僅影響編輯畫面的「4W原價」欄與清單總計，不影響任何報表計算）
 function displayFw4(code,qty=1,cycle='2W'){
@@ -1284,11 +1285,7 @@ function renderInventory(){
     const catMap={};
     (DB.products||[]).forEach(p=>{if(p&&p.code)catMap[p.code]=p.cat||'';});
     let list=(DB.inventory||[]).map(it=>{
-      // 相容兩種 schema：簡寫 {n,s,st} 和完整 {name,stock,std}
-      const name=it.name||it.n||'';
-      const stock=Number(it.stock!=null?it.stock:it.s)||0;
-      const std=Number(it.std!=null?it.std:it.st)||0;
-      return {name,stock,std,cat:catMap[name]||'其他'};
+      return {name:it.name||'',stock:Number(it.stock)||0,std:Number(it.std)||0,cat:catMap[it.name]||'其他'};
     });
     if(INV_STATE.mode==='short')list=list.filter(x=>x.stock<x.std);
     if(INV_STATE.cat)list=list.filter(x=>x.cat===INV_STATE.cat);
@@ -1342,14 +1339,25 @@ function toggleProdSection(){
   if(show)renderProducts();
 }
 
-// 庫存操作：送出試用/出貨 −1，補齊回標準數；寫回 localStorage + sync 雲端
+// ═══════════════════════════════════════════════════════════
+// MIGRATION 框架
+// ═══════════════════════════════════════════════════════════
+// 統一 inventory schema：舊格式 {n,s,st} → 新格式 {name,stock,std}
+function normalizeInventory(){
+  (DB.inventory||[]).forEach(it=>{
+    if(it.n!=null&&it.name==null){it.name=it.n;delete it.n;}
+    if(it.s!=null&&it.stock==null){it.stock=it.s;delete it.s;}
+    if(it.st!=null&&it.std==null){it.std=it.st;delete it.st;}
+  });
+  saveLocal();
+}
 // 歷史補建：所有 status≠未拜訪/空 且 visits 空的客戶，依 trialDate / note SERVE / 其他推算補一筆 visit
 function backfillVisits(){
   try{
     let added=0;
     (DB.clients||[]).forEach(c=>{
       try{
-        if(!c||!c.status||c.status==='未拜訪')return;
+        if(!c||!c.status||c.status===STATUS.UNVISITED)return;
         if((c.visits||[]).length>0)return;
         // 推算日期
         let d=c.trialDate||'';
@@ -1357,7 +1365,7 @@ function backfillVisits(){
           const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
           if(m)d=m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
         }
-        if(!d&&c.updatedAt){const dt=new Date(c.updatedAt);if(!isNaN(dt))d=dt.toISOString().slice(0,10);}
+        if(!d&&c.updatedAt){const dt=new Date(c.updatedAt);if(!isNaN(dt))d=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
         if(!d)return;
         c.visits=[{date:d,mood:0,note:'',insight:'(系統補建)',statusChange:c.status,nextdate:c.nextdate||null}];
         added++;
@@ -1370,17 +1378,14 @@ function backfillVisits(){
 
 function invAct(name,action){
   try{
-    const it=(DB.inventory||[]).find(x=>x&&(x.name===name||x.n===name));
+    const it=(DB.inventory||[]).find(x=>x&&x.name===name);
     if(!it)return;
-    // 判斷該筆使用的 schema（n/s/st 或 name/stock/std）
-    const keyS=(it.stock!=null)?'stock':'s';
-    const keySt=(it.std!=null)?'std':'st';
-    const cur=Number(it[keyS])||0, std=Number(it[keySt])||0;
+    const cur=Number(it.stock)||0, std=Number(it.std)||0;
     if(action==='trial'||action==='ship'){
       if(cur<=0)return;
-      it[keyS]=cur-1;
+      it.stock=cur-1;
     }else if(action==='refill'){
-      it[keyS]=std;
+      it.stock=std;
     }
     saveLocal();
     autoSync('saveInventory',{inventory:DB.inventory});
@@ -1398,12 +1403,12 @@ function openInvModal(name){
   document.getElementById('inv-modal-title').textContent=isEdit?'編輯庫存品項':'新增庫存品項';
   const del=document.getElementById('im-del-btn');
   if(isEdit){
-    const it=(DB.inventory||[]).find(x=>x&&(x.name===INV_EDIT_NAME||x.n===INV_EDIT_NAME));
+    const it=(DB.inventory||[]).find(x=>x&&x.name===INV_EDIT_NAME);
     if(!it){alert('找不到品項：'+INV_EDIT_NAME);return;}
-    document.getElementById('im-name').value=it.name||it.n||'';
+    document.getElementById('im-name').value=it.name||'';
     document.getElementById('im-name').disabled=true;
-    document.getElementById('im-stock').value=(it.stock!=null?it.stock:it.s)||0;
-    document.getElementById('im-std').value=(it.std!=null?it.std:it.st)||0;
+    document.getElementById('im-stock').value=Number(it.stock)||0;
+    document.getElementById('im-std').value=Number(it.std)||0;
     if(del)del.style.display='';
   }else{
     document.getElementById('im-name').value='';
@@ -1423,15 +1428,13 @@ function saveInv(){
     if(!name){alert('請輸入品項代號');return;}
     if(!DB.inventory)DB.inventory=[];
     if(INV_EDIT_NAME){
-      const it=DB.inventory.find(x=>x&&(x.name===INV_EDIT_NAME||x.n===INV_EDIT_NAME));
+      const it=DB.inventory.find(x=>x&&x.name===INV_EDIT_NAME);
       if(!it){alert('找不到品項');return;}
-      // 維持原 schema
-      if(it.stock!=null)it.stock=stock;else it.s=stock;
-      if(it.std!=null)it.std=std;else it.st=std;
+      it.stock=stock;
+      it.std=std;
     }else{
       // 檢查代號是否重複
-      if(DB.inventory.find(x=>x&&(x.name===name||x.n===name))){alert('代號「'+name+'」已存在');return;}
-      // 新增一律用完整 schema
+      if(DB.inventory.find(x=>x&&x.name===name)){alert('代號「'+name+'」已存在');return;}
       DB.inventory.push({name,stock,std});
     }
     saveLocal();
@@ -1442,7 +1445,7 @@ function saveInv(){
 function deleteInv(){
   if(!INV_EDIT_NAME)return;
   if(!confirm('確定刪除庫存品項「'+INV_EDIT_NAME+'」？'))return;
-  DB.inventory=(DB.inventory||[]).filter(x=>x&&x.name!==INV_EDIT_NAME&&x.n!==INV_EDIT_NAME);
+  DB.inventory=(DB.inventory||[]).filter(x=>x&&x.name!==INV_EDIT_NAME);
   saveLocal();
   autoSync('saveInventory',{inventory:DB.inventory});
   closeInvModal();renderInventory();
@@ -1593,8 +1596,10 @@ function setRegion(r,el){
 // ═══════════════════════════════════════════════════════════
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
-// 單筆 4W 金額：quoted 有值直接用 quoted×qty（quoted 語意即為 4W 金額，與 UI 的「4W原價」同單位）；
-// 否則 fallback 到原價的 4W 金額（displayFw4 會考慮 cycle 與地墊 4W 換的 0.8 折扣）
+// 單筆 4W 金額（唯一計算入口）：
+// - quoted > 0 → quoted × qty（quoted 語意 = 該品項的 4W 報價金額）
+// - 否則 → displayFw4 fallback（原價 × cycle 調整 × 地墊 4W 0.8 折）
+// 報表、成約區、試用品清單統一用此函式，不再使用已移除的 fw4()
 function itemFW4(it){
   if(!it||!it.product)return 0;
   if(it.quoted&&it.quoted>0){
@@ -1623,7 +1628,7 @@ function calcReportAmt(c,from,to){
 function trialStartDate(c){
   if(c.trialDate)return c.trialDate;
   const vs=(c.visits||[]).filter(v=>v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
-  const trial=vs.find(v=>v.statusChange==='試用中');
+  const trial=vs.find(v=>v.statusChange===STATUS.TRIAL);
   if(trial)return trial.date;
   if(vs.length)return vs[0].date;
   const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
@@ -1634,23 +1639,24 @@ function trialStartDate(c){
 // 防禦式：整段包 try/catch，任何單筆客戶出錯不影響其他客戶、也不影響 app 啟動
 function autoAddRecycleTodos(){
   try{
-    const today=new Date();
-    const todayStr=today.toISOString().slice(0,10);
+    const todayObj=new Date();
+    const todayStr=today();
     const DAY=86400000;
     let added=0;
     (DB.clients||[]).forEach(c=>{
       try{
-        if(!c||c.status!=='試用中')return;
+        if(!c||c.status!==STATUS.TRIAL)return;
         const ts=trialStartDate(c);
         if(!ts||typeof ts!=='string'||ts.length<10)return;
         const tsDate=new Date(ts);
         if(isNaN(tsDate.getTime()))return;
-        const daysSince=(today-tsDate)/DAY;
+        const daysSince=(todayObj-tsDate)/DAY;
         if(daysSince<7)return;
         if((c.todos||[]).some(t=>t&&t.text&&t.text.indexOf('回收')>=0))return;
         const dueDate=new Date(tsDate.getTime()+14*DAY);
         if(isNaN(dueDate.getTime()))return;
-        const due=dueDate.toISOString().slice(0,10);
+        const dd=dueDate;
+        const due=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
         c.todos=c.todos||[];
         c.todos.push({text:'回收試用品',dueDate:due,done:false});
         added++;
@@ -1670,7 +1676,7 @@ function autoAddRecycleTodos(){
 let statusFilter={};
 function defaultStatusFilter(){
   const f={};
-  SO.forEach(s=>{f[s]=(s!=='拒絕'&&s!=='已結案');});
+  SO.forEach(s=>{f[s]=(s!==STATUS.REFUSE&&s!==STATUS.CLOSED);});
   return f;
 }
 function loadStatusFilter(){
@@ -1726,20 +1732,20 @@ function matchCategory(c){
   const visitsN=(c.visits||[]).length;
   const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
   const hasUnquoted=mains.length>0&&mains.some(it=>!it.quoted||it.quoted==0);
-  const isRefused=statusEq(c.status,'拒絕');
-  const isDeal=c.status==='已成約'||c.status==='已轉交';
+  const isRefused=statusEq(c.status,STATUS.REFUSE);
+  const isDeal=c.status===STATUS.DEAL||c.status===STATUS.TRANSFER;
   switch(activeCat){
     case '銷售紀錄': return visitsN>0||mains.length>0;
     case '未拜訪': {
       if(visitsN>0)return false;
-      if(mains.length>0)return false; // 有試用品項也算拜訪過
-      if(isRefused)return false;      // 被拒絕的也排除
+      if(mains.length>0)return false;
+      if(isRefused)return false;
       if(activeRegion){
         return parseRegion(c.addr)===activeRegion;
       }
       return true;
     }
-    case '試用中未報價': return c.status==='試用中'&&mains.length>0&&hasUnquoted;
+    case '試用中未報價': return c.status===STATUS.TRIAL&&mains.length>0&&hasUnquoted;
     case '複訪順序': return !!c.nextdate;
     case '已成約': return isDeal;
     case '拒絕': return isRefused;
@@ -2076,7 +2082,7 @@ function renderTodoFields(){
 }
 async function saveClient(){
   const btn=document.getElementById('save-btn');btn.disabled=true;btn.textContent='儲存中...';
-  const autofw=S.cfItems.reduce((s,it)=>s+fw4(it.product,it.qty),0);
+  const autofw=S.cfItems.reduce((s,it)=>s+itemFW4(it),0);
   const c={
     name:document.getElementById('cf-name').value||'(未命名)',
     contact:document.getElementById('cf-contact').value,
@@ -2141,7 +2147,7 @@ function openCD(i){
     // 只顯示主商品（非 bundled），配件以 +配件 方式附加
     const mains=c.trialItems.filter(it=>it.product&&!it.bundledTo);
     document.getElementById('cd-tri').innerHTML=mains.map(it=>{
-      const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
+      const f=displayFw4(it.product,it.qty||1,it.cycle||'2W');const r=ref9(it.product,it.qty,it.cycle||'2W');
       const isLow=it.quoted>0&&it.quoted<r;const p=getProd(it.product);const isMat=p?.cat==='地墊';
       // 找此主商品對應的 bundled 配件/口味
       const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
@@ -2401,7 +2407,7 @@ function genReport(){
   // A: status ∈ {試用中, 報價, 將成約}
   // B: 區間內有 visits 且有試用品項
   // 聯集 A ∪ B
-  const STATUS_A=new Set(['試用中','報價','將成約']);
+  const STATUS_A=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
   const rows4w=[];
   const picked=DB.clients.filter(c=>{
     const a=STATUS_A.has(c.status);
@@ -2686,9 +2692,98 @@ function forceReload(){
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-loadStatusFilter();initVersion();initPills();initProdCats();(function(){try{if(!localStorage.getItem('backfilled_visits_v1')){backfillVisits();localStorage.setItem('backfilled_visits_v1','1');}}catch(e){}})();autoAddRecycleTodos();renderClients();
+loadStatusFilter();initVersion();initPills();initProdCats();
+// Migration runner — 統一管理資料遷移，每個 migration 只跑一次
+const MIGRATIONS=[
+  {v:1, desc:'backfill visits', fn:backfillVisits},
+  {v:2, desc:'normalize inventory schema', fn:normalizeInventory},
+];
+(function runMigrations(){
+  const done=Number(localStorage.getItem('migration_v')||0);
+  // 相容舊 flag：如果已跑過 backfilled_visits_v1 但 migration_v < 1，視為 v1 已完成
+  const start=(done===0&&localStorage.getItem('backfilled_visits_v1'))?1:done;
+  MIGRATIONS.filter(m=>m.v>start).forEach(m=>{
+    try{m.fn();}catch(e){console.warn('Migration v'+m.v+' failed:',e);}
+    localStorage.setItem('migration_v',String(m.v));
+  });
+  if(start!==done)localStorage.setItem('migration_v',String(Math.max(start,done)));
+})();
+autoAddRecycleTodos();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL)updateSheetStatus(true);
+
+// ═══════════════════════════════════════════════════════════
+// TEST MODE — 加 ?test=1 啟動，console + 頁面顯示結果
+// ═══════════════════════════════════════════════════════════
+if(location.search.includes('test=1')){
+(function runTests(){
+  const results=[];
+  function assert(name,actual,expected){
+    const pass=actual===expected;
+    results.push({name,pass,actual,expected});
+    console[pass?'log':'error']((pass?'✓':'✗')+' '+name+(pass?'':' (got '+actual+', expected '+expected+')'));
+  }
+
+  // --- displayFw4 ---
+  // 拖把 S-20: price=100, cycle=2W → 4W = 100*2*1 = 200
+  assert('displayFw4 拖把 S-20 qty=1', displayFw4('S-20',1,'2W'), 200);
+  assert('displayFw4 拖把 S-20 qty=3', displayFw4('S-20',3,'2W'), 600);
+  // 地墊 DECSR: price=170, cycle=2W → 2W換: 170*2=340; 4W換: 170*2*0.8=272
+  assert('displayFw4 地墊 DECSR 2W', displayFw4('DECSR',1,'2W'), 340);
+  assert('displayFw4 地墊 DECSR 4W', displayFw4('DECSR',1,'4W'), 272);
+  // 不存在的商品
+  assert('displayFw4 不存在商品', displayFw4('XXXXX',1,'2W'), 0);
+
+  // --- itemFW4 ---
+  // quoted 有值 → quoted × qty
+  assert('itemFW4 quoted=500 qty=2', itemFW4({product:'S-20',quoted:500,qty:2,cycle:'2W'}), 1000);
+  // quoted=0 → fallback displayFw4
+  assert('itemFW4 quoted=0', itemFW4({product:'S-20',quoted:0,qty:1,cycle:'2W'}), 200);
+  // 無 quoted → fallback
+  assert('itemFW4 無 quoted', itemFW4({product:'S-20',qty:2,cycle:'2W'}), 400);
+  // 地墊 4W 換 無 quoted → 0.8 折
+  assert('itemFW4 地墊 4W 無quoted', itemFW4({product:'DECSR',qty:1,cycle:'4W'}), 272);
+  // null input
+  assert('itemFW4 null', itemFW4(null), 0);
+  assert('itemFW4 無 product', itemFW4({qty:1}), 0);
+
+  // --- statusEq ---
+  assert('statusEq 拒絕=已結案', statusEq(STATUS.REFUSE,STATUS.CLOSED), true);
+  assert('statusEq 已結案=拒絕', statusEq(STATUS.CLOSED,STATUS.REFUSE), true);
+  assert('statusEq 試用中≠已成約', statusEq(STATUS.TRIAL,STATUS.DEAL), false);
+  assert('statusEq 同狀態', statusEq(STATUS.TRIAL,STATUS.TRIAL), true);
+
+  // --- displayStatus ---
+  assert('displayStatus 已結案→拒絕', displayStatus(STATUS.CLOSED), STATUS.REFUSE);
+  assert('displayStatus 空→未拜訪', displayStatus(''), STATUS.UNVISITED);
+  assert('displayStatus 試用中→試用中', displayStatus(STATUS.TRIAL), STATUS.TRIAL);
+
+  // --- trialStartDate ---
+  assert('trialStartDate 有 trialDate', trialStartDate({trialDate:'2026-01-15'}), '2026-01-15');
+  assert('trialStartDate visits statusChange', trialStartDate({visits:[{date:'2026-02-01',statusChange:STATUS.TRIAL},{date:'2026-01-10'}]}), '2026-02-01');
+  assert('trialStartDate visits 無 statusChange', trialStartDate({visits:[{date:'2026-03-05'}]}), '2026-03-05');
+  assert('trialStartDate SERVE note', trialStartDate({note:'SERVE 2026/1/8'}), '2026-01-08');
+  assert('trialStartDate 全空', trialStartDate({}), '');
+
+  // --- calcReportAmt ---
+  const testClient1={contractedItems:[{product:'S-20',quoted:300,qty:1,contractDate:'2026-03-15'},{product:'SHB',quoted:0,qty:1,bundledTo:'S-20',contractDate:'2026-03-15'}],trialItems:[]};
+  assert('calcReportAmt 有成約', calcReportAmt(testClient1,'2026-03-01','2026-03-31'), 300);
+  const testClient2={contractedItems:[],trialItems:[{product:'S-20',quoted:250,qty:1}]};
+  assert('calcReportAmt fallback 試用', calcReportAmt(testClient2,'2026-03-01','2026-03-31'), 250);
+
+  // --- 結果顯示 ---
+  const pass=results.filter(r=>r.pass).length;
+  const fail=results.filter(r=>!r.pass).length;
+  const total=results.length;
+  const banner=document.createElement('div');
+  banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;font-size:14px;font-weight:600;text-align:center;';
+  banner.style.background=fail?'#FCEBEB':'#E1F5EE';
+  banner.style.color=fail?'#A32D2D':'#085041';
+  banner.textContent='TEST: '+pass+'/'+total+' passed'+(fail?' — '+fail+' FAILED':'  ✓ ALL PASS');
+  document.body.prepend(banner);
+  console.log('=== TEST SUMMARY: '+pass+'/'+total+' passed'+(fail?', '+fail+' FAILED':' ✓ ALL PASS')+' ===');
+})();
+}
 </script>
 </body>
 </html>
