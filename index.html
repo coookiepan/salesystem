@@ -456,7 +456,10 @@ tr:last-child td{border-bottom:none}
 
 <!-- ═══ INVENTORY ═══ -->
 <div class="panel" id="panel-inventory">
-  <div class="page-title">車上庫存</div>
+  <div class="toolbar">
+    <div class="page-title" style="margin:0">車上庫存</div>
+    <button class="btn btn-primary btn-sm" onclick="openInvModal(-1)">+ 新增品項</button>
+  </div>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <button class="pill on" onclick="invSetMode('all',this)" id="inv-m-all">📦 全部品項</button>
     <button class="pill" onclick="invSetMode('short',this)" id="inv-m-short">🚨 缺貨清單</button>
@@ -591,11 +594,28 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- ═══ INVENTORY MODAL ═══ -->
+<div class="modal-bg" id="inv-modal" onclick="if(event.target===this)closeInvModal()">
+  <div class="modal">
+    <div class="modal-title" id="inv-modal-title">新增庫存品項</div>
+    <div class="f"><label class="lbl">品項代號 *</label><input id="im-name" placeholder="如 DOME、DWSH"></div>
+    <div class="g2">
+      <div class="f"><label class="lbl">目前庫存</label><input id="im-stock" type="number" min="0" value="0"></div>
+      <div class="f"><label class="lbl">標準配備數 *</label><input id="im-std" type="number" min="0" value="1"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveInv()">儲存</button>
+      <button class="btn btn-outline" onclick="closeInvModal()">取消</button>
+      <button class="btn btn-danger" id="im-del-btn" onclick="deleteInv()" style="margin-left:auto;display:none">刪除</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.12-f';
+const APP_VERSION='v2026.04.12-h';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1263,12 +1283,13 @@ function renderInventory(){
     // 建 product 對照表: name -> cat
     const catMap={};
     (DB.products||[]).forEach(p=>{if(p&&p.code)catMap[p.code]=p.cat||'';});
-    let list=(DB.inventory||[]).map(it=>({
-      name:it.name||'',
-      stock:Number(it.stock)||0,
-      std:Number(it.std)||0,
-      cat:catMap[it.name]||'其他'
-    }));
+    let list=(DB.inventory||[]).map(it=>{
+      // 相容兩種 schema：簡寫 {n,s,st} 和完整 {name,stock,std}
+      const name=it.name||it.n||'';
+      const stock=Number(it.stock!=null?it.stock:it.s)||0;
+      const std=Number(it.std!=null?it.std:it.st)||0;
+      return {name,stock,std,cat:catMap[name]||'其他'};
+    });
     if(INV_STATE.mode==='short')list=list.filter(x=>x.stock<x.std);
     if(INV_STATE.cat)list=list.filter(x=>x.cat===INV_STATE.cat);
     if(q)list=list.filter(x=>x.name.toLowerCase().includes(q));
@@ -1290,6 +1311,7 @@ function renderInventory(){
         html+=`<div class="cc" style="padding:10px 12px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <div style="flex:1;font-size:14px;font-weight:600">${x.name}</div>
+            <button onclick="openInvModal('${esc}')" title="編輯" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;opacity:.6">⚙️</button>
             <div style="font-size:15px;font-weight:700;color:${color}">${x.stock} / ${x.std}</div>
           </div>
           <div style="display:flex;gap:6px">
@@ -1348,13 +1370,17 @@ function backfillVisits(){
 
 function invAct(name,action){
   try{
-    const it=(DB.inventory||[]).find(x=>x&&x.name===name);
+    const it=(DB.inventory||[]).find(x=>x&&(x.name===name||x.n===name));
     if(!it)return;
+    // 判斷該筆使用的 schema（n/s/st 或 name/stock/std）
+    const keyS=(it.stock!=null)?'stock':'s';
+    const keySt=(it.std!=null)?'std':'st';
+    const cur=Number(it[keyS])||0, std=Number(it[keySt])||0;
     if(action==='trial'||action==='ship'){
-      if((it.stock||0)<=0){return;}
-      it.stock=(it.stock||0)-1;
+      if(cur<=0)return;
+      it[keyS]=cur-1;
     }else if(action==='refill'){
-      it.stock=it.std||0;
+      it[keyS]=std;
     }
     saveLocal();
     autoSync('saveInventory',{inventory:DB.inventory});
@@ -1362,6 +1388,64 @@ function invAct(name,action){
   }catch(e){
     alert('庫存操作失敗：'+(e.message||e));
   }
+}
+
+// 庫存 modal：name 為空或 -1 表示新增；帶品項代號表示編輯
+let INV_EDIT_NAME=null;
+function openInvModal(name){
+  INV_EDIT_NAME=(name&&name!==-1)?name:null;
+  const isEdit=!!INV_EDIT_NAME;
+  document.getElementById('inv-modal-title').textContent=isEdit?'編輯庫存品項':'新增庫存品項';
+  const del=document.getElementById('im-del-btn');
+  if(isEdit){
+    const it=(DB.inventory||[]).find(x=>x&&(x.name===INV_EDIT_NAME||x.n===INV_EDIT_NAME));
+    if(!it){alert('找不到品項：'+INV_EDIT_NAME);return;}
+    document.getElementById('im-name').value=it.name||it.n||'';
+    document.getElementById('im-name').disabled=true;
+    document.getElementById('im-stock').value=(it.stock!=null?it.stock:it.s)||0;
+    document.getElementById('im-std').value=(it.std!=null?it.std:it.st)||0;
+    if(del)del.style.display='';
+  }else{
+    document.getElementById('im-name').value='';
+    document.getElementById('im-name').disabled=false;
+    document.getElementById('im-stock').value=0;
+    document.getElementById('im-std').value=1;
+    if(del)del.style.display='none';
+  }
+  document.getElementById('inv-modal').classList.add('on');
+}
+function closeInvModal(){document.getElementById('inv-modal').classList.remove('on');INV_EDIT_NAME=null;}
+function saveInv(){
+  try{
+    const name=(document.getElementById('im-name').value||'').trim();
+    const stock=Math.max(0,parseInt(document.getElementById('im-stock').value)||0);
+    const std=Math.max(0,parseInt(document.getElementById('im-std').value)||0);
+    if(!name){alert('請輸入品項代號');return;}
+    if(!DB.inventory)DB.inventory=[];
+    if(INV_EDIT_NAME){
+      const it=DB.inventory.find(x=>x&&(x.name===INV_EDIT_NAME||x.n===INV_EDIT_NAME));
+      if(!it){alert('找不到品項');return;}
+      // 維持原 schema
+      if(it.stock!=null)it.stock=stock;else it.s=stock;
+      if(it.std!=null)it.std=std;else it.st=std;
+    }else{
+      // 檢查代號是否重複
+      if(DB.inventory.find(x=>x&&(x.name===name||x.n===name))){alert('代號「'+name+'」已存在');return;}
+      // 新增一律用完整 schema
+      DB.inventory.push({name,stock,std});
+    }
+    saveLocal();
+    autoSync('saveInventory',{inventory:DB.inventory});
+    closeInvModal();renderInventory();
+  }catch(e){alert('儲存失敗：'+(e.message||e));}
+}
+function deleteInv(){
+  if(!INV_EDIT_NAME)return;
+  if(!confirm('確定刪除庫存品項「'+INV_EDIT_NAME+'」？'))return;
+  DB.inventory=(DB.inventory||[]).filter(x=>x&&x.name!==INV_EDIT_NAME&&x.n!==INV_EDIT_NAME);
+  saveLocal();
+  autoSync('saveInventory',{inventory:DB.inventory});
+  closeInvModal();renderInventory();
 }
 
 function renderProducts(){
