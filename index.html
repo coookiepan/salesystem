@@ -583,7 +583,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.11-u';
+const APP_VERSION='v2026.04.08-q';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1370,33 +1370,23 @@ function setRegion(r,el){
 // ═══════════════════════════════════════════════════════════
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
-// 單筆 4W 金額：quoted 有值用 quoted×(4/cycle週數)×qty；否則 fallback fw4 原價
-function itemFW4(it){
-  if(!it||!it.product)return 0;
-  const m=String(it.cycle||'').match(/(\d+)/);
-  const wk=m?parseInt(m[1]):4;
-  if(it.quoted&&it.quoted>0){
-    return Math.round(it.quoted*(4/wk)*(it.qty||1));
-  }
-  return fw4(it.product,it.qty);
-}
 function calcFW4(c){
   if(c.fw4>0)return c.fw4;
-  const t=(c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
-  const k=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+  const t=(c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);
+  const k=(c.contractedItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);
   return t+k;
 }
-// 報表專用：區間內有成約 → 只加區間內成約品項；否則用試用金額
+// 報表專用：若成約品項的 contractDate 落在 [from,to] 區間則用成約金額，否則用試用金額
 function calcReportAmt(c,from,to){
-  const inRange=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
+  const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo);
+  const inRange=k.filter(it=>it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
   if(inRange.length){
-    // 含其 bundled 配件
-    const codes=new Set(inRange.map(it=>it.product));
-    return (c.contractedItems||[]).filter(it=>codes.has(it.product)||codes.has(it.bundledTo)).reduce((s,it)=>s+itemFW4(it),0);
+    // 有成約在區間內 → 成約品項金額（含其配件，但這裡簡化只算主項）
+    return (c.contractedItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0);
   }
-  return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0)||c.fw4||0;
+  // 預設走試用
+  return (c.trialItems||[]).reduce((s,it)=>s+fw4(it.product,it.qty),0)||c.fw4||0;
 }
-// 試用→成約：把第 i 筆主項（含其 bundled 配件）從 cfItems 搬到 cfContracted
 // 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
 function trialStartDate(c){
   if(c.trialDate)return c.trialDate;
@@ -1407,26 +1397,6 @@ function trialStartDate(c){
   const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
   if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
   return '';
-}
-// 自動產生回收待辦：試用中客戶，試用起始日 +7 天後自動新增「回收試用品」todo，dueDate = 起始日+14 天
-// 同客戶已有「回收」相關待辦就跳過，避免重複
-function autoAddRecycleTodos(){
-  const today=new Date().toISOString().slice(0,10);
-  const DAY=86400000;
-  let added=0;
-  (DB.clients||[]).forEach(c=>{
-    if(c.status!=='試用中')return;
-    const ts=trialStartDate(c);if(!ts)return;
-    const daysSince=(new Date(today)-new Date(ts))/DAY;
-    if(daysSince<7)return;
-    if((c.todos||[]).some(t=>t.text&&t.text.indexOf('回收')>=0))return;
-    const due=new Date(new Date(ts).getTime()+14*DAY).toISOString().slice(0,10);
-    c.todos=c.todos||[];
-    c.todos.push({text:'回收試用品',dueDate:due,done:false});
-    added++;
-  });
-  if(added>0){saveLocal();console.log('autoAddRecycleTodos: +'+added);}
-  return added;
 }
 // 狀態開關 — 哪些 status 要顯示在列表中
 // key 是 status 字串，value 是 true/false
@@ -1569,7 +1539,7 @@ function renderClients(){
   const el=document.getElementById('clients-list');
   if(!list.length){el.innerHTML='<div class="empty">尚無符合的客戶</div>';return;}
   el.innerHTML=list.map(({c,i})=>{
-    const fw=calcReportAmt(c,from,to);
+    const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
     const prod=autoProd(c.trialItems)||'';
@@ -1716,25 +1686,17 @@ function promoteToContract(i){
   // 加入成約區，標記成約日期
   if(!S.cfContracted)S.cfContracted=[];
   moved.forEach(it=>{it.contractDate=today();S.cfContracted.push(it);});
-  const st=document.getElementById('cf-status');if(st)st.value='已成約';
   renderItems();renderContracted();updProd();
 }
-// 從成約區搬回試用區（改回試用）
+// 從成約區移除（誤操作救回）
 function removeContracted(i){
+  if(!confirm('從成約區移除這個品項？'))return;
   const main=S.cfContracted[i];if(!main)return;
-  if(!confirm('把「'+main.product+'」改回試用品項？'))return;
   const mainCode=main.product;
-  const moved=[];
   for(let j=S.cfContracted.length-1;j>=0;j--){
-    if(S.cfContracted[j].bundledTo===mainCode||j===i){
-      const x={...S.cfContracted[j]};delete x.contractDate;moved.unshift(x);
-      S.cfContracted.splice(j,1);
-    }
+    if(S.cfContracted[j].bundledTo===mainCode||j===i)S.cfContracted.splice(j,1);
   }
-  if(!S.cfItems)S.cfItems=[];
-  S.cfItems.push(...moved);
-  const st=document.getElementById('cf-status');if(st)st.value='試用中';
-  renderItems();renderContracted();updProd();
+  renderContracted();
 }
 function renderContracted(){
   const el=document.getElementById('cf-contracted-list');
@@ -1749,7 +1711,7 @@ function renderContracted(){
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
       <span style="flex:1;font-size:13px">${it.product} ${p?'· '+p.desc:''} ×${it.qty||1}</span>
       <span style="font-size:13px;color:#085041;font-weight:600">${amt}</span>
-      ${!isAcc?`<button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
+      ${!isAcc?`<button onclick="removeContracted(${i})" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
     </div></div>`;
   }).join('');
 }
@@ -1873,7 +1835,7 @@ async function saveClient(){
 // ═══════════════════════════════════════════════════════════
 function openCD(i){
   S.curIdx=i;const c=DB.clients[i];
-  const fw=calcReportAmt(c,from,to);const prod=autoProd(c.trialItems)||c.product||'-';
+  const fw=calcFW4(c);const prod=autoProd(c.trialItems)||c.product||'-';
   document.getElementById('cd-name').textContent=c.name;
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
@@ -2170,7 +2132,7 @@ function genReport(){
     return va<vb?-1:va>vb?1:0;
   });
   picked.forEach((c,i)=>{
-    const fw=calcReportAmt(c,from,to);
+    const fw=calcFW4(c);
     const prod=rptProd(c.trialItems);
     const mon=rptFirstMonth(c);
     // 欄位（依照月報 RS sheet 結構）: NO, 客戶名稱, (空=C欄), 窗口/職位, 提案商品, 1月, 2月, 3月, 4月, 5月, 6月, 拜訪進度說明
@@ -2309,7 +2271,7 @@ function genExport(){
   SO.forEach(s=>{const n=DB.clients.filter(c=>c.status===s).length;if(n)out+=`${s}：${n} 位\n`;});
   out+=`\n=== 4W推進表 ===\n`;
   DB.clients.filter(c=>c.status!=='已結案'&&(c.trialItems?.length||c.fw4>0)).forEach((c,i)=>{
-    const fw=calcReportAmt(c,from,to);const prod=autoProd(c.trialItems)||c.product||'';
+    const fw=calcFW4(c);const prod=autoProd(c.trialItems)||c.product||'';
     out+=`${i+1}. ${c.name}　${prod}　${c.status}　4W $${fw.toLocaleString()}\n`;
     (c.trialItems||[]).filter(it=>it.product).forEach(it=>{
       const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
@@ -2510,7 +2472,7 @@ function forceReload(){
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-loadStatusFilter();initVersion();initPills();initProdCats();autoAddRecycleTodos();renderClients();
+loadStatusFilter();initVersion();initPills();initProdCats();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL)updateSheetStatus(true);
 </script>
