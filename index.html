@@ -208,9 +208,9 @@ tr:last-child td{border-bottom:none}
     <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     待辦
   </button>
-  <button class="nav-btn" onclick="navTo('products',this)" id="nav-products">
-    <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-    商品
+  <button class="nav-btn" onclick="navTo('inventory',this)" id="nav-inventory">
+    <svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4"/><line x1="12" y1="11" x2="12" y2="21"/></svg>
+    庫存
   </button>
   <button class="nav-btn" onclick="navTo('settings',this)" id="nav-settings">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -454,25 +454,52 @@ tr:last-child td{border-bottom:none}
   <div id="gt-list"></div>
 </div>
 
-<!-- ═══ PRODUCTS ═══ -->
-<div class="panel" id="panel-products">
-  <div class="toolbar">
-    <div class="page-title" style="margin:0">商品資料庫</div>
-    <button class="btn btn-primary btn-sm" onclick="openProdModal(-1)">+ 新增商品</button>
+<!-- ═══ INVENTORY ═══ -->
+<div class="panel" id="panel-inventory">
+  <div class="page-title">車上庫存</div>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <button class="pill on" onclick="invSetMode('all',this)" id="inv-m-all">📦 全部品項</button>
+    <button class="pill" onclick="invSetMode('short',this)" id="inv-m-short">🚨 缺貨清單</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <div class="toolbar-left" id="prod-cat-pills"></div>
-    <input id="prod-search" placeholder="搜尋代號/品名..." oninput="renderProducts()" style="flex:1;max-width:200px;margin-left:auto">
+  <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    <button class="pill on" onclick="invSetCat('',this)" id="inv-c-all">全部</button>
+    <button class="pill" onclick="invSetCat('地墊',this)" id="inv-c-mat">地墊</button>
+    <button class="pill" onclick="invSetCat('拖把',this)" id="inv-c-mop">拖把</button>
+    <button class="pill" onclick="invSetCat('芳香',this)" id="inv-c-fra">芳香</button>
   </div>
-  <div class="alert-info alert" style="font-size:12px;margin-bottom:10px">
-    ✏️ 點任一商品可編輯；停用的商品不會出現在試用品項選單中
-  </div>
-  <div id="prod-list"></div>
+  <input id="inv-search" placeholder="搜尋品項代號..." oninput="renderInventory()" style="margin-bottom:10px">
+  <div id="inv-count" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+  <div id="inv-list"></div>
 </div>
 
+<!-- ═══ PRODUCTS ═══ -->
 <!-- ═══ SETTINGS ═══ -->
 <div class="panel" id="panel-settings">
   <div class="page-title">設定</div>
+
+  <!-- 商品資料庫（可收合） -->
+  <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+    <div onclick="toggleProdSection()" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none">
+      <span id="prod-toggle-icon" style="font-size:12px;color:var(--text3);transition:transform .15s">▶</span>
+      <div style="flex:1;font-weight:600">商品資料庫</div>
+      <span id="prod-toggle-count" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+    <div id="prod-section" style="display:none;padding:0 16px 16px 16px;border-top:1px solid var(--border)">
+      <div class="toolbar" style="padding-top:12px">
+        <div style="flex:1"></div>
+        <button class="btn btn-primary btn-sm" onclick="openProdModal(-1)">+ 新增商品</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div class="toolbar-left" id="prod-cat-pills"></div>
+        <input id="prod-search" placeholder="搜尋代號/品名..." oninput="renderProducts()" style="flex:1;max-width:200px;margin-left:auto">
+      </div>
+      <div class="alert-info alert" style="font-size:12px;margin-bottom:10px">
+        ✏️ 點任一商品可編輯；停用的商品不會出現在試用品項選單中
+      </div>
+      <div id="prod-list"></div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="form-section">版本資訊</div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -521,21 +548,6 @@ tr:last-child td{border-bottom:none}
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">匯入</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(this)">
     </div>
-    <div class="setting-row">
-      <div><div class="setting-label">🔄 重算所有客戶金額</div><div class="setting-sub">以當前商品庫價格重算每個客戶的 4W 金額並推上雲端</div></div>
-      <button class="btn btn-outline btn-sm" onclick="recalcAllFw4()">重算</button>
-    </div>
-  </div>
-  <!-- 月報 -->
-  <div class="card">
-    <div class="form-section">月報產生</div>
-    <div class="g2">
-      <div class="f"><label class="lbl">月份</label><select id="ex-month" style="width:auto"><option value="3">3月</option><option value="4" selected>4月</option><option value="5">5月</option></select></div>
-      <div class="f"><label class="lbl">本月推估 (元)</label><input id="ex-est" type="number"></div>
-    </div>
-    <button class="btn btn-primary" onclick="genExport()" style="width:100%">產生報表預覽</button>
-    <div style="margin-top:10px;font-family:'Menlo','Monaco',monospace;font-size:12px;color:var(--text2);white-space:pre-wrap;line-height:1.8;overflow-x:auto" id="ex-out"></div>
-    <button class="btn btn-outline btn-sm" onclick="copyExport()" style="margin-top:8px;display:none" id="copy-btn">複製全文</button>
   </div>
 </div>
 
@@ -583,7 +595,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.11-t-hotfix';
+const APP_VERSION='v2026.04.12-f';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1194,8 +1206,8 @@ function navTo(id,el){
   document.getElementById('panel-'+id).classList.add('on');
   if(id==='daily'){const d=document.getElementById('daily-date');if(!d.value)d.value=today();renderDaily();}
   if(id==='todos')renderGT();
-  if(id==='products')renderProducts();
-  if(id==='settings')initSettings();
+  if(id==='inventory')renderInventory();
+  if(id==='settings'){initSettings();renderProducts();}
   window.scrollTo(0,0);
 }
 function today(){
@@ -1206,6 +1218,9 @@ function today(){
 function initSettings(){
   document.getElementById('sheet-url').value=SHEET_URL;
   if(SHEET_URL)updateSheetStatus(true);
+  const cnt=document.getElementById('prod-toggle-count');
+  const sec=document.getElementById('prod-section');
+  if(cnt&&sec&&sec.style.display==='none')cnt.textContent='共 '+(DB.products||[]).length+' 項';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1223,6 +1238,130 @@ function setProdCat(c,el){
   prodCatFilter=c;
   document.querySelectorAll('#prod-cat-pills .pill').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');renderProducts();
+}
+
+// 庫存分頁狀態
+let INV_STATE={mode:'all',cat:''};
+function invSetMode(m,el){
+  INV_STATE.mode=m;
+  document.querySelectorAll('#inv-m-short,#inv-m-all').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  renderInventory();
+}
+function invSetCat(c,el){
+  INV_STATE.cat=c;
+  document.querySelectorAll('#inv-c-all,#inv-c-mat,#inv-c-mop,#inv-c-fra').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  renderInventory();
+}
+function renderInventory(){
+  try{
+    const el=document.getElementById('inv-list');
+    const countEl=document.getElementById('inv-count');
+    if(!el)return;
+    const q=(document.getElementById('inv-search')?.value||'').toLowerCase();
+    // 建 product 對照表: name -> cat
+    const catMap={};
+    (DB.products||[]).forEach(p=>{if(p&&p.code)catMap[p.code]=p.cat||'';});
+    let list=(DB.inventory||[]).map(it=>({
+      name:it.name||'',
+      stock:Number(it.stock)||0,
+      std:Number(it.std)||0,
+      cat:catMap[it.name]||'其他'
+    }));
+    if(INV_STATE.mode==='short')list=list.filter(x=>x.stock<x.std);
+    if(INV_STATE.cat)list=list.filter(x=>x.cat===INV_STATE.cat);
+    if(q)list=list.filter(x=>x.name.toLowerCase().includes(q));
+    // 分類分組
+    const GROUPS=['地墊','拖把','芳香','其他'];
+    const grouped={};GROUPS.forEach(g=>grouped[g]=[]);
+    list.forEach(x=>{if(!grouped[x.cat])grouped[x.cat]=[];grouped[x.cat].push(x);});
+    if(countEl)countEl.textContent=`共 ${list.length} 項`+(INV_STATE.mode==='short'?'（缺貨）':'');
+    if(!list.length){el.innerHTML='<div class="empty">沒有符合條件的品項</div>';return;}
+    let html='';
+    GROUPS.forEach(g=>{
+      const items=grouped[g]||[];
+      if(!items.length)return;
+      html+=`<div style="font-size:12px;font-weight:600;color:var(--text3);margin:12px 0 6px 0">${g}（${items.length}）</div>`;
+      items.forEach(x=>{
+        const pct=x.std>0?x.stock/x.std:1;
+        const color=x.stock===0?'var(--red)':pct<1?'#d97706':'#085041';
+        const esc=x.name.replace(/'/g,"\\'");
+        html+=`<div class="cc" style="padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="flex:1;font-size:14px;font-weight:600">${x.name}</div>
+            <div style="font-size:15px;font-weight:700;color:${color}">${x.stock} / ${x.std}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" onclick="invAct('${esc}','trial')" style="flex:1;font-size:12px;padding:6px">送出試用 −1</button>
+            <button class="btn btn-danger btn-sm" onclick="invAct('${esc}','ship')" style="flex:1;font-size:12px;padding:6px">出貨 −1</button>
+            <button class="btn btn-primary btn-sm" onclick="invAct('${esc}','refill')" style="flex:1;font-size:12px;padding:6px">補齊</button>
+          </div>
+        </div>`;
+      });
+    });
+    el.innerHTML=html;
+  }catch(e){
+    const el=document.getElementById('inv-list');
+    if(el)el.innerHTML='<div class="empty" style="color:var(--red)">庫存渲染錯誤: '+(e.message||e)+'</div>';
+  }
+}
+
+// 展開/收合 設定頁裡的商品資料庫區塊
+function toggleProdSection(){
+  const sec=document.getElementById('prod-section');
+  const icon=document.getElementById('prod-toggle-icon');
+  const cnt=document.getElementById('prod-toggle-count');
+  if(!sec)return;
+  const show=sec.style.display==='none';
+  sec.style.display=show?'block':'none';
+  if(icon)icon.style.transform=show?'rotate(90deg)':'rotate(0deg)';
+  if(cnt)cnt.textContent=show?'':'共 '+(DB.products||[]).length+' 項';
+  if(show)renderProducts();
+}
+
+// 庫存操作：送出試用/出貨 −1，補齊回標準數；寫回 localStorage + sync 雲端
+// 歷史補建：所有 status≠未拜訪/空 且 visits 空的客戶，依 trialDate / note SERVE / 其他推算補一筆 visit
+function backfillVisits(){
+  try{
+    let added=0;
+    (DB.clients||[]).forEach(c=>{
+      try{
+        if(!c||!c.status||c.status==='未拜訪')return;
+        if((c.visits||[]).length>0)return;
+        // 推算日期
+        let d=c.trialDate||'';
+        if(!d){
+          const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+          if(m)d=m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+        }
+        if(!d&&c.updatedAt){const dt=new Date(c.updatedAt);if(!isNaN(dt))d=dt.toISOString().slice(0,10);}
+        if(!d)return;
+        c.visits=[{date:d,mood:0,note:'',insight:'(系統補建)',statusChange:c.status,nextdate:c.nextdate||null}];
+        added++;
+      }catch(inner){}
+    });
+    if(added>0)saveLocal();
+    return added;
+  }catch(e){return 0;}
+}
+
+function invAct(name,action){
+  try{
+    const it=(DB.inventory||[]).find(x=>x&&x.name===name);
+    if(!it)return;
+    if(action==='trial'||action==='ship'){
+      if((it.stock||0)<=0){return;}
+      it.stock=(it.stock||0)-1;
+    }else if(action==='refill'){
+      it.stock=it.std||0;
+    }
+    saveLocal();
+    autoSync('saveInventory',{inventory:DB.inventory});
+    renderInventory();
+  }catch(e){
+    alert('庫存操作失敗：'+(e.message||e));
+  }
 }
 
 function renderProducts(){
@@ -1370,15 +1509,14 @@ function setRegion(r,el){
 // ═══════════════════════════════════════════════════════════
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
-// 單筆 4W 金額：quoted 有值用 quoted×(4/cycle週數)×qty；否則 fallback fw4 原價
+// 單筆 4W 金額：quoted 有值直接用 quoted×qty（quoted 語意即為 4W 金額，與 UI 的「4W原價」同單位）；
+// 否則 fallback 到原價的 4W 金額（displayFw4 會考慮 cycle 與地墊 4W 換的 0.8 折扣）
 function itemFW4(it){
   if(!it||!it.product)return 0;
-  const m=String(it.cycle||'').match(/(\d+)/);
-  const wk=m?parseInt(m[1]):4;
   if(it.quoted&&it.quoted>0){
-    return Math.round(it.quoted*(4/wk)*(it.qty||1));
+    return Math.round(it.quoted*(it.qty||1));
   }
-  return fw4(it.product,it.qty);
+  return displayFw4(it.product,it.qty||1,it.cycle||'2W');
 }
 function calcFW4(c){
   if(c.fw4>0)return c.fw4;
@@ -1407,6 +1545,41 @@ function trialStartDate(c){
   const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
   if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
   return '';
+}
+// 自動產生回收待辦：試用中客戶，試用起始日 +7 天後自動新增「回收試用品」todo
+// 防禦式：整段包 try/catch，任何單筆客戶出錯不影響其他客戶、也不影響 app 啟動
+function autoAddRecycleTodos(){
+  try{
+    const today=new Date();
+    const todayStr=today.toISOString().slice(0,10);
+    const DAY=86400000;
+    let added=0;
+    (DB.clients||[]).forEach(c=>{
+      try{
+        if(!c||c.status!=='試用中')return;
+        const ts=trialStartDate(c);
+        if(!ts||typeof ts!=='string'||ts.length<10)return;
+        const tsDate=new Date(ts);
+        if(isNaN(tsDate.getTime()))return;
+        const daysSince=(today-tsDate)/DAY;
+        if(daysSince<7)return;
+        if((c.todos||[]).some(t=>t&&t.text&&t.text.indexOf('回收')>=0))return;
+        const dueDate=new Date(tsDate.getTime()+14*DAY);
+        if(isNaN(dueDate.getTime()))return;
+        const due=dueDate.toISOString().slice(0,10);
+        c.todos=c.todos||[];
+        c.todos.push({text:'回收試用品',dueDate:due,done:false});
+        added++;
+      }catch(inner){
+        // 單筆客戶失敗，略過不中斷
+      }
+    });
+    if(added>0)saveLocal();
+    return added;
+  }catch(e){
+    // 整個函式失敗也不影響 app 啟動
+    return 0;
+  }
 }
 // 狀態開關 — 哪些 status 要顯示在列表中
 // key 是 status 字串，value 是 true/false
@@ -1482,7 +1655,7 @@ function matchCategory(c){
       }
       return true;
     }
-    case '試用中未報價': return mains.length>0&&hasUnquoted&&!isRefused;
+    case '試用中未報價': return c.status==='試用中'&&mains.length>0&&hasUnquoted;
     case '複訪順序': return !!c.nextdate;
     case '已成約': return isDeal;
     case '拒絕': return isRefused;
@@ -1682,7 +1855,6 @@ function renderItems(){
 // 把試用品項轉成成約品項（連同配件）
 function promoteToContract(i){
   const main=S.cfItems[i];if(!main||!main.product)return;
-  if(!confirm('確定要把「'+main.product+'」轉為成約品項？'))return;
   const mainCode=main.product;
   // 收集主商品 + 它的配件
   const moved=[S.cfItems[i]];
@@ -1702,7 +1874,6 @@ function promoteToContract(i){
 // 從成約區搬回試用區（改回試用）
 function removeContracted(i){
   const main=S.cfContracted[i];if(!main)return;
-  if(!confirm('把「'+main.product+'」改回試用品項？'))return;
   const mainCode=main.product;
   const moved=[];
   for(let j=S.cfContracted.length-1;j>=0;j--){
@@ -1724,7 +1895,7 @@ function renderContracted(){
   el.innerHTML=items.map((it,i)=>{
     const p=getProd(it.product);
     const isAcc=!!it.bundledTo;
-    const amt=isAcc?'':'$'+fw4(it.product,it.qty).toLocaleString();
+    const amt=isAcc?'':'$'+itemFW4(it).toLocaleString();
     return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
       <span style="flex:1;font-size:13px">${it.product} ${p?'· '+p.desc:''} ×${it.qty||1}</span>
@@ -1841,8 +2012,22 @@ async function saveClient(){
   const tdVal=document.getElementById('cf-trialdate').value;
   if(tdVal)c.trialDate=tdVal;
   const isEdit=S.editIdx>=0;
+  // 自動寫 visit：status 從「未拜訪/空」變成其他 → 今天補一筆 visit（已存在今天的就更新 statusChange）
+  try{
+    const oldStatus=isEdit?(DB.clients[S.editIdx]?.status||''):'';
+    const isLeaving=(!oldStatus||oldStatus==='未拜訪')&&c.status&&c.status!=='未拜訪';
+    if(isLeaving){
+      const td=today();
+      const prevVisits=isEdit?(DB.clients[S.editIdx].visits||[]):[];
+      const same=prevVisits.find(v=>v&&v.date===td);
+      if(same){same.statusChange=c.status;}
+      else{prevVisits.push({date:td,mood:0,note:'',insight:'',statusChange:c.status,nextdate:c.nextdate||null});}
+      if(isEdit)DB.clients[S.editIdx].visits=prevVisits;
+      else c._autoVisit=prevVisits; // 暫存給下面 push 用
+    }
+  }catch(e){}
   if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
-  else{c.visits=[];DB.clients.push(c);}
+  else{c.visits=c._autoVisit||[];delete c._autoVisit;DB.clients.push(c);}
   saveLocal();autoSync('save',{client:c,idx:isEdit?S.editIdx:-1});
   S.editIdx=-1;btn.disabled=false;btn.textContent='儲存客戶';
   closeForm();renderClients();
@@ -2279,32 +2464,6 @@ function delGT(ci,ti){DB.clients[ci].todos.splice(ti,1);saveLocal();autoSync('sa
 // ═══════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════
-function genExport(){
-  const mo=document.getElementById('ex-month').value;const est=document.getElementById('ex-est').value||0;
-  const trialing=DB.clients.filter(c=>c.status==='試用中');
-  const ta=trialing.reduce((s,c)=>s+calcFW4(c),0);
-  let out=`=== RS 主報表填入 ===\n月份：${mo}月　本月推估：${est} 元\n\n`;
-  out+=`【試用軒數】累計：${trialing.length} 軒\n【試用金額（4W原價）】累計：$${ta.toLocaleString()} 元\n\n`;
-  out+=`=== 客戶狀態 ===\n`;
-  SO.forEach(s=>{const n=DB.clients.filter(c=>c.status===s).length;if(n)out+=`${s}：${n} 位\n`;});
-  out+=`\n=== 4W推進表 ===\n`;
-  DB.clients.filter(c=>c.status!=='已結案'&&(c.trialItems?.length||c.fw4>0)).forEach((c,i)=>{
-    const fw=calcReportAmt(c,from,to);const prod=autoProd(c.trialItems)||c.product||'';
-    out+=`${i+1}. ${c.name}　${prod}　${c.status}　4W $${fw.toLocaleString()}\n`;
-    (c.trialItems||[]).filter(it=>it.product).forEach(it=>{
-      const f=fw4(it.product,it.qty);const r=ref9(it.product,it.qty,it.cycle||'2W');
-      const p=getProd(it.product);const isMat=p?.cat==='地墊';
-      out+=`   ${it.product}×${it.qty}${isMat?` (${it.cycle||'2W'}換)`:''} 原價$${f}${it.quoted?` 報價$${it.quoted}`:` 9折$${r}`}\n`;
-    });
-  });
-  out+=`\n=== 日報欄位對應 ===\nC客戶名稱/D窗口職稱/E提案商品/F拜訪說明\nG初訪 H複訪 I報價 J試用(○) / K試用金額 / L預估4W`;
-  document.getElementById('ex-out').textContent=out;
-  document.getElementById('copy-btn').style.display='';
-}
-function copyExport(){
-  navigator.clipboard.writeText(document.getElementById('ex-out').textContent).then(()=>alert('已複製'));
-}
-
 
 // ═══════════════════════════════════════════════════════════
 // VERSION TRACKING
@@ -2432,53 +2591,6 @@ async function pullAndDismiss(){
 }
 // 每分鐘刷新相對時間
 setInterval(()=>{renderVerBadge();},60000);
-async function recalcAllFw4(){
-  if(!confirm('將重算所有 '+DB.clients.length+' 個客戶的 4W 金額，並推上雲端。確定繼續？'))return;
-  let changed=0, same=0;
-  const details=[];
-  for(let i=0;i<DB.clients.length;i++){
-    const c=DB.clients[i];
-    if(!c.trialItems||!c.trialItems.length){continue;}
-    const mains=c.trialItems.filter(it=>it.product&&!it.bundledTo);
-    if(!mains.length){continue;}
-    const newFw4=c.trialItems.reduce((s,it)=>s+fw4(it.product,it.qty),0);
-    const oldFw4=c.fw4||0;
-    if(newFw4!==oldFw4){
-      details.push(c.name+': $'+oldFw4+' → $'+newFw4);
-      c.fw4=newFw4;
-      c.updatedAt=Date.now();
-      changed++;
-    }else{
-      same++;
-    }
-  }
-  if(changed===0){
-    alert('✓ 全部 '+DB.clients.length+' 個客戶金額都正確，無須更新');
-    return;
-  }
-  saveLocal();
-  // 顯示變更清單
-  const msg='已重算 '+changed+' 筆（另 '+same+' 筆不變）:\n\n'+details.slice(0,20).join('\n')+(details.length>20?'\n...(以下省略)':'')+'\n\n是否推上雲端？';
-  if(!confirm(msg)){
-    renderClients();
-    alert('僅本地更新，未推雲端');
-    return;
-  }
-  // 推雲端
-  const btn=event.target;
-  btn.disabled=true;btn.textContent='推送中...';
-  let ok=0,fail=0;
-  for(let i=0;i<DB.clients.length;i++){
-    const c=DB.clients[i];
-    try{
-      await callScript('save',{client:c,idx:i});
-      ok++;
-    }catch(e){fail++;}
-  }
-  btn.disabled=false;btn.textContent='重算';
-  renderClients();
-  alert('完成！本地重算 '+changed+' 筆，雲端推送成功 '+ok+' 筆，失敗 '+fail+' 筆');
-}
 
 function forceReload(){
   // 加時間戳參數繞過瀏覽器快取
@@ -2490,7 +2602,7 @@ function forceReload(){
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-loadStatusFilter();initVersion();initPills();initProdCats();renderClients();
+loadStatusFilter();initVersion();initPills();initProdCats();(function(){try{if(!localStorage.getItem('backfilled_visits_v1')){backfillVisits();localStorage.setItem('backfilled_visits_v1','1');}}catch(e){}})();autoAddRecycleTodos();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL)updateSheetStatus(true);
 </script>
