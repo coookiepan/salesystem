@@ -611,11 +611,24 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- ═══ TODO MODAL（取代 prompt，相容 iOS PWA） ═══ -->
+<div class="modal-bg" id="todo-modal" onclick="if(event.target===this)closeTodoModal()">
+  <div class="modal">
+    <div class="modal-title">新增待辦</div>
+    <div class="f"><label class="lbl">待辦內容 *</label><input id="tm-text" placeholder="例如：回收試用品"></div>
+    <div class="f"><label class="lbl">截止日期（選填）</label><input id="tm-due" type="date"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveTodoModal()">新增</button>
+      <button class="btn btn-outline" onclick="closeTodoModal()">取消</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.12-i';
+const APP_VERSION='v2026.04.13-a';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -952,8 +965,8 @@ const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE
 const MOODS=['','😞','😐','😊','😄'];
 const SS_STYLE={'未拜訪':['#F1EFE8','#444441'],'初訪':['#E6F1FB','#0C447C'],'複訪':['#FAEEDA','#633806'],'試用中':['#E6F1FB','#0C447C'],'報價':['#FAEEDA','#633806'],'將成約':['#EEEDFE','#3C3489'],'已成約':['#E1F5EE','#085041'],'已轉交':['#D4EDDA','#155724'],'已結案':['#FCEBEB','#A32D2D'],'拒絕':['#FCEBEB','#A32D2D']};
 // 舊狀態顯示文字對應（新舊並存）
+// 安全轉換：已結案→拒絕（migration v3 後不應再有，但保留防禦）
 function displayStatus(s){return s===STATUS.CLOSED?STATUS.REFUSE:(s||STATUS.UNVISITED);}
-// 判定兩個 status 是否語意相同（拒絕=已結案）
 function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)===n(b);}
 const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
@@ -1133,9 +1146,10 @@ async function autoSync(action,payload){
     SYNC.state='ok';
     setSyncBar('ok');
   }catch(e){
-    SYNC.pending=(SYNC.pending||0)+1;
+    SYNC.pending=Math.min((SYNC.pending||0)+1, 999); // 上限防止無限增長
     SYNC.state='err';
     setSyncBar('err');
+    console.warn('[autoSync] 同步失敗 (pending:'+SYNC.pending+'):',e.message||e);
   }
   saveLocal();
   renderVerBadge();
@@ -1342,26 +1356,41 @@ function toggleProdSection(){
 // ═══════════════════════════════════════════════════════════
 // MIGRATION 框架
 // ═══════════════════════════════════════════════════════════
-// 資料不變式檢查 — 啟動時掃描所有客戶，列印違反的筆數到 console
+// 資料不變式檢查 + 自動修正：啟動時掃描所有客戶
+// 修正策略：盡量補資料而非刪資料，降低資料損失風險
 function validateClients(){
-  let warnings=0;
+  let fixed=0;
   (DB.clients||[]).forEach((c,i)=>{
     if(!c)return;
-    const isDeal=c.status===STATUS.DEAL||c.status===STATUS.TRANSFER;
-    const hasContract=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length>0;
-    // 不變式 1：已成約/已轉交 ↔ contractedItems 至少一筆主項
-    if(isDeal&&!hasContract){
-      console.warn('[validateClients] #'+i+' '+c.name+': status='+c.status+' 但無成約品項');
-      warnings++;
-    }
-    // 不變式 2：status 非未拜訪 → 應有至少一筆 visit
+    // 不變式 1：status 非未拜訪 → 應有至少一筆 visit → 自動補建
     if(c.status&&c.status!==STATUS.UNVISITED&&(c.visits||[]).length===0){
-      console.warn('[validateClients] #'+i+' '+c.name+': status='+c.status+' 但 visits 為空');
-      warnings++;
+      const d=trialStartDate(c)||today();
+      c.visits=[{date:d,mood:0,note:'',insight:'(系統補建)',statusChange:c.status,nextdate:c.nextdate||null}];
+      console.warn('[validateClients] 自動補建 visit: #'+i+' '+c.name);
+      fixed++;
+    }
+    // 不變式 2：已結案 → 轉為拒絕（migration v3 應已處理，此為二次防禦）
+    if(c.status===STATUS.CLOSED){
+      c.status=STATUS.REFUSE;
+      console.warn('[validateClients] 自動轉換已結案→拒絕: #'+i+' '+c.name);
+      fixed++;
     }
   });
-  if(warnings)console.warn('[validateClients] 共 '+warnings+' 筆違反不變式');
-  return warnings;
+  if(fixed){saveLocal();console.warn('[validateClients] 共修正 '+fixed+' 筆');}
+  return fixed;
+}
+
+// 已結案 → 拒絕：消除隱性映射，統一為單一狀態值
+function normalizeClosed(){
+  let count=0;
+  (DB.clients||[]).forEach(c=>{
+    if(c.status===STATUS.CLOSED){c.status=STATUS.REFUSE;count++;}
+    (c.visits||[]).forEach(v=>{
+      if(v.statusChange===STATUS.CLOSED)v.statusChange=STATUS.REFUSE;
+    });
+  });
+  if(count)saveLocal();
+  return count;
 }
 
 // 統一 inventory schema：舊格式 {n,s,st} → 新格式 {name,stock,std}
@@ -1629,21 +1658,23 @@ function itemFW4(it){
   }
   return displayFw4(it.product,it.qty||1,it.cycle||'2W');
 }
+// 客戶 4W 金額（純計算，不依賴 c.fw4 快取）：
+// - 有成約品項 → 成約合計
+// - 否則 → 試用品項合計
+// 不再使用 c.fw4 作為 fallback（c.fw4 僅為快取，saveClient 時自動更新）
 function calcFW4(c){
-  if(c.fw4>0)return c.fw4;
-  const t=(c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
   const k=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
-  return t+k;
+  if(k>0)return k;
+  return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
 }
-// 報表專用：區間內有成約 → 只加區間內成約品項；否則用試用金額
+// 報表專用：區間內有成約 → 只加區間內成約品項（含配件）；否則用試用金額
 function calcReportAmt(c,from,to){
   const inRange=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
   if(inRange.length){
-    // 含其 bundled 配件
     const codes=new Set(inRange.map(it=>it.product));
     return (c.contractedItems||[]).filter(it=>codes.has(it.product)||codes.has(it.bundledTo)).reduce((s,it)=>s+itemFW4(it),0);
   }
-  return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0)||c.fw4||0;
+  return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
 }
 // 試用→成約：把第 i 筆主項（含其 bundled 配件）從 cfItems 搬到 cfContracted
 // 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
@@ -2104,45 +2135,48 @@ function renderTodoFields(){
 }
 async function saveClient(){
   const btn=document.getElementById('save-btn');btn.disabled=true;btn.textContent='儲存中...';
-  const autofw=S.cfItems.reduce((s,it)=>s+itemFW4(it),0);
-  const c={
-    name:document.getElementById('cf-name').value||'(未命名)',
-    contact:document.getElementById('cf-contact').value,
-    addr:document.getElementById('cf-addr').value,
-    type:document.getElementById('cf-type').value,
-    status:document.getElementById('cf-status').value,
-    product:autoProd(S.cfItems),
-    nextdate:document.getElementById('cf-nextdate').value,
-    fw4:autofw,env:document.getElementById('cf-env').value,
-    note:document.getElementById('cf-note').value,
-    trialItems:JSON.parse(JSON.stringify(S.cfItems)),
-    contractedItems:JSON.parse(JSON.stringify(S.cfContracted||[])),
-    todos:JSON.parse(JSON.stringify(S.cfTodos)),
-    updatedAt:Date.now(),
-  };
-  // 試用日：使用者填了就存；沒填就不寫此欄（繼續交由 trialStartDate() 動態計算）
-  const tdVal=document.getElementById('cf-trialdate').value;
-  if(tdVal)c.trialDate=tdVal;
-  const isEdit=S.editIdx>=0;
-  // 自動寫 visit：status 從「未拜訪/空」變成其他 → 今天補一筆 visit（已存在今天的就更新 statusChange）
   try{
+    const autofw=S.cfItems.reduce((s,it)=>s+itemFW4(it),0);
+    const c={
+      name:document.getElementById('cf-name').value||'(未命名)',
+      contact:document.getElementById('cf-contact').value,
+      addr:document.getElementById('cf-addr').value,
+      type:document.getElementById('cf-type').value,
+      status:document.getElementById('cf-status').value,
+      nextdate:document.getElementById('cf-nextdate').value,
+      fw4:autofw, // 快取值，顯示一律由 calcFW4() 即時算
+      env:document.getElementById('cf-env').value,
+      note:document.getElementById('cf-note').value,
+      trialItems:JSON.parse(JSON.stringify(S.cfItems)),
+      contractedItems:JSON.parse(JSON.stringify(S.cfContracted||[])),
+      todos:JSON.parse(JSON.stringify(S.cfTodos)),
+      updatedAt:Date.now(),
+    };
+    const tdVal=document.getElementById('cf-trialdate').value;
+    if(tdVal)c.trialDate=tdVal;
+    const isEdit=S.editIdx>=0;
+    // 自動寫 visit：status 從「未拜訪/空」變成其他
     const oldStatus=isEdit?(DB.clients[S.editIdx]?.status||''):'';
     const isLeaving=(!oldStatus||oldStatus===STATUS.UNVISITED)&&c.status&&c.status!==STATUS.UNVISITED;
+    let autoVisits=[];
     if(isLeaving){
       const td=today();
-      const prevVisits=isEdit?(DB.clients[S.editIdx].visits||[]):[];
+      const prevVisits=isEdit?[...(DB.clients[S.editIdx].visits||[])]:[];
       const same=prevVisits.find(v=>v&&v.date===td);
       if(same){same.statusChange=c.status;}
       else{prevVisits.push({date:td,mood:0,note:'',insight:'',statusChange:c.status,nextdate:c.nextdate||null});}
       if(isEdit)DB.clients[S.editIdx].visits=prevVisits;
-      else c._autoVisit=prevVisits; // 暫存給下面 push 用
+      else autoVisits=prevVisits;
     }
-  }catch(e){}
-  if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
-  else{c.visits=c._autoVisit||[];delete c._autoVisit;DB.clients.push(c);}
-  saveLocal();autoSync('save',{client:c,idx:isEdit?S.editIdx:-1});
-  S.editIdx=-1;btn.disabled=false;btn.textContent='儲存客戶';
-  closeForm();renderClients();
+    if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
+    else{c.visits=autoVisits;DB.clients.push(c);}
+    saveLocal();autoSync('save',{client:c,idx:isEdit?S.editIdx:-1});
+    S.editIdx=-1;closeForm();renderClients();
+  }catch(e){
+    alert('儲存失敗：'+(e.message||e));
+  }finally{
+    btn.disabled=false;btn.textContent='儲存客戶';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2150,7 +2184,7 @@ async function saveClient(){
 // ═══════════════════════════════════════════════════════════
 function openCD(i){
   S.curIdx=i;const c=DB.clients[i];
-  const fw=calcFW4(c);const prod=autoProd(c.trialItems)||c.product||'-';
+  const fw=calcFW4(c);const prod=autoProd(c.trialItems)||'-';
   document.getElementById('cd-name').textContent=c.name;
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
@@ -2211,11 +2245,19 @@ function renderCDTodos(){
 function togCDTodo(i){DB.clients[S.curIdx].todos[i].done=!DB.clients[S.curIdx].todos[i].done;DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});renderCDTodos();renderClients();}
 function delCDTodo(i){DB.clients[S.curIdx].todos.splice(i,1);DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});renderCDTodos();renderClients();}
 function addDetTodo(){
-  const text=prompt(`新增待辦（${DB.clients[S.curIdx].name}）：`);if(!text?.trim())return;
-  const due=prompt('截止日期（選填，YYYY-MM-DD）：')||'';
-  DB.clients[S.curIdx].todos.push({text:text.trim(),dueDate:due,done:false});
+  document.getElementById('tm-text').value='';
+  document.getElementById('tm-due').value='';
+  document.getElementById('todo-modal').classList.add('on');
+  setTimeout(()=>document.getElementById('tm-text').focus(),100);
+}
+function closeTodoModal(){document.getElementById('todo-modal').classList.remove('on');}
+function saveTodoModal(){
+  const text=(document.getElementById('tm-text').value||'').trim();
+  if(!text){alert('請輸入待辦內容');return;}
+  const due=document.getElementById('tm-due').value||'';
+  DB.clients[S.curIdx].todos.push({text,dueDate:due,done:false});
   DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});
-  renderCDTodos();renderClients();
+  closeTodoModal();renderCDTodos();renderClients();
 }
 
 // VISIT LOG
@@ -2719,16 +2761,21 @@ loadStatusFilter();initVersion();initPills();initProdCats();
 const MIGRATIONS=[
   {v:1, desc:'backfill visits', fn:backfillVisits},
   {v:2, desc:'normalize inventory schema', fn:normalizeInventory},
+  {v:3, desc:'normalize 已結案→拒絕', fn:normalizeClosed},
 ];
 (function runMigrations(){
-  const done=Number(localStorage.getItem('migration_v')||0);
+  let cur=Number(localStorage.getItem('migration_v')||0);
   // 相容舊 flag：如果已跑過 backfilled_visits_v1 但 migration_v < 1，視為 v1 已完成
-  const start=(done===0&&localStorage.getItem('backfilled_visits_v1'))?1:done;
-  MIGRATIONS.filter(m=>m.v>start).forEach(m=>{
-    try{m.fn();}catch(e){console.warn('Migration v'+m.v+' failed:',e);}
-    localStorage.setItem('migration_v',String(m.v));
+  if(cur===0&&localStorage.getItem('backfilled_visits_v1'))cur=1;
+  MIGRATIONS.filter(m=>m.v>cur).forEach(m=>{
+    try{
+      m.fn();
+      localStorage.setItem('migration_v',String(m.v)); // 成功才標記
+    }catch(e){
+      console.error('Migration v'+m.v+' ('+m.desc+') FAILED:',e);
+      // 失敗不標記 → 下次啟動會重跑
+    }
   });
-  if(start!==done)localStorage.setItem('migration_v',String(Math.max(start,done)));
 })();
 autoAddRecycleTodos();validateClients();renderClients();
 document.getElementById('daily-date').value=today();
@@ -2787,11 +2834,21 @@ if(location.search.includes('test=1')){
   assert('trialStartDate SERVE note', trialStartDate({note:'SERVE 2026/1/8'}), '2026-01-08');
   assert('trialStartDate 全空', trialStartDate({}), '');
 
+  // --- calcFW4（純計算，不依賴 c.fw4） ---
+  const cfClient1={trialItems:[{product:'S-20',quoted:200,qty:1}],contractedItems:[]};
+  assert('calcFW4 只有試用', calcFW4(cfClient1), 200);
+  const cfClient2={trialItems:[{product:'S-20',quoted:200,qty:1}],contractedItems:[{product:'DECSR',quoted:300,qty:1}]};
+  assert('calcFW4 有成約→用成約', calcFW4(cfClient2), 300);
+  const cfClient3={trialItems:[],contractedItems:[],fw4:999};
+  assert('calcFW4 忽略 c.fw4', calcFW4(cfClient3), 0);
+
   // --- calcReportAmt ---
   const testClient1={contractedItems:[{product:'S-20',quoted:300,qty:1,contractDate:'2026-03-15'},{product:'SHB',quoted:0,qty:1,bundledTo:'S-20',contractDate:'2026-03-15'}],trialItems:[]};
   assert('calcReportAmt 有成約', calcReportAmt(testClient1,'2026-03-01','2026-03-31'), 300);
   const testClient2={contractedItems:[],trialItems:[{product:'S-20',quoted:250,qty:1}]};
   assert('calcReportAmt fallback 試用', calcReportAmt(testClient2,'2026-03-01','2026-03-31'), 250);
+  const testClient3={contractedItems:[],trialItems:[],fw4:500};
+  assert('calcReportAmt 不用 c.fw4', calcReportAmt(testClient3,'2026-03-01','2026-03-31'), 0);
 
   // --- 結果顯示 ---
   const pass=results.filter(r=>r.pass).length;
