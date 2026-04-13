@@ -208,6 +208,10 @@ tr:last-child td{border-bottom:none}
     <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     待辦
   </button>
+  <button class="nav-btn" onclick="navTo('shops',this)" id="nav-shops">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    查詢
+  </button>
   <button class="nav-btn" onclick="navTo('inventory',this)" id="nav-inventory">
     <svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4"/><line x1="12" y1="11" x2="12" y2="21"/></svg>
     庫存
@@ -454,6 +458,17 @@ tr:last-child td{border-bottom:none}
   <div id="gt-list"></div>
 </div>
 
+<!-- ═══ SHOPS SEARCH ═══ -->
+<div class="panel" id="panel-shops">
+  <div class="page-title">店家查詢</div>
+  <div class="page-subtitle" id="shops-status">公司現有客戶名單（從雲端載入）</div>
+  <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
+    <input id="shop-search" placeholder="輸入店名、地址、電話、負責人…" oninput="renderShops(this.value)" autocomplete="off">
+  </div>
+  <div id="shops-stats" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+  <div id="shops-list"></div>
+</div>
+
 <!-- ═══ INVENTORY ═══ -->
 <div class="panel" id="panel-inventory">
   <div class="toolbar">
@@ -628,7 +643,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.13-a';
+const APP_VERSION='v2026.04.13-b';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -649,6 +664,7 @@ function handleRequest(e){
       case 'saveInventory': result=saveInventory(body.inventory);break;
       case 'getProducts':   result=getProducts();break;
       case 'saveProducts':  result=saveProducts(body.products);break;
+      case 'getShops':      result=getShops();break;
       case 'ping':          result={ok:true};break;
       default:              result={error:'Unknown action'};
     }
@@ -704,7 +720,20 @@ function getProducts(){
   const val=sheet.getRange(2,1).getValue();
   return{products:val?JSON.parse(val):null};
 }
-function saveProducts(products){getProdSheet().getRange(2,1).setValue(JSON.stringify(products));return{ok:true};}`;
+function saveProducts(products){getProdSheet().getRange(2,1).setValue(JSON.stringify(products));return{ok:true};}
+
+function getShopsSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let sheet=ss.getSheetByName('shops');
+  if(!sheet){sheet=ss.insertSheet('shops');sheet.getRange(1,1,1,4).setValues([['顧客名','電話號碼','地址','負責人']]);}
+  return sheet;
+}
+function getShops(){
+  const sheet=getShopsSheet();const lastRow=sheet.getLastRow();
+  if(lastRow<2)return{shops:[]};
+  const data=sheet.getRange(2,1,lastRow-1,4).getValues();
+  return{shops:data.filter(r=>String(r[0]||'').trim()!=='').map(r=>({name:String(r[0]||'').trim(),phone:String(r[1]||'').trim(),addr:String(r[2]||'').trim(),owner:String(r[3]||'').trim()}))};
+}`;
 
 // ═══════════════════════════════════════════════════════════
 // 預設商品資料（啟動時若 localStorage 無資料則載入）
@@ -1241,6 +1270,7 @@ function navTo(id,el){
   document.getElementById('panel-'+id).classList.add('on');
   if(id==='daily'){const d=document.getElementById('daily-date');if(!d.value)d.value=today();renderDaily();}
   if(id==='todos')renderGT();
+  if(id==='shops')renderShops(document.getElementById('shop-search')?.value||'');
   if(id==='inventory')renderInventory();
   if(id==='settings'){initSettings();renderProducts();}
   window.scrollTo(0,0);
@@ -1581,6 +1611,74 @@ function deleteProd(){
   DB.products.splice(prodEditIdx,1);
   saveLocal();autoSync('saveProducts',{products:DB.products});
   closeProdModal();renderProducts();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SHOPS SEARCH — 公司現有客戶名單查詢
+// ═══════════════════════════════════════════════════════════
+let SHOPS=[];
+// 啟動時從 localStorage 載入快取
+try{const sc=localStorage.getItem('duskin_shops');if(sc)SHOPS=JSON.parse(sc)||[];}catch(e){}
+
+async function loadShops(){
+  const statusEl=document.getElementById('shops-status');
+  if(!SHEET_URL){
+    if(statusEl)statusEl.textContent='尚未設定雲端連線，請到設定頁填入 URL';
+    return;
+  }
+  if(statusEl)statusEl.textContent='載入中…';
+  try{
+    const res=await api({action:'getShops'});
+    SHOPS=res.shops||[];
+    try{localStorage.setItem('duskin_shops',JSON.stringify(SHOPS));}catch(e){}
+    if(statusEl)statusEl.textContent='公司現有客戶名單（'+SHOPS.length+' 筆）';
+    renderShops(document.getElementById('shop-search')?.value||'');
+  }catch(e){
+    if(statusEl)statusEl.textContent='載入失敗：'+(e.message||e)+(SHOPS.length?' （顯示離線快取 '+SHOPS.length+' 筆）':'');
+  }
+}
+
+function shopEscHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function shopHighlight(text,keywords){
+  let safe=shopEscHtml(text);
+  keywords.forEach(kw=>{
+    if(!kw)return;
+    const esc=kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    safe=safe.replace(new RegExp(esc,'gi'),m=>'<span style="background:#fff3a0;padding:0 2px;border-radius:2px;font-weight:600">'+m+'</span>');
+  });
+  return safe;
+}
+function renderShops(query){
+  const q=(query||'').trim();
+  const keywords=q.split(/\s+/).filter(Boolean);
+  let list=SHOPS;
+  if(keywords.length){
+    list=SHOPS.filter(s=>{
+      const all=(s.name+' '+s.phone+' '+s.addr+' '+s.owner).toLowerCase();
+      return keywords.every(kw=>all.includes(kw.toLowerCase()));
+    });
+  }
+  const statsEl=document.getElementById('shops-stats');
+  const el=document.getElementById('shops-list');
+  if(statsEl)statsEl.textContent=q?'找到 '+list.length+' 筆（共 '+SHOPS.length+' 筆）':'共 '+SHOPS.length+' 筆資料';
+  if(!SHOPS.length){
+    el.innerHTML='<div class="empty">尚無店家資料<br><button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="loadShops()">從雲端載入</button></div>';
+    return;
+  }
+  if(!list.length){el.innerHTML='<div class="empty">沒有符合的資料</div>';return;}
+  const MAX=200;
+  const shown=list.slice(0,MAX);
+  el.innerHTML=shown.map(s=>{
+    const name=shopHighlight(s.name||'(無名稱)',keywords);
+    const phone=s.phone?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">電話</span><a href="tel:'+shopEscHtml(s.phone.replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+shopHighlight(s.phone,keywords)+'</a></div>':'';
+    const addr=s.addr?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">地址</span><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.addr)+'" target="_blank" rel="noopener" style="color:var(--green)">'+shopHighlight(s.addr,keywords)+'</a></div>':'';
+    const owner=s.owner?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">負責人</span>'+shopHighlight(s.owner,keywords)+'</div>':'';
+    return '<div class="card" style="border-left:3px solid var(--green-b)">'+
+      '<div style="font-size:15px;font-weight:600;margin-bottom:4px">'+name+'</div>'+
+      phone+addr+owner+'</div>';
+  }).join('')+(list.length>MAX?'<div class="empty">只顯示前 '+MAX+' 筆，請輸入更精確的關鍵字</div>':'');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2779,7 +2877,7 @@ const MIGRATIONS=[
 })();
 autoAddRecycleTodos();validateClients();renderClients();
 document.getElementById('daily-date').value=today();
-if(SHEET_URL)updateSheetStatus(true);
+if(SHEET_URL){updateSheetStatus(true);loadShops();}
 
 // ═══════════════════════════════════════════════════════════
 // TEST MODE — 加 ?test=1 啟動，console + 頁面顯示結果
