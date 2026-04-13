@@ -1337,10 +1337,43 @@ function renderInventory(){
     if(INV_STATE.mode==='short')list=list.filter(x=>x.stock<x.std);
     if(INV_STATE.cat)list=list.filter(x=>x.cat===INV_STATE.cat);
     if(q)list=list.filter(x=>x.name.toLowerCase().includes(q));
-    // 分類分組
-    const GROUPS=['地墊','拖把','芳香','其他'];
+    // 分類分組 + 自訂排序
+    const GROUPS=['地墊','芳香','拖把','其他'];
     const grouped={};GROUPS.forEach(g=>grouped[g]=[]);
     list.forEach(x=>{if(!grouped[x.cat])grouped[x.cat]=[];grouped[x.cat].push(x);});
+    // 自訂排序：依品項類別 → 尺寸 → 顏色
+    const INV_ORDER=[
+      // 地墊：吸塵吸水 → 歡迎 → 豪華 → FOREVER → BASIC → 雅緻 → 刮沙 → 薄型 → KK → 男女辨識
+      'DWSSH','DWSH','DWSR','DWSLH','DWLH','DWLLH','DW3MH',
+      'DECSR','DECSLR','DECLR','DECLLR','DECTR',
+      'TJSR','TJSH','2SN2','TJSLH','TJLH',
+      'FSSK','FFSK','FFSLK','FFLK',
+      'BSH','BSR','BSLH','BSLR',
+      'GSH','GSB','GLH',
+      'EXSH','EXSLH','EXLH',
+      'UQSH','UQSLH','UQLH',
+      'KKSN','KKSLN','KKLN',
+      'MANSB','MWOSR',
+      // 芳香：DOME → FNWT/FNBK/FNPS2-K → BF系列 → AF系列 → AM系列 → 電池
+      'DOME',
+      'FNWT','FNBK','FNPS2-K',
+      'BFDW','BF-W','BF-PC',
+      'AFDW','AF-BP','AF-IT',
+      'AMDW','AMMK','AMWT','AMOB',
+      'BT3','BT1','BT4',
+      // 拖把：拖把布 → 握把 → 配件
+      'SHH','NSAC','N-AC','M-90','M-120','NFM-DS',
+      'SHB','M90-H','M120-H','BS-H','BM-H','P-B','M-PA',
+      'S-20',
+    ];
+    const orderMap={};INV_ORDER.forEach((code,i)=>orderMap[code]=i);
+    GROUPS.forEach(g=>{
+      if(grouped[g])grouped[g].sort((a,b)=>{
+        const ia=orderMap[a.name]!=null?orderMap[a.name]:9999;
+        const ib=orderMap[b.name]!=null?orderMap[b.name]:9999;
+        return ia-ib;
+      });
+    });
     if(countEl)countEl.textContent=`共 ${list.length} 項`+(INV_STATE.mode==='short'?'（缺貨）':'');
     if(!list.length){el.innerHTML='<div class="empty">沒有符合條件的品項</div>';return;}
     let html='';
