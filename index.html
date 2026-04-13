@@ -461,7 +461,10 @@ tr:last-child td{border-bottom:none}
 <!-- ═══ SHOPS SEARCH ═══ -->
 <div class="panel" id="panel-shops">
   <div class="page-title">店家查詢</div>
-  <div class="page-subtitle" id="shops-status">公司現有客戶名單（從雲端載入）</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="page-subtitle" id="shops-status" style="flex:1;margin:0">公司現有客戶名單（從雲端載入）</div>
+    <button class="btn btn-outline btn-xs" onclick="loadShops()">🔄 重新載入</button>
+  </div>
   <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
     <input id="shop-search" placeholder="輸入店名、地址、電話、負責人…" oninput="renderShops(this.value)" autocomplete="off">
   </div>
@@ -1629,12 +1632,17 @@ async function loadShops(){
   if(statusEl)statusEl.textContent='載入中…';
   try{
     const res=await api({action:'getShops'});
+    if(!res.shops&&res.error){throw new Error(res.error);}
     SHOPS=res.shops||[];
     try{localStorage.setItem('duskin_shops',JSON.stringify(SHOPS));}catch(e){}
-    if(statusEl)statusEl.textContent='公司現有客戶名單（'+SHOPS.length+' 筆）';
+    if(statusEl)statusEl.textContent='公司現有客戶名單（'+SHOPS.length+' 筆）· 上次更新 '+new Date().toLocaleTimeString();
     renderShops(document.getElementById('shop-search')?.value||'');
   }catch(e){
-    if(statusEl)statusEl.textContent='載入失敗：'+(e.message||e)+(SHOPS.length?' （顯示離線快取 '+SHOPS.length+' 筆）':'');
+    const msg='載入失敗：'+(e.message||e);
+    console.error('[loadShops]',e);
+    if(statusEl)statusEl.textContent=msg+(SHOPS.length?' （顯示離線快取 '+SHOPS.length+' 筆）':'');
+    // 手機除錯用：長按狀態文字可看完整錯誤
+    if(statusEl)statusEl.title=msg;
   }
 }
 
