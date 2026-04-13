@@ -1392,9 +1392,9 @@ function renderInventory(){
             <div style="font-size:15px;font-weight:700;color:${color}">${x.stock} / ${x.std}</div>
           </div>
           <div style="display:flex;gap:6px">
-            <button class="btn btn-outline btn-sm" onclick="invAct('${esc}','trial')" style="flex:1;font-size:12px;padding:6px">送出試用 −1</button>
-            <button class="btn btn-danger btn-sm" onclick="invAct('${esc}','ship')" style="flex:1;font-size:12px;padding:6px">出貨 −1</button>
-            <button class="btn btn-primary btn-sm" onclick="invAct('${esc}','refill')" style="flex:1;font-size:12px;padding:6px">補齊</button>
+            <button class="btn btn-danger btn-sm" onclick="invAct('${esc}','minus')" style="flex:1;font-size:14px;padding:6px;font-weight:700">−1</button>
+            <button class="btn btn-primary btn-sm" onclick="invAct('${esc}','plus')" style="flex:1;font-size:14px;padding:6px;font-weight:700">+1</button>
+            <button class="btn btn-outline btn-sm" onclick="invAct('${esc}','refill')" style="flex:1;font-size:12px;padding:6px">補齊</button>
           </div>
         </div>`;
       });
@@ -1498,9 +1498,11 @@ function invAct(name,action){
     const it=(DB.inventory||[]).find(x=>x&&x.name===name);
     if(!it)return;
     const cur=Number(it.stock)||0, std=Number(it.std)||0;
-    if(action==='trial'||action==='ship'){
+    if(action==='minus'){
       if(cur<=0)return;
       it.stock=cur-1;
+    }else if(action==='plus'){
+      it.stock=cur+1;
     }else if(action==='refill'){
       it.stock=std;
     }
@@ -1510,6 +1512,29 @@ function invAct(name,action){
   }catch(e){
     alert('庫存操作失敗：'+(e.message||e));
   }
+}
+// 比對新舊 trialItems，回傳新增的品項差量 [{code, qty}, ...]
+function getInventoryDiffs(oldItems,newItems){
+  const oldMap={};
+  (oldItems||[]).forEach(it=>{if(it.product)oldMap[it.product]=(oldMap[it.product]||0)+(it.qty||1);});
+  const newMap={};
+  (newItems||[]).forEach(it=>{if(it.product)newMap[it.product]=(newMap[it.product]||0)+(it.qty||1);});
+  const diffs=[];
+  Object.keys(newMap).forEach(code=>{
+    const added=newMap[code]-(oldMap[code]||0);
+    if(added>0)diffs.push({code,qty:added});
+  });
+  return diffs;
+}
+// 執行庫存扣減
+function applyInventoryDeduct(diffs){
+  diffs.forEach(({code,qty})=>{
+    const it=(DB.inventory||[]).find(x=>x&&x.name===code);
+    if(it)it.stock=Math.max(0,(Number(it.stock)||0)-qty);
+  });
+  saveLocal();
+  autoSync('saveInventory',{inventory:DB.inventory});
+  renderInventory();
 }
 
 // 庫存 modal：name 為空或 -1 表示新增；帶品項代號表示編輯
@@ -2038,6 +2063,8 @@ function showView(id){
 }
 function openCF(idx){
   S.editIdx=idx;S.cfItems=[];S.cfTodos=[];
+  // 記住舊的試用品項，存檔時比對新增的品項扣庫存
+  S._prevTrialItems=idx>=0?JSON.parse(JSON.stringify(DB.clients[idx]?.trialItems||[])):[];
   document.getElementById('form-title').textContent=idx>=0?'編輯客戶':'新增客戶';
   const c=idx>=0?DB.clients[idx]:null;
   document.getElementById('cf-name').value=c?.name||'';
@@ -2310,6 +2337,18 @@ async function saveClient(){
     if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
     else{c.visits=autoVisits;DB.clients.push(c);}
     saveLocal();autoSync('save',{client:c,idx:isEdit?S.editIdx:-1});
+    // 自動扣庫存：比對新舊試用品項，新增的品項詢問是否扣減
+    const oldTrialItems=isEdit?(S._prevTrialItems||[]):[];
+    const pendingDiffs=getInventoryDiffs(oldTrialItems,c.trialItems);
+    if(pendingDiffs.length){
+      const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n')+'\n\n是否從庫存扣減？';
+      // 用 setTimeout 避免阻塞 saveClient 流程
+      setTimeout(()=>{
+        if(confirm(msg)){
+          applyInventoryDeduct(pendingDiffs);
+        }
+      },100);
+    }
     S.editIdx=-1;closeForm();renderClients();
   }catch(e){
     alert('儲存失敗：'+(e.message||e));
