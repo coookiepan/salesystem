@@ -1777,14 +1777,20 @@ function parseRegion(addr){
   const m=addr.match(/([\u4e00-\u9fa5]{1,3}區)/);
   return m?m[1]:'';
 }
-// 蒐集所有未拜訪客戶的區域清單
+// 蒐集指定分類客戶的區域清單
 function collectRegions(){
   const regions=new Set();
   DB.clients.forEach(c=>{
-    if((c.visits||[]).length>0)return;
-    const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
-    if(mains.length>0)return; // 有試用品項也算拜訪過，不列入未拜訪池
-    if(statusEq(c.status,STATUS.REFUSE))return;
+    // 依目前分類決定篩選條件
+    if(activeCat==='複訪順序'){
+      if(!c.nextdate)return;
+    }else{
+      // 未拜訪
+      if((c.visits||[]).length>0)return;
+      const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+      if(mains.length>0)return;
+      if(statusEq(c.status,STATUS.REFUSE))return;
+    }
     const r=parseRegion(c.addr);
     if(r)regions.add(r);
   });
@@ -1794,7 +1800,7 @@ function collectRegions(){
 function renderRegionBar(){
   const bar=document.getElementById('region-bar');
   if(!bar)return;
-  if(activeCat!==STATUS.UNVISITED){bar.style.display='none';bar.innerHTML='';return;}
+  if(activeCat!==STATUS.UNVISITED&&activeCat!=='複訪順序'){bar.style.display='none';bar.innerHTML='';return;}
   const regions=collectRegions();
   if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
   bar.style.display='flex';
@@ -1962,7 +1968,13 @@ function matchCategory(c){
       return true;
     }
     case '試用中未報價': return c.status===STATUS.TRIAL&&mains.length>0&&hasUnquoted;
-    case '複訪順序': return !!c.nextdate;
+    case '複訪順序': {
+      if(!c.nextdate)return false;
+      if(activeRegion){
+        return parseRegion(c.addr)===activeRegion;
+      }
+      return true;
+    }
     case '已成約': return isDeal;
     case '拒絕': return isRefused;
     case '全部': return true;
