@@ -660,7 +660,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.16-a';
+const APP_VERSION='v2026.04.16-b';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1149,21 +1149,21 @@ function isBundleAcc(code){
 //      3) 對剩下的主商品逐一重建 bundle
 function rebuildAllBundles(){
   // 先把孤兒口味代號回補到其對應主商品的 flavorCode，避免 rebuild 時遺失使用者的口味選擇
+  // 成功回補的孤兒口味會被標記 _absorbed，後續 filter 刪掉（避免 rebuild 重複插入）
   S.cfItems.forEach(it=>{
     if(it.bundledTo||!it.product) return;
     if(!isFlavorOnly(it.product)) return;
-    // 找一個能吃這個口味的主商品
     for(const other of S.cfItems){
       if(other===it||other.bundledTo||!other.product) continue;
       const choices=getFlavorChoices(other.product);
-      if(choices.some(c=>c.code===it.product)){ other.flavorCode=it.product; break; }
+      if(choices.some(c=>c.code===it.product)){ other.flavorCode=it.product; it._absorbed=true; break; }
     }
   });
+  // 清掉 bundledTo 標記的（由 rebuildBundle 重建）+ 已被回補的孤兒口味
+  // 沒有 bundledTo 的品項（含配件代號如 BT3）一律保留，使用者可單獨試用
   S.cfItems=S.cfItems.filter(it=>{
-    if(it.bundledTo) return false; // 清掉舊的 bundled
-    if(!it.product) return true;   // 空白 row 保留
-    if(isBundleAcc(it.product)) return false;  // 孤兒配件
-    if(isFlavorOnly(it.product)) return false; // 孤兒口味（稍後重建時會被當 flavor row 的預設值還原）
+    if(it.bundledTo) return false;
+    if(it._absorbed){delete it._absorbed; return false;}
     return true;
   });
   for(let i=0;i<S.cfItems.length;i++){
@@ -1965,12 +1965,12 @@ function autoAddRecycleTodos(){
         if(isNaN(tsDate.getTime()))return;
         const daysSince=(todayObj-tsDate)/DAY;
         if(daysSince<7)return;
-        if((c.todos||[]).some(t=>t&&t.text&&t.text.indexOf('回收')>=0))return;
+        if((c.todos||[]).some(t=>t&&(t.source==='auto-recycle'||(t.text&&t.text.indexOf('回收')>=0))))return;
         const dueDate=new Date(tsDate.getTime()+14*DAY);
         if(isNaN(dueDate.getTime()))return;
         const due=fmtDate(dueDate);
         c.todos=c.todos||[];
-        c.todos.push({text:'回收試用品',dueDate:due,done:false});
+        c.todos.push({text:'回收試用品',dueDate:due,done:false,source:'auto-recycle'});
         added++;
       }catch(inner){
         // 單筆客戶失敗，略過不中斷
@@ -2925,11 +2925,14 @@ function initVersion(){
 // 從線上 fetch 目前頁面，解析 APP_VERSION，比對是否有新版
 async function checkForUpdate(){
   try{
-    const url=window.location.pathname+'?_check='+Date.now();
+    // 用 origin + pathname 組合，避免 iOS PWA scope 路徑異常
+    const base=window.location.origin+(window.location.pathname||'/');
+    const url=base+(base.endsWith('/')? 'index.html':'')+'?_check='+Date.now();
     const res=await fetch(url,{cache:'no-store'});
     if(!res.ok)return;
     const text=await res.text();
-    const m=text.match(/const APP_VERSION='([^']+)'/);
+    // 用更精確的 regex：錨定行首 const + 尾部分號，避免匹配註解或測試中的字串
+    const m=text.match(/^const APP_VERSION=['"](v[^'"]+)['"]\s*;/m);
     if(!m)return;
     const remoteVer=m[1];
     if(remoteVer!==APP_VERSION){
