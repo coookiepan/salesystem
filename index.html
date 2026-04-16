@@ -661,8 +661,8 @@ function handleRequest(e){
     let result;
     switch(action){
       case 'getAll':        result=getAllClients();break;
-      case 'save':          result=saveClient(body.client,body.idx);break;
-      case 'delete':        result=deleteClient(body.idx);break;
+      case 'save':          result=saveClient(body.client);break;
+      case 'delete':        result=deleteClient(body.id);break;
       case 'getInventory':  result=getInventory();break;
       case 'saveInventory': result=saveInventory(body.inventory);break;
       case 'getProducts':   result=getProducts();break;
@@ -689,15 +689,29 @@ function getAllClients(){
   const data=sheet.getRange(2,1,lastRow-1,1).getValues();
   return{clients:data.map(r=>r[0]).filter(c=>c!=='').map(c=>JSON.parse(c))};
 }
-function saveClient(client,idx){
+function findRowById(sheet,id){
+  if(!id)return -1;
+  const lastRow=sheet.getLastRow();
+  if(lastRow<2)return -1;
+  const data=sheet.getRange(2,1,lastRow-1,1).getValues();
+  for(let i=0;i<data.length;i++){
+    try{const c=JSON.parse(data[i][0]);if(c.id===id)return i+2;}catch(e){}
+  }
+  return -1;
+}
+function saveClient(client){
   const sheet=getSheet();const json=JSON.stringify(client);
-  if(idx===-1||idx===undefined){sheet.getRange(sheet.getLastRow()+1,1).setValue(json);return{ok:true};}
-  const row=Number(idx)+2;
-  if(row>sheet.getLastRow())sheet.getRange(sheet.getLastRow()+1,1).setValue(json);
-  else sheet.getRange(row,1).setValue(json);
+  const row=findRowById(sheet,client.id);
+  if(row>0){sheet.getRange(row,1).setValue(json);}
+  else{sheet.getRange(sheet.getLastRow()+1,1).setValue(json);}
   return{ok:true};
 }
-function deleteClient(idx){getSheet().deleteRow(Number(idx)+2);return{ok:true};}
+function deleteClient(id){
+  const sheet=getSheet();
+  const row=findRowById(sheet,id);
+  if(row>0)sheet.deleteRow(row);
+  return{ok:true};
+}
 
 function getInvSheet(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();
@@ -903,6 +917,33 @@ const DEFAULT_PRODUCTS=[
   {code:'F7400A',cat:'芳香',desc:'自動酒精機台',price:0,cycle:'',note:'配件',active:false},
   {code:'FST-01',cat:'芳香',desc:'自動酒精機台立架',price:0,cycle:'',note:'配件',active:false},
   {code:'BT2',cat:'芳香',desc:'BT2鹼性3號電池',price:0,cycle:'',note:'配件',active:false},
+];
+
+// 庫存頁面排序（業務自訂）：分類內的品項顯示順序
+// 不在此清單中的品項會自動排到同分類最後（按代號字母排）
+const INV_SORT_ORDER=[
+  // 地墊：吸塵吸水 → 歡迎 → 豪華 → FOREVER → BASIC → 雅緻 → 刮沙 → 薄型 → KK → 男女辨識
+  'DWSSH','DWSH','DWSR','DWSLH','DWLH','DWLLH','DW3MH',
+  'DECSR','DECSLR','DECLR','DECLLR','DECTR',
+  'TJSR','TJSH','2SN2','TJSLH','TJLH',
+  'FSSK','FFSK','FFSLK','FFLK',
+  'BSH','BSR','BSLH','BSLR',
+  'GSH','GSB','GLH',
+  'EXSH','EXSLH','EXLH',
+  'UQSH','UQSLH','UQLH',
+  'KKSN','KKSLN','KKLN',
+  'MANSB','MWOSR',
+  // 芳香：DOME → FNWT/FNBK/FNPS2-K → BF系列 → AF系列 → AM系列 → 電池
+  'DOME',
+  'FNWT','FNBK','FNPS2-K',
+  'BFDW','BF-W','BF-PC',
+  'AFDW','AF-BP','AF-IT',
+  'AMDW','AMMK','AMWT','AMOB',
+  'BT3','BT1','BT4',
+  // 拖把：拖把布 → 握把 → 配件
+  'SHH','NSAC','N-AC','M-90','M-120','NFM-DS',
+  'SHB','M90-H','M120-H','BS-H','BM-H','P-B','M-PA',
+  'S-20',
 ];
 
 const INV_INIT=[{name:'S-20',stock:5,std:5},{name:'SHH',stock:10,std:10},{name:'NFM-DS',stock:2,std:2},{name:'N-AC',stock:2,std:2},{name:'M-120',stock:2,std:2},{name:'M120-H',stock:2,std:2},{name:'M-90',stock:2,std:2},{name:'NSAC',stock:2,std:2},{name:'SHB',stock:15,std:15},{name:'BS-H',stock:2,std:2},{name:'BM-H',stock:2,std:2},{name:'P-B',stock:4,std:4},{name:'M90-H',stock:2,std:2},{name:'M-PA',stock:4,std:4},{name:'TJSR',stock:1,std:1},{name:'TJSH',stock:1,std:1},{name:'TJLH',stock:1,std:1},{name:'2SN2',stock:1,std:1},{name:'GSH',stock:1,std:1},{name:'GSB',stock:1,std:1},{name:'EXSLH',stock:1,std:1},{name:'GLH',stock:1,std:1},{name:'EXLH',stock:1,std:1},{name:'EXSH',stock:1,std:1},{name:'MANSB',stock:1,std:1},{name:'MWOSR',stock:1,std:1},{name:'FFSK',stock:2,std:2},{name:'FFSLK',stock:1,std:1},{name:'FFLK',stock:1,std:1},{name:'TJSLH',stock:1,std:1},{name:'DWSR',stock:1,std:1},{name:'DWSH',stock:2,std:2},{name:'DWSLH',stock:2,std:2},{name:'DWLH',stock:1,std:1},{name:'DWLLH',stock:1,std:1},{name:'DW3MH',stock:1,std:1},{name:'BSH',stock:2,std:2},{name:'BSR',stock:1,std:1},{name:'BSLH',stock:1,std:1},{name:'BSLR',stock:1,std:1},{name:'FSSK',stock:1,std:1},{name:'UQSH',stock:1,std:1},{name:'UQSLH',stock:1,std:1},{name:'UQLH',stock:1,std:1},{name:'DECSR',stock:2,std:2},{name:'DECSLR',stock:2,std:2},{name:'DECLR',stock:2,std:2},{name:'DECLLR',stock:1,std:1},{name:'DECTR',stock:1,std:1},{name:'DWSSH',stock:2,std:2},{name:'KKSN',stock:1,std:1},{name:'KKSLN',stock:1,std:1},{name:'KKLN',stock:1,std:1},{name:'DOME',stock:30,std:30},{name:'FNWT',stock:2,std:2},{name:'FNBK',stock:2,std:2},{name:'FNPS2-K',stock:4,std:4},{name:'BT3',stock:24,std:24},{name:'BFDW',stock:4,std:4},{name:'BF-W',stock:4,std:4},{name:'AFDW',stock:2,std:2},{name:'BT1',stock:4,std:4},{name:'BF-PC',stock:4,std:4},{name:'AF-BP',stock:2,std:2},{name:'AF-IT',stock:2,std:2},{name:'AMDW',stock:4,std:4},{name:'AMMK',stock:2,std:2},{name:'AMWT',stock:2,std:2},{name:'AMOB',stock:2,std:2},{name:'BT4',stock:16,std:16}];
@@ -1278,6 +1319,11 @@ function navTo(id,el){
   if(id==='settings'){initSettings();renderProducts();}
   window.scrollTo(0,0);
 }
+// 產生唯一 ID（用於 client 識別，取代陣列 index）
+function genId(){
+  try{return crypto.randomUUID();}catch(e){}
+  return Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+}
 function today(){
   // 使用本地時區（不是 UTC），避免 UTC+8 跨日顯示錯誤
   const d=new Date();
@@ -1341,37 +1387,14 @@ function renderInventory(){
     const GROUPS=['地墊','芳香','拖把','其他'];
     const grouped={};GROUPS.forEach(g=>grouped[g]=[]);
     list.forEach(x=>{if(!grouped[x.cat])grouped[x.cat]=[];grouped[x.cat].push(x);});
-    // 自訂排序：依品項類別 → 尺寸 → 顏色
-    const INV_ORDER=[
-      // 地墊：吸塵吸水 → 歡迎 → 豪華 → FOREVER → BASIC → 雅緻 → 刮沙 → 薄型 → KK → 男女辨識
-      'DWSSH','DWSH','DWSR','DWSLH','DWLH','DWLLH','DW3MH',
-      'DECSR','DECSLR','DECLR','DECLLR','DECTR',
-      'TJSR','TJSH','2SN2','TJSLH','TJLH',
-      'FSSK','FFSK','FFSLK','FFLK',
-      'BSH','BSR','BSLH','BSLR',
-      'GSH','GSB','GLH',
-      'EXSH','EXSLH','EXLH',
-      'UQSH','UQSLH','UQLH',
-      'KKSN','KKSLN','KKLN',
-      'MANSB','MWOSR',
-      // 芳香：DOME → FNWT/FNBK/FNPS2-K → BF系列 → AF系列 → AM系列 → 電池
-      'DOME',
-      'FNWT','FNBK','FNPS2-K',
-      'BFDW','BF-W','BF-PC',
-      'AFDW','AF-BP','AF-IT',
-      'AMDW','AMMK','AMWT','AMOB',
-      'BT3','BT1','BT4',
-      // 拖把：拖把布 → 握把 → 配件
-      'SHH','NSAC','N-AC','M-90','M-120','NFM-DS',
-      'SHB','M90-H','M120-H','BS-H','BM-H','P-B','M-PA',
-      'S-20',
-    ];
-    const orderMap={};INV_ORDER.forEach((code,i)=>orderMap[code]=i);
+    // 排序：依 INV_SORT_ORDER（業務自訂排序），不在清單中的品項按代號字母排到最後
+    const orderMap={};INV_SORT_ORDER.forEach((code,i)=>orderMap[code]=i);
     GROUPS.forEach(g=>{
       if(grouped[g])grouped[g].sort((a,b)=>{
-        const ia=orderMap[a.name]!=null?orderMap[a.name]:9999;
-        const ib=orderMap[b.name]!=null?orderMap[b.name]:9999;
-        return ia-ib;
+        const ia=orderMap[a.name]!=null?orderMap[a.name]:99999;
+        const ib=orderMap[b.name]!=null?orderMap[b.name]:99999;
+        if(ia!==ib)return ia-ib;
+        return a.name.localeCompare(b.name); // 不在清單中的品項按字母排
       });
     });
     if(countEl)countEl.textContent=`共 ${list.length} 項`+(INV_STATE.mode==='short'?'（缺貨）':'');
@@ -1459,6 +1482,16 @@ function normalizeClosed(){
   return count;
 }
 
+// v4: 為所有客戶補上唯一 id（取代陣列 index 作為雲端同步 key）
+function backfillClientIds(){
+  let count=0;
+  (DB.clients||[]).forEach(c=>{
+    if(!c.id){c.id=genId();count++;}
+  });
+  if(count)saveLocal();
+  return count;
+}
+
 // 統一 inventory schema：舊格式 {n,s,st} → 新格式 {name,stock,std}
 function normalizeInventory(){
   (DB.inventory||[]).forEach(it=>{
@@ -1514,11 +1547,12 @@ function invAct(name,action){
   }
 }
 // 比對新舊 trialItems，回傳新增的品項差量 [{code, qty}, ...]
+// 只算 main 品項（排除 bundledTo 配件），配件由 BUNDLE_MAP 自動管理
 function getInventoryDiffs(oldItems,newItems){
   const oldMap={};
-  (oldItems||[]).forEach(it=>{if(it.product)oldMap[it.product]=(oldMap[it.product]||0)+(it.qty||1);});
+  (oldItems||[]).forEach(it=>{if(it.product&&!it.bundledTo)oldMap[it.product]=(oldMap[it.product]||0)+(it.qty||1);});
   const newMap={};
-  (newItems||[]).forEach(it=>{if(it.product)newMap[it.product]=(newMap[it.product]||0)+(it.qty||1);});
+  (newItems||[]).forEach(it=>{if(it.product&&!it.bundledTo)newMap[it.product]=(newMap[it.product]||0)+(it.qty||1);});
   const diffs=[];
   Object.keys(newMap).forEach(code=>{
     const added=newMap[code]-(oldMap[code]||0);
@@ -2346,9 +2380,9 @@ async function saveClient(){
       if(isEdit)DB.clients[S.editIdx].visits=prevVisits;
       else autoVisits=prevVisits;
     }
-    if(isEdit){c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
-    else{c.visits=autoVisits;DB.clients.push(c);}
-    saveLocal();autoSync('save',{client:c,idx:isEdit?S.editIdx:-1});
+    if(isEdit){c.id=DB.clients[S.editIdx].id||genId();c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
+    else{c.id=genId();c.visits=autoVisits;DB.clients.push(c);}
+    saveLocal();autoSync('save',{client:c});
     // 自動扣庫存：比對新舊試用品項，新增的品項詢問是否扣減
     const oldTrialItems=isEdit?(S._prevTrialItems||[]):[];
     const pendingDiffs=getInventoryDiffs(oldTrialItems,c.trialItems);
@@ -2414,7 +2448,7 @@ function editCur(){if(S.curIdx<0)return;const i=S.curIdx;closeDetail();openCF(i)
 async function delCur(){
   if(S.curIdx<0)return;
   if(!confirm(`確認刪除「${DB.clients[S.curIdx].name}」？`))return;
-  const idx=S.curIdx;DB.clients.splice(idx,1);saveLocal();autoSync('delete',{idx});
+  const idx=S.curIdx;const delId=DB.clients[idx]?.id;DB.clients.splice(idx,1);saveLocal();autoSync('delete',{id:delId});
   S.curIdx=-1;closeDetail();renderClients();
 }
 
@@ -2432,8 +2466,8 @@ function renderCDTodos(){
       <button onclick="delCDTodo(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">×</button>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦</div>';
 }
-function togCDTodo(i){DB.clients[S.curIdx].todos[i].done=!DB.clients[S.curIdx].todos[i].done;DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});renderCDTodos();renderClients();}
-function delCDTodo(i){DB.clients[S.curIdx].todos.splice(i,1);DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});renderCDTodos();renderClients();}
+function togCDTodo(i){DB.clients[S.curIdx].todos[i].done=!DB.clients[S.curIdx].todos[i].done;DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});renderCDTodos();renderClients();}
+function delCDTodo(i){DB.clients[S.curIdx].todos.splice(i,1);DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});renderCDTodos();renderClients();}
 function addDetTodo(){
   document.getElementById('tm-text').value='';
   document.getElementById('tm-due').value='';
@@ -2446,7 +2480,7 @@ function saveTodoModal(){
   if(!text){alert('請輸入待辦內容');return;}
   const due=document.getElementById('tm-due').value||'';
   DB.clients[S.curIdx].todos.push({text,dueDate:due,done:false});
-  DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx],idx:S.curIdx});
+  DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});
   closeTodoModal();renderCDTodos();renderClients();
 }
 
@@ -2495,7 +2529,7 @@ function saveVL(){
     c.nextdate=selDate;
     c.updatedAt=Date.now();
     saveLocal();
-    autoSync('save',{client:c,idx:S.curIdx});
+    autoSync('save',{client:c});
     document.getElementById('vl-form').style.display='none';
     S.editVisitIdx=-1;
     renderVisits();renderClients();openCD(S.curIdx);
@@ -2527,7 +2561,7 @@ function saveVL(){
     c.nextdate=nd;
   }
   c.updatedAt=Date.now();saveLocal();
-  autoSync('save',{client:c,idx:S.curIdx});
+  autoSync('save',{client:c});
   document.getElementById('vl-form').style.display='none';
   S.editVisitIdx=-1;
   renderVisits();renderClients();openCD(S.curIdx);
@@ -2802,8 +2836,8 @@ function renderGT(){
     </div>`;
   }).join('')+'</div>';
 }
-function togGT(ci,ti){DB.clients[ci].todos[ti].done=!DB.clients[ci].todos[ti].done;saveLocal();autoSync('save',{client:DB.clients[ci],idx:ci});renderGT();}
-function delGT(ci,ti){DB.clients[ci].todos.splice(ti,1);saveLocal();autoSync('save',{client:DB.clients[ci],idx:ci});renderGT();}
+function togGT(ci,ti){DB.clients[ci].todos[ti].done=!DB.clients[ci].todos[ti].done;saveLocal();autoSync('save',{client:DB.clients[ci]});renderGT();}
+function delGT(ci,ti){DB.clients[ci].todos.splice(ti,1);saveLocal();autoSync('save',{client:DB.clients[ci]});renderGT();}
 
 // ═══════════════════════════════════════════════════════════
 // EXPORT
@@ -2952,20 +2986,23 @@ const MIGRATIONS=[
   {v:1, desc:'backfill visits', fn:backfillVisits},
   {v:2, desc:'normalize inventory schema', fn:normalizeInventory},
   {v:3, desc:'normalize 已結案→拒絕', fn:normalizeClosed},
+  {v:4, desc:'backfill client ids', fn:backfillClientIds},
 ];
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);
   // 相容舊 flag：如果已跑過 backfilled_visits_v1 但 migration_v < 1，視為 v1 已完成
   if(cur===0&&localStorage.getItem('backfilled_visits_v1'))cur=1;
-  MIGRATIONS.filter(m=>m.v>cur).forEach(m=>{
+  const pending=MIGRATIONS.filter(m=>m.v>cur);
+  for(const m of pending){
     try{
       m.fn();
-      localStorage.setItem('migration_v',String(m.v)); // 成功才標記
+      cur=m.v;
+      localStorage.setItem('migration_v',String(cur));
     }catch(e){
       console.error('Migration v'+m.v+' ('+m.desc+') FAILED:',e);
-      // 失敗不標記 → 下次啟動會重跑
+      break; // 失敗即中斷，避免跳號執行後續 migration
     }
-  });
+  }
 })();
 autoAddRecycleTodos();validateClients();renderClients();
 document.getElementById('daily-date').value=today();
