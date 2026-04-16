@@ -660,7 +660,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.16-b';
+const APP_VERSION='v2026.04.16-c';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1440,10 +1440,10 @@ function renderInventory(){
       items.forEach(x=>{
         const pct=x.std>0?x.stock/x.std:1;
         const color=x.stock===0?'var(--red)':pct<1?'#d97706':'#085041';
-        const esc=x.name.replace(/'/g,"\\'");
+        const esc=escHtml(x.name).replace(/'/g,"&#39;");
         html+=`<div class="cc" style="padding:10px 12px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <div style="flex:1;font-size:14px;font-weight:600">${x.name}</div>
+            <div style="flex:1;font-size:14px;font-weight:600">${escHtml(x.name)}</div>
             <button onclick="openInvModal('${esc}')" title="編輯" style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;opacity:.6">⚙️</button>
             <div style="font-size:15px;font-weight:700;color:${color}">${x.stock} / ${x.std}</div>
           </div>
@@ -1794,11 +1794,11 @@ async function loadShops(){
   }
 }
 
-function shopEscHtml(s){
+function escHtml(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function shopHighlight(text,keywords){
-  let safe=shopEscHtml(text);
+  let safe=escHtml(text);
   keywords.forEach(kw=>{
     if(!kw)return;
     const esc=kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -1828,7 +1828,7 @@ function renderShops(query){
   const shown=list.slice(0,MAX);
   el.innerHTML=shown.map(s=>{
     const name=shopHighlight(s.name||'(無名稱)',keywords);
-    const phone=s.phone?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">電話</span><a href="tel:'+shopEscHtml(s.phone.replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+shopHighlight(s.phone,keywords)+'</a></div>':'';
+    const phone=s.phone?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">電話</span><a href="tel:'+escHtml(s.phone.replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+shopHighlight(s.phone,keywords)+'</a></div>':'';
     const addr=s.addr?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">地址</span><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.addr)+'" target="_blank" rel="noopener" style="color:var(--green)">'+shopHighlight(s.addr,keywords)+'</a></div>':'';
     const owner=s.owner?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">負責人</span>'+shopHighlight(s.owner,keywords)+'</div>':'';
     return '<div class="card" style="border-left:3px solid var(--green-b)">'+
@@ -1895,7 +1895,7 @@ function renderRegionBar(){
   if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
   bar.style.display='flex';
   bar.innerHTML='<button class="pill pill-sm'+(activeRegion===''?' on':'')+'" onclick="setRegion(\'\',this)">全部區域</button>'+
-    regions.map(r=>`<button class="pill pill-sm${activeRegion===r?' on':''}" onclick="setRegion('${r}',this)">${r}</button>`).join('');
+    regions.map(r=>`<button class="pill pill-sm${activeRegion===r?' on':''}" onclick="setRegion('${escHtml(r)}',this)">${escHtml(r)}</button>`).join('');
 }
 function setRegion(r,el){
   activeRegion=r;
@@ -2135,8 +2135,8 @@ function renderClients(){
     const prod=autoProd(c.trialItems)||'';
     const td=trialStartDate(c);
     return`<div class="cc" onclick="openCD(${i})">
-      <div class="cc-name">${c.name}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${c.type}</span>`:''}</div>
-      <div class="cc-sub">${[c.contact,c.addr].filter(Boolean).join(' · ')}</div>
+      <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}</div>
+      <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
       <div class="cc-badges">
         ${bdg(displayStatus(c.status))}
         ${fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:''}
@@ -2359,13 +2359,13 @@ function setMainQty(i,q){
   const main=S.cfItems[i]; if(!main) return;
   q=Math.max(1,+q||1);
   main.qty=q;
-  const b=BUNDLE_MAP[main.product]; if(!b) return;
+  const b=BUNDLE_MAP[main.product]; if(!b||!b.accs) return;
   // 找出緊接著的 bundled rows，依 BUNDLE_MAP 更新 acc 數量
   let accIdx=0;
-  for(let j=i+1;j<S.cfItems.length;j++){
+  for(let j=i+1;j<S.cfItems.length&&accIdx<b.accs.length;j++){
     const it=S.cfItems[j];
     if(it.bundledTo!==main.product) break;
-    if(it.bundleRole==='acc'&&b.accs[accIdx]){
+    if(it.bundleRole==='acc'){
       it.qty=b.accs[accIdx].qty*q;
       accIdx++;
     }
@@ -2399,7 +2399,7 @@ function renderTodoFields(){
   document.getElementById('cf-todos').innerHTML=S.cfTodos.length?S.cfTodos.map((t,i)=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <input type="checkbox" ${t.done?'checked':''} style="width:18px;height:18px;accent-color:var(--green)" onchange="S.cfTodos[${i}].done=this.checked">
-      <input value="${t.text}" style="flex:1;font-size:13px" oninput="S.cfTodos[${i}].text=this.value">
+      <input value="${escHtml(t.text)}" style="flex:1;font-size:13px" oninput="S.cfTodos[${i}].text=this.value">
       <input type="date" value="${t.dueDate||''}" style="width:140px;font-size:12px" onchange="S.cfTodos[${i}].dueDate=this.value">
       <button onclick="S.cfTodos.splice(${i},1);renderTodoFields()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0;flex-shrink:0">×</button>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);margin-bottom:8px">尚無待辦</div>';
@@ -2517,7 +2517,7 @@ function renderCDTodos(){
     <div class="todo-row">
       <input type="checkbox" ${t.done?'checked':''} onchange="togCDTodo(${i})">
       <div style="flex:1">
-        <div class="${t.done?'todo-done':''}">${t.text}</div>
+        <div class="${t.done?'todo-done':''}">${escHtml(t.text)}</div>
         ${t.dueDate?`<div style="font-size:11px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'⚠ ':''}${t.dueDate}</div>`:''}
       </div>
       <button onclick="delCDTodo(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">×</button>
@@ -2644,8 +2644,8 @@ function renderVisits(){
           <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯">✏️</button>
         </div>
       </div>
-      ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${v.note}</div>`:''}
-      ${v.insight?`<div style="font-size:13px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:5px 10px">${v.insight}</div>`:''}
+      ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${escHtml(v.note)}</div>`:''}
+      ${v.insight?`<div style="font-size:13px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:5px 10px">${escHtml(v.insight)}</div>`:''}
       ${v.nextdate?`<div style="font-size:12px;color:var(--text3);margin-top:4px">下次：${v.nextdate}</div>`:''}
     </div>`).join('');
 }
@@ -2667,11 +2667,11 @@ function renderDaily(){
   document.getElementById('daily-list').innerHTML=vis.length?vis.map(c=>{
     const v=(c.visits||[]).find(v=>v.date===date);const ci=DB.clients.indexOf(c);
     return`<div class="cc" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
-      <div class="cc-name">${c.name} ${v?MOODS[v.mood]||'':''}</div>
-      <div class="cc-sub">${c.contact||''}</div>
+      <div class="cc-name">${escHtml(c.name)} ${v?MOODS[v.mood]||'':''}</div>
+      <div class="cc-sub">${escHtml(c.contact||'')}</div>
       <div class="cc-badges">${bdg(displayStatus(c.status))}${v?.statusChange?bdg(v.statusChange):''}</div>
-      ${v?.note?`<div style="font-size:13px;color:var(--text2)">${v.note}</div>`:''}
-      ${v?.insight?`<div style="font-size:12px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:4px 8px;margin-top:4px">${v.insight}</div>`:''}
+      ${v?.note?`<div style="font-size:13px;color:var(--text2)">${escHtml(v.note)}</div>`:''}
+      ${v?.insight?`<div style="font-size:12px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:4px 8px;margin-top:4px">${escHtml(v.insight)}</div>`:''}
     </div>`;
   }).join(''):'<div class="empty">此日無拜訪記錄</div>';
 }
@@ -2887,9 +2887,9 @@ function renderGT(){
       <input type="checkbox" ${t.done?'checked':''} onchange="togGT(${t.ci},${t.ti})">
       <div style="flex:1">
         <div class="${t.done?'todo-done':''}">
-          ${t.text}
+          ${escHtml(t.text)}
           <span style="font-size:11px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
-            onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${t.cn}</span>
+            onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>
         </div>
         ${t.dueDate?`<div style="font-size:11px;color:${od?'var(--red)':'var(--text3)'};">${od?'⚠ ':''}${t.dueDate}</div>`:''}
       </div>
