@@ -161,7 +161,8 @@ tr:last-child td{border-bottom:none}
 #sync-bar.syncing{background:linear-gradient(90deg,var(--green) 0%,var(--green-l) 50%,var(--green) 100%);background-size:200% 100%;animation:shimmer 1s infinite}
 #sync-bar.err{background:var(--red)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-#sync-status{display:none}
+#sync-status{display:none;position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:999;font-size:11px;padding:2px 10px;border-radius:10px;white-space:nowrap}
+#sync-status:not(:empty){display:block;background:var(--bg);border:1px solid var(--border);color:var(--red)}
 .setting-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
 .setting-row:last-child{border-bottom:none}
 .setting-label{font-size:14px;font-weight:500}
@@ -646,7 +647,7 @@ tr:last-child td{border-bottom:none}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.13-b';
+const APP_VERSION='v2026.04.16-a';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1200,7 +1201,11 @@ function setSyncBar(s){
   const bar=document.getElementById('sync-bar');const st=document.getElementById('sync-status');
   bar.className=s==='sync'?'syncing':s==='err'?'err':'';
   if(s==='ok'){st.textContent='✓ 已同步';setTimeout(()=>st.textContent='',3000);}
-  else if(s==='err'){st.textContent='⚠ 同步失敗';setTimeout(()=>st.textContent='',5000);}
+  else if(s==='err'){
+    const pend=SYNC.pending||0;
+    st.textContent='⚠ 同步失敗'+(pend>0?' ('+pend+' 筆待推送)':'');
+    // 失敗狀態常駐，不自動消失，讓使用者意識到問題
+  }
   else if(s==='sync')st.textContent='同步中...';
   else st.textContent='';
 }
@@ -1283,7 +1288,7 @@ function updateSheetStatus(ok){
 function exportJSON(){
   const a=document.createElement('a');
   a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,exportedAt:new Date().toISOString()},null,2));
-  a.download='duskin_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  a.download='duskin_backup_'+today()+'.json';a.click();
 }
 function importJSON(input){
   const file=input.files[0];if(!file)return;
@@ -1374,11 +1379,11 @@ function renderInventory(){
     const countEl=document.getElementById('inv-count');
     if(!el)return;
     const q=(document.getElementById('inv-search')?.value||'').toLowerCase();
-    // 建 product 對照表: name -> cat
+    // 分類來源：優先用 inventory 自身的 cat，fallback 查 products
     const catMap={};
     (DB.products||[]).forEach(p=>{if(p&&p.code)catMap[p.code]=p.cat||'';});
     let list=(DB.inventory||[]).map(it=>{
-      return {name:it.name||'',stock:Number(it.stock)||0,std:Number(it.std)||0,cat:catMap[it.name]||'其他'};
+      return {name:it.name||'',stock:Number(it.stock)||0,std:Number(it.std)||0,cat:it.cat||catMap[it.name]||'其他'};
     });
     if(INV_STATE.mode==='short')list=list.filter(x=>x.stock<x.std);
     if(INV_STATE.cat)list=list.filter(x=>x.cat===INV_STATE.cat);
@@ -1487,6 +1492,18 @@ function backfillClientIds(){
   let count=0;
   (DB.clients||[]).forEach(c=>{
     if(!c.id){c.id=genId();count++;}
+  });
+  if(count)saveLocal();
+  return count;
+}
+
+// v5: 為庫存品項補上 cat（直接存分類，減少對 products 對照的依賴）
+function backfillInventoryCat(){
+  const catMap={};
+  (DB.products||[]).forEach(p=>{if(p&&p.code)catMap[p.code]=p.cat||'';});
+  let count=0;
+  (DB.inventory||[]).forEach(it=>{
+    if(!it.cat){it.cat=catMap[it.name]||'其他';count++;}
   });
   if(count)saveLocal();
   return count;
@@ -1611,7 +1628,8 @@ function saveInv(){
     }else{
       // 檢查代號是否重複
       if(DB.inventory.find(x=>x&&x.name===name)){alert('代號「'+name+'」已存在');return;}
-      DB.inventory.push({name,stock,std});
+      const prod=(DB.products||[]).find(p=>p.code===name);
+      DB.inventory.push({name,stock,std,cat:prod?prod.cat:'其他'});
     }
     saveLocal();
     autoSync('saveInventory',{inventory:DB.inventory});
@@ -2228,19 +2246,23 @@ function promoteToContract(i){
 }
 // 從成約區搬回試用區（改回試用）
 function removeContracted(i){
-  const main=S.cfContracted[i];if(!main)return;
-  const mainCode=main.product;
-  const moved=[];
-  for(let j=S.cfContracted.length-1;j>=0;j--){
-    if(S.cfContracted[j].bundledTo===mainCode||j===i){
-      const x={...S.cfContracted[j]};delete x.contractDate;moved.unshift(x);
-      S.cfContracted.splice(j,1);
+  try{
+    const main=S.cfContracted[i];if(!main)return;
+    const mainCode=main.product;
+    const moved=[];
+    for(let j=S.cfContracted.length-1;j>=0;j--){
+      if(S.cfContracted[j].bundledTo===mainCode||j===i){
+        const x={...S.cfContracted[j]};delete x.contractDate;moved.unshift(x);
+        S.cfContracted.splice(j,1);
+      }
     }
+    if(!S.cfItems)S.cfItems=[];
+    S.cfItems.push(...moved);
+    const st=document.getElementById('cf-status');if(st)st.value=STATUS.TRIAL;
+    renderItems();renderContracted();updProd();
+  }catch(e){
+    alert('操作失敗：'+(e.message||e));
   }
-  if(!S.cfItems)S.cfItems=[];
-  S.cfItems.push(...moved);
-  const st=document.getElementById('cf-status');if(st)st.value=STATUS.TRIAL;
-  renderItems();renderContracted();updProd();
 }
 function renderContracted(){
   const el=document.getElementById('cf-contracted-list');
@@ -2517,55 +2539,59 @@ function updVLMode(){
 function setMood(n){S.curMood=n;updMoodUI();}
 function updMoodUI(){for(let i=1;i<=4;i++)document.getElementById('vm'+i).classList.toggle('on',i===S.curMood);}
 function saveVL(){
-  const selDate=document.getElementById('vl-date').value;
-  if(!selDate){alert('請選擇日期');return;}
-  const c=DB.clients[S.curIdx];
-  const isEdit=S.editVisitIdx>=0;
-  if(isEdit&&selDate>today()){
-    alert('編輯拜訪紀錄時，日期不能改成未來。\n若要排下次拜訪日，請用「+ 記錄拜訪 / 排下次」按鈕新增。');
-    return;
-  }
-  if(!isEdit&&selDate>today()){
-    c.nextdate=selDate;
-    c.updatedAt=Date.now();
-    saveLocal();
+  try{
+    const selDate=document.getElementById('vl-date').value;
+    if(!selDate){alert('請選擇日期');return;}
+    const c=DB.clients[S.curIdx];
+    const isEdit=S.editVisitIdx>=0;
+    if(isEdit&&selDate>today()){
+      alert('編輯拜訪紀錄時，日期不能改成未來。\n若要排下次拜訪日，請用「+ 記錄拜訪 / 排下次」按鈕新增。');
+      return;
+    }
+    if(!isEdit&&selDate>today()){
+      c.nextdate=selDate;
+      c.updatedAt=Date.now();
+      saveLocal();
+      autoSync('save',{client:c});
+      document.getElementById('vl-form').style.display='none';
+      S.editVisitIdx=-1;
+      renderVisits();renderClients();openCD(S.curIdx);
+      showVerToast('🗓️ 已設下次拜訪日為 '+selDate);
+      return;
+    }
+    const ns=document.getElementById('vl-status').value;
+    const noteVal=document.getElementById('vl-note').value;
+    const insVal=document.getElementById('vl-ins').value;
+    if(!c.visits)c.visits=[];
+    if(isEdit){
+      const orig=c.visits[S.editVisitIdx]||{};
+      c.visits[S.editVisitIdx]={
+        date:selDate,
+        mood:S.curMood,
+        note:noteVal,
+        insight:insVal,
+        statusChange:ns||null,
+        nextdate:orig.nextdate||null
+      };
+      if(ns)c.status=ns;
+    }else{
+      const base=new Date(selDate+'T00:00:00');
+      base.setDate(base.getDate()+7);
+      const nd=base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0');
+      const v={date:selDate,mood:S.curMood,note:noteVal,insight:insVal,statusChange:ns||null,nextdate:nd};
+      c.visits.push(v);
+      if(ns)c.status=ns;
+      c.nextdate=nd;
+    }
+    c.updatedAt=Date.now();saveLocal();
     autoSync('save',{client:c});
     document.getElementById('vl-form').style.display='none';
     S.editVisitIdx=-1;
     renderVisits();renderClients();openCD(S.curIdx);
-    showVerToast('🗓️ 已設下次拜訪日為 '+selDate);
-    return;
+    if(isEdit)showVerToast('✓ 拜訪紀錄已更新');
+  }catch(e){
+    alert('儲存拜訪紀錄失敗：'+(e.message||e));
   }
-  const ns=document.getElementById('vl-status').value;
-  const noteVal=document.getElementById('vl-note').value;
-  const insVal=document.getElementById('vl-ins').value;
-  if(!c.visits)c.visits=[];
-  if(isEdit){
-    const orig=c.visits[S.editVisitIdx]||{};
-    c.visits[S.editVisitIdx]={
-      date:selDate,
-      mood:S.curMood,
-      note:noteVal,
-      insight:insVal,
-      statusChange:ns||null,
-      nextdate:orig.nextdate||null
-    };
-    if(ns)c.status=ns;
-  }else{
-    const base=new Date(selDate+'T00:00:00');
-    base.setDate(base.getDate()+7);
-    const nd=base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0');
-    const v={date:selDate,mood:S.curMood,note:noteVal,insight:insVal,statusChange:ns||null,nextdate:nd};
-    c.visits.push(v);
-    if(ns)c.status=ns;
-    c.nextdate=nd;
-  }
-  c.updatedAt=Date.now();saveLocal();
-  autoSync('save',{client:c});
-  document.getElementById('vl-form').style.display='none';
-  S.editVisitIdx=-1;
-  renderVisits();renderClients();openCD(S.curIdx);
-  if(isEdit)showVerToast('✓ 拜訪紀錄已更新');
 }
 function renderVisits(){
   const c=DB.clients[S.curIdx];
@@ -2987,6 +3013,7 @@ const MIGRATIONS=[
   {v:2, desc:'normalize inventory schema', fn:normalizeInventory},
   {v:3, desc:'normalize 已結案→拒絕', fn:normalizeClosed},
   {v:4, desc:'backfill client ids', fn:backfillClientIds},
+  {v:5, desc:'backfill inventory cat', fn:backfillInventoryCat},
 ];
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);
@@ -3076,6 +3103,45 @@ if(location.search.includes('test=1')){
   assert('calcReportAmt fallback 試用', calcReportAmt(testClient2,'2026-03-01','2026-03-31'), 250);
   const testClient3={contractedItems:[],trialItems:[],fw4:500};
   assert('calcReportAmt 不用 c.fw4', calcReportAmt(testClient3,'2026-03-01','2026-03-31'), 0);
+
+  // --- matchCategory ---
+  const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trialItems:[{product:'S-20',qty:1,quoted:0}],contractedItems:[]};
+  const mcUnvisited={status:STATUS.UNVISITED,visits:[],trialItems:[],contractedItems:[]};
+  const mcDeal={status:STATUS.DEAL,visits:[{date:'2026-01-01'}],trialItems:[],contractedItems:[{product:'S-20',qty:1}]};
+  const mcRefuse={status:STATUS.REFUSE,visits:[{date:'2026-01-01'}],trialItems:[],contractedItems:[]};
+  const origCat=activeCat;const origRegion=activeRegion;
+  activeCat='試用中未報價';
+  assert('matchCategory 試用未報價-是',matchCategory(mcTrial),true);
+  assert('matchCategory 試用未報價-不是(未拜訪)',matchCategory(mcUnvisited),false);
+  activeCat='未拜訪';activeRegion='';
+  assert('matchCategory 未拜訪-是',matchCategory(mcUnvisited),true);
+  assert('matchCategory 未拜訪-不是(有visit)',matchCategory(mcTrial),false);
+  activeCat='已成約';
+  assert('matchCategory 已成約',matchCategory(mcDeal),true);
+  activeCat='拒絕';
+  assert('matchCategory 拒絕',matchCategory(mcRefuse),true);
+  activeCat='複訪順序';activeRegion='';
+  assert('matchCategory 複訪順序-無nextdate',matchCategory({...mcTrial,nextdate:''}),false);
+  assert('matchCategory 複訪順序-有nextdate',matchCategory({...mcTrial,nextdate:'2026-05-01'}),true);
+  activeCat=origCat;activeRegion=origRegion;
+
+  // --- getInventoryDiffs ---
+  const diffOld=[{product:'AFDW',qty:1},{product:'BT3',qty:4,bundledTo:'AFDW'}];
+  const diffNew=[{product:'AFDW',qty:2},{product:'BT3',qty:8,bundledTo:'AFDW'}];
+  const diffs=getInventoryDiffs(diffOld,diffNew);
+  assert('getInventoryDiffs 排除 bundledTo',diffs.length,1);
+  assert('getInventoryDiffs main only',diffs[0]?.code,'AFDW');
+  assert('getInventoryDiffs 空→空',getInventoryDiffs([],[]).length,0);
+  assert('getInventoryDiffs 新增1個',getInventoryDiffs([],[{product:'S-20',qty:1}]).length,1);
+
+  // --- genId ---
+  assert('genId 不為空',!!genId(),true);
+  assert('genId 唯一',genId()!==genId(),true);
+
+  // --- parseRegion ---
+  assert('parseRegion 永康區',parseRegion('永康區中山路12號'),'永康區');
+  assert('parseRegion 空',parseRegion(''),'');
+  assert('parseRegion 無區',parseRegion('台南市中山路'),'');
 
   // --- 結果顯示 ---
   const pass=results.filter(r=>r.pass).length;
