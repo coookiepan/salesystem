@@ -643,6 +643,19 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<div class="modal-bg" id="ver-menu-modal" onclick="if(event.target===this)closeVerMenu()">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-title" style="font-size:14px">系統資訊</div>
+    <div id="vm-info" style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:12px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" onclick="closeVerMenu();syncFromSheet()">從雲端拉最新（每日開工建議）</button>
+      <button class="btn btn-outline" onclick="closeVerMenu();pushAllToSheet()">推送全部到雲端</button>
+      <button class="btn btn-outline" onclick="closeVerMenu();forceReload()" style="color:var(--text3)">強制重新載入程式</button>
+      <button class="btn btn-outline" onclick="closeVerMenu()">關閉</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
@@ -1224,10 +1237,15 @@ async function autoSync(action,payload){
     SYNC.state='ok';
     setSyncBar('ok');
   }catch(e){
-    SYNC.pending=Math.min((SYNC.pending||0)+1, 999); // 上限防止無限增長
+    SYNC.pending=Math.min((SYNC.pending||0)+1, 999);
     SYNC.state='err';
     setSyncBar('err');
     console.warn('[autoSync] 同步失敗 (pending:'+SYNC.pending+'):',e.message||e);
+    // delete 失敗加入重試佇列（delete 無法靠下次編輯自動補救）
+    if(action==='delete'&&payload){
+      if(!SYNC.failedDeletes)SYNC.failedDeletes=[];
+      SYNC.failedDeletes.push(payload);
+    }
   }
   saveLocal();
   renderVerBadge();
@@ -1251,6 +1269,12 @@ async function syncFromSheet(silent){
     SYNC.lastSyncAt=Date.now();
     SYNC.pending=0;
     SYNC.state='ok';
+    // 重試先前失敗的 delete
+    if(SYNC.failedDeletes&&SYNC.failedDeletes.length){
+      const retries=[...SYNC.failedDeletes];
+      SYNC.failedDeletes=[];
+      for(const p of retries){try{await api({action:'delete',...p});}catch(e){console.warn('[retry delete] failed:',e);}}
+    }
     saveLocal();renderClients();renderProducts();setSyncBar('ok');
     renderVerBadge();
     dismissPullBanner();
@@ -1267,9 +1291,11 @@ async function pushAllToSheet(){
   if(!confirm('將所有資料推送到 Google Sheets？'))return;
   SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
-    for(let i=0;i<DB.clients.length;i++)await api({action:'save',client:DB.clients[i],idx:i});
+    for(const c of DB.clients){if(!c.id)c.id=genId();await api({action:'save',client:c});}
     await api({action:'saveInventory',inventory:DB.inventory});
     await api({action:'saveProducts',products:DB.products});
+    // 清空失敗佇列
+    if(SYNC.failedDeletes)SYNC.failedDeletes=[];
     SYNC.lastSyncAt=Date.now();
     SYNC.pending=0;
     SYNC.state='ok';
@@ -1329,10 +1355,12 @@ function genId(){
   try{return crypto.randomUUID();}catch(e){}
   return Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 }
-function today(){
-  // 使用本地時區（不是 UTC），避免 UTC+8 跨日顯示錯誤
-  const d=new Date();
+// 統一日期格式化：Date → 'YYYY-MM-DD'（本地時區，避免 UTC+8 跨日）
+function fmtDate(d){
+  if(!d)d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function today(){return fmtDate();
 }
 function initSettings(){
   document.getElementById('sheet-url').value=SHEET_URL;
@@ -1497,6 +1525,16 @@ function backfillClientIds(){
   return count;
 }
 
+// v6: 移除已廢棄的 c.fw4 快取欄位（金額一律由 calcFW4 即時算）
+function removeDeprecatedFw4(){
+  let count=0;
+  (DB.clients||[]).forEach(c=>{
+    if('fw4' in c){delete c.fw4;count++;}
+  });
+  if(count)saveLocal();
+  return count;
+}
+
 // v5: 為庫存品項補上 cat（直接存分類，減少對 products 對照的依賴）
 function backfillInventoryCat(){
   const catMap={};
@@ -1532,7 +1570,7 @@ function backfillVisits(){
           const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
           if(m)d=m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
         }
-        if(!d&&c.updatedAt){const dt=new Date(c.updatedAt);if(!isNaN(dt))d=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+        if(!d&&c.updatedAt){const dt=new Date(c.updatedAt);if(!isNaN(dt))d=fmtDate(dt);}
         if(!d)return;
         c.visits=[{date:d,mood:0,note:'',insight:'(系統補建)',statusChange:c.status,nextdate:c.nextdate||null}];
         added++;
@@ -1930,8 +1968,7 @@ function autoAddRecycleTodos(){
         if((c.todos||[]).some(t=>t&&t.text&&t.text.indexOf('回收')>=0))return;
         const dueDate=new Date(tsDate.getTime()+14*DAY);
         if(isNaN(dueDate.getTime()))return;
-        const dd=dueDate;
-        const due=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
+        const due=fmtDate(dueDate);
         c.todos=c.todos||[];
         c.todos.push({text:'回收試用品',dueDate:due,done:false});
         added++;
@@ -2370,7 +2407,6 @@ function renderTodoFields(){
 async function saveClient(){
   const btn=document.getElementById('save-btn');btn.disabled=true;btn.textContent='儲存中...';
   try{
-    const autofw=S.cfItems.reduce((s,it)=>s+itemFW4(it),0);
     const c={
       name:document.getElementById('cf-name').value||'(未命名)',
       contact:document.getElementById('cf-contact').value,
@@ -2378,7 +2414,6 @@ async function saveClient(){
       type:document.getElementById('cf-type').value,
       status:document.getElementById('cf-status').value,
       nextdate:document.getElementById('cf-nextdate').value,
-      fw4:autofw, // 快取值，顯示一律由 calcFW4() 即時算
       env:document.getElementById('cf-env').value,
       note:document.getElementById('cf-note').value,
       trialItems:JSON.parse(JSON.stringify(S.cfItems)),
@@ -2577,7 +2612,7 @@ function saveVL(){
     }else{
       const base=new Date(selDate+'T00:00:00');
       base.setDate(base.getDate()+7);
-      const nd=base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0');
+      const nd=fmtDate(base);
       const v={date:selDate,mood:S.curMood,note:noteVal,insight:insVal,statusChange:ns||null,nextdate:nd};
       c.visits.push(v);
       if(ns)c.status=ns;
@@ -2655,8 +2690,8 @@ function openReportModal(){
 }
 function closeReportModal(){document.getElementById('report-modal').style.display='none';}
 
-// 日期工具
-function rptFmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// rptFmt 已合併到 fmtDate，此處保留別名向後相容
+function rptFmt(d){return fmtDate(d);}
 function setRptRange(kind){
   const d=new Date(), y=d.getFullYear(), m=d.getMonth();
   let from, to;
@@ -2945,30 +2980,20 @@ function renderVerBadge(){
   if(stv)stv.textContent=APP_VERSION;
 }
 function showVerMenu(){
-  const lines=[`程式版本：${APP_VERSION}`];
+  let html=`<div>程式版本：<b>${APP_VERSION}</b></div>`;
   if(SHEET_URL){
-    lines.push('');
-    lines.push(`資料狀態：${SYNC.state==='syncing'?'同步中...':SYNC.state==='err'||SYNC.pending>0?('⚠ '+(SYNC.pending>0?SYNC.pending+' 筆待推送':'同步失敗')):SYNC.lastSyncAt?'● 已同步 · '+relTime(SYNC.lastSyncAt):'尚未同步'}`);
-    if(SYNC.lastPullAt)lines.push(`上次拉雲端：${relTime(SYNC.lastPullAt)}`);
+    const stText=SYNC.state==='syncing'?'同步中...':SYNC.state==='err'||SYNC.pending>0?('⚠ '+(SYNC.pending>0?SYNC.pending+' 筆待推送':'同步失敗')):SYNC.lastSyncAt?'✓ 已同步 · '+relTime(SYNC.lastSyncAt):'尚未同步';
+    html+=`<div>資料狀態：${stText}</div>`;
+    if(SYNC.lastPullAt)html+=`<div>上次拉雲端：${relTime(SYNC.lastPullAt)}</div>`;
   }else{
-    lines.push('');
-    lines.push('⚠ 尚未連接 Google Sheets');
+    html+=`<div style="color:var(--red)">⚠ 尚未連接 Google Sheets</div>`;
   }
-  lines.push('');
-  lines.push('1 = 從雲端拉最新（每日開工建議）');
-  lines.push('2 = 推送全部到雲端');
-  lines.push('3 = 強制重新載入程式');
-  lines.push('其他 = 關閉');
-  const choice=prompt(lines.join('\n'),'1');
-  if(choice==='1')syncFromSheet();
-  else if(choice==='2')pushAllToSheet();
-  else if(choice==='3')forceReload();
+  document.getElementById('vm-info').innerHTML=html;
+  document.getElementById('ver-menu-modal').classList.add('on');
 }
+function closeVerMenu(){document.getElementById('ver-menu-modal').classList.remove('on');}
 // Pull banner (每日提醒從雲端拉最新)
-function todayDateStr(){
-  const d=new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
+function todayDateStr(){return fmtDate();}
 function checkDailyPull(){
   const b=document.getElementById('pull-banner');
   if(!b)return;
@@ -2979,7 +3004,7 @@ function checkDailyPull(){
   // 上次拉雲端是否為今日
   if(SYNC.lastPullAt){
     const last=new Date(SYNC.lastPullAt);
-    const lastStr=last.getFullYear()+'-'+String(last.getMonth()+1).padStart(2,'0')+'-'+String(last.getDate()).padStart(2,'0');
+    const lastStr=fmtDate(last);
     if(lastStr===todayDateStr()){b.style.display='none';return;}
   }
   b.style.display='flex';
@@ -3014,6 +3039,7 @@ const MIGRATIONS=[
   {v:3, desc:'normalize 已結案→拒絕', fn:normalizeClosed},
   {v:4, desc:'backfill client ids', fn:backfillClientIds},
   {v:5, desc:'backfill inventory cat', fn:backfillInventoryCat},
+  {v:6, desc:'remove deprecated fw4 field', fn:removeDeprecatedFw4},
 ];
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);
