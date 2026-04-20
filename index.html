@@ -442,7 +442,7 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="card">
       <div class="form-section">已成約品項</div>
       <div id="cf-contracted-list" style="margin-bottom:12px"></div>
-      <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3)">4W原價・9折報價參考・黃=低於9折</span></div>
+      <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3);letter-spacing:0;text-transform:none">4W原價・報價折數・黃=低於9折</span></div>
       <div id="cf-items"></div>
       <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
@@ -821,7 +821,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.17-a';
+const APP_VERSION='v2026.04.17-b';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -2388,6 +2388,9 @@ function renderItems(){
     const p=getProd(it.product);const isMat=p?.cat==='地墊';
     const f=displayFw4(it.product,it.qty,it.cycle||'2W');const r=ref9(it.product,it.qty,it.cycle||'2W');
     const isLow=it.quoted>0&&r>0&&it.quoted<r;
+    // 計算實際折數（quoted / 4W原價 * 10，一位小數）
+    const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
+    const discountLow=discount!==null&&discount<9;
     return`<div class="ti-row">
       <div class="ti-top">
         <select style="flex:1;min-width:0;font-size:13px" onchange="setItemProd(${i},this.value)">
@@ -2406,7 +2409,9 @@ function renderItems(){
         <span class="ti-label" style="margin-left:8px">報價</span>
         <input type="number" class="price-inp${isLow?' low':''}" value="${it.quoted||''}" placeholder="${r>0?r:''}"
           oninput="S.cfItems[${i}].quoted=+this.value||0" onblur="renderItems()">
-        ${isLow?`<span style="font-size:11px;color:var(--yellow);font-weight:600">低於9折</span>`:r>0&&!it.quoted?`<span style="font-size:11px;color:var(--text3)">9折 $${r}</span>`:''}
+        ${discount!==null
+          ?`<span style="font-size:11px;color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`
+          :r>0?`<span style="font-size:11px;color:var(--text3)">9折 $${r}</span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -2636,14 +2641,16 @@ function openCD(i){
     const mains=c.trialItems.filter(it=>it.product&&!it.bundledTo);
     document.getElementById('cd-tri').innerHTML=mains.map(it=>{
       const f=displayFw4(it.product,it.qty||1,it.cycle||'2W');const r=ref9(it.product,it.qty,it.cycle||'2W');
-      const isLow=it.quoted>0&&it.quoted<r;const p=getProd(it.product);const isMat=p?.cat==='地墊';
+      const p=getProd(it.product);const isMat=p?.cat==='地墊';
+      const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
+      const discountLow=discount!==null&&discount<9;
       // 找此主商品對應的 bundled 配件/口味
       const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
       const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
-      return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:4px">
+      return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
         <b>${it.product}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${it.cycle||'2W'}換</span>`:''}
-        <span style="color:#085041">4W $${f.toLocaleString()}</span>
-        ${it.quoted>0?`<span style="color:${isLow?'var(--yellow)':'var(--text3)'}">報價$${it.quoted}${isLow?' ⚠':''}</span>`:''}
+        <span style="color:var(--text2);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
+        ${it.quoted>0?`<span style="color:var(--text2);font-variant-numeric:tabular-nums">報價 $${it.quoted.toLocaleString()}</span><span style="color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`:''}
         ${accTxt}
       </div>`;
     }).join('');
