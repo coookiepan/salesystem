@@ -8,6 +8,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>DUSKIN 銷售系統</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -104,6 +106,9 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .cc{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .12s var(--ease),background .12s var(--ease);position:relative}
 .cc:hover{border-color:var(--border2);background:var(--surface-hover)}
 .cc:active{background:var(--bg2)}
+.cc-map-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;padding:0;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease)}
+.cc-map-btn:hover{background:var(--bg);border-color:var(--border2);color:var(--text)}
+.cc-map-btn:active{background:var(--bg3)}
 .cc-name{font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px;color:var(--text);line-height:1.35}
 .cc-sub{font-size:12.5px;color:var(--text2);margin-bottom:8px;line-height:1.45}
 .cc-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
@@ -323,6 +328,55 @@ tbody tr:hover{background:var(--surface-hover)}
 #sync-status:not(:empty){display:block;background:var(--bg);border:1px solid var(--border);color:var(--red)}
 
 /* ═══════════════════════════════════════════════════════════
+   MAP VIEW
+   ═══════════════════════════════════════════════════════════ */
+.cv-switch{display:inline-flex;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:2px;margin-bottom:12px;gap:2px}
+.cv-sw{padding:6px 14px;font-size:13px;font-weight:500;background:none;border:none;border-radius:4px;cursor:pointer;color:var(--text2);font-family:inherit;transition:background .12s var(--ease),color .12s var(--ease);display:inline-flex;align-items:center;gap:5px;line-height:1}
+.cv-sw:hover{color:var(--text)}
+.cv-sw.on{background:var(--bg);color:var(--text);box-shadow:var(--shadow-sm)}
+.cv-sw svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#leaflet-map{width:100%;height:calc(100vh - 280px);min-height:420px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);z-index:1}
+.leaflet-container{font-family:inherit!important;font-size:13px}
+.leaflet-popup-content-wrapper{border-radius:var(--r-sm)!important;box-shadow:var(--shadow-md)!important;padding:0}
+.leaflet-popup-content{margin:14px 16px!important;line-height:1.5}
+.leaflet-popup-tip{box-shadow:none}
+.map-popup{min-width:200px}
+.map-popup .mp-name{font-weight:600;font-size:14.5px;color:var(--text);margin-bottom:3px;letter-spacing:-.008em;line-height:1.3}
+.map-popup .mp-sub{font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
+.map-popup .mp-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.map-popup .mp-meta{font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.map-popup .mp-actions{display:flex;gap:6px}
+.map-popup .mp-actions a,.map-popup .mp-actions button{text-decoration:none;flex:1;text-align:center}
+#geo-progress{background:var(--amber-l);border:1px solid #F0C674;color:var(--amber-d);padding:10px 12px;border-radius:var(--r-sm);font-size:12.5px;margin-bottom:10px}
+#geo-progress .gp-main{display:flex;align-items:center;gap:10px}
+#geo-progress .gp-ico{font-size:18px;flex-shrink:0}
+#geo-progress .gp-body{flex:1;min-width:0}
+#geo-progress .gp-row1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:8px}
+#geo-progress .gp-label{font-weight:600}
+#geo-progress .gp-txt{font-variant-numeric:tabular-nums;font-weight:500;font-size:12px}
+#geo-progress .gp-bar{height:4px;background:rgba(99,56,6,.15);border-radius:2px;overflow:hidden;margin-bottom:5px}
+#geo-progress .gp-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .3s var(--ease)}
+#geo-progress .gp-hint{font-size:11px;opacity:.8;line-height:1.4}
+#gp-eta{font-variant-numeric:tabular-nums;font-weight:500}
+.map-failed{margin-top:14px;border-top:1px solid var(--border);padding-top:14px}
+.map-failed-title{font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.mf-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:6px;background:var(--bg);font-size:13px}
+.mf-row:hover{border-color:var(--border2);background:var(--surface-hover)}
+.mf-name{flex:1;font-weight:500;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mf-addr{font-size:11.5px;color:var(--text3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.mf-actions{display:flex;gap:4px;flex-shrink:0}
+.map-toolbar{margin-bottom:10px}
+.map-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--text2);padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px}
+.map-legend-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.map-legend-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.pin-drop-hint{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:var(--r-sm);font-size:12.5px;z-index:500;box-shadow:var(--shadow-md);display:flex;align-items:center;gap:10px;pointer-events:auto}
+.pin-drop-hint button{background:rgba(255,255,255,.15);color:inherit;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.pin-drop-hint button:hover{background:rgba(255,255,255,.25)}
+/* leaflet marker override for cleaner look */
+.duskin-marker{border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);width:16px!important;height:16px!important;display:flex;align-items:center;justify-content:center}
+.duskin-marker.has-todo::after{content:'';position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
+
+/* ═══════════════════════════════════════════════════════════
    INVENTORY ITEM
    ═══════════════════════════════════════════════════════════ */
 .inv-item{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:10px 14px;margin-bottom:6px;transition:border-color .12s var(--ease)}
@@ -390,6 +444,10 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="panel on" id="panel-clients">
   <div id="view-list">
     <div id="pull-banner" style="display:none"><span>🌥</span><div class="pb-txt">今天還沒從雲端拉最新資料，可能不是最新版本</div><button class="btn btn-primary btn-xs" onclick="pullAndDismiss()">拉最新</button><button class="pb-close" onclick="dismissPullBanner()">×</button></div>
+    <div class="cv-switch">
+      <button class="cv-sw on" onclick="setClientView('list')"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>清單</button>
+      <button class="cv-sw" onclick="setClientView('map')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>地圖</button>
+    </div>
     <div class="toolbar">
       <div class="toolbar-left" id="status-pills"></div>
       <button class="btn btn-outline btn-sm" onclick="openStatusFilterModal()" title="狀態篩選">⚙️</button>
@@ -407,6 +465,41 @@ tbody tr:hover{background:var(--surface-hover)}
       </select>
     </div>
     <div id="clients-list"></div>
+  </div>
+
+  <div id="view-map" style="display:none">
+    <div class="cv-switch">
+      <button class="cv-sw" onclick="setClientView('list')"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>清單</button>
+      <button class="cv-sw on" onclick="setClientView('map')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>地圖</button>
+    </div>
+    <div class="map-toolbar">
+      <div id="geo-progress" style="display:none">
+        <div class="gp-main">
+          <span class="gp-ico">🔍</span>
+          <div class="gp-body">
+            <div class="gp-row1"><span class="gp-label">定位中…</span><span class="gp-txt">0 / 0</span></div>
+            <div class="gp-bar"><div class="gp-fill" style="width:0%"></div></div>
+            <div class="gp-hint">可切換到其他頁面，結果會自動儲存 · <span id="gp-eta">預估剩餘 —</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="map-filter-bar" class="toolbar-left" style="margin-bottom:10px;gap:6px">
+        <button class="pill pill-sm on" onclick="setMapFilter('all',this)">全部</button>
+        <button class="pill pill-sm" onclick="setMapFilter('week',this)">本週要拜訪</button>
+        <button class="pill pill-sm" onclick="setMapFilter('today',this)">今天</button>
+        <button class="pill pill-sm" onclick="setMapFilter('todo',this)">有未完成待辦</button>
+      </div>
+      <div class="map-legend">
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#D4A017"></span>報價/將成約</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#C94545"></span>試用中</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#9A9A93"></span>已成約</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#2A6BB0"></span>初訪/複訪</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#8DB4D9"></span>未拜訪</span>
+        <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 家</span>
+      </div>
+    </div>
+    <div id="leaflet-map"></div>
+    <div id="failed-geocode" class="map-failed" style="display:none"></div>
   </div>
 
   <div id="view-form" style="display:none">
@@ -475,7 +568,8 @@ tbody tr:hover{background:var(--surface-hover)}
           <div style="font-size:18px;font-weight:700" id="cd-name"></div>
           <div style="font-size:13px;color:var(--text2);margin-top:3px" id="cd-sub"></div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px">
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -821,7 +915,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.17-b';
+const APP_VERSION='v2026.04.17-c-map';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -2221,6 +2315,402 @@ function matchCategory(c){
   }
   return true;
 }
+// ═══════════════════════════════════════════════════════════
+// MAP VIEW — Leaflet + OpenStreetMap (Tainan-focused)
+// ═══════════════════════════════════════════════════════════
+// 預設城市（若未來擴充到其他縣市，可改這裡 + TAINAN_VIEWBOX）
+const DEFAULT_CITY='台南市';
+// 台南市大致範圍（viewbox：西,北,東,南；用於限縮 Nominatim 搜尋範圍）
+const TAINAN_VIEWBOX='120.05,23.45,120.55,22.85';
+// 預設地圖中心（台南市中心，zoom 11 可看到全市）
+const TAINAN_CENTER=[23.00,120.20];
+const TAINAN_ZOOM=11;
+let MAP_STATE={view:'list', map:null, markers:[], pinDropFor:null, pinDropHandler:null, filter:'all', markersById:{}};
+
+// 地圖篩選邏輯
+function mapMatchesFilter(c){
+  const f=MAP_STATE.filter;
+  if(f==='all') return true;
+  if(f==='today'){
+    return c.nextdate===today();
+  }
+  if(f==='week'){
+    if(!c.nextdate) return false;
+    const td=today();
+    // 本週：今天 ~ 今天+6
+    const t=new Date(td); const end=new Date(t); end.setDate(end.getDate()+6);
+    const endStr=fmtDate(end);
+    return c.nextdate>=td&&c.nextdate<=endStr;
+  }
+  if(f==='todo'){
+    return (c.todos||[]).some(t=>!t.done);
+  }
+  return true;
+}
+
+function setMapFilter(f,el){
+  MAP_STATE.filter=f;
+  document.querySelectorAll('#map-filter-bar .pill').forEach(p=>p.classList.remove('on'));
+  if(el) el.classList.add('on');
+  MAP_STATE._boundsFitted=false; // 重新 fit 到篩選後的結果
+  renderMapMarkers();
+}
+
+// 狀態 → marker 顏色
+function mapColorForStatus(s){
+  s=displayStatus(s);
+  if(s===STATUS.QUOTE||s===STATUS.CLOSING) return '#D4A017'; // 黃：熱客（報價/將成約）
+  if(s===STATUS.TRIAL) return '#C94545';                      // 紅：試用中
+  if(s===STATUS.DEAL||s===STATUS.TRANSFER) return '#9A9A93';  // 灰：已成約
+  if(s===STATUS.FIRST||s===STATUS.REVISIT) return '#2A6BB0';  // 深藍：初訪/複訪
+  if(s===STATUS.UNVISITED) return '#8DB4D9';                  // 淡藍：未拜訪
+  return '#B0B0A7';
+}
+
+// 是否該在地圖上顯示（排除 拒絕/結案）
+function mapShouldShow(c){
+  if(!c) return false;
+  if(statusEq(c.status,STATUS.REFUSE)) return false;
+  if(c.status===STATUS.CLOSED) return false;
+  return true;
+}
+
+// ── Geocoding（Nominatim，1 req/sec rate limit）──────────
+const GEO_QUEUE=[];
+let GEO_WORKING=false;
+let GEO_TOTAL=0;
+let GEO_DONE=0;
+
+// 產生地址查詢的 fallback 變體：越後面越寬鬆
+// 所有變體都會帶 DEFAULT_CITY 前綴（目前為台南市）
+function addrVariants(addr){
+  let raw=(addr||'').trim();
+  if(!raw) return [];
+  // 如果使用者已自行包含縣市（開頭是市/縣），就不重複加
+  const hasCity=/^(臺|台)[北中南東]市|新北市|桃園市|基隆市|新竹[市縣]|苗栗縣|彰化縣|南投縣|雲林縣|嘉義[市縣]|屏東縣|宜蘭縣|花蓮縣|臺東縣|台東縣|澎湖縣|金門縣|連江縣/.test(raw);
+  const prefix=hasCity?'':DEFAULT_CITY;
+  const variants=[];
+  // 1. 完整地址（含門牌）
+  variants.push(prefix+raw);
+  // 2. 去掉門牌號（「100號」、「3段440號」等）
+  const noNumber=raw.replace(/\d+\s*[之\-]?\s*\d*\s*號.*/,'').replace(/\d+\s*樓.*/,'').trim();
+  if(noNumber&&noNumber!==raw) variants.push(prefix+noNumber);
+  // 3. 去掉巷/弄 細節
+  const noLane=raw.replace(/\d+巷.*/,'').replace(/\d+弄.*/,'').trim();
+  if(noLane&&noLane!==raw&&noLane!==noNumber) variants.push(prefix+noLane);
+  // 4. 只保留到「路/街/大道」
+  const roadOnly=raw.match(/^(.*?(?:路|街|大道))/);
+  if(roadOnly&&roadOnly[1]){
+    const q=prefix+roadOnly[1];
+    if(!variants.includes(q)) variants.push(q);
+  }
+  // 5. 只保留到「區」（最寬鬆，至少落點在該區附近）
+  const districtOnly=raw.match(/^([\u4e00-\u9fa5]{2,4}區)/);
+  if(districtOnly){
+    const q=prefix+districtOnly[1];
+    if(!variants.includes(q)) variants.push(q);
+  }
+  return variants;
+}
+
+async function nominatimGeocode(addr){
+  const variants=addrVariants(addr);
+  if(!variants.length) return null;
+  for(const q of variants){
+    try{
+      // viewbox + bounded=1：強制結果落在台南市範圍內，大幅提升精度
+      const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&viewbox='+TAINAN_VIEWBOX+'&bounded=1&q='+encodeURIComponent(q);
+      const res=await fetch(url,{headers:{'Accept-Language':'zh-TW,zh;q=0.9'}});
+      if(!res.ok) continue;
+      const data=await res.json();
+      if(Array.isArray(data)&&data.length){
+        return {lat:parseFloat(data[0].lat), lng:parseFloat(data[0].lon), source:q===variants[0]?'exact':'approx'};
+      }
+      // 尊重 rate limit：即使 variant 失敗也要等
+      if(variants.indexOf(q)<variants.length-1) await new Promise(r=>setTimeout(r,1100));
+    }catch(e){/* try next */}
+  }
+  return null;
+}
+
+function enqueueGeocode(client){
+  // 跳過：無地址、已有座標、已失敗且 24hr 內不重試
+  if(!client||!client.addr) return;
+  if(client.lat&&client.lng) return;
+  if(client.geocodeSource==='failed'&&client.geocodedAt&&(Date.now()-client.geocodedAt<86400000)) return;
+  if(!GEO_QUEUE.find(x=>x.id===client.id)) GEO_QUEUE.push(client);
+}
+
+async function processGeoQueue(){
+  if(GEO_WORKING||!GEO_QUEUE.length) return;
+  GEO_WORKING=true;
+  GEO_TOTAL=GEO_QUEUE.length; GEO_DONE=0; GEO_START_AT=Date.now();
+  renderGeoProgress();
+  while(GEO_QUEUE.length){
+    const client=GEO_QUEUE.shift();
+    const coord=await nominatimGeocode(client.addr);
+    if(coord){
+      client.lat=coord.lat; client.lng=coord.lng;
+      client.geocodeSource='auto';
+    }else{
+      client.geocodeSource='failed';
+    }
+    client.geocodedAt=Date.now();
+    saveLocal();
+    autoSync('save',{client});
+    GEO_DONE++;
+    renderGeoProgress();
+    if(MAP_STATE.view==='map') renderMapMarkers();
+    // Nominatim ToS: ≤ 1 req/sec
+    if(GEO_QUEUE.length) await new Promise(r=>setTimeout(r,1100));
+  }
+  GEO_WORKING=false;
+  renderGeoProgress();
+}
+
+let GEO_START_AT=0;
+function renderGeoProgress(){
+  const el=document.getElementById('geo-progress');
+  if(!el) return;
+  if(!GEO_WORKING){el.style.display='none';return;}
+  el.style.display='block';
+  const pct=GEO_TOTAL?(GEO_DONE/GEO_TOTAL*100):0;
+  el.querySelector('.gp-fill').style.width=pct+'%';
+  el.querySelector('.gp-txt').textContent=GEO_DONE+' / '+GEO_TOTAL;
+  // ETA：根據已消耗時間 / 已完成筆數 估剩餘時間
+  const eta=document.getElementById('gp-eta');
+  if(eta){
+    if(GEO_DONE>0&&GEO_START_AT){
+      const elapsedMs=Date.now()-GEO_START_AT;
+      const msPerItem=elapsedMs/GEO_DONE;
+      const remainMs=(GEO_TOTAL-GEO_DONE)*msPerItem;
+      const remainSec=Math.round(remainMs/1000);
+      if(remainSec<60) eta.textContent='預估剩餘 '+remainSec+' 秒';
+      else eta.textContent='預估剩餘 '+Math.round(remainSec/60)+' 分'+(remainSec%60?' '+(remainSec%60)+' 秒':'');
+    }else{
+      eta.textContent='預估剩餘 '+Math.round(GEO_TOTAL*1.5)+' 秒';
+    }
+  }
+}
+
+// ── Map init ─────────────────────────────────────────────
+function initMap(){
+  if(MAP_STATE.map||typeof L==='undefined') return;
+  MAP_STATE.map=L.map('leaflet-map',{zoomControl:true,attributionControl:true}).setView(TAINAN_CENTER,TAINAN_ZOOM);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap'
+  }).addTo(MAP_STATE.map);
+  // 加上「我的位置」按鈕
+  const LocateCtrl=L.Control.extend({
+    onAdd:function(){
+      const btn=L.DomUtil.create('button','leaflet-bar');
+      btn.innerHTML='<span style="font-size:16px">📍</span>';
+      btn.style.cssText='background:#fff;width:34px;height:34px;border:none;cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0';
+      btn.title='移至我的位置';
+      btn.onclick=(e)=>{e.stopPropagation();goToMyLocation();};
+      L.DomEvent.disableClickPropagation(btn);
+      return btn;
+    }
+  });
+  new LocateCtrl({position:'topright'}).addTo(MAP_STATE.map);
+}
+
+function goToMyLocation(){
+  if(!navigator.geolocation){alert('此瀏覽器不支援定位');return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude,longitude}=pos.coords;
+    if(MAP_STATE.map) MAP_STATE.map.setView([latitude,longitude],15);
+  },err=>alert('無法取得位置：'+err.message));
+}
+
+// ── Render markers ────────────────────────────────────────
+function renderMapMarkers(){
+  if(!MAP_STATE.map) return;
+  MAP_STATE.markers.forEach(m=>MAP_STATE.map.removeLayer(m));
+  MAP_STATE.markers=[];
+  MAP_STATE.markersById={};
+  const visible=(DB.clients||[]).filter(c=>mapShouldShow(c)&&typeof c.lat==='number'&&typeof c.lng==='number'&&mapMatchesFilter(c));
+  const cnt=document.getElementById('map-count');
+  if(cnt) cnt.textContent=visible.length;
+  const bounds=[];
+  visible.forEach(c=>{
+    const color=mapColorForStatus(c.status);
+    const hasTodo=(c.todos||[]).some(t=>!t.done);
+    const icon=L.divIcon({
+      className:'duskin-marker-wrap',
+      html:`<div class="duskin-marker${hasTodo?' has-todo':''}" style="background:${color};position:relative"></div>`,
+      iconSize:[16,16],
+      iconAnchor:[8,8]
+    });
+    const marker=L.marker([c.lat,c.lng],{icon}).addTo(MAP_STATE.map);
+    const idx=DB.clients.indexOf(c);
+    marker.bindPopup(buildMapPopup(c,idx),{maxWidth:280});
+    MAP_STATE.markers.push(marker);
+    if(c.id) MAP_STATE.markersById[c.id]=marker;
+    bounds.push([c.lat,c.lng]);
+  });
+  if(bounds.length&&!MAP_STATE._boundsFitted){
+    MAP_STATE.map.fitBounds(bounds,{padding:[40,40],maxZoom:15});
+    MAP_STATE._boundsFitted=true;
+  }else if(!bounds.length&&!MAP_STATE._boundsFitted){
+    // 沒有任何 marker → 預設顯示台南市
+    MAP_STATE.map.setView(TAINAN_CENTER,TAINAN_ZOOM);
+    MAP_STATE._boundsFitted=true;
+  }
+  renderFailedGeocode();
+}
+
+function buildMapPopup(c,idx){
+  const todos=(c.todos||[]).filter(t=>!t.done).length;
+  const fw=calcFW4(c);
+  const navUrl=c.addr?'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(c.addr):'';
+  const badges=bdg(displayStatus(c.status||STATUS.UNVISITED))
+    +(fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:'')
+    +(todos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${todos}待辦</span>`:'');
+  return `<div class="map-popup">
+    <div class="mp-name">${escHtml(c.name||'-')}</div>
+    <div class="mp-sub">${escHtml([c.contact,c.type].filter(Boolean).join(' · ')||c.addr||'')}</div>
+    <div class="mp-badges">${badges}</div>
+    <div class="mp-meta">
+      ${c.nextdate?`📅 下次：${c.nextdate}<br>`:''}
+      ${c.addr?`📍 ${escHtml(c.addr)}`:''}
+    </div>
+    <div class="mp-actions">
+      <button class="btn btn-primary btn-xs" onclick="openCDFromMap(${idx})">看詳情</button>
+      ${navUrl?`<a class="btn btn-outline btn-xs" href="${navUrl}" target="_blank" rel="noopener">🧭 導航</a>`:''}
+    </div>
+  </div>`;
+}
+
+function openCDFromMap(idx){
+  setClientView('list');
+  setTimeout(()=>openCD(idx),80);
+}
+
+// 從客戶列表/詳情頁跳到地圖，zoom 到該客戶並打開 popup
+function jumpToMap(idx, event){
+  if(event){event.stopPropagation();event.preventDefault();}
+  const c=DB.clients[idx];
+  if(!c){return;}
+  if(!c.lat||!c.lng){
+    // 沒座標 → 切到地圖，在「無法定位」清單中會看到
+    setClientView('map');
+    setTimeout(()=>{
+      const fg=document.getElementById('failed-geocode');
+      if(fg&&fg.scrollIntoView) fg.scrollIntoView({behavior:'smooth',block:'nearest'});
+    },120);
+    return;
+  }
+  setClientView('map');
+  setTimeout(()=>{
+    if(!MAP_STATE.map) return;
+    // 若目前篩選把這筆排除掉，改回「全部」
+    if(!mapMatchesFilter(c)){setMapFilter('all',document.querySelector('#map-filter-bar .pill'));}
+    MAP_STATE.map.flyTo([c.lat,c.lng],17,{duration:.6});
+    setTimeout(()=>{
+      const m=MAP_STATE.markersById[c.id];
+      if(m) m.openPopup();
+    },700);
+  },120);
+}
+
+// ── Failed geocode 側清單 ─────────────────────────────────
+function renderFailedGeocode(){
+  const el=document.getElementById('failed-geocode');
+  if(!el) return;
+  const failed=(DB.clients||[]).filter(c=>mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed');
+  const noAddr=(DB.clients||[]).filter(c=>mapShouldShow(c)&&!c.addr);
+  if(!failed.length&&!noAddr.length){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='block';
+  let html=`<div class="map-failed-title">⚠ 無法定位（${failed.length+noAddr.length}）</div>`;
+  failed.forEach(c=>{
+    const idx=DB.clients.indexOf(c);
+    html+=`<div class="mf-row">
+      <div class="mf-name">${escHtml(c.name)}</div>
+      <div class="mf-addr">${escHtml(c.addr||'')}</div>
+      <div class="mf-actions">
+        <button class="btn btn-outline btn-xs" onclick="startPinDrop(${idx})">手動定位</button>
+        <button class="btn btn-outline btn-xs" onclick="retryGeocode(${idx})">重試</button>
+      </div>
+    </div>`;
+  });
+  noAddr.forEach(c=>{
+    const idx=DB.clients.indexOf(c);
+    html+=`<div class="mf-row">
+      <div class="mf-name">${escHtml(c.name)}</div>
+      <div class="mf-addr" style="color:var(--text3);font-style:italic">（無地址）</div>
+      <div class="mf-actions">
+        <button class="btn btn-outline btn-xs" onclick="openCDFromMap(${idx})">編輯</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+function retryGeocode(idx){
+  const c=DB.clients[idx];if(!c)return;
+  c.geocodeSource=null; c.geocodedAt=null;
+  enqueueGeocode(c);
+  processGeoQueue();
+}
+
+// ── 手動定位（點地圖放 marker）──────────────────────────
+function startPinDrop(idx){
+  const c=DB.clients[idx];if(!c||!MAP_STATE.map)return;
+  MAP_STATE.pinDropFor=idx;
+  // 顯示提示
+  let hint=document.getElementById('pin-drop-hint');
+  if(!hint){
+    hint=document.createElement('div');hint.id='pin-drop-hint';hint.className='pin-drop-hint';
+    document.getElementById('view-map').appendChild(hint);
+  }
+  hint.innerHTML=`點地圖位置為「${escHtml(c.name)}」定位 <button id="pin-cancel">取消</button>`;
+  document.getElementById('pin-cancel').onclick=cancelPinDrop;
+  MAP_STATE.map.getContainer().style.cursor='crosshair';
+  if(MAP_STATE.pinDropHandler) MAP_STATE.map.off('click',MAP_STATE.pinDropHandler);
+  MAP_STATE.pinDropHandler=e=>{
+    c.lat=e.latlng.lat; c.lng=e.latlng.lng;
+    c.geocodeSource='manual'; c.geocodedAt=Date.now();
+    saveLocal(); autoSync('save',{client:c});
+    cancelPinDrop();
+    renderMapMarkers();
+  };
+  MAP_STATE.map.on('click',MAP_STATE.pinDropHandler);
+}
+
+function cancelPinDrop(){
+  MAP_STATE.pinDropFor=null;
+  if(MAP_STATE.map){
+    MAP_STATE.map.getContainer().style.cursor='';
+    if(MAP_STATE.pinDropHandler){MAP_STATE.map.off('click',MAP_STATE.pinDropHandler);MAP_STATE.pinDropHandler=null;}
+  }
+  const hint=document.getElementById('pin-drop-hint');
+  if(hint) hint.remove();
+}
+
+// ── View switcher ────────────────────────────────────────
+function setClientView(v){
+  MAP_STATE.view=v;
+  document.getElementById('view-list').style.display=v==='list'?'block':'none';
+  document.getElementById('view-map').style.display=v==='map'?'block':'none';
+  if(v==='map'){
+    // Lazy init map on first open
+    initMap();
+    // 觸發 size 重新計算（hidden → shown 時 Leaflet 需要 invalidateSize）
+    setTimeout(()=>{
+      if(MAP_STATE.map) MAP_STATE.map.invalidateSize();
+      MAP_STATE._boundsFitted=false;
+      renderMapMarkers();
+      // 批次 geocode 所有還沒有座標的客戶
+      (DB.clients||[]).forEach(c=>{
+        if(mapShouldShow(c)&&c.addr&&!c.lat) enqueueGeocode(c);
+      });
+      processGeoQueue();
+    },50);
+  }
+}
+
 function renderClients(){
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
@@ -2285,8 +2775,12 @@ function renderClients(){
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
     const prod=autoProd(c.trialItems)||'';
     const td=trialStartDate(c);
+    const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
+    const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
+    const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
     return`<div class="cc" onclick="openCD(${i})">
-      <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}</div>
+      ${mapBtn}
+      <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
       <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
       <div class="cc-badges">
         ${bdg(displayStatus(c.status))}
@@ -2593,9 +3087,21 @@ async function saveClient(){
       if(isEdit)DB.clients[S.editIdx].visits=prevVisits;
       else autoVisits=prevVisits;
     }
-    if(isEdit){c.id=DB.clients[S.editIdx].id||genId();c.visits=DB.clients[S.editIdx].visits||[];DB.clients[S.editIdx]=c;}
+    if(isEdit){
+      const prev=DB.clients[S.editIdx];
+      c.id=prev.id||genId();
+      c.visits=prev.visits||[];
+      // 保留座標，若地址改變則清空重新定位
+      if(prev.addr===c.addr&&prev.lat){
+        c.lat=prev.lat; c.lng=prev.lng;
+        c.geocodeSource=prev.geocodeSource; c.geocodedAt=prev.geocodedAt;
+      }
+      DB.clients[S.editIdx]=c;
+    }
     else{c.id=genId();c.visits=autoVisits;DB.clients.push(c);}
     saveLocal();autoSync('save',{client:c});
+    // 無座標且有地址 → 排入 geocode queue 背景處理
+    if(c.addr&&!c.lat){enqueueGeocode(c);processGeoQueue();}
     // 自動扣庫存：比對新舊試用品項，新增的品項詢問是否扣減
     const oldTrialItems=isEdit?(S._prevTrialItems||[]):[];
     const pendingDiffs=getInventoryDiffs(oldTrialItems,c.trialItems);
@@ -2622,6 +3128,9 @@ async function saveClient(){
 function openCD(i){
   S.curIdx=i;const c=DB.clients[i];
   const fw=calcFW4(c);const prod=autoProd(c.trialItems)||'-';
+  // 顯示/隱藏「在地圖上查看」按鈕
+  const cdMapBtn=document.getElementById('cd-map-btn');
+  if(cdMapBtn) cdMapBtn.style.display=(c.lat&&c.lng&&mapShouldShow(c))?'inline-flex':'none';
   document.getElementById('cd-name').textContent=c.name;
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
@@ -3194,6 +3703,19 @@ function forceReload(){
 // ═══════════════════════════════════════════════════════════
 loadStatusFilter();initVersion();initPills();initProdCats();
 // Migration runner — 統一管理資料遷移，每個 migration 只跑一次
+function prepareGeocodeFields(){
+  // v7: 確保所有 client 有 lat/lng/geocodeSource 欄位（undefined 也 OK）
+  // 實際 geocoding 在地圖頁首次開啟時 lazy 執行
+  let count=0;
+  (DB.clients||[]).forEach(c=>{
+    if(!c)return;
+    if(c.lat===undefined) c.lat=null;
+    if(c.lng===undefined) c.lng=null;
+    if(c.geocodeSource===undefined) c.geocodeSource=null;
+    count++;
+  });
+  if(count)saveLocal();
+}
 const MIGRATIONS=[
   {v:1, desc:'backfill visits', fn:backfillVisits},
   {v:2, desc:'normalize inventory schema', fn:normalizeInventory},
@@ -3201,6 +3723,7 @@ const MIGRATIONS=[
   {v:4, desc:'backfill client ids', fn:backfillClientIds},
   {v:5, desc:'backfill inventory cat', fn:backfillInventoryCat},
   {v:6, desc:'remove deprecated fw4 field', fn:removeDeprecatedFw4},
+  {v:7, desc:'add geocode fields', fn:prepareGeocodeFields},
 ];
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);
