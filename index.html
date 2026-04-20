@@ -2383,12 +2383,20 @@ let GEO_DONE=0;
 
 // 產生地址查詢的 fallback 變體：越後面越寬鬆
 // 所有變體都會帶 DEFAULT_CITY 前綴（目前為台南市）
+// 判斷地址是否已開頭帶縣市名稱（共用邏輯）
+function addrHasCity(addr){
+  return /^(臺|台)[北中南東]市|新北市|桃園市|基隆市|新竹[市縣]|苗栗縣|彰化縣|南投縣|雲林縣|嘉義[市縣]|屏東縣|宜蘭縣|花蓮縣|臺東縣|台東縣|澎湖縣|金門縣|連江縣/.test((addr||'').trim());
+}
+// 確保地址帶有縣市前綴（用於導航 URL 等）
+function ensureCityPrefix(addr){
+  const raw=(addr||'').trim();
+  if(!raw) return '';
+  return addrHasCity(raw)?raw:DEFAULT_CITY+raw;
+}
 function addrVariants(addr){
   let raw=(addr||'').trim();
   if(!raw) return [];
-  // 如果使用者已自行包含縣市（開頭是市/縣），就不重複加
-  const hasCity=/^(臺|台)[北中南東]市|新北市|桃園市|基隆市|新竹[市縣]|苗栗縣|彰化縣|南投縣|雲林縣|嘉義[市縣]|屏東縣|宜蘭縣|花蓮縣|臺東縣|台東縣|澎湖縣|金門縣|連江縣/.test(raw);
-  const prefix=hasCity?'':DEFAULT_CITY;
+  const prefix=addrHasCity(raw)?'':DEFAULT_CITY;
   const variants=[];
   // 1. 完整地址（含門牌）
   variants.push(prefix+raw);
@@ -2564,7 +2572,16 @@ function renderMapMarkers(){
 function buildMapPopup(c,idx){
   const todos=(c.todos||[]).filter(t=>!t.done).length;
   const fw=calcFW4(c);
-  const navUrl=c.addr?'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(c.addr):'';
+  // 導航目的地：
+  //  - 手動定位 → 用精確 lat/lng（使用者自己 pin 的，最準）
+  //  - 其他 → 用地址 + 臺南市前綴（交給 Google Maps 自己 geocode）
+  let navUrl='';
+  if(c.geocodeSource==='manual'&&c.lat&&c.lng){
+    navUrl='https://www.google.com/maps/dir/?api=1&destination='+c.lat+','+c.lng;
+  }else{
+    const navAddr=ensureCityPrefix(c.addr);
+    if(navAddr) navUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(navAddr);
+  }
   const badges=bdg(displayStatus(c.status||STATUS.UNVISITED))
     +(fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:'')
     +(todos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${todos}待辦</span>`:'');
