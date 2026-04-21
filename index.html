@@ -928,7 +928,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.21-fw4src';
+const APP_VERSION='v2026.04.21-report-raw';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -2337,22 +2337,11 @@ function calcFW4(c){
   if(k>0)return k;
   return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
 }
-// 報表專用：區間內有成約 → 只加區間內成約主項 + 綁在這些主項下的配件（不論配件
-// contractDate 是否在區間）；區間外的同代號成約不納入。無區間內成約時回傳試用金額。
-function calcReportAmt(c,from,to){
-  const items=c.contractedItems||[];
-  const inRangeMains=items.filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
-  if(inRangeMains.length){
-    const mainKeys=new Set(inRangeMains.map(it=>it.product+'|'+it.contractDate));
-    const mainCodesInRange=new Set(inRangeMains.map(it=>it.product));
-    return items.filter(it=>{
-      if(!it.bundledTo){
-        return it.contractDate&&mainKeys.has(it.product+'|'+it.contractDate);
-      }
-      return mainCodesInRange.has(it.bundledTo);
-    }).reduce((s,it)=>s+itemFW4(it),0);
-  }
-  return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+// 4W 推進表專用：一律回傳「現有試用品項的 4W 原價加總」（displayFw4，含 qty 與 cycle
+// 調整、地墊 4W 0.8 折，但忽略 quoted 報價與成約狀態）。使用者需求：推進表要看的
+// 是原價潛在值而非打折後的報價，成約不改變推進表數字。
+function calcReportAmt(c){
+  return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,it.cycle||'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
 function rptAmountMonth(c,from,to){
@@ -3659,7 +3648,7 @@ function genReport(){
     return va<vb?-1:va>vb?1:0;
   });
   picked.forEach((c,i)=>{
-    const fw=calcReportAmt(c,from,to);
+    const fw=calcReportAmt(c);
     const prod=rptProd(c.trialItems);
     // 月份欄：區間內最早成約月優先，否則區間內首訪月，皆無則留白
     const mon=rptAmountMonth(c,from,to);
@@ -4192,22 +4181,21 @@ if(location.search.includes('test=1')){
   assert('itemFW4 null', itemFW4(null), 0);
   assert('itemFW4 無 product', itemFW4({qty:1}), 0);
 
-  // --- calcReportAmt ---
-  // 區間外同代號成約不納入：2026-01 成約 S-20、2026-04 又成約 S-20，跑 4 月報表只算 4 月那筆
+  // --- calcReportAmt（4W 推進表專用：只看試用品項 4W 原價）---
+  // 一律忽略成約、忽略 quoted，只回傳 trialItems 的 displayFw4 合計
   const rc1={contractedItems:[
-    {product:'S-20',qty:1,quoted:300,cycle:'2W',contractDate:'2026-01-15'},
-    {product:'S-20',qty:1,quoted:400,cycle:'2W',contractDate:'2026-04-10'}
+    {product:'S-20',qty:1,quoted:300,cycle:'2W',contractDate:'2026-04-10'}
+  ],trialItems:[]};
+  assert('calcReportAmt 無試用 → 0（不看成約）', calcReportAmt(rc1), 0);
+  const rc2={trialItems:[
+    {product:'S-20',qty:2,cycle:'2W',quoted:100}  // quoted 應被忽略
   ]};
-  assert('calcReportAmt 區間外同代號不納入', calcReportAmt(rc1,'2026-04-01','2026-04-30'), 400);
-  // 配件：bundledTo 指向區間內主項的配件應納入（即使配件本身 contractDate 不同）
-  const rc2={contractedItems:[
-    {product:'S-20',qty:1,quoted:500,cycle:'2W',contractDate:'2026-04-10'},
-    {product:'ACC1',qty:1,quoted:100,cycle:'2W',contractDate:'2026-04-10',bundledTo:'S-20'}
+  assert('calcReportAmt 忽略 quoted', calcReportAmt(rc2), 400);
+  const rc3={trialItems:[
+    {product:'S-20',qty:1,cycle:'2W'},
+    {product:'DECSR',qty:1,cycle:'4W'}  // 地墊 4W 272
   ]};
-  assert('calcReportAmt 主項+配件', calcReportAmt(rc2,'2026-04-01','2026-04-30'), 600);
-  // 無區間內成約 → fallback 試用品項
-  const rc3={contractedItems:[],trialItems:[{product:'S-20',qty:2,cycle:'2W'}]};
-  assert('calcReportAmt 無成約 fallback 試用', calcReportAmt(rc3,'2026-04-01','2026-04-30'), 400);
+  assert('calcReportAmt 主項+地墊', calcReportAmt(rc3), 200+272);
 
   // --- rptAmountMonth ---
   // 區間內有成約 → 回傳最早成約月
@@ -4287,13 +4275,13 @@ if(location.search.includes('test=1')){
   const cfClient3={trialItems:[],contractedItems:[],fw4:999};
   assert('calcFW4 忽略 c.fw4', calcFW4(cfClient3), 0);
 
-  // --- calcReportAmt ---
-  const testClient1={contractedItems:[{product:'S-20',quoted:300,qty:1,contractDate:'2026-03-15'},{product:'SHB',quoted:0,qty:1,bundledTo:'S-20',contractDate:'2026-03-15'}],trialItems:[]};
-  assert('calcReportAmt 有成約', calcReportAmt(testClient1,'2026-03-01','2026-03-31'), 300);
-  const testClient2={contractedItems:[],trialItems:[{product:'S-20',quoted:250,qty:1}]};
-  assert('calcReportAmt fallback 試用', calcReportAmt(testClient2,'2026-03-01','2026-03-31'), 250);
-  const testClient3={contractedItems:[],trialItems:[],fw4:500};
-  assert('calcReportAmt 不用 c.fw4', calcReportAmt(testClient3,'2026-03-01','2026-03-31'), 0);
+  // --- calcReportAmt 第二組（新語意：只看 trialItems displayFw4）---
+  const testClient1={contractedItems:[{product:'S-20',quoted:300,qty:1,contractDate:'2026-03-15'}],trialItems:[]};
+  assert('calcReportAmt 只看試用 - 試用空', calcReportAmt(testClient1), 0);
+  const testClient2={trialItems:[{product:'S-20',quoted:250,qty:1}]};
+  assert('calcReportAmt 只看試用 - 忽略 quoted', calcReportAmt(testClient2), 200);
+  const testClient3={trialItems:[],fw4:500};
+  assert('calcReportAmt 只看試用 - 不用 c.fw4', calcReportAmt(testClient3), 0);
 
   // --- matchCategory ---
   const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trialItems:[{product:'S-20',qty:1,quoted:0}],contractedItems:[]};
