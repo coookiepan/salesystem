@@ -3489,36 +3489,52 @@ function genReport(){
   document.getElementById('rpt-4w-cnt').textContent=`共 ${rows4w.length} 筆`;
 
   // ─── 日報區塊 ───
-  // 依日期聚合：區間內所有 visits
+  // 依日期聚合：區間內所有 visits，同一 (client,date) 合併成單列
+  // （note/insight 串接去重，勾選取聯集；避免同客戶同日多訪重複出現）
   const byDate={};
   DB.clients.forEach(c=>{
     (c.visits||[]).forEach(v=>{
       if(v.date&&v.date>=from&&v.date<=to){
-        if(!byDate[v.date]) byDate[v.date]=[];
-        byDate[v.date].push({c,v});
+        if(!byDate[v.date]) byDate[v.date]={order:[],map:new Map()};
+        const bucket=byDate[v.date];
+        const key=DB.clients.indexOf(c);
+        if(!bucket.map.has(key)){
+          bucket.map.set(key,{c,visits:[v]});
+          bucket.order.push(key);
+        }else{
+          bucket.map.get(key).visits.push(v);
+        }
       }
     });
   });
   const dates=Object.keys(byDate).sort();
   const dowArr=['日','一','二','三','四','五','六'];
   const blocks=[];
-  let totalVisits=0;
+  let totalShops=0;
   dates.forEach(date=>{
-    const entries=byDate[date];
-    totalVisits+=entries.length;
+    const bucket=byDate[date];
+    const entries=bucket.order.map(k=>bucket.map.get(k));
+    totalShops+=entries.length;
     const dow=dowArr[new Date(date+'T00:00:00').getDay()];
     blocks.push(`=== ${date} (週${dow}) ===`);
     entries.forEach((e,i)=>{
-      const c=e.c, v=e.v;
-      // 拜訪內容說明 = note 與 insight 合併
-      const note=[v.note,v.insight].filter(x=>x&&x.trim()).join('；').replace(/[\t\n\r]/g,' ');
-      // 勾選邏輯
-      const sc=v.statusChange||'';
-      const isInit=sc===STATUS.FIRST;
-      const isRe=sc===STATUS.REVISIT;
-      const isQuote=sc===STATUS.QUOTE;
-      // 有報價就自動勾試用；「試用中/將成約/已成約」也算試用
-      const isTrial=isQuote||sc===STATUS.TRIAL||sc===STATUS.CLOSING||sc===STATUS.DEAL;
+      const c=e.c;
+      // note/insight 合併所有當日 visits，去重並串接
+      const noteParts=[];
+      const seen=new Set();
+      e.visits.forEach(v=>{
+        [v.note,v.insight].forEach(x=>{
+          const s=(x||'').trim();
+          if(s&&!seen.has(s)){seen.add(s);noteParts.push(s);}
+        });
+      });
+      const note=noteParts.join('；').replace(/[\t\n\r]/g,' ');
+      // 勾選取聯集：任一 visit 命中就算數
+      const scs=e.visits.map(v=>v.statusChange||'');
+      const isInit=scs.includes(STATUS.FIRST);
+      const isRe=scs.includes(STATUS.REVISIT);
+      const isQuote=scs.includes(STATUS.QUOTE);
+      const isTrial=isQuote||scs.some(s=>s===STATUS.TRIAL||s===STATUS.CLOSING||s===STATUS.DEAL);
       // 初訪/複訪 互斥，擇一
       const initMark=isInit&&!isRe?'✓':'';
       const reMark=isRe&&!isInit?'✓':'';
@@ -3544,7 +3560,7 @@ function genReport(){
     blocks.push(''); // 空行分隔
   });
   document.getElementById('rpt-daily').value=blocks.join('\n').replace(/\n+$/,'');
-  document.getElementById('rpt-daily-cnt').textContent=`${dates.length} 天・${totalVisits} 軒`;
+  document.getElementById('rpt-daily-cnt').textContent=`${dates.length} 天・${totalShops} 軒`;
 
   document.getElementById('rpt-output').style.display='block';
 }
