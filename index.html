@@ -2173,14 +2173,34 @@ function calcFW4(c){
   if(k>0)return k;
   return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
 }
-// 報表專用：區間內有成約 → 只加區間內成約品項（含配件）；否則用試用金額
+// 報表專用：區間內有成約 → 只加區間內成約主項 + 綁在這些主項下的配件（不論配件
+// contractDate 是否在區間）；區間外的同代號成約不納入。無區間內成約時回傳試用金額。
 function calcReportAmt(c,from,to){
-  const inRange=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
-  if(inRange.length){
-    const codes=new Set(inRange.map(it=>it.product));
-    return (c.contractedItems||[]).filter(it=>codes.has(it.product)||codes.has(it.bundledTo)).reduce((s,it)=>s+itemFW4(it),0);
+  const items=c.contractedItems||[];
+  const inRangeMains=items.filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
+  if(inRangeMains.length){
+    const mainKeys=new Set(inRangeMains.map(it=>it.product+'|'+it.contractDate));
+    const mainCodesInRange=new Set(inRangeMains.map(it=>it.product));
+    return items.filter(it=>{
+      if(!it.bundledTo){
+        return it.contractDate&&mainKeys.has(it.product+'|'+it.contractDate);
+      }
+      return mainCodesInRange.has(it.bundledTo);
+    }).reduce((s,it)=>s+itemFW4(it),0);
   }
   return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+}
+// 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
+function rptAmountMonth(c,from,to){
+  const contractDates=(c.contractedItems||[])
+    .filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to)
+    .map(it=>it.contractDate).sort();
+  if(contractDates.length) return parseInt(contractDates[0].split('-')[1],10);
+  const visitDates=(c.visits||[])
+    .filter(v=>v.date&&v.date>=from&&v.date<=to)
+    .map(v=>v.date).sort();
+  if(visitDates.length) return parseInt(visitDates[0].split('-')[1],10);
+  return null;
 }
 // 試用→成約：把第 i 筆主項（含其 bundled 配件）從 cfItems 搬到 cfContracted
 // 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
@@ -3421,13 +3441,6 @@ function rptProd(items){
   return 'ALL';
 }
 
-// 取該客戶第一次 visit 的月份 (1-12)；沒有 visits 則回傳 null
-function rptFirstMonth(c){
-  const vs=(c.visits||[]).filter(v=>v.date).map(v=>v.date).sort();
-  if(!vs.length) return null;
-  return parseInt(vs[0].split('-')[1],10);
-}
-
 function rptVisitsInRange(c,from,to){
   return (c.visits||[]).filter(v=>v.date&&v.date>=from&&v.date<=to);
 }
@@ -3461,11 +3474,12 @@ function genReport(){
   picked.forEach((c,i)=>{
     const fw=calcReportAmt(c,from,to);
     const prod=rptProd(c.trialItems);
-    const mon=rptFirstMonth(c);
+    // 月份欄：區間內最早成約月優先，否則區間內首訪月，皆無則留白
+    const mon=rptAmountMonth(c,from,to);
     // 欄位（依照月報 RS sheet 結構）: NO, 客戶名稱, (空=C欄), 窗口/職位, 提案商品, 1月, 2月, 3月, 4月, 5月, 6月, 拜訪進度說明
     const cols=[String(i+1), c.name, '', c.contact||'', prod];
     for(let m=1;m<=6;m++){
-      cols.push((m===mon&&fw>0)?String(fw):'');
+      cols.push((mon!==null&&m===mon&&fw>0)?String(fw):'');
     }
     // 拜訪進度說明：預填 note，讓使用者自行修改
     cols.push((c.note||'').replace(/[\t\n\r]/g,' '));
@@ -3797,6 +3811,39 @@ if(location.search.includes('test=1')){
   // null input
   assert('itemFW4 null', itemFW4(null), 0);
   assert('itemFW4 無 product', itemFW4({qty:1}), 0);
+
+  // --- calcReportAmt ---
+  // 區間外同代號成約不納入：2026-01 成約 S-20、2026-04 又成約 S-20，跑 4 月報表只算 4 月那筆
+  const rc1={contractedItems:[
+    {product:'S-20',qty:1,quoted:300,cycle:'2W',contractDate:'2026-01-15'},
+    {product:'S-20',qty:1,quoted:400,cycle:'2W',contractDate:'2026-04-10'}
+  ]};
+  assert('calcReportAmt 區間外同代號不納入', calcReportAmt(rc1,'2026-04-01','2026-04-30'), 400);
+  // 配件：bundledTo 指向區間內主項的配件應納入（即使配件本身 contractDate 不同）
+  const rc2={contractedItems:[
+    {product:'S-20',qty:1,quoted:500,cycle:'2W',contractDate:'2026-04-10'},
+    {product:'ACC1',qty:1,quoted:100,cycle:'2W',contractDate:'2026-04-10',bundledTo:'S-20'}
+  ]};
+  assert('calcReportAmt 主項+配件', calcReportAmt(rc2,'2026-04-01','2026-04-30'), 600);
+  // 無區間內成約 → fallback 試用品項
+  const rc3={contractedItems:[],trialItems:[{product:'S-20',qty:2,cycle:'2W'}]};
+  assert('calcReportAmt 無成約 fallback 試用', calcReportAmt(rc3,'2026-04-01','2026-04-30'), 400);
+
+  // --- rptAmountMonth ---
+  // 區間內有成約 → 回傳最早成約月
+  const rm1={contractedItems:[
+    {product:'S-20',qty:1,contractDate:'2026-04-20'},
+    {product:'S-20',qty:1,contractDate:'2026-04-05'}
+  ],visits:[{date:'2026-01-10'}]};
+  assert('rptAmountMonth 區間內最早成約月', rptAmountMonth(rm1,'2026-04-01','2026-04-30'), 4);
+  // 無成約但有 visit → 回傳區間內首訪月
+  const rm2={contractedItems:[],visits:[{date:'2026-04-12'},{date:'2026-04-03'}]};
+  assert('rptAmountMonth 區間內首訪月', rptAmountMonth(rm2,'2026-04-01','2026-04-30'), 4);
+  // 區間外的 visit 不算
+  const rm3={contractedItems:[],visits:[{date:'2026-01-10'}]};
+  assert('rptAmountMonth 區間外 visit → null', rptAmountMonth(rm3,'2026-04-01','2026-04-30'), null);
+  // 皆無 → null
+  assert('rptAmountMonth 皆無 → null', rptAmountMonth({},'2026-04-01','2026-04-30'), null);
 
   // --- statusEq ---
   assert('statusEq 拒絕=已結案', statusEq(STATUS.REFUSE,STATUS.CLOSED), true);
