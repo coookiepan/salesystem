@@ -577,7 +577,7 @@ tbody tr:hover{background:var(--surface-hover)}
       <div id="cd-badges" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
       <div class="g2">
         <div><div class="detail-label">提案商品</div><div class="detail-val" id="cd-product">-</div></div>
-        <div><div class="detail-label">預估4W</div><div style="font-size:15px;font-weight:700;color:var(--green-d);margin-bottom:10px" id="cd-fw4">-</div></div>
+        <div><div class="detail-label">預估4W</div><div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px"><div style="font-size:15px;font-weight:700;color:var(--green-d)" id="cd-fw4">-</div><div id="cd-fw4-src" style="font-size:10px;color:var(--text3);font-weight:500"></div></div></div>
         <div><div class="detail-label">下次拜訪</div><div class="detail-val" id="cd-next">-</div></div>
         <div><div class="detail-label">地址</div><div class="detail-val" id="cd-addr">-</div></div>
       </div>
@@ -928,7 +928,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.21-dedup2';
+const APP_VERSION='v2026.04.21-fw4src';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -3341,6 +3341,9 @@ async function saveClient(){
 function openCD(i){
   S.curIdx=i;const c=DB.clients[i];
   const fw=calcFW4(c);const prod=autoProd(c.trialItems)||'-';
+  // 預估 4W 的來源：若成約合計 > 0 走成約，否則走試用
+  const fwContractSum=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+  const fwSrc=fwContractSum>0?'（來自成約）':(c.trialItems||[]).length?'（來自試用）':'';
   // 顯示/隱藏「在地圖上查看」按鈕
   const cdMapBtn=document.getElementById('cd-map-btn');
   if(cdMapBtn) cdMapBtn.style.display=(c.lat&&c.lng&&mapShouldShow(c))?'inline-flex':'none';
@@ -3352,6 +3355,15 @@ function openCD(i){
     ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
   document.getElementById('cd-fw4').textContent=fw>0?'$'+fw.toLocaleString():'-';
+  document.getElementById('cd-fw4-src').textContent=fw>0?fwSrc:'';
+  // 若狀態是試用中但成約區有殘留，顯示警告
+  const srcW=document.getElementById('cd-fw4-src');
+  if(srcW&&fwContractSum>0&&(c.status===STATUS.TRIAL||c.status===STATUS.QUOTE)){
+    srcW.textContent='⚠ 來自成約（狀態為'+c.status+'，可能有殘留）';
+    srcW.style.color='var(--yellow)';
+  }else if(srcW){
+    srcW.style.color='var(--text3)';
+  }
   document.getElementById('cd-next').textContent=c.nextdate||'-';
   document.getElementById('cd-addr').textContent=c.addr||'-';
   const ew=document.getElementById('cd-env-w');c.env?(ew.style.display='block',document.getElementById('cd-env').textContent=c.env):ew.style.display='none';
