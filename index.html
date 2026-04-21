@@ -905,8 +905,21 @@ tbody tr:hover{background:var(--surface-hover)}
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" onclick="closeVerMenu();syncFromSheet()">從雲端拉最新（每日開工建議）</button>
       <button class="btn btn-outline" onclick="closeVerMenu();pushAllToSheet()">推送全部到雲端</button>
+      <button class="btn btn-outline" onclick="closeVerMenu();openDedupModal()">清理重複店家</button>
       <button class="btn btn-outline" onclick="closeVerMenu();forceReload()" style="color:var(--text3)">強制重新載入程式</button>
       <button class="btn btn-outline" onclick="closeVerMenu()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dedup-modal" onclick="if(event.target===this)closeDedupModal()">
+  <div class="modal" style="max-width:640px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-title" style="font-size:14px">清理重複店家</div>
+    <div id="dedup-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+    <div id="dedup-list" style="flex:1;overflow-y:auto;font-size:13px;max-height:60vh"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-primary" id="dedup-auto-btn" onclick="dedupAutoMerge()">自動合併無衝突組</button>
+      <button class="btn btn-outline" onclick="closeDedupModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -915,7 +928,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.17-c-map';
+const APP_VERSION='v2026.04.21-dedup';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1711,6 +1724,120 @@ function backfillClientIds(){
   });
   if(count)saveLocal();
   return count;
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEDUP: 清理重複店家（多裝置同步造成同店名多筆的救援工具）
+// ═══════════════════════════════════════════════════════════
+// 店名正規化：去除前後空白、合併連續空白；全形空白轉半形；大小寫保留
+function normalizeName(n){
+  if(!n)return '';
+  return String(n)
+    .replace(/　/g,' ')          // 全形空白 → 半形
+    .replace(/\s+/g,' ')             // 連續空白合併
+    .trim()
+    .toLowerCase();
+}
+// 掃描 DB.clients，依正規化後店名分組，回傳所有群組大小 ≥ 2 的組
+// 每組 = {key, clients:[{client, idx}...]}
+function findDuplicateGroups(){
+  const map=new Map();
+  (DB.clients||[]).forEach((c,idx)=>{
+    if(!c||!c.name)return;
+    const k=normalizeName(c.name);
+    if(!k)return;
+    if(!map.has(k))map.set(k,[]);
+    map.get(k).push({client:c,idx});
+  });
+  const groups=[];
+  map.forEach((arr,key)=>{if(arr.length>=2)groups.push({key,clients:arr});});
+  return groups;
+}
+// 合併候選人：挑 updatedAt 最新者為 keeper，其他為 removers
+function pickMergeKeeper(clients){
+  const sorted=[...clients].sort((a,b)=>(b.client.updatedAt||0)-(a.client.updatedAt||0));
+  return {keeper:sorted[0],removers:sorted.slice(1)};
+}
+// 比對一組 clients 的純量欄位衝突（非空且值不同才算衝突）
+// 回傳 {field, values:[{idx,value}]} 陣列；陣列空 = 無衝突可自動合併
+const DEDUP_SCALAR_FIELDS=['contact','addr','type','status','nextdate','env','note','trialDate'];
+function detectScalarConflicts(clients){
+  const conflicts=[];
+  DEDUP_SCALAR_FIELDS.forEach(f=>{
+    const vals=clients.map(x=>({idx:x.idx,value:(x.client[f]||'').toString().trim()}))
+                      .filter(x=>x.value!=='');
+    const uniq=[...new Set(vals.map(v=>v.value))];
+    if(uniq.length>1)conflicts.push({field:f,values:vals});
+  });
+  return conflicts;
+}
+// 合併 visits：依 (date + statusChange + note 前32字) 做 key 去重
+function mergeVisits(clients){
+  const seen=new Set();const out=[];
+  clients.forEach(x=>{
+    (x.client.visits||[]).forEach(v=>{
+      if(!v)return;
+      const k=(v.date||'')+'|'+(v.statusChange||'')+'|'+((v.note||'').slice(0,32));
+      if(seen.has(k))return;
+      seen.add(k);out.push(v);
+    });
+  });
+  out.sort((a,b)=>(a.date||'')<(b.date||'')?-1:1);
+  return out;
+}
+// 合併 items (trial/contracted)：(product + bundledTo + contractDate) 做 key 去重
+function mergeItems(clients,field){
+  const seen=new Set();const out=[];
+  clients.forEach(x=>{
+    (x.client[field]||[]).forEach(it=>{
+      if(!it||!it.product)return;
+      const k=it.product+'|'+(it.bundledTo||'')+'|'+(it.contractDate||'');
+      if(seen.has(k))return;
+      seen.add(k);out.push(JSON.parse(JSON.stringify(it)));
+    });
+  });
+  return out;
+}
+// 合併 todos：依文字內容去重
+function mergeTodos(clients){
+  const seen=new Set();const out=[];
+  clients.forEach(x=>{
+    (x.client.todos||[]).forEach(t=>{
+      if(!t)return;
+      const k=(t.text||'').trim();
+      if(!k||seen.has(k))return;
+      seen.add(k);out.push({...t});
+    });
+  });
+  return out;
+}
+// 核心合併：把 group 合併進 keeper（以 keeper 為基底，list 全合併、純量欄衝突用 resolutions）
+// resolutions: {field: chosenValue} — 若未提供則 keeper 原值優先
+// 回傳新的 client 物件（未寫回 DB）
+function mergeClientGroup(group,resolutions){
+  const {keeper}=pickMergeKeeper(group.clients);
+  const all=group.clients;
+  const merged={...keeper.client};
+  // 純量欄：若 keeper 該欄為空且其他有值 → 補上；若有衝突且提供 resolution → 用 resolution
+  DEDUP_SCALAR_FIELDS.forEach(f=>{
+    if(resolutions&&Object.prototype.hasOwnProperty.call(resolutions,f)){
+      merged[f]=resolutions[f];
+      return;
+    }
+    if(!merged[f]){
+      for(const x of all){if(x.client[f]){merged[f]=x.client[f];break;}}
+    }
+  });
+  // 座標：任一有就帶（keeper 優先）
+  if(!merged.lat){
+    for(const x of all){if(x.client.lat){merged.lat=x.client.lat;merged.lng=x.client.lng;merged.geocodeSource=x.client.geocodeSource;merged.geocodedAt=x.client.geocodedAt;break;}}
+  }
+  merged.visits=mergeVisits(all);
+  merged.trialItems=mergeItems(all,'trialItems');
+  merged.contractedItems=mergeItems(all,'contractedItems');
+  merged.todos=mergeTodos(all);
+  merged.updatedAt=Date.now();
+  return {keeperIdx:keeper.idx,merged,removerIdxs:all.filter(x=>x.idx!==keeper.idx).map(x=>x.idx)};
 }
 
 // v6: 移除已廢棄的 c.fw4 快取欄位（金額一律由 calcFW4 即時算）
@@ -3112,6 +3239,17 @@ async function saveClient(){
     const tdVal=document.getElementById('cf-trialdate').value;
     if(tdVal)c.trialDate=tdVal;
     const isEdit=S.editIdx>=0;
+    // 新增時檢查店名正規化後是否與現有客戶重複（防止多裝置並行造成雲端重複）
+    if(!isEdit){
+      const k=normalizeName(c.name);
+      if(k){
+        const dup=(DB.clients||[]).find(x=>x&&normalizeName(x.name)===k);
+        if(dup){
+          const ok=confirm(`⚠ 已存在同名店家「${dup.name}」。\n\n仍要新增一筆新的嗎？\n（若是同一家店請按取消，改用編輯既有資料；若確實是不同分店請按確定）`);
+          if(!ok){btn.disabled=false;btn.textContent='儲存客戶';return;}
+        }
+      }
+    }
     // 自動寫 visit：status 從「未拜訪/空」變成其他
     const oldStatus=isEdit?(DB.clients[S.editIdx]?.status||''):'';
     const isLeaving=(!oldStatus||oldStatus===STATUS.UNVISITED)&&c.status&&c.status!==STATUS.UNVISITED;
@@ -3710,6 +3848,139 @@ function showVerMenu(){
   document.getElementById('ver-menu-modal').classList.add('on');
 }
 function closeVerMenu(){document.getElementById('ver-menu-modal').classList.remove('on');}
+
+// ═══════════════════════════════════════════════════════════
+// DEDUP MODAL
+// ═══════════════════════════════════════════════════════════
+// _dedupState: { groups: [...], resolutions: {groupKey: {field: value}}, conflicts: {groupKey: [fields]} }
+let _dedupState=null;
+function openDedupModal(){
+  if(!confirm('即將掃描重複店家（依店名正規化後比對）。建議先從雲端拉最新資料，避免清理到過時的副本。\n\n是否繼續？'))return;
+  const groups=findDuplicateGroups();
+  _dedupState={groups,resolutions:{},conflicts:{}};
+  groups.forEach(g=>{
+    _dedupState.conflicts[g.key]=detectScalarConflicts(g.clients);
+  });
+  renderDedupModal();
+  document.getElementById('dedup-modal').classList.add('on');
+}
+function closeDedupModal(){
+  document.getElementById('dedup-modal').classList.remove('on');
+  _dedupState=null;
+}
+function renderDedupModal(){
+  const s=_dedupState;if(!s){return;}
+  const groups=s.groups;
+  const sum=document.getElementById('dedup-summary');
+  const autoCnt=groups.filter(g=>s.conflicts[g.key].length===0).length;
+  const cfltCnt=groups.length-autoCnt;
+  sum.innerHTML=`找到 <b>${groups.length}</b> 組重複 · 無衝突可自動合併 <b>${autoCnt}</b> 組 · 有衝突需手動處理 <b>${cfltCnt}</b> 組`;
+  const list=document.getElementById('dedup-list');
+  if(!groups.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">🎉 沒有發現重複店家</div>';return;}
+  list.innerHTML=groups.map(g=>{
+    const {keeper}=pickMergeKeeper(g.clients);
+    const conflicts=s.conflicts[g.key];
+    const rowsHtml=g.clients.map(x=>{
+      const mark=x.idx===keeper.idx?'<span style="color:var(--green);font-weight:600">⭐ 保留</span>':'<span style="color:var(--text3)">將合併並刪除</span>';
+      const upd=x.client.updatedAt?new Date(x.client.updatedAt).toISOString().slice(0,16).replace('T',' '):'無時間';
+      const visitCnt=(x.client.visits||[]).length;
+      return `<div style="font-size:12px;padding:4px 8px;background:var(--bg2);border-radius:4px;margin-bottom:3px">
+        ${mark} · #${x.idx} · updatedAt ${upd} · ${visitCnt} 筆 visit
+        <div style="color:var(--text3);font-size:11px">${escHtml(x.client.contact||'—')} · ${escHtml((x.client.addr||'').slice(0,30)||'—')}</div>
+      </div>`;
+    }).join('');
+    let cHtml='';
+    if(conflicts.length){
+      cHtml='<div style="margin-top:6px;padding:6px;border:1px solid var(--yellow);border-radius:4px;background:#fffbe6">'+
+        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text2)">⚠ 欄位衝突，選擇要保留的值：</div>'+
+        conflicts.map(c=>{
+          const chosen=(s.resolutions[g.key]||{})[c.field];
+          const opts=c.values.map(v=>{
+            const sel=chosen===v.value?' selected':'';
+            return `<option value="${encodeURIComponent(v.value)}"${sel}>${escHtml(v.value.slice(0,50))}</option>`;
+          }).join('');
+          return `<div style="font-size:11px;margin-bottom:3px">
+            <span style="display:inline-block;min-width:60px;color:var(--text2)">${c.field}:</span>
+            <select onchange="setDedupResolution('${g.key}','${c.field}',decodeURIComponent(this.value))" style="font-size:11px;max-width:300px">
+              <option value="">（請選擇）</option>${opts}
+            </select>
+          </div>`;
+        }).join('')+
+        `<button class="btn btn-outline btn-xs" onclick="mergeDedupGroup('${g.key}')" style="margin-top:4px">此組合併</button>`+
+      '</div>';
+    }else{
+      cHtml=`<div style="margin-top:4px"><button class="btn btn-outline btn-xs" onclick="mergeDedupGroup('${g.key}')">此組合併（無衝突）</button></div>`;
+    }
+    return `<div style="padding:8px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">${escHtml(g.clients[0].client.name)} <span style="color:var(--text3);font-weight:400">（${g.clients.length} 筆）</span></div>
+      ${rowsHtml}${cHtml}
+    </div>`;
+  }).join('');
+}
+function setDedupResolution(key,field,value){
+  if(!_dedupState)return;
+  if(!_dedupState.resolutions[key])_dedupState.resolutions[key]={};
+  _dedupState.resolutions[key][field]=value;
+}
+// 執行合併：把 group 合併進 keeper，推送 save(keeper) + delete(removers)
+async function mergeDedupGroup(key){
+  const s=_dedupState;if(!s)return;
+  const g=s.groups.find(x=>x.key===key);if(!g)return;
+  const conflicts=s.conflicts[key];
+  if(conflicts.length){
+    const res=s.resolutions[key]||{};
+    const missing=conflicts.filter(c=>!Object.prototype.hasOwnProperty.call(res,c.field));
+    if(missing.length){alert('尚有 '+missing.length+' 個衝突欄位未選擇：'+missing.map(c=>c.field).join(', '));return;}
+  }
+  if(!confirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n保留最新那筆，其餘的 visits/品項/待辦清單合併進來後刪除。此操作會同步到雲端。`))return;
+  const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,s.resolutions[key]);
+  // 先保留 remover 的 id 清單
+  const removerIds=removerIdxs.map(i=>DB.clients[i]?.id).filter(x=>x);
+  // 寫回 keeper
+  DB.clients[keeperIdx]=merged;
+  // 從大到小刪除 removers（避免 index 位移）
+  removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
+  saveLocal();
+  // 雲端：save keeper + delete removers
+  autoSync('save',{client:merged});
+  for(const id of removerIds){autoSync('delete',{id});}
+  renderClients();
+  // 重新計算 group 清單
+  s.groups=findDuplicateGroups();
+  s.conflicts={};
+  s.resolutions={};
+  s.groups.forEach(gg=>{s.conflicts[gg.key]=detectScalarConflicts(gg.clients);});
+  renderDedupModal();
+}
+// 一鍵合併所有無衝突的組
+async function dedupAutoMerge(){
+  const s=_dedupState;if(!s)return;
+  const targets=s.groups.filter(g=>s.conflicts[g.key].length===0);
+  if(!targets.length){alert('沒有可自動合併的組（都有衝突）');return;}
+  if(!confirm(`將自動合併 ${targets.length} 組無衝突的重複店家，並同步到雲端。是否繼續？`))return;
+  const allRemoverIds=[];
+  targets.forEach(g=>{
+    const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,null);
+    const removerIds=removerIdxs.map(i=>DB.clients[i]?.id).filter(x=>x);
+    allRemoverIds.push(...removerIds);
+    DB.clients[keeperIdx]=merged;
+    removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
+  });
+  saveLocal();
+  // 雲端：save 每個 keeper + delete removers
+  for(const g of targets){
+    const keeper=DB.clients.find(c=>c&&normalizeName(c.name)===g.key);
+    if(keeper)autoSync('save',{client:keeper});
+  }
+  for(const id of allRemoverIds){autoSync('delete',{id});}
+  renderClients();
+  s.groups=findDuplicateGroups();
+  s.conflicts={};
+  s.resolutions={};
+  s.groups.forEach(gg=>{s.conflicts[gg.key]=detectScalarConflicts(gg.clients);});
+  renderDedupModal();
+  alert(`✅ 已合併 ${targets.length} 組，共刪除 ${allRemoverIds.length} 筆重複資料`);
+}
 // Pull banner (每日提醒從雲端拉最新)
 function todayDateStr(){return fmtDate();}
 function checkDailyPull(){
@@ -3860,6 +4131,42 @@ if(location.search.includes('test=1')){
   assert('rptAmountMonth 區間外 visit → null', rptAmountMonth(rm3,'2026-04-01','2026-04-30'), null);
   // 皆無 → null
   assert('rptAmountMonth 皆無 → null', rptAmountMonth({},'2026-04-01','2026-04-30'), null);
+
+  // --- normalizeName ---
+  assert('normalizeName 前後空白', normalizeName('  A店  '), 'a店');
+  assert('normalizeName 連續空白', normalizeName('A  B'), 'a b');
+  assert('normalizeName 全形空白', normalizeName('A　B'), 'a b');
+  assert('normalizeName 大小寫', normalizeName('McDonald\'s'), "mcdonald's");
+  assert('normalizeName 空值', normalizeName(''), '');
+  assert('normalizeName null', normalizeName(null), '');
+
+  // --- findDuplicateGroups / mergeClientGroup ---
+  const savedClients=DB.clients;
+  DB.clients=[
+    {id:'a',name:'王記',contact:'老闆',addr:'台南市',updatedAt:100,visits:[{date:'2026-01-01',note:'v1'}]},
+    {id:'b',name:'王記 ',contact:'',addr:'台南市',updatedAt:200,visits:[{date:'2026-02-01',note:'v2'}]},
+    {id:'c',name:'李記',updatedAt:100}
+  ];
+  const grps=findDuplicateGroups();
+  assert('findDuplicateGroups 找到 1 組', grps.length, 1);
+  assert('findDuplicateGroups 該組有 2 筆', grps[0].clients.length, 2);
+  const cflt=detectScalarConflicts(grps[0].clients);
+  assert('detectScalarConflicts contact 不是衝突（b 空）', cflt.filter(c=>c.field==='contact').length, 0);
+  const merged=mergeClientGroup(grps[0],null);
+  assert('mergeClientGroup keeper 為 updatedAt 較新', DB.clients[merged.keeperIdx].id, 'b');
+  assert('mergeClientGroup visits 合併 2 筆', merged.merged.visits.length, 2);
+  assert('mergeClientGroup contact 從 a 補上', merged.merged.contact, '老闆');
+  // 有衝突情境
+  DB.clients=[
+    {id:'a',name:'X店',contact:'甲',updatedAt:100},
+    {id:'b',name:'x店',contact:'乙',updatedAt:200}
+  ];
+  const grps2=findDuplicateGroups();
+  const cflt2=detectScalarConflicts(grps2[0].clients);
+  assert('detectScalarConflicts contact 是衝突', cflt2.filter(c=>c.field==='contact').length, 1);
+  const merged2=mergeClientGroup(grps2[0],{contact:'乙'});
+  assert('mergeClientGroup 用 resolution', merged2.merged.contact, '乙');
+  DB.clients=savedClients;
 
   // --- statusEq ---
   assert('statusEq 拒絕=已結案', statusEq(STATUS.REFUSE,STATUS.CLOSED), true);
