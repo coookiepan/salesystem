@@ -905,8 +905,21 @@ tbody tr:hover{background:var(--surface-hover)}
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" onclick="closeVerMenu();syncFromSheet()">從雲端拉最新（每日開工建議）</button>
       <button class="btn btn-outline" onclick="closeVerMenu();pushAllToSheet()">推送全部到雲端</button>
+      <button class="btn btn-outline" onclick="closeVerMenu();openDedupModal()">清理重複店家</button>
       <button class="btn btn-outline" onclick="closeVerMenu();forceReload()" style="color:var(--text3)">強制重新載入程式</button>
       <button class="btn btn-outline" onclick="closeVerMenu()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dedup-modal" onclick="if(event.target===this)closeDedupModal()">
+  <div class="modal" style="max-width:640px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-title" style="font-size:14px">清理重複店家</div>
+    <div id="dedup-summary" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+    <div id="dedup-list" style="flex:1;overflow-y:auto;font-size:13px;max-height:60vh"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-primary" id="dedup-auto-btn" onclick="dedupAutoMerge()">自動合併無衝突組</button>
+      <button class="btn btn-outline" onclick="closeDedupModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -915,7 +928,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.17-c-map';
+const APP_VERSION='v2026.04.21-dedup';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1713,6 +1726,120 @@ function backfillClientIds(){
   return count;
 }
 
+// ═══════════════════════════════════════════════════════════
+// DEDUP: 清理重複店家（多裝置同步造成同店名多筆的救援工具）
+// ═══════════════════════════════════════════════════════════
+// 店名正規化：去除前後空白、合併連續空白；全形空白轉半形；大小寫保留
+function normalizeName(n){
+  if(!n)return '';
+  return String(n)
+    .replace(/　/g,' ')          // 全形空白 → 半形
+    .replace(/\s+/g,' ')             // 連續空白合併
+    .trim()
+    .toLowerCase();
+}
+// 掃描 DB.clients，依正規化後店名分組，回傳所有群組大小 ≥ 2 的組
+// 每組 = {key, clients:[{client, idx}...]}
+function findDuplicateGroups(){
+  const map=new Map();
+  (DB.clients||[]).forEach((c,idx)=>{
+    if(!c||!c.name)return;
+    const k=normalizeName(c.name);
+    if(!k)return;
+    if(!map.has(k))map.set(k,[]);
+    map.get(k).push({client:c,idx});
+  });
+  const groups=[];
+  map.forEach((arr,key)=>{if(arr.length>=2)groups.push({key,clients:arr});});
+  return groups;
+}
+// 合併候選人：挑 updatedAt 最新者為 keeper，其他為 removers
+function pickMergeKeeper(clients){
+  const sorted=[...clients].sort((a,b)=>(b.client.updatedAt||0)-(a.client.updatedAt||0));
+  return {keeper:sorted[0],removers:sorted.slice(1)};
+}
+// 比對一組 clients 的純量欄位衝突（非空且值不同才算衝突）
+// 回傳 {field, values:[{idx,value}]} 陣列；陣列空 = 無衝突可自動合併
+const DEDUP_SCALAR_FIELDS=['contact','addr','type','status','nextdate','env','note','trialDate'];
+function detectScalarConflicts(clients){
+  const conflicts=[];
+  DEDUP_SCALAR_FIELDS.forEach(f=>{
+    const vals=clients.map(x=>({idx:x.idx,value:(x.client[f]||'').toString().trim()}))
+                      .filter(x=>x.value!=='');
+    const uniq=[...new Set(vals.map(v=>v.value))];
+    if(uniq.length>1)conflicts.push({field:f,values:vals});
+  });
+  return conflicts;
+}
+// 合併 visits：依 (date + statusChange + note 前32字) 做 key 去重
+function mergeVisits(clients){
+  const seen=new Set();const out=[];
+  clients.forEach(x=>{
+    (x.client.visits||[]).forEach(v=>{
+      if(!v)return;
+      const k=(v.date||'')+'|'+(v.statusChange||'')+'|'+((v.note||'').slice(0,32));
+      if(seen.has(k))return;
+      seen.add(k);out.push(v);
+    });
+  });
+  out.sort((a,b)=>(a.date||'')<(b.date||'')?-1:1);
+  return out;
+}
+// 合併 items (trial/contracted)：(product + bundledTo + contractDate) 做 key 去重
+function mergeItems(clients,field){
+  const seen=new Set();const out=[];
+  clients.forEach(x=>{
+    (x.client[field]||[]).forEach(it=>{
+      if(!it||!it.product)return;
+      const k=it.product+'|'+(it.bundledTo||'')+'|'+(it.contractDate||'');
+      if(seen.has(k))return;
+      seen.add(k);out.push(JSON.parse(JSON.stringify(it)));
+    });
+  });
+  return out;
+}
+// 合併 todos：依文字內容去重
+function mergeTodos(clients){
+  const seen=new Set();const out=[];
+  clients.forEach(x=>{
+    (x.client.todos||[]).forEach(t=>{
+      if(!t)return;
+      const k=(t.text||'').trim();
+      if(!k||seen.has(k))return;
+      seen.add(k);out.push({...t});
+    });
+  });
+  return out;
+}
+// 核心合併：把 group 合併進 keeper（以 keeper 為基底，list 全合併、純量欄衝突用 resolutions）
+// resolutions: {field: chosenValue} — 若未提供則 keeper 原值優先
+// 回傳新的 client 物件（未寫回 DB）
+function mergeClientGroup(group,resolutions){
+  const {keeper}=pickMergeKeeper(group.clients);
+  const all=group.clients;
+  const merged={...keeper.client};
+  // 純量欄：若 keeper 該欄為空且其他有值 → 補上；若有衝突且提供 resolution → 用 resolution
+  DEDUP_SCALAR_FIELDS.forEach(f=>{
+    if(resolutions&&Object.prototype.hasOwnProperty.call(resolutions,f)){
+      merged[f]=resolutions[f];
+      return;
+    }
+    if(!merged[f]){
+      for(const x of all){if(x.client[f]){merged[f]=x.client[f];break;}}
+    }
+  });
+  // 座標：任一有就帶（keeper 優先）
+  if(!merged.lat){
+    for(const x of all){if(x.client.lat){merged.lat=x.client.lat;merged.lng=x.client.lng;merged.geocodeSource=x.client.geocodeSource;merged.geocodedAt=x.client.geocodedAt;break;}}
+  }
+  merged.visits=mergeVisits(all);
+  merged.trialItems=mergeItems(all,'trialItems');
+  merged.contractedItems=mergeItems(all,'contractedItems');
+  merged.todos=mergeTodos(all);
+  merged.updatedAt=Date.now();
+  return {keeperIdx:keeper.idx,merged,removerIdxs:all.filter(x=>x.idx!==keeper.idx).map(x=>x.idx)};
+}
+
 // v6: 移除已廢棄的 c.fw4 快取欄位（金額一律由 calcFW4 即時算）
 function removeDeprecatedFw4(){
   let count=0;
@@ -2153,13 +2280,14 @@ function setRegion(r,el){
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
 // 單筆 4W 金額（唯一計算入口）：
-// - quoted > 0 → quoted × qty（quoted 語意 = 該品項的 4W 報價金額）
-// - 否則 → displayFw4 fallback（原價 × cycle 調整 × 地墊 4W 0.8 折）
+// - quoted > 0 → 直接回傳 quoted（quoted 語意 = 該品項的 4W 報價總金額，使用者輸入時
+//   對應 UI 上的 ref9 total placeholder，已含 qty；不可再乘 qty）
+// - 否則 → displayFw4 fallback（原價 × cycle 調整 × 地墊 4W 0.8 折 × qty）
 // 報表、成約區、試用品清單統一用此函式，不再使用已移除的 fw4()
 function itemFW4(it){
   if(!it||!it.product)return 0;
   if(it.quoted&&it.quoted>0){
-    return Math.round(it.quoted*(it.qty||1));
+    return Math.round(it.quoted);
   }
   return displayFw4(it.product,it.qty||1,it.cycle||'2W');
 }
@@ -2172,14 +2300,34 @@ function calcFW4(c){
   if(k>0)return k;
   return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
 }
-// 報表專用：區間內有成約 → 只加區間內成約品項（含配件）；否則用試用金額
+// 報表專用：區間內有成約 → 只加區間內成約主項 + 綁在這些主項下的配件（不論配件
+// contractDate 是否在區間）；區間外的同代號成約不納入。無區間內成約時回傳試用金額。
 function calcReportAmt(c,from,to){
-  const inRange=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
-  if(inRange.length){
-    const codes=new Set(inRange.map(it=>it.product));
-    return (c.contractedItems||[]).filter(it=>codes.has(it.product)||codes.has(it.bundledTo)).reduce((s,it)=>s+itemFW4(it),0);
+  const items=c.contractedItems||[];
+  const inRangeMains=items.filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to);
+  if(inRangeMains.length){
+    const mainKeys=new Set(inRangeMains.map(it=>it.product+'|'+it.contractDate));
+    const mainCodesInRange=new Set(inRangeMains.map(it=>it.product));
+    return items.filter(it=>{
+      if(!it.bundledTo){
+        return it.contractDate&&mainKeys.has(it.product+'|'+it.contractDate);
+      }
+      return mainCodesInRange.has(it.bundledTo);
+    }).reduce((s,it)=>s+itemFW4(it),0);
   }
   return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+}
+// 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
+function rptAmountMonth(c,from,to){
+  const contractDates=(c.contractedItems||[])
+    .filter(it=>it.product&&!it.bundledTo&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to)
+    .map(it=>it.contractDate).sort();
+  if(contractDates.length) return parseInt(contractDates[0].split('-')[1],10);
+  const visitDates=(c.visits||[])
+    .filter(v=>v.date&&v.date>=from&&v.date<=to)
+    .map(v=>v.date).sort();
+  if(visitDates.length) return parseInt(visitDates[0].split('-')[1],10);
+  return null;
 }
 // 試用→成約：把第 i 筆主項（含其 bundled 配件）從 cfItems 搬到 cfContracted
 // 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
@@ -3091,6 +3239,17 @@ async function saveClient(){
     const tdVal=document.getElementById('cf-trialdate').value;
     if(tdVal)c.trialDate=tdVal;
     const isEdit=S.editIdx>=0;
+    // 新增時檢查店名正規化後是否與現有客戶重複（防止多裝置並行造成雲端重複）
+    if(!isEdit){
+      const k=normalizeName(c.name);
+      if(k){
+        const dup=(DB.clients||[]).find(x=>x&&normalizeName(x.name)===k);
+        if(dup){
+          const ok=confirm(`⚠ 已存在同名店家「${dup.name}」。\n\n仍要新增一筆新的嗎？\n（若是同一家店請按取消，改用編輯既有資料；若確實是不同分店請按確定）`);
+          if(!ok){btn.disabled=false;btn.textContent='儲存客戶';return;}
+        }
+      }
+    }
     // 自動寫 visit：status 從「未拜訪/空」變成其他
     const oldStatus=isEdit?(DB.clients[S.editIdx]?.status||''):'';
     const isLeaving=(!oldStatus||oldStatus===STATUS.UNVISITED)&&c.status&&c.status!==STATUS.UNVISITED;
@@ -3420,13 +3579,6 @@ function rptProd(items){
   return 'ALL';
 }
 
-// 取該客戶第一次 visit 的月份 (1-12)；沒有 visits 則回傳 null
-function rptFirstMonth(c){
-  const vs=(c.visits||[]).filter(v=>v.date).map(v=>v.date).sort();
-  if(!vs.length) return null;
-  return parseInt(vs[0].split('-')[1],10);
-}
-
 function rptVisitsInRange(c,from,to){
   return (c.visits||[]).filter(v=>v.date&&v.date>=from&&v.date<=to);
 }
@@ -3460,11 +3612,12 @@ function genReport(){
   picked.forEach((c,i)=>{
     const fw=calcReportAmt(c,from,to);
     const prod=rptProd(c.trialItems);
-    const mon=rptFirstMonth(c);
+    // 月份欄：區間內最早成約月優先，否則區間內首訪月，皆無則留白
+    const mon=rptAmountMonth(c,from,to);
     // 欄位（依照月報 RS sheet 結構）: NO, 客戶名稱, (空=C欄), 窗口/職位, 提案商品, 1月, 2月, 3月, 4月, 5月, 6月, 拜訪進度說明
     const cols=[String(i+1), c.name, '', c.contact||'', prod];
     for(let m=1;m<=6;m++){
-      cols.push((m===mon&&fw>0)?String(fw):'');
+      cols.push((mon!==null&&m===mon&&fw>0)?String(fw):'');
     }
     // 拜訪進度說明：預填 note，讓使用者自行修改
     cols.push((c.note||'').replace(/[\t\n\r]/g,' '));
@@ -3474,36 +3627,52 @@ function genReport(){
   document.getElementById('rpt-4w-cnt').textContent=`共 ${rows4w.length} 筆`;
 
   // ─── 日報區塊 ───
-  // 依日期聚合：區間內所有 visits
+  // 依日期聚合：區間內所有 visits，同一 (client,date) 合併成單列
+  // （note/insight 串接去重，勾選取聯集；避免同客戶同日多訪重複出現）
   const byDate={};
   DB.clients.forEach(c=>{
     (c.visits||[]).forEach(v=>{
       if(v.date&&v.date>=from&&v.date<=to){
-        if(!byDate[v.date]) byDate[v.date]=[];
-        byDate[v.date].push({c,v});
+        if(!byDate[v.date]) byDate[v.date]={order:[],map:new Map()};
+        const bucket=byDate[v.date];
+        const key=DB.clients.indexOf(c);
+        if(!bucket.map.has(key)){
+          bucket.map.set(key,{c,visits:[v]});
+          bucket.order.push(key);
+        }else{
+          bucket.map.get(key).visits.push(v);
+        }
       }
     });
   });
   const dates=Object.keys(byDate).sort();
   const dowArr=['日','一','二','三','四','五','六'];
   const blocks=[];
-  let totalVisits=0;
+  let totalShops=0;
   dates.forEach(date=>{
-    const entries=byDate[date];
-    totalVisits+=entries.length;
+    const bucket=byDate[date];
+    const entries=bucket.order.map(k=>bucket.map.get(k));
+    totalShops+=entries.length;
     const dow=dowArr[new Date(date+'T00:00:00').getDay()];
     blocks.push(`=== ${date} (週${dow}) ===`);
     entries.forEach((e,i)=>{
-      const c=e.c, v=e.v;
-      // 拜訪內容說明 = note 與 insight 合併
-      const note=[v.note,v.insight].filter(x=>x&&x.trim()).join('；').replace(/[\t\n\r]/g,' ');
-      // 勾選邏輯
-      const sc=v.statusChange||'';
-      const isInit=sc===STATUS.FIRST;
-      const isRe=sc===STATUS.REVISIT;
-      const isQuote=sc===STATUS.QUOTE;
-      // 有報價就自動勾試用；「試用中/將成約/已成約」也算試用
-      const isTrial=isQuote||sc===STATUS.TRIAL||sc===STATUS.CLOSING||sc===STATUS.DEAL;
+      const c=e.c;
+      // note/insight 合併所有當日 visits，去重並串接
+      const noteParts=[];
+      const seen=new Set();
+      e.visits.forEach(v=>{
+        [v.note,v.insight].forEach(x=>{
+          const s=(x||'').trim();
+          if(s&&!seen.has(s)){seen.add(s);noteParts.push(s);}
+        });
+      });
+      const note=noteParts.join('；').replace(/[\t\n\r]/g,' ');
+      // 勾選取聯集：任一 visit 命中就算數
+      const scs=e.visits.map(v=>v.statusChange||'');
+      const isInit=scs.includes(STATUS.FIRST);
+      const isRe=scs.includes(STATUS.REVISIT);
+      const isQuote=scs.includes(STATUS.QUOTE);
+      const isTrial=isQuote||scs.some(s=>s===STATUS.TRIAL||s===STATUS.CLOSING||s===STATUS.DEAL);
       // 初訪/複訪 互斥，擇一
       const initMark=isInit&&!isRe?'✓':'';
       const reMark=isRe&&!isInit?'✓':'';
@@ -3529,7 +3698,7 @@ function genReport(){
     blocks.push(''); // 空行分隔
   });
   document.getElementById('rpt-daily').value=blocks.join('\n').replace(/\n+$/,'');
-  document.getElementById('rpt-daily-cnt').textContent=`${dates.length} 天・${totalVisits} 軒`;
+  document.getElementById('rpt-daily-cnt').textContent=`${dates.length} 天・${totalShops} 軒`;
 
   document.getElementById('rpt-output').style.display='block';
 }
@@ -3679,6 +3848,139 @@ function showVerMenu(){
   document.getElementById('ver-menu-modal').classList.add('on');
 }
 function closeVerMenu(){document.getElementById('ver-menu-modal').classList.remove('on');}
+
+// ═══════════════════════════════════════════════════════════
+// DEDUP MODAL
+// ═══════════════════════════════════════════════════════════
+// _dedupState: { groups: [...], resolutions: {groupKey: {field: value}}, conflicts: {groupKey: [fields]} }
+let _dedupState=null;
+function openDedupModal(){
+  if(!confirm('即將掃描重複店家（依店名正規化後比對）。建議先從雲端拉最新資料，避免清理到過時的副本。\n\n是否繼續？'))return;
+  const groups=findDuplicateGroups();
+  _dedupState={groups,resolutions:{},conflicts:{}};
+  groups.forEach(g=>{
+    _dedupState.conflicts[g.key]=detectScalarConflicts(g.clients);
+  });
+  renderDedupModal();
+  document.getElementById('dedup-modal').classList.add('on');
+}
+function closeDedupModal(){
+  document.getElementById('dedup-modal').classList.remove('on');
+  _dedupState=null;
+}
+function renderDedupModal(){
+  const s=_dedupState;if(!s){return;}
+  const groups=s.groups;
+  const sum=document.getElementById('dedup-summary');
+  const autoCnt=groups.filter(g=>s.conflicts[g.key].length===0).length;
+  const cfltCnt=groups.length-autoCnt;
+  sum.innerHTML=`找到 <b>${groups.length}</b> 組重複 · 無衝突可自動合併 <b>${autoCnt}</b> 組 · 有衝突需手動處理 <b>${cfltCnt}</b> 組`;
+  const list=document.getElementById('dedup-list');
+  if(!groups.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">🎉 沒有發現重複店家</div>';return;}
+  list.innerHTML=groups.map(g=>{
+    const {keeper}=pickMergeKeeper(g.clients);
+    const conflicts=s.conflicts[g.key];
+    const rowsHtml=g.clients.map(x=>{
+      const mark=x.idx===keeper.idx?'<span style="color:var(--green);font-weight:600">⭐ 保留</span>':'<span style="color:var(--text3)">將合併並刪除</span>';
+      const upd=x.client.updatedAt?new Date(x.client.updatedAt).toISOString().slice(0,16).replace('T',' '):'無時間';
+      const visitCnt=(x.client.visits||[]).length;
+      return `<div style="font-size:12px;padding:4px 8px;background:var(--bg2);border-radius:4px;margin-bottom:3px">
+        ${mark} · #${x.idx} · updatedAt ${upd} · ${visitCnt} 筆 visit
+        <div style="color:var(--text3);font-size:11px">${escHtml(x.client.contact||'—')} · ${escHtml((x.client.addr||'').slice(0,30)||'—')}</div>
+      </div>`;
+    }).join('');
+    let cHtml='';
+    if(conflicts.length){
+      cHtml='<div style="margin-top:6px;padding:6px;border:1px solid var(--yellow);border-radius:4px;background:#fffbe6">'+
+        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text2)">⚠ 欄位衝突，選擇要保留的值：</div>'+
+        conflicts.map(c=>{
+          const chosen=(s.resolutions[g.key]||{})[c.field];
+          const opts=c.values.map(v=>{
+            const sel=chosen===v.value?' selected':'';
+            return `<option value="${encodeURIComponent(v.value)}"${sel}>${escHtml(v.value.slice(0,50))}</option>`;
+          }).join('');
+          return `<div style="font-size:11px;margin-bottom:3px">
+            <span style="display:inline-block;min-width:60px;color:var(--text2)">${c.field}:</span>
+            <select onchange="setDedupResolution('${g.key}','${c.field}',decodeURIComponent(this.value))" style="font-size:11px;max-width:300px">
+              <option value="">（請選擇）</option>${opts}
+            </select>
+          </div>`;
+        }).join('')+
+        `<button class="btn btn-outline btn-xs" onclick="mergeDedupGroup('${g.key}')" style="margin-top:4px">此組合併</button>`+
+      '</div>';
+    }else{
+      cHtml=`<div style="margin-top:4px"><button class="btn btn-outline btn-xs" onclick="mergeDedupGroup('${g.key}')">此組合併（無衝突）</button></div>`;
+    }
+    return `<div style="padding:8px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">${escHtml(g.clients[0].client.name)} <span style="color:var(--text3);font-weight:400">（${g.clients.length} 筆）</span></div>
+      ${rowsHtml}${cHtml}
+    </div>`;
+  }).join('');
+}
+function setDedupResolution(key,field,value){
+  if(!_dedupState)return;
+  if(!_dedupState.resolutions[key])_dedupState.resolutions[key]={};
+  _dedupState.resolutions[key][field]=value;
+}
+// 執行合併：把 group 合併進 keeper，推送 save(keeper) + delete(removers)
+async function mergeDedupGroup(key){
+  const s=_dedupState;if(!s)return;
+  const g=s.groups.find(x=>x.key===key);if(!g)return;
+  const conflicts=s.conflicts[key];
+  if(conflicts.length){
+    const res=s.resolutions[key]||{};
+    const missing=conflicts.filter(c=>!Object.prototype.hasOwnProperty.call(res,c.field));
+    if(missing.length){alert('尚有 '+missing.length+' 個衝突欄位未選擇：'+missing.map(c=>c.field).join(', '));return;}
+  }
+  if(!confirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n保留最新那筆，其餘的 visits/品項/待辦清單合併進來後刪除。此操作會同步到雲端。`))return;
+  const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,s.resolutions[key]);
+  // 先保留 remover 的 id 清單
+  const removerIds=removerIdxs.map(i=>DB.clients[i]?.id).filter(x=>x);
+  // 寫回 keeper
+  DB.clients[keeperIdx]=merged;
+  // 從大到小刪除 removers（避免 index 位移）
+  removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
+  saveLocal();
+  // 雲端：save keeper + delete removers
+  autoSync('save',{client:merged});
+  for(const id of removerIds){autoSync('delete',{id});}
+  renderClients();
+  // 重新計算 group 清單
+  s.groups=findDuplicateGroups();
+  s.conflicts={};
+  s.resolutions={};
+  s.groups.forEach(gg=>{s.conflicts[gg.key]=detectScalarConflicts(gg.clients);});
+  renderDedupModal();
+}
+// 一鍵合併所有無衝突的組
+async function dedupAutoMerge(){
+  const s=_dedupState;if(!s)return;
+  const targets=s.groups.filter(g=>s.conflicts[g.key].length===0);
+  if(!targets.length){alert('沒有可自動合併的組（都有衝突）');return;}
+  if(!confirm(`將自動合併 ${targets.length} 組無衝突的重複店家，並同步到雲端。是否繼續？`))return;
+  const allRemoverIds=[];
+  targets.forEach(g=>{
+    const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,null);
+    const removerIds=removerIdxs.map(i=>DB.clients[i]?.id).filter(x=>x);
+    allRemoverIds.push(...removerIds);
+    DB.clients[keeperIdx]=merged;
+    removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
+  });
+  saveLocal();
+  // 雲端：save 每個 keeper + delete removers
+  for(const g of targets){
+    const keeper=DB.clients.find(c=>c&&normalizeName(c.name)===g.key);
+    if(keeper)autoSync('save',{client:keeper});
+  }
+  for(const id of allRemoverIds){autoSync('delete',{id});}
+  renderClients();
+  s.groups=findDuplicateGroups();
+  s.conflicts={};
+  s.resolutions={};
+  s.groups.forEach(gg=>{s.conflicts[gg.key]=detectScalarConflicts(gg.clients);});
+  renderDedupModal();
+  alert(`✅ 已合併 ${targets.length} 組，共刪除 ${allRemoverIds.length} 筆重複資料`);
+}
 // Pull banner (每日提醒從雲端拉最新)
 function todayDateStr(){return fmtDate();}
 function checkDailyPull(){
@@ -3785,8 +4087,8 @@ if(location.search.includes('test=1')){
   assert('displayFw4 不存在商品', displayFw4('XXXXX',1,'2W'), 0);
 
   // --- itemFW4 ---
-  // quoted 有值 → quoted × qty
-  assert('itemFW4 quoted=500 qty=2', itemFW4({product:'S-20',quoted:500,qty:2,cycle:'2W'}), 1000);
+  // quoted 有值 → 直接回傳（quoted 已是 4W 總額，不再乘 qty）
+  assert('itemFW4 quoted=500 qty=2', itemFW4({product:'S-20',quoted:500,qty:2,cycle:'2W'}), 500);
   // quoted=0 → fallback displayFw4
   assert('itemFW4 quoted=0', itemFW4({product:'S-20',quoted:0,qty:1,cycle:'2W'}), 200);
   // 無 quoted → fallback
@@ -3796,6 +4098,75 @@ if(location.search.includes('test=1')){
   // null input
   assert('itemFW4 null', itemFW4(null), 0);
   assert('itemFW4 無 product', itemFW4({qty:1}), 0);
+
+  // --- calcReportAmt ---
+  // 區間外同代號成約不納入：2026-01 成約 S-20、2026-04 又成約 S-20，跑 4 月報表只算 4 月那筆
+  const rc1={contractedItems:[
+    {product:'S-20',qty:1,quoted:300,cycle:'2W',contractDate:'2026-01-15'},
+    {product:'S-20',qty:1,quoted:400,cycle:'2W',contractDate:'2026-04-10'}
+  ]};
+  assert('calcReportAmt 區間外同代號不納入', calcReportAmt(rc1,'2026-04-01','2026-04-30'), 400);
+  // 配件：bundledTo 指向區間內主項的配件應納入（即使配件本身 contractDate 不同）
+  const rc2={contractedItems:[
+    {product:'S-20',qty:1,quoted:500,cycle:'2W',contractDate:'2026-04-10'},
+    {product:'ACC1',qty:1,quoted:100,cycle:'2W',contractDate:'2026-04-10',bundledTo:'S-20'}
+  ]};
+  assert('calcReportAmt 主項+配件', calcReportAmt(rc2,'2026-04-01','2026-04-30'), 600);
+  // 無區間內成約 → fallback 試用品項
+  const rc3={contractedItems:[],trialItems:[{product:'S-20',qty:2,cycle:'2W'}]};
+  assert('calcReportAmt 無成約 fallback 試用', calcReportAmt(rc3,'2026-04-01','2026-04-30'), 400);
+
+  // --- rptAmountMonth ---
+  // 區間內有成約 → 回傳最早成約月
+  const rm1={contractedItems:[
+    {product:'S-20',qty:1,contractDate:'2026-04-20'},
+    {product:'S-20',qty:1,contractDate:'2026-04-05'}
+  ],visits:[{date:'2026-01-10'}]};
+  assert('rptAmountMonth 區間內最早成約月', rptAmountMonth(rm1,'2026-04-01','2026-04-30'), 4);
+  // 無成約但有 visit → 回傳區間內首訪月
+  const rm2={contractedItems:[],visits:[{date:'2026-04-12'},{date:'2026-04-03'}]};
+  assert('rptAmountMonth 區間內首訪月', rptAmountMonth(rm2,'2026-04-01','2026-04-30'), 4);
+  // 區間外的 visit 不算
+  const rm3={contractedItems:[],visits:[{date:'2026-01-10'}]};
+  assert('rptAmountMonth 區間外 visit → null', rptAmountMonth(rm3,'2026-04-01','2026-04-30'), null);
+  // 皆無 → null
+  assert('rptAmountMonth 皆無 → null', rptAmountMonth({},'2026-04-01','2026-04-30'), null);
+
+  // --- normalizeName ---
+  assert('normalizeName 前後空白', normalizeName('  A店  '), 'a店');
+  assert('normalizeName 連續空白', normalizeName('A  B'), 'a b');
+  assert('normalizeName 全形空白', normalizeName('A　B'), 'a b');
+  assert('normalizeName 大小寫', normalizeName('McDonald\'s'), "mcdonald's");
+  assert('normalizeName 空值', normalizeName(''), '');
+  assert('normalizeName null', normalizeName(null), '');
+
+  // --- findDuplicateGroups / mergeClientGroup ---
+  const savedClients=DB.clients;
+  DB.clients=[
+    {id:'a',name:'王記',contact:'老闆',addr:'台南市',updatedAt:100,visits:[{date:'2026-01-01',note:'v1'}]},
+    {id:'b',name:'王記 ',contact:'',addr:'台南市',updatedAt:200,visits:[{date:'2026-02-01',note:'v2'}]},
+    {id:'c',name:'李記',updatedAt:100}
+  ];
+  const grps=findDuplicateGroups();
+  assert('findDuplicateGroups 找到 1 組', grps.length, 1);
+  assert('findDuplicateGroups 該組有 2 筆', grps[0].clients.length, 2);
+  const cflt=detectScalarConflicts(grps[0].clients);
+  assert('detectScalarConflicts contact 不是衝突（b 空）', cflt.filter(c=>c.field==='contact').length, 0);
+  const merged=mergeClientGroup(grps[0],null);
+  assert('mergeClientGroup keeper 為 updatedAt 較新', DB.clients[merged.keeperIdx].id, 'b');
+  assert('mergeClientGroup visits 合併 2 筆', merged.merged.visits.length, 2);
+  assert('mergeClientGroup contact 從 a 補上', merged.merged.contact, '老闆');
+  // 有衝突情境
+  DB.clients=[
+    {id:'a',name:'X店',contact:'甲',updatedAt:100},
+    {id:'b',name:'x店',contact:'乙',updatedAt:200}
+  ];
+  const grps2=findDuplicateGroups();
+  const cflt2=detectScalarConflicts(grps2[0].clients);
+  assert('detectScalarConflicts contact 是衝突', cflt2.filter(c=>c.field==='contact').length, 1);
+  const merged2=mergeClientGroup(grps2[0],{contact:'乙'});
+  assert('mergeClientGroup 用 resolution', merged2.merged.contact, '乙');
+  DB.clients=savedClients;
 
   // --- statusEq ---
   assert('statusEq 拒絕=已結案', statusEq(STATUS.REFUSE,STATUS.CLOSED), true);
