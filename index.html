@@ -2153,13 +2153,14 @@ function setRegion(r,el){
 // CLIENT LIST
 // ═══════════════════════════════════════════════════════════
 // 單筆 4W 金額（唯一計算入口）：
-// - quoted > 0 → quoted × qty（quoted 語意 = 該品項的 4W 報價金額）
-// - 否則 → displayFw4 fallback（原價 × cycle 調整 × 地墊 4W 0.8 折）
+// - quoted > 0 → 直接回傳 quoted（quoted 語意 = 該品項的 4W 報價總金額，使用者輸入時
+//   對應 UI 上的 ref9 total placeholder，已含 qty；不可再乘 qty）
+// - 否則 → displayFw4 fallback（原價 × cycle 調整 × 地墊 4W 0.8 折 × qty）
 // 報表、成約區、試用品清單統一用此函式，不再使用已移除的 fw4()
 function itemFW4(it){
   if(!it||!it.product)return 0;
   if(it.quoted&&it.quoted>0){
-    return Math.round(it.quoted*(it.qty||1));
+    return Math.round(it.quoted);
   }
   return displayFw4(it.product,it.qty||1,it.cycle||'2W');
 }
@@ -3785,8 +3786,8 @@ if(location.search.includes('test=1')){
   assert('displayFw4 不存在商品', displayFw4('XXXXX',1,'2W'), 0);
 
   // --- itemFW4 ---
-  // quoted 有值 → quoted × qty
-  assert('itemFW4 quoted=500 qty=2', itemFW4({product:'S-20',quoted:500,qty:2,cycle:'2W'}), 1000);
+  // quoted 有值 → 直接回傳（quoted 已是 4W 總額，不再乘 qty）
+  assert('itemFW4 quoted=500 qty=2', itemFW4({product:'S-20',quoted:500,qty:2,cycle:'2W'}), 500);
   // quoted=0 → fallback displayFw4
   assert('itemFW4 quoted=0', itemFW4({product:'S-20',quoted:0,qty:1,cycle:'2W'}), 200);
   // 無 quoted → fallback
