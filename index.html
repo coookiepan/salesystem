@@ -928,7 +928,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.21-dedup';
+const APP_VERSION='v2026.04.21-dedup2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -944,7 +944,8 @@ function handleRequest(e){
     switch(action){
       case 'getAll':        result=getAllClients();break;
       case 'save':          result=saveClient(body.client);break;
-      case 'delete':        result=deleteClient(body.id);break;
+      case 'delete':        result=deleteClient(body.id,body.name);break;
+      case 'deleteByName':  result=deleteByName(body.name,body.keepId);break;
       case 'getInventory':  result=getInventory();break;
       case 'saveInventory': result=saveInventory(body.inventory);break;
       case 'getProducts':   result=getProducts();break;
@@ -981,18 +982,54 @@ function findRowById(sheet,id){
   }
   return -1;
 }
+function normName(n){return (n||'').toString().replace(/\\u3000/g,' ').replace(/\\s+/g,' ').trim().toLowerCase();}
+function findRowsByName(sheet,name){
+  const rows=[];const k=normName(name);if(!k)return rows;
+  const lastRow=sheet.getLastRow();if(lastRow<2)return rows;
+  const data=sheet.getRange(2,1,lastRow-1,1).getValues();
+  for(let i=0;i<data.length;i++){
+    try{const c=JSON.parse(data[i][0]);if(normName(c.name)===k)rows.push(i+2);}catch(e){}
+  }
+  return rows;
+}
 function saveClient(client){
   const sheet=getSheet();const json=JSON.stringify(client);
-  const row=findRowById(sheet,client.id);
+  let row=findRowById(sheet,client.id);
+  // 後備：若找不到 id（舊資料 row 無 id），改用正規化後店名比對第一筆
+  if(row<0&&client.name){
+    const ns=findRowsByName(sheet,client.name);
+    if(ns.length)row=ns[0];
+  }
   if(row>0){sheet.getRange(row,1).setValue(json);}
   else{sheet.getRange(sheet.getLastRow()+1,1).setValue(json);}
-  return{ok:true};
+  return{ok:true,row:row>0?row:-1};
 }
-function deleteClient(id){
+function deleteClient(id,name){
   const sheet=getSheet();
   const row=findRowById(sheet,id);
-  if(row>0)sheet.deleteRow(row);
-  return{ok:true};
+  if(row>0){sheet.deleteRow(row);return{ok:true,deleted:1};}
+  // 後備：若無 id 命中，且有提供 name，刪所有同名列（給清理重複用）
+  if(name){
+    const rows=findRowsByName(sheet,name);
+    rows.sort((a,b)=>b-a).forEach(r=>sheet.deleteRow(r));
+    return{ok:true,deleted:rows.length,byName:true};
+  }
+  return{ok:true,deleted:0};
+}
+// 刪所有 normalized name 相同但 id ≠ keepId 的列（清理雲端重複專用）
+function deleteByName(name,keepId){
+  const sheet=getSheet();const k=normName(name);if(!k)return{ok:true,deleted:0};
+  const lastRow=sheet.getLastRow();if(lastRow<2)return{ok:true,deleted:0};
+  const data=sheet.getRange(2,1,lastRow-1,1).getValues();
+  const toDelete=[];
+  for(let i=0;i<data.length;i++){
+    try{
+      const c=JSON.parse(data[i][0]);
+      if(normName(c.name)===k&&c.id!==keepId)toDelete.push(i+2);
+    }catch(e){}
+  }
+  toDelete.sort((a,b)=>b-a).forEach(r=>sheet.deleteRow(r));
+  return{ok:true,deleted:toDelete.length};
 }
 
 function getInvSheet(){
@@ -3922,7 +3959,61 @@ function setDedupResolution(key,field,value){
   if(!_dedupState.resolutions[key])_dedupState.resolutions[key]={};
   _dedupState.resolutions[key][field]=value;
 }
-// 執行合併：把 group 合併進 keeper，推送 save(keeper) + delete(removers)
+// 逐筆 await 的雲端同步輔助：直接用 api()，可取得每筆成敗與 server 回應
+async function dedupApi(action,payload){
+  if(!SHEET_URL)return{ok:false,error:'未設定 SHEET_URL'};
+  try{const r=await api({action,...payload});return{ok:true,resp:r};}
+  catch(e){return{ok:false,error:e.message||String(e)};}
+}
+// 單組合併：先合併本地 → 呼叫 deleteByName（新版 Apps Script）清雲端同名舊列 → save keeper
+// 若伺服器還是舊版（不認 deleteByName），fallback 用 delete(id,name)
+async function syncMergedGroupToCloud(merged,removerClients){
+  const log=[];
+  // 先用 deleteByName 一次清掉所有同名但非 keeper id 的雲端列（涵蓋舊資料無 id 的情況）
+  const dnRes=await dedupApi('deleteByName',{name:merged.name,keepId:merged.id});
+  if(dnRes.ok&&dnRes.resp&&typeof dnRes.resp.deleted==='number'){
+    log.push({type:'deleteByName',name:merged.name,ok:true,deleted:dnRes.resp.deleted});
+  }else if(dnRes.ok){
+    // 舊版 Apps Script 不認 deleteByName，fallback 逐筆刪
+    log.push({type:'deleteByName',name:merged.name,ok:false,error:'舊版 Apps Script 不支援 deleteByName，改用逐筆刪除'});
+    for(const r of removerClients){
+      const res=await dedupApi('delete',{id:r.id,name:r.name});
+      log.push({type:'delete',id:r.id||'(無 id)',name:r.name,ok:res.ok,error:res.error,deleted:res.resp?.deleted});
+    }
+  }else{
+    log.push({type:'deleteByName',name:merged.name,ok:false,error:dnRes.error});
+  }
+  // 最後 save keeper（確保 keeper 以最新合併內容存在於雲端）
+  const sRes=await dedupApi('save',{client:merged});
+  log.push({type:'save',id:merged.id,name:merged.name,ok:sRes.ok,error:sRes.error,row:sRes.resp?.row});
+  return log;
+}
+// 顯示結果摘要
+function showDedupReport(fullLog,totalGroups){
+  const saves=fullLog.filter(x=>x.type==='save');
+  const delByName=fullLog.filter(x=>x.type==='deleteByName'&&x.ok);
+  const deletes=fullLog.filter(x=>x.type==='delete');
+  const fails=fullLog.filter(x=>!x.ok);
+  const totalDeleted=delByName.reduce((s,x)=>s+(x.deleted||0),0)+deletes.reduce((s,x)=>s+(x.deleted||0),0);
+  let html=`<div style="font-size:13px;line-height:1.6">
+    <div>✅ 合併 <b>${totalGroups}</b> 組</div>
+    <div>☁️ 雲端實際刪除 <b>${totalDeleted}</b> 列</div>
+    <div>💾 keeper 存回雲端 <b>${saves.filter(x=>x.ok).length}/${saves.length}</b> 筆</div>`;
+  if(fails.length){
+    html+=`<div style="color:var(--red);margin-top:8px">⚠ <b>${fails.length} 筆失敗</b>：</div>`;
+    html+='<ul style="margin:4px 0 0 18px;font-size:12px;color:var(--text2)">'+
+      fails.map(f=>`<li>${f.type} <b>${escHtml(f.name||f.id||'')}</b>：${escHtml(f.error||'未知')}</li>`).join('')+'</ul>';
+    html+=`<div style="margin-top:8px;padding:8px;background:#fffbe6;border:1px solid var(--yellow);border-radius:4px;font-size:12px">
+      <b>若顯示「舊版 Apps Script 不支援 deleteByName」</b>：請到「Google Sheets 同步」區塊按「複製 Apps Script 程式碼」，貼回你的 Apps Script 專案覆寫 → 重新部署後再跑一次清理即可徹底清乾淨。
+    </div>`;
+  }else{
+    html+='<div style="color:var(--green);margin-top:8px">🎉 全部成功</div>';
+  }
+  html+='</div>';
+  const list=document.getElementById('dedup-list');
+  if(list)list.innerHTML=html;
+}
+// 執行單組合併
 async function mergeDedupGroup(key){
   const s=_dedupState;if(!s)return;
   const g=s.groups.find(x=>x.key===key);if(!g)return;
@@ -3932,54 +4023,44 @@ async function mergeDedupGroup(key){
     const missing=conflicts.filter(c=>!Object.prototype.hasOwnProperty.call(res,c.field));
     if(missing.length){alert('尚有 '+missing.length+' 個衝突欄位未選擇：'+missing.map(c=>c.field).join(', '));return;}
   }
-  if(!confirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n保留最新那筆，其餘的 visits/品項/待辦清單合併進來後刪除。此操作會同步到雲端。`))return;
+  if(!confirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n此操作會：\n1. 本地合併並保留最新那筆\n2. 雲端刪除所有同名的其他列\n3. 把合併結果推回雲端\n\n無法復原，建議先做一次 Google Sheets 備份。`))return;
+  const btn=document.querySelector('#dedup-list button');if(btn){btn.disabled=true;}
   const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,s.resolutions[key]);
-  // 先保留 remover 的 id 清單
-  const removerIds=removerIdxs.map(i=>DB.clients[i]?.id).filter(x=>x);
-  // 寫回 keeper
+  const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
   DB.clients[keeperIdx]=merged;
-  // 從大到小刪除 removers（避免 index 位移）
   removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
   saveLocal();
-  // 雲端：save keeper + delete removers
-  autoSync('save',{client:merged});
-  for(const id of removerIds){autoSync('delete',{id});}
+  const log=await syncMergedGroupToCloud(merged,removerClients);
   renderClients();
-  // 重新計算 group 清單
-  s.groups=findDuplicateGroups();
-  s.conflicts={};
-  s.resolutions={};
-  s.groups.forEach(gg=>{s.conflicts[gg.key]=detectScalarConflicts(gg.clients);});
-  renderDedupModal();
+  showDedupReport(log,1);
 }
 // 一鍵合併所有無衝突的組
 async function dedupAutoMerge(){
   const s=_dedupState;if(!s)return;
   const targets=s.groups.filter(g=>s.conflicts[g.key].length===0);
   if(!targets.length){alert('沒有可自動合併的組（都有衝突）');return;}
-  if(!confirm(`將自動合併 ${targets.length} 組無衝突的重複店家，並同步到雲端。是否繼續？`))return;
-  const allRemoverIds=[];
+  if(!confirm(`將自動合併 ${targets.length} 組無衝突的重複店家並同步到雲端。\n\n無法復原，強烈建議先：\n1. 到 Google Sheets 手動複製 clients 分頁備份\n2. 或本機「匯出 JSON」存檔\n\n是否繼續？`))return;
+  const fullLog=[];
+  // 先全部本地合併
+  const mergedList=[];
   targets.forEach(g=>{
     const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,null);
-    const removerIds=removerIdxs.map(i=>DB.clients[i]?.id).filter(x=>x);
-    allRemoverIds.push(...removerIds);
+    const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
+    mergedList.push({merged,removerClients});
     DB.clients[keeperIdx]=merged;
     removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
   });
   saveLocal();
-  // 雲端：save 每個 keeper + delete removers
-  for(const g of targets){
-    const keeper=DB.clients.find(c=>c&&normalizeName(c.name)===g.key);
-    if(keeper)autoSync('save',{client:keeper});
-  }
-  for(const id of allRemoverIds){autoSync('delete',{id});}
   renderClients();
-  s.groups=findDuplicateGroups();
-  s.conflicts={};
-  s.resolutions={};
-  s.groups.forEach(gg=>{s.conflicts[gg.key]=detectScalarConflicts(gg.clients);});
-  renderDedupModal();
-  alert(`✅ 已合併 ${targets.length} 組，共刪除 ${allRemoverIds.length} 筆重複資料`);
+  // 再逐組 sync 雲端（顯示進度）
+  const sum=document.getElementById('dedup-summary');
+  for(let i=0;i<mergedList.length;i++){
+    const {merged,removerClients}=mergedList[i];
+    if(sum)sum.innerHTML=`同步中... (${i+1}/${mergedList.length}) <b>${escHtml(merged.name)}</b>`;
+    const log=await syncMergedGroupToCloud(merged,removerClients);
+    fullLog.push(...log);
+  }
+  showDedupReport(fullLog,mergedList.length);
 }
 // Pull banner (每日提醒從雲端拉最新)
 function todayDateStr(){return fmtDate();}
