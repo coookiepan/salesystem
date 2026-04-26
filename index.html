@@ -928,7 +928,7 @@ tbody tr:hover{background:var(--surface-hover)}
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.21-report-raw';
+const APP_VERSION='v2026.04.21-report-2w';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -2337,11 +2337,12 @@ function calcFW4(c){
   if(k>0)return k;
   return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
 }
-// 4W 推進表專用：一律回傳「現有試用品項的 4W 原價加總」（displayFw4，含 qty 與 cycle
-// 調整、地墊 4W 0.8 折，但忽略 quoted 報價與成約狀態）。使用者需求：推進表要看的
-// 是原價潛在值而非打折後的報價，成約不改變推進表數字。
+// 4W 推進表專用：一律回傳「現有試用品項以 2W 預設換週為基準的 4W 原價加總」。
+// 公司預設顧客是 2 週換一次（4W 推進表是給長官看的潛在業績，未成約前不可預設 4W）：
+// - 一律以 cycle='2W' 餵 displayFw4，地墊也用 2W 原價（不套 4W 0.8 折）
+// - 忽略 quoted 報價、忽略 contractedItems、忽略日期區間
 function calcReportAmt(c){
-  return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,it.cycle||'2W'),0);
+  return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
 function rptAmountMonth(c,from,to){
@@ -4193,9 +4194,12 @@ if(location.search.includes('test=1')){
   assert('calcReportAmt 忽略 quoted', calcReportAmt(rc2), 400);
   const rc3={trialItems:[
     {product:'S-20',qty:1,cycle:'2W'},
-    {product:'DECSR',qty:1,cycle:'4W'}  // 地墊 4W 272
+    {product:'DECSR',qty:1,cycle:'4W'}  // 試用品項即使勾 4W，推進表也以 2W 預設算 → 340
   ]};
-  assert('calcReportAmt 主項+地墊', calcReportAmt(rc3), 200+272);
+  assert('calcReportAmt 主項+地墊（強制 2W）', calcReportAmt(rc3), 200+340);
+  // 地墊不論 cycle 一律算 2W 原價（公司預設客戶 2W 換）
+  const rc4={trialItems:[{product:'DECSR',qty:2,cycle:'4W'}]};
+  assert('calcReportAmt 地墊強制 2W 不打折', calcReportAmt(rc4), 340*2);
 
   // --- rptAmountMonth ---
   // 區間內有成約 → 回傳最早成約月
