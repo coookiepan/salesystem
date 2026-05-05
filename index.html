@@ -926,25 +926,31 @@ tbody tr:hover{background:var(--surface-hover)}
 </div>
 
 <div class="modal-bg" id="admin-modal" onclick="if(event.target===this)closeAdminModal()">
-  <div class="modal" style="max-width:760px;max-height:92vh;display:flex;flex-direction:column">
-    <div class="modal-title" style="font-size:14px">📊 長官儀表板（唯讀）</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
-      <b>業務員 Sheet 命名規則</b>：每位業務員的 Google 試算表「整份檔名」就是業務員姓名（例如「王大明」）。本儀表板會自動讀取每份試算表的檔名來識別業務員。
+  <div class="modal" style="max-width:96vw;width:96vw;max-height:94vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="modal-title" style="font-size:14px;margin:0">📊 長官儀表板（唯讀）</div>
+      <button class="btn btn-outline btn-sm" onclick="closeAdminModal()">關閉</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
-      <label class="lbl" style="font-size:12px">業務員 Apps Script URL（一行一個）</label>
-      <textarea id="admin-urls" rows="4" style="font-size:11px;font-family:monospace" placeholder="https://script.google.com/macros/s/.../exec
-https://script.google.com/macros/s/.../exec"></textarea>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-primary btn-sm" onclick="loadAdminSnapshot()">載入彙總</button>
-        <button class="btn btn-outline btn-sm" onclick="saveAdminUrls()">儲存清單</button>
-        <span id="admin-status" style="font-size:12px;color:var(--text2);align-self:center"></span>
+    <div id="admin-tabs" style="display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px"></div>
+
+    <div id="admin-overview-view" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+        <b>業務員 Sheet 命名規則</b>：每位業務員的 Google 試算表「整份檔名」就是業務員姓名（例如「王大明」）。本儀表板會自動讀取每份試算表的檔名來識別業務員。
       </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+        <label class="lbl" style="font-size:12px">業務員 Apps Script URL（一行一個）</label>
+        <textarea id="admin-urls" rows="4" style="font-size:11px;font-family:monospace" placeholder="https://script.google.com/macros/s/.../exec
+https://script.google.com/macros/s/.../exec"></textarea>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="loadAdminSnapshot()">載入彙總</button>
+          <button class="btn btn-outline btn-sm" onclick="saveAdminUrls()">儲存清單</button>
+          <span id="admin-status" style="font-size:12px;color:var(--text2);align-self:center"></span>
+        </div>
+      </div>
+      <div id="admin-dashboard" style="font-size:13px"></div>
     </div>
-    <div id="admin-dashboard" style="flex:1;overflow-y:auto;font-size:13px;max-height:60vh"></div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn btn-outline" onclick="closeAdminModal()">關閉</button>
-    </div>
+
+    <div id="admin-rep-view" style="flex:1;overflow-y:auto;display:none;flex-direction:column"></div>
   </div>
 </div>
 
@@ -952,7 +958,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.26-admin';
+const APP_VERSION='v2026.04.26-admin2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -4124,6 +4130,12 @@ function openAdminModal(){
   document.getElementById('admin-urls').value=urls.join('\n');
   document.getElementById('admin-dashboard').innerHTML='<div style="color:var(--text3);padding:16px;text-align:center">尚未載入。請貼入業務員 Apps Script URL（一行一個）後按「載入彙總」。</div>';
   setAdminStatus('');
+  _adminCurrentTab='overview';
+  _adminSelectedClient=null;
+  _adminRepSearch='';
+  document.getElementById('admin-overview-view').style.display='flex';
+  document.getElementById('admin-rep-view').style.display='none';
+  renderAdminTabs();
   document.getElementById('admin-modal').classList.add('on');
 }
 function closeAdminModal(){
@@ -4172,11 +4184,12 @@ async function loadAdminSnapshot(){
   _adminSnapshots=results;
   setAdminStatus('✓ 載入完成 · '+new Date().toLocaleString('zh-TW'));
   renderAdminDashboard();
+  renderAdminTabs();
 }
 function renderAdminDashboard(){
   const dash=document.getElementById('admin-dashboard');
   if(!dash||!_adminSnapshots)return;
-  const cards=_adminSnapshots.map(s=>{
+  const cards=_adminSnapshots.map((s,idx)=>{
     if(s.error){
       return `<div style="border:1px solid var(--red);border-radius:6px;padding:10px;margin-bottom:10px;background:#FCEBEB">
         <div style="font-weight:600;color:var(--red)">⚠ ${escHtml(s.sheetName)}</div>
@@ -4187,8 +4200,8 @@ function renderAdminDashboard(){
     const m=calcAdminMetrics(s.clients);
     const dups=findDuplicateGroupsIn(s.clients);
     const dupWarn=dups>0?`<span style="color:var(--yellow);font-size:11px;margin-left:6px">⚠ ${dups} 組重複未清</span>`:'';
-    return `<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--bg2)">
-      <div style="font-weight:600;font-size:14px">${escHtml(s.sheetName)} <span style="color:var(--text3);font-weight:400;font-size:11px">${s.clients.length} 筆客戶</span>${dupWarn}</div>
+    return `<div onclick="switchAdminTab(${idx})" style="cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--bg2);transition:background .15s" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='var(--bg2)'">
+      <div style="font-weight:600;font-size:14px">${escHtml(s.sheetName)} <span style="color:var(--text3);font-weight:400;font-size:11px">${s.clients.length} 筆客戶 · 點選看詳情 →</span>${dupWarn}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px">
         <div><div style="font-size:11px;color:var(--text3)">試用軒數</div><div style="font-size:18px;font-weight:700">${m.trialShop}</div></div>
         <div><div style="font-size:11px;color:var(--text3)">試用金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${m.trialAmount.toLocaleString()}</div></div>
@@ -4226,6 +4239,215 @@ function findDuplicateGroupsIn(clients){
   (clients||[]).forEach(c=>{if(!c||!c.name)return;const k=normalizeName(c.name);if(!k)return;map.set(k,(map.get(k)||0)+1);});
   let n=0;map.forEach(v=>{if(v>=2)n++;});
   return n;
+}
+
+// ─── Admin tabs / rep detail view ────────────────────────────
+let _adminCurrentTab='overview';   // 'overview' | rep index (number)
+let _adminSelectedClient=null;     // null = 列表，數字 = 該位 client 的 idx
+let _adminRepSearch='';
+function renderAdminTabs(){
+  const tabs=document.getElementById('admin-tabs');
+  if(!tabs)return;
+  let html=`<button class="btn ${_adminCurrentTab==='overview'?'btn-primary':'btn-outline'} btn-sm" onclick="switchAdminTab('overview')">📋 概覽</button>`;
+  (_adminSnapshots||[]).forEach((s,i)=>{
+    const cnt=(s.clients||[]).length;
+    const active=_adminCurrentTab===i?'btn-primary':'btn-outline';
+    const err=s.error?' style="color:var(--red)"':'';
+    html+=`<button class="btn ${active} btn-sm"${err} onclick="switchAdminTab(${i})">${escHtml(s.sheetName||('業務'+(i+1)))} <span style="opacity:.7">(${cnt})</span></button>`;
+  });
+  tabs.innerHTML=html;
+}
+function switchAdminTab(t){
+  _adminCurrentTab=t;
+  _adminSelectedClient=null;
+  _adminRepSearch='';
+  const ov=document.getElementById('admin-overview-view');
+  const rv=document.getElementById('admin-rep-view');
+  if(t==='overview'){
+    ov.style.display='flex';
+    rv.style.display='none';
+  }else{
+    ov.style.display='none';
+    rv.style.display='flex';
+    renderAdminRepView();
+  }
+  renderAdminTabs();
+}
+function adminBackToList(){
+  _adminSelectedClient=null;
+  renderAdminRepView();
+}
+function adminSelectClient(idx){
+  _adminSelectedClient=idx;
+  renderAdminRepView();
+}
+function renderAdminRepView(){
+  if(typeof _adminCurrentTab!=='number')return;
+  const s=_adminSnapshots[_adminCurrentTab];
+  const view=document.getElementById('admin-rep-view');
+  if(!s||!view)return;
+  if(s.error){
+    view.innerHTML=`<div style="padding:16px;color:var(--red)">⚠ 此業務員的資料載入失敗：${escHtml(s.error)}</div>`;
+    return;
+  }
+  if(_adminSelectedClient!==null){
+    view.innerHTML=renderAdminClientDetailHTML(s,_adminSelectedClient);
+    return;
+  }
+  // 列表模式
+  view.innerHTML=`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <div style="font-size:14px;font-weight:600">${escHtml(s.sheetName)}</div>
+      <span style="font-size:12px;color:var(--text3)">${s.clients.length} 筆客戶</span>
+      <input id="admin-rep-search-inp" placeholder="搜尋店名 / 聯絡人 / 地址" value="${escHtml(_adminRepSearch)}"
+             oninput="_adminRepSearch=this.value;filterAdminRepList()"
+             style="flex:1;min-width:200px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px">
+      <button class="btn btn-outline btn-sm" onclick="exportAdminRepCSV()">⬇ 匯出 CSV</button>
+    </div>
+    <div id="admin-rep-list" style="overflow-y:auto;flex:1"></div>
+  `;
+  filterAdminRepList();
+  setTimeout(()=>{const el=document.getElementById('admin-rep-search-inp');if(el)el.focus();},0);
+}
+function filterAdminRepList(){
+  if(typeof _adminCurrentTab!=='number')return;
+  const s=_adminSnapshots[_adminCurrentTab];
+  const list=document.getElementById('admin-rep-list');
+  if(!list||!s)return;
+  const q=normalizeName(_adminRepSearch);
+  const filtered=(s.clients||[]).map((c,i)=>({c,i})).filter(({c})=>{
+    if(!q)return true;
+    const blob=normalizeName((c.name||'')+' '+(c.contact||'')+' '+(c.addr||''));
+    return blob.includes(q);
+  });
+  if(!filtered.length){list.innerHTML='<div style="padding:16px;color:var(--text3)">無符合的客戶</div>';return;}
+  // 表頭
+  list.innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead style="background:var(--bg2);position:sticky;top:0">
+        <tr>
+          <th style="text-align:left;padding:6px 8px">店名</th>
+          <th style="text-align:left;padding:6px 8px">狀態</th>
+          <th style="text-align:left;padding:6px 8px">聯絡人</th>
+          <th style="text-align:left;padding:6px 8px;min-width:120px">地址</th>
+          <th style="text-align:right;padding:6px 8px">試用金額</th>
+          <th style="text-align:right;padding:6px 8px">成約金額</th>
+          <th style="text-align:right;padding:6px 8px">拜訪</th>
+          <th style="text-align:left;padding:6px 8px">下次拜訪</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(({c,i})=>{
+          const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
+          const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
+          const visitCnt=(c.visits||[]).filter(v=>v.date).length;
+          return `<tr onclick="adminSelectClient(${i})" style="cursor:pointer;border-bottom:1px solid var(--border)">
+            <td style="padding:6px 8px;font-weight:500">${escHtml(c.name||'(未命名)')}</td>
+            <td style="padding:6px 8px">${escHtml(c.status||'-')}</td>
+            <td style="padding:6px 8px">${escHtml(c.contact||'-')}</td>
+            <td style="padding:6px 8px;color:var(--text2)">${escHtml((c.addr||'-').slice(0,40))}</td>
+            <td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">${trialAmt>0?'$'+trialAmt.toLocaleString():'-'}</td>
+            <td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">${dealAmt>0?'$'+dealAmt.toLocaleString():'-'}</td>
+            <td style="padding:6px 8px;text-align:right">${visitCnt}</td>
+            <td style="padding:6px 8px">${escHtml(c.nextdate||'-')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+function renderAdminClientDetailHTML(s,idx){
+  const c=s.clients[idx];if(!c)return '<div>找不到客戶</div>';
+  const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
+  const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
+  const visits=(c.visits||[]).slice().sort((a,b)=>(a.date||'')<(b.date||'')?1:-1);
+  const moods=['','😍','😊','😐','😕','😞'];
+  const visitsHtml=visits.length?visits.map(v=>{
+    const noteParts=[v.note,v.insight].filter(x=>x&&x.trim()).join(' ／ ');
+    return `<div style="border-left:3px solid var(--green);padding:6px 10px;margin-bottom:6px;background:var(--bg2);font-size:12px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <b>${escHtml(v.date||'-')}</b>
+        ${v.mood?`<span>${moods[v.mood]||''}</span>`:''}
+        ${v.statusChange?`<span class="badge">${escHtml(v.statusChange)}</span>`:''}
+        ${v.nextdate?`<span style="color:var(--text3)">→ 下次 ${escHtml(v.nextdate)}</span>`:''}
+      </div>
+      ${noteParts?`<div style="margin-top:4px;color:var(--text2)">${escHtml(noteParts)}</div>`:''}
+    </div>`;
+  }).join(''):'<div style="color:var(--text3);font-size:12px">（無拜訪紀錄）</div>';
+  const fmtItem=(it)=>{
+    const acc=it.bundledTo?'<span style="color:var(--text3)">[配件]</span> ':'';
+    const qStr=it.quoted>0?` <span style="color:var(--green-d)">報價 $${it.quoted}</span>`:'';
+    return `<div style="font-size:12px;padding:3px 6px">${acc}${escHtml(it.product)} ×${it.qty||1}${it.cycle?` <span style="color:var(--text3)">${it.cycle}</span>`:''}${qStr}${it.contractDate?` <span style="color:var(--text3)">[${it.contractDate}]</span>`:''}</div>`;
+  };
+  const trialHtml=(c.trialItems||[]).length?(c.trialItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
+  const dealHtml=(c.contractedItems||[]).length?(c.contractedItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
+  const todosHtml=(c.todos||[]).length?(c.todos||[]).map(t=>`<div style="font-size:12px;padding:3px 6px;${t.done?'color:var(--text3);text-decoration:line-through':''}">• ${escHtml(t.text||'')}${t.dueDate?` <span style="color:var(--text3)">${t.dueDate}</span>`:''}</div>`).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="adminBackToList()">← 回列表</button>
+      <div style="font-size:16px;font-weight:700;flex:1">${escHtml(c.name||'(未命名)')}</div>
+      <span class="badge">${escHtml(c.status||'-')}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;font-size:12px;background:var(--bg2);padding:10px;border-radius:6px;margin-bottom:10px">
+      <div><div style="color:var(--text3)">聯絡人</div><div>${escHtml(c.contact||'-')}</div></div>
+      <div><div style="color:var(--text3)">類型</div><div>${escHtml(c.type||'-')}</div></div>
+      <div><div style="color:var(--text3)">地址</div><div>${escHtml(c.addr||'-')}</div></div>
+      <div><div style="color:var(--text3)">下次拜訪</div><div>${escHtml(c.nextdate||'-')}</div></div>
+      <div><div style="color:var(--text3)">試用金額</div><div style="color:var(--green-d);font-weight:600">${trialAmt>0?'$'+trialAmt.toLocaleString():'-'}</div></div>
+      <div><div style="color:var(--text3)">成約金額</div><div style="color:var(--green-d);font-weight:600">${dealAmt>0?'$'+dealAmt.toLocaleString():'-'}</div></div>
+    </div>
+    ${c.note?`<div style="font-size:12px;margin-bottom:10px"><div style="color:var(--text3)">備註</div><div>${escHtml(c.note)}</div></div>`:''}
+    ${c.env?`<div style="font-size:12px;margin-bottom:10px"><div style="color:var(--text3)">環境觀察</div><div>${escHtml(c.env)}</div></div>`:''}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px">試用品項</div>
+        <div style="border:1px solid var(--border);border-radius:4px;padding:4px">${trialHtml}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px">成約品項</div>
+        <div style="border:1px solid var(--border);border-radius:4px;padding:4px">${dealHtml}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px">待辦事項</div>
+        <div style="border:1px solid var(--border);border-radius:4px;padding:4px">${todosHtml}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">拜訪紀錄（${visits.length} 筆）</div>
+      ${visitsHtml}
+    </div>
+  `;
+}
+// CSV 匯出
+function csvCell(v){const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function exportAdminRepCSV(){
+  if(typeof _adminCurrentTab!=='number')return;
+  const s=_adminSnapshots[_adminCurrentTab];if(!s)return;
+  const headers=['店家名稱','狀態','聯絡人','地址','類型','試用金額(2W)','成約金額','拜訪次數','未完成待辦','上次拜訪','下次拜訪','試用品項','成約品項','備註'];
+  const rows=[headers];
+  (s.clients||[]).forEach(c=>{
+    const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
+    const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
+    const visits=(c.visits||[]).filter(v=>v.date);
+    const lastVisit=visits.map(v=>v.date).sort().reverse()[0]||'';
+    const trialSummary=(c.trialItems||[]).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；');
+    const dealSummary=(c.contractedItems||[]).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；');
+    rows.push([
+      c.name||'',c.status||'',c.contact||'',c.addr||'',c.type||'',
+      trialAmt,dealAmt,visits.length,(c.todos||[]).filter(t=>!t.done).length,
+      lastVisit,c.nextdate||'',trialSummary,dealSummary,
+      (c.note||'').replace(/[\r\n]+/g,' ')
+    ]);
+  });
+  const csv='﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(s.sheetName||'業務員').replace(/[^\w一-龥]/g,'_')+'_客戶清單_'+today().replace(/-/g,'')+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 // Pull banner (每日提醒從雲端拉最新)
@@ -4386,6 +4608,15 @@ if(location.search.includes('test=1')){
   // 重複偵測
   const dupClients=[{name:'王記'},{name:'王記 '},{name:'李記'}];
   assert('findDuplicateGroupsIn 1 組', findDuplicateGroupsIn(dupClients), 1);
+
+  // --- csvCell ---
+  assert('csvCell 純文字', csvCell('abc'), 'abc');
+  assert('csvCell 含逗號', csvCell('a,b'), '"a,b"');
+  assert('csvCell 含雙引號', csvCell('a"b'), '"a""b"');
+  assert('csvCell 含換行', csvCell('a\nb'), '"a\nb"');
+  assert('csvCell 數字', csvCell(100), '100');
+  assert('csvCell null', csvCell(null), '');
+  assert('csvCell undefined', csvCell(undefined), '');
 
   // --- rptAmountMonth ---
   // 區間內有成約 → 回傳最早成約月
