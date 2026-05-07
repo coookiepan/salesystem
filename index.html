@@ -398,6 +398,51 @@ tbody tr:hover{background:var(--surface-hover)}
 *::-webkit-scrollbar-track{background:transparent}
 *::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 *::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ═══════════════════════════════════════════════════════════
+   CONTRACTMAKER (報價單產生器) — 整合自 contractmaker repo
+   ═══════════════════════════════════════════════════════════ */
+.cm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px}
+.cm-overlay.on{display:flex}
+.cm-panel{background:var(--bg);border-radius:var(--radius);width:100%;max-width:760px;box-shadow:0 8px 32px rgba(0,0,0,.25);margin:auto}
+.cm-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1;border-radius:var(--radius) var(--radius) 0 0}
+.cm-head h3{margin:0;font-size:16px;font-weight:700}
+.cm-body{padding:14px 18px}
+.cm-body .cm-section{margin-bottom:16px}
+.cm-body .cm-section h4{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px}
+.cm-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.cm-row.full{grid-template-columns:1fr}
+.cm-row.three{grid-template-columns:1fr 1fr 1fr}
+.cm-field{display:flex;flex-direction:column;gap:4px}
+.cm-field>span{font-size:11px;color:var(--text2)}
+.cm-field input,.cm-field select,.cm-field textarea{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;width:100%;box-sizing:border-box}
+.cm-field textarea{min-height:60px;resize:vertical}
+.cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:13px}
+.cm-flags label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.cm-items{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.cm-item{background:var(--bg2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.cm-item-head{display:flex;align-items:center;gap:8px}
+.cm-item-pick{flex:1;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm-item-pick.empty{color:var(--text3);font-style:italic}
+.cm-item-pick .code{display:inline-block;font-weight:700;color:var(--green-d);margin-right:6px}
+.cm-item-pick .price{display:inline-block;color:var(--text3);font-size:11px;margin-left:6px}
+.cm-item-fields{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.cm-item-fields .cm-field>span{font-size:10px}
+.cm-item-fields input,.cm-item-fields select{padding:5px 7px;font-size:13px}
+.cm-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg);border-radius:0 0 var(--radius) var(--radius)}
+.cm-preview{font-family:'Courier New',monospace;font-size:12px;background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;border:1px solid var(--border)}
+.cm-prod-list{max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)}
+.cm-prod-cat{position:sticky;top:0;background:#D9E1F2;color:#1f4e79;font-weight:700;padding:6px 10px;font-size:12px;z-index:1}
+.cm-prod-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px}
+.cm-prod-row:hover{background:var(--bg)}
+.cm-prod-row .name{font-weight:500}
+.cm-prod-row .meta{color:var(--text3);font-size:11px}
+.cm-prod-row .price{color:var(--green-d);font-weight:600;font-variant-numeric:tabular-nums}
+.cm-msg{padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;display:none}
+.cm-msg.warn{display:block;background:#FAEEDA;color:#633806;border:1px solid #E5C68A}
+.cm-msg.error{display:block;background:#FCEBEB;color:#A32D2D;border:1px solid #F0B5B5}
+.cm-msg.info{display:block;background:#E6F1FB;color:#0C447C;border:1px solid #B4D2EE}
+@media(max-width:480px){.cm-row,.cm-row.three{grid-template-columns:1fr}.cm-item-fields{grid-template-columns:1fr 1fr}.cm-overlay{padding:0}.cm-panel{border-radius:0;max-width:none;min-height:100vh}}
 </style>
 </head>
 <body>
@@ -570,6 +615,7 @@ tbody tr:hover{background:var(--surface-hover)}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
+          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="openCM()" title="產生報價單／合約 Word">📄 產生合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -640,6 +686,90 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="scard"><div class="snum" id="ds-a">$0</div><div class="slbl">試用金額</div><div class="prog"><div class="prog-f" id="dp-a" style="width:0%"></div></div><div class="prog-hint">目標 $1,600</div></div>
   </div>
   <div id="daily-list"></div>
+</div>
+
+<!-- ═══ CONTRACTMAKER MODAL — 產生合約／報價單 Word ═══ -->
+<div class="cm-overlay" id="cm-modal">
+  <div class="cm-panel">
+    <header class="cm-head">
+      <h3>📄 產生報價單／合約 <span id="cm-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
+      <button class="btn btn-outline btn-sm" onclick="closeCM()">關閉</button>
+    </header>
+    <div class="cm-body">
+      <div id="cm-msg-box" class="cm-msg"></div>
+
+      <div class="cm-section">
+        <h4>客戶資料</h4>
+        <div class="cm-row">
+          <label class="cm-field"><span>客戶名稱 *</span><input id="cm-client" oninput="cmSet('client',this.value)"></label>
+          <label class="cm-field"><span>日期 * (YYYY/MM/DD)</span><input id="cm-date" oninput="cmSet('date',this.value)"></label>
+        </div>
+        <div class="cm-row three">
+          <label class="cm-field"><span>版本（檔名後綴）</span><input id="cm-version" placeholder="例：基礎版" oninput="cmSet('version',this.value)"></label>
+          <label class="cm-field"><span>統一編號</span><input id="cm-taxId" oninput="cmSet('customerInfo.taxId',this.value)"></label>
+          <label class="cm-field"><span>聯絡人</span><input id="cm-contact" oninput="cmSet('customerInfo.contact',this.value)"></label>
+        </div>
+        <div class="cm-row">
+          <label class="cm-field"><span>客戶電話</span><input id="cm-phone" oninput="cmSet('customerInfo.phone',this.value)"></label>
+          <label class="cm-field"><span>客戶地址</span><input id="cm-address" oninput="cmSet('customerInfo.address',this.value)"></label>
+        </div>
+      </div>
+
+      <div class="cm-section">
+        <h4>全域設定</h4>
+        <div class="cm-row">
+          <label class="cm-field"><span>顯示週期</span>
+            <select id="cm-displayCycle" onchange="cmSet('displayCycle',this.value)">
+              <option value="">隨商品（混合）</option>
+              <option value="2W">2W</option>
+              <option value="4W" selected>4W（月單價）</option>
+            </select>
+          </label>
+          <label class="cm-field"><span>整體折扣（0~1，留空=無）</span><input id="cm-discount" type="number" step="0.01" min="0" max="1" placeholder="例：0.8 = 8 折" oninput="cmSet('discount',this.value)"></label>
+        </div>
+        <div class="cm-flags">
+          <label><input type="checkbox" id="cm-roundTotalToHundred" onchange="cmSet('roundTotalToHundred',this.checked)"> 總額向上取整百</label>
+          <label><input type="checkbox" id="cm-showLocation" onchange="cmSet('showLocation',this.checked)"> 顯示位置欄</label>
+          <label><input type="checkbox" id="cm-showStamp" onchange="cmSet('showStamp',this.checked)"> 顯示核章區</label>
+          <label><input type="checkbox" id="cm-showCustomerNumber" onchange="cmSet('showCustomerNumber',this.checked)"> 顯示統編</label>
+        </div>
+      </div>
+
+      <div class="cm-section">
+        <h4>商品明細 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（從成約／試用品項自動帶入；不在合約商品庫的代號會被略過）</span></h4>
+        <div id="cm-items" class="cm-items"></div>
+        <button class="btn btn-outline btn-sm" onclick="cmAddItem()">＋ 新增品項</button>
+      </div>
+
+      <div class="cm-section">
+        <h4>額外備註（一行一條，可空白）</h4>
+        <textarea id="cm-extraNotes" rows="3" oninput="cmSet('extraNotes',this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
+      </div>
+
+      <div class="cm-section" id="cm-preview-wrap" style="display:none">
+        <h4>文字預覽</h4>
+        <div class="cm-preview" id="cm-preview"></div>
+      </div>
+    </div>
+    <div class="cm-actions">
+      <button class="btn btn-outline btn-sm" onclick="cmPreview()">📋 預覽</button>
+      <button class="btn btn-primary btn-sm" id="cm-download-btn" onclick="cmDownload()">📥 下載 Word</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTRACTMAKER PRODUCT PICKER ═══ -->
+<div class="cm-overlay" id="cm-prod-modal" style="z-index:1010">
+  <div class="cm-panel" style="max-width:560px">
+    <header class="cm-head">
+      <h3>選擇商品</h3>
+      <button class="btn btn-outline btn-sm" onclick="cmCloseProdPicker()">關閉</button>
+    </header>
+    <div class="cm-body">
+      <input id="cm-prod-search" placeholder="搜尋商品名稱 / 代號…" oninput="cmRenderProdList()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;box-sizing:border-box;background:var(--bg);color:var(--text);font-family:inherit">
+      <div id="cm-prod-list" class="cm-prod-list"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ REPORT MODAL ═══ -->
@@ -4534,6 +4664,634 @@ document.getElementById('daily-date').value=today();
 if(SHEET_URL){updateSheetStatus(true);loadShops();}
 
 // ═══════════════════════════════════════════════════════════
+// CONTRACTMAKER (報價單／合約 Word 產生器) — 整合自 contractmaker repo
+// 來源: https://github.com/coookiepan/contractmaker
+// 高整合：客戶詳情頁「📄 產生合約」→ 自動帶入客戶資料 + 成約／試用品項
+// docx@8.5.0 UMD 庫於首次開啟時延遲載入（unpkg CDN）
+// ═══════════════════════════════════════════════════════════
+
+// 商品庫（內嵌自 contractmaker/catalog.json）
+const CM_CATALOG ={"categories":{"mat_welcome":"迎賓系列","mat_elegant":"雅緻系列","mat_basic":"Basic 系列","mat_forever":"Forever 系列","mat_dust":"吸塵吸水系列","mat_thin":"薄型吸塵吸水系列","mat_luxury":"豪華系列","mat_luxury_2tone":"豪華系列(2色)","mat_strong":"強力刮砂系列","mat_metal":"鐵屑油污系列","mat_gender":"男女辨識系列","mat_custom":"訂做系列","fragrance":"芳香劑","urinal":"小便斗清潔","mop":"拖把/抹布"},"products":{"LYSR":{"name":"高級迎賓地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"LYLR":{"name":"高級迎賓地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DECSR":{"name":"歡迎光臨地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"DECSLR":{"name":"歡迎光臨地墊SL紅","category":"mat_welcome","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"DECLR":{"name":"歡迎光臨地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"DECLLR":{"name":"歡迎光臨地墊LL紅","category":"mat_welcome","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"DECTR":{"name":"歡迎光臨地墊T紅","category":"mat_welcome","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"GSH":{"name":"雅緻地墊S灰","category":"mat_elegant","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"GSB":{"name":"雅緻地墊S棕","category":"mat_elegant","size":"S","color":"棕","cycle":"2W","price":190,"discountable":true},"GLH":{"name":"雅緻地墊L灰","category":"mat_elegant","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"GLB":{"name":"雅緻地墊L棕","category":"mat_elegant","size":"L","color":"棕","cycle":"2W","price":360,"discountable":true},"GLLH":{"name":"雅緻地墊LL灰","category":"mat_elegant","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"GLLB":{"name":"雅緻地墊LL棕","category":"mat_elegant","size":"LL","color":"棕","cycle":"2W","price":500,"discountable":true},"GTH":{"name":"雅緻地墊T灰","category":"mat_elegant","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"GTB":{"name":"雅緻地墊T棕","category":"mat_elegant","size":"T","color":"棕","cycle":"2W","price":900,"discountable":true},"BSH":{"name":"Basic地墊S灰","category":"mat_basic","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"BSR":{"name":"Basic地墊S紅","category":"mat_basic","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"BSLH":{"name":"Basic地墊SL灰","category":"mat_basic","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"BSLR":{"name":"Basic地墊SL紅","category":"mat_basic","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"BLH":{"name":"Basic地墊L灰","category":"mat_basic","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"BLR":{"name":"Basic地墊L紅","category":"mat_basic","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"BLLH":{"name":"Basic地墊LL灰","category":"mat_basic","size":"LL","color":"灰","cycle":"2W","price":420,"discountable":true},"BLLR":{"name":"Basic地墊LL紅","category":"mat_basic","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"BXH":{"name":"Basic地墊X灰","category":"mat_basic","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"BXR":{"name":"Basic地墊X紅","category":"mat_basic","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"BTH":{"name":"Basic地墊T灰","category":"mat_basic","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"BTR":{"name":"Basic地墊T紅","category":"mat_basic","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"B3H":{"name":"Basic地墊3M灰","category":"mat_basic","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"B3R":{"name":"Basic地墊3M紅","category":"mat_basic","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"B5H":{"name":"Basic地墊5M灰","category":"mat_basic","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"B5R":{"name":"Basic地墊5M紅","category":"mat_basic","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"FFSSK":{"name":"Forever地墊SS黑灰","category":"mat_forever","size":"SS","color":"黑灰","cycle":"2W","price":140,"discountable":true},"FFSSR":{"name":"Forever地墊SS紅","category":"mat_forever","size":"SS","color":"紅","cycle":"2W","price":140,"discountable":true},"FFSK":{"name":"Forever地墊S黑灰","category":"mat_forever","size":"S","color":"黑灰","cycle":"2W","price":170,"discountable":true},"FFSR":{"name":"Forever地墊S紅","category":"mat_forever","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"FFSLK":{"name":"Forever地墊SL黑灰","category":"mat_forever","size":"SL","color":"黑灰","cycle":"2W","price":220,"discountable":true},"FFSLR":{"name":"Forever地墊SL紅","category":"mat_forever","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"FFLK":{"name":"Forever地墊L黑灰","category":"mat_forever","size":"L","color":"黑灰","cycle":"2W","price":280,"discountable":true},"FFLR":{"name":"Forever地墊L紅","category":"mat_forever","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"FFMK":{"name":"Forever地墊M黑灰","category":"mat_forever","size":"M","color":"黑灰","cycle":"2W","price":420,"discountable":true},"FFMR":{"name":"Forever地墊M紅","category":"mat_forever","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"FFXK":{"name":"Forever地墊X黑灰","category":"mat_forever","size":"X","color":"黑灰","cycle":"2W","price":550,"discountable":true},"FFTK":{"name":"Forever地墊T黑灰","category":"mat_forever","size":"T","color":"黑灰","cycle":"2W","price":720,"discountable":true},"FF3MK":{"name":"Forever地墊3M黑灰","category":"mat_forever","size":"3M","color":"黑灰","cycle":"2W","price":610,"discountable":true},"FF5MK":{"name":"Forever地墊5M黑灰","category":"mat_forever","size":"5M","color":"黑灰","cycle":"2W","price":880,"discountable":true},"FF5MR":{"name":"Forever地墊5M紅","category":"mat_forever","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"DWSSH":{"name":"吸塵吸水地墊SS灰","category":"mat_dust","size":"SS","color":"灰","cycle":"2W","price":170,"discountable":true},"DWSSR":{"name":"吸塵吸水地墊SS紅","category":"mat_dust","size":"SS","color":"紅","cycle":"2W","price":170,"discountable":true},"DWSH":{"name":"吸塵吸水地墊S灰","category":"mat_dust","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"DWSR":{"name":"吸塵吸水地墊S紅","category":"mat_dust","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"DWSLH":{"name":"吸塵吸水地墊SL灰","category":"mat_dust","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"DWSLR":{"name":"吸塵吸水地墊SL紅","category":"mat_dust","size":"SL","color":"紅","cycle":"2W","price":310,"discountable":true},"DWLH":{"name":"吸塵吸水地墊L灰","category":"mat_dust","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"DWLR":{"name":"吸塵吸水地墊L紅","category":"mat_dust","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DWLLH":{"name":"吸塵吸水地墊LL灰","category":"mat_dust","size":"LL","color":"灰","cycle":"2W","price":530,"discountable":true},"DWLLR":{"name":"吸塵吸水地墊LL紅","category":"mat_dust","size":"LL","color":"紅","cycle":"2W","price":530,"discountable":true},"DWXH":{"name":"吸塵吸水地墊X灰","category":"mat_dust","size":"X","color":"灰","cycle":"2W","price":690,"discountable":true},"DWXR":{"name":"吸塵吸水地墊X紅","category":"mat_dust","size":"X","color":"紅","cycle":"2W","price":690,"discountable":true},"DWTH":{"name":"吸塵吸水地墊T灰","category":"mat_dust","size":"T","color":"灰","cycle":"2W","price":940,"discountable":true},"DWTR":{"name":"吸塵吸水地墊T紅","category":"mat_dust","size":"T","color":"紅","cycle":"2W","price":940,"discountable":true},"DW3MH":{"name":"吸塵吸水地墊3M灰","category":"mat_dust","size":"3M","color":"灰","cycle":"2W","price":680,"discountable":true},"DW3MR":{"name":"吸塵吸水地墊3M紅","category":"mat_dust","size":"3M","color":"紅","cycle":"2W","price":680,"discountable":true},"DW4MH":{"name":"吸塵吸水地墊4M灰","category":"mat_dust","size":"4M","color":"灰","cycle":"2W","price":830,"discountable":true},"DW4MR":{"name":"吸塵吸水地墊4M紅","category":"mat_dust","size":"4M","color":"紅","cycle":"2W","price":830,"discountable":true},"DW5MH":{"name":"吸塵吸水地墊5M灰","category":"mat_dust","size":"5M","color":"灰","cycle":"2W","price":1050,"discountable":true},"DW5MR":{"name":"吸塵吸水地墊5M紅","category":"mat_dust","size":"5M","color":"紅","cycle":"2W","price":1050,"discountable":true},"UQSH":{"name":"薄型吸塵吸水地墊S灰","category":"mat_thin","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"UQSLH":{"name":"薄型吸塵吸水地墊SL灰","category":"mat_thin","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"UQLH":{"name":"薄型吸塵吸水地墊L灰","category":"mat_thin","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"UQLLH":{"name":"薄型吸塵吸水地墊LL灰","category":"mat_thin","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"UQTH":{"name":"薄型吸塵吸水地墊T灰","category":"mat_thin","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"UQ4MH":{"name":"薄型吸塵吸水地墊4M灰","category":"mat_thin","size":"4M","color":"灰","cycle":"2W","price":730,"discountable":true},"UQ5MH":{"name":"薄型吸塵吸水地墊5M灰","category":"mat_thin","size":"5M","color":"灰","cycle":"2W","price":910,"discountable":true},"TJSR":{"name":"豪華地墊S紅","category":"mat_luxury","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"TJSH":{"name":"豪華地墊S灰","category":"mat_luxury","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"TJSLR":{"name":"豪華地墊SL紅","category":"mat_luxury","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"TJSLH":{"name":"豪華地墊SL灰","category":"mat_luxury","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"TJLR":{"name":"豪華地墊L紅","category":"mat_luxury","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"TJLH":{"name":"豪華地墊L灰","category":"mat_luxury","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"TJMR":{"name":"豪華地墊M紅","category":"mat_luxury","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"TJMH":{"name":"豪華地墊M灰","category":"mat_luxury","size":"M","color":"灰","cycle":"2W","price":420,"discountable":true},"TJXR":{"name":"豪華地墊X紅","category":"mat_luxury","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"TJXH":{"name":"豪華地墊X灰","category":"mat_luxury","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"TJTR":{"name":"豪華地墊T紅","category":"mat_luxury","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"TJTH":{"name":"豪華地墊T灰","category":"mat_luxury","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"TJ3MR":{"name":"豪華地墊3M紅","category":"mat_luxury","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"TJ3MH":{"name":"豪華地墊3M灰","category":"mat_luxury","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"TJ5MR":{"name":"豪華地墊5M紅","category":"mat_luxury","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"TJ5MH":{"name":"豪華地墊5M灰","category":"mat_luxury","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"2SN2":{"name":"豪華地墊S紅(2色)","category":"mat_luxury_2tone","size":"S","color":"紅(2色)","cycle":"2W","price":170,"discountable":true},"2SLN2":{"name":"豪華地墊SL紅(2色)","category":"mat_luxury_2tone","size":"SL","color":"紅(2色)","cycle":"2W","price":220,"discountable":true},"2LN2":{"name":"豪華地墊L紅(2色)","category":"mat_luxury_2tone","size":"L","color":"紅(2色)","cycle":"2W","price":280,"discountable":true},"2MN2":{"name":"豪華地墊M紅(2色)","category":"mat_luxury_2tone","size":"M","color":"紅(2色)","cycle":"2W","price":420,"discountable":true},"2TN2":{"name":"豪華地墊T紅(2色)","category":"mat_luxury_2tone","size":"T","color":"紅(2色)","cycle":"2W","price":720,"discountable":true},"EXSG":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSH":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSLG":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXSLH":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXLG":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"EXLH":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"ELLG":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"ELLH":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"EXTG":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"EXTH":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"KKSG":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSH":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSLG":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKSLH":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKLG":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"KKLH":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"MANSB":{"name":"男女辨識地墊(男)S棕","category":"mat_gender","size":"S","color":"棕","cycle":"2W","price":170,"discountable":true},"MWOSR":{"name":"男女辨識地墊(女)S紅","category":"mat_gender","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"AMWT":{"name":"小型擴香芳香系列-白茶","category":"fragrance","size":"120ml","cycle":"4W","price":500,"discountable":false},"BF-L":{"name":"BF複方精油芳香系列-檸檬馬鞭草","category":"fragrance","size":"240ml","cycle":"4W","price":200,"discountable":false},"DOME":{"name":"網狀尿石去除劑","category":"urinal","size":"40g","cycle":"4W","price":200,"discountable":false},"NSAC":{"name":"業務用除塵拖把","category":"mop","size":null,"cycle":"4W","price":200,"discountable":true},"M-90":{"name":"業務用除塵特大拖把","category":"mop","size":"34×120","cycle":"4W","price":null,"discountable":true},"S-20":{"name":"業務用握把式抹布","category":"mop","size":"18×32","cycle":"4W","price":null,"discountable":true},"HPL":{"name":"訂做地墊2色L","category":"mat_custom","size":"L","color":"2色","cycle":"2W","price":360,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"},"HPS":{"name":"訂做地墊2色S","category":"mat_custom","size":"S","color":"2色","cycle":"2W","price":230,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"}}};
+
+// ─── 引擎核心（自 engine.js 改寫，瀏覽器內嵌版） ───
+const CM_engine = (function(catalog){
+  function expandItem(item, options){
+    options = options || {};
+    const { code, qty, loc, priceOverride, nameOverride,
+            displayCycle: itemDisplayCycle, discount: itemDiscount } = item;
+    const product = catalog.products[code];
+    if(!product) throw new Error('商品代號不存在於合約商品庫: '+code);
+    const name = nameOverride || product.name;
+    const productCycle = product.cycle;
+    const displayCycle = itemDisplayCycle || options.defaultDisplayCycle || productCycle;
+    const originalPriceBase = product.price;
+    if(originalPriceBase == null && priceOverride == null){
+      throw new Error('商品 '+code+' 沒有原價，請填入特殊單價');
+    }
+    let pricePerChange, appliedDiscountSource = null;
+    if(priceOverride != null){
+      pricePerChange = (productCycle === '2W' && displayCycle === '4W') ? priceOverride/2 : priceOverride;
+      appliedDiscountSource = 'override';
+    } else if(itemDiscount != null){
+      pricePerChange = Math.round(originalPriceBase * itemDiscount);
+      appliedDiscountSource = 'item';
+    } else if(options.areaDiscount != null && product.discountable){
+      pricePerChange = Math.round(originalPriceBase * options.areaDiscount);
+      appliedDiscountSource = 'area';
+    } else if(options.discount != null && options.discount < 1 && product.discountable){
+      pricePerChange = Math.round(originalPriceBase * options.discount);
+      appliedDiscountSource = 'global';
+    } else {
+      pricePerChange = originalPriceBase;
+    }
+    const cycleMultiplier = productCycle === '2W' ? 2 : 1;
+    const monthly = pricePerChange * cycleMultiplier * qty;
+    const monthlyAtOriginal = originalPriceBase != null ? originalPriceBase * cycleMultiplier * qty : null;
+    let displayUnitPrice, displayOriginalPrice;
+    if(productCycle === '2W' && displayCycle === '4W'){
+      displayUnitPrice = pricePerChange * 2;
+      displayOriginalPrice = originalPriceBase != null ? originalPriceBase * 2 : null;
+    } else {
+      displayUnitPrice = pricePerChange;
+      displayOriginalPrice = originalPriceBase;
+    }
+    let actualDiscount = null, isDiscounted = false;
+    if(originalPriceBase != null && pricePerChange !== originalPriceBase){
+      actualDiscount = pricePerChange / originalPriceBase;
+      isDiscounted = pricePerChange < originalPriceBase;
+    }
+    return {
+      code, name, size: product.size, productCycle, displayCycle, cycle: displayCycle, qty,
+      pricePerChange, originalPrice: displayOriginalPrice, unitPrice: displayUnitPrice,
+      monthly, monthlyAtOriginal,
+      discount: actualDiscount,
+      discountPct: actualDiscount != null ? Math.round((1-actualDiscount)*100) : null,
+      discountSource: appliedDiscountSource, isDiscounted,
+      location: loc || '', note: product.note || null, _product: product
+    };
+  }
+  function expandArea(area, options){
+    options = options || {};
+    const areaOptions = Object.assign({}, options);
+    if(area.discount != null) areaOptions.areaDiscount = area.discount;
+    const items = area.items.map(it => expandItem(it, areaOptions));
+    const subtotal = items.reduce((s,i)=>s+i.monthly, 0);
+    const subtotalAtOriginal = items.reduce((s,i)=>s+(i.monthlyAtOriginal != null ? i.monthlyAtOriginal : i.monthly), 0);
+    return {name: area.name, items, subtotal, subtotalAtOriginal, isDiscounted: items.some(i=>i.isDiscounted)};
+  }
+  function buildCMNotes(areas, options, customItems, extraNotes){
+    const notes = [];
+    notes.push({text:'本報價單商品均含 5% 營業稅。'});
+    const has2W = areas.some(a=>a.items.some(i=>i.cycle==='2W'));
+    const has4W = areas.some(a=>a.items.some(i=>i.cycle==='4W'));
+    if(has2W && has4W){
+      const uniq = [...new Map(areas.flatMap(a=>a.items).filter(i=>i.cycle==='2W').map(i=>[i.code,i])).values()];
+      const codes2W = uniq.map(i=>i.name+'（'+i.code+'）').join('、');
+      notes.push({text:'更換週期：'+codes2W+' 每 2 週更換一次，其餘品項每 4 週更換一次。'});
+    } else if(has2W){
+      notes.push({text:'上述商品每 2 週更換一次。'});
+    } else {
+      notes.push({text:'上述商品每 4 週更換一次。'});
+    }
+    if(customItems.length > 0){
+      const uniq = [...new Map(customItems.map(c=>[c.code,c])).values()];
+      const list = uniq.map(c=>c.name+'（'+c.code+'）').join('、');
+      const years = uniq[0].years;
+      notes.push({text: list+' 為訂製品，合約期間為 ', strong: years+' 年', strongColor:'C00000', tail:'。'});
+    }
+    if(options.discount && options.discount < 1){
+      const t = options.discount * 10;
+      const ds = Number.isInteger(t) ? (t+' 折') : (t.toFixed(1)+' 折');
+      notes.push({text:'部分品項享有 ', strong: ds+'優惠', strongColor:'C00000', tail:'，表中顯示為折扣後價格。'});
+    }
+    for(const en of extraNotes) notes.push(typeof en === 'string' ? {text:en} : en);
+    return notes;
+  }
+  function expandQuote(config){
+    const options = {discount: config.discount || null, roundTotalToHundred: config.roundTotalToHundred || false, defaultDisplayCycle: config.displayCycle || null};
+    let areas;
+    if(config.areas) areas = config.areas.map(a=>expandArea(a, options));
+    else if(config.items) areas = [expandArea({name: config.areaName || '商品明細', items: config.items}, options)];
+    else throw new Error('config 必須包含 areas 或 items');
+    let grandTotal = areas.reduce((s,a)=>s+a.subtotal, 0);
+    const grandTotalAtOriginal = areas.reduce((s,a)=>s+a.subtotalAtOriginal, 0);
+    if(options.roundTotalToHundred) grandTotal = Math.ceil(grandTotal/100)*100;
+    const overallDiscount = grandTotalAtOriginal > 0 && grandTotal !== grandTotalAtOriginal ? grandTotal/grandTotalAtOriginal : null;
+    const overallSavings = grandTotalAtOriginal - grandTotal;
+    const customItems = [];
+    for(const area of areas) for(const item of area.items)
+      if(item._product.contractYears) customItems.push({code:item.code, name:item.name, years:item._product.contractYears});
+    return {client: config.client, version: config.version, date: config.date,
+      customerInfo: config.customerInfo || {}, areas,
+      grandTotal, grandTotalAtOriginal, overallDiscount, overallSavings,
+      discount: options.discount, customItems,
+      show: {location: config.showLocation !== false, stamp: config.showStamp !== false, customerNumber: config.showCustomerNumber !== false},
+      notes: buildCMNotes(areas, options, customItems, config.extraNotes || [])};
+  }
+  function fmtN(n){ return n.toLocaleString(); }
+  function previewText(config){
+    const q = expandQuote(config);
+    const lines = [];
+    lines.push('客戶名稱：'+q.client+(q.version?' （'+q.version+'）':''));
+    lines.push('報價日期：'+q.date);
+    lines.push('');
+    for(const area of q.areas){
+      lines.push(area.isDiscounted ? '【'+area.name+'】 ★有折扣' : '【'+area.name+'】');
+      for(const it of area.items){
+        let priceCol;
+        if(it.isDiscounted) priceCol = '單價 '+fmtN(it.unitPrice)+'（原價 '+fmtN(it.originalPrice)+'，省 '+it.discountPct+'%）';
+        else if(it.discountSource === 'override' && it.unitPrice !== it.originalPrice) priceCol = '單價 '+fmtN(it.unitPrice)+'（原價 '+fmtN(it.originalPrice)+'）';
+        else priceCol = '單價 '+fmtN(it.unitPrice);
+        lines.push('  '+it.code+' '+it.name+' × '+it.qty+' '+it.cycle+'  '+priceCol+'  → 月 '+fmtN(it.monthly)+(it.location?'  位置: '+it.location:''));
+      }
+      lines.push(area.isDiscounted ? '  小計: '+fmtN(area.subtotal)+'（原價 '+fmtN(area.subtotalAtOriginal)+'）' : '  小計: '+fmtN(area.subtotal));
+      lines.push('');
+    }
+    if(q.overallDiscount != null){
+      const pct = Math.round((1-q.overallDiscount)*1000)/10;
+      lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
+      lines.push('  原價：'+fmtN(q.grandTotalAtOriginal)+'　已優惠：'+fmtN(q.overallSavings)+'（約 '+pct+'%，相當於 '+(q.overallDiscount*10).toFixed(1)+' 折）');
+    } else {
+      lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
+    }
+    lines.push(''); lines.push('說明：');
+    q.notes.forEach((n,i)=>{
+      let s = '  '+(i+1)+'. '+(n.text||'');
+      if(n.strong) s += '['+n.strong+']';
+      if(n.tail) s += n.tail;
+      lines.push(s);
+    });
+    return lines.join('\n');
+  }
+  return {expandQuote, expandItem, expandArea, previewText, catalog};
+})(CM_CATALOG);
+
+// ─── Word builder（自 builders/quote.js 改寫；需 docx UMD） ───
+const CM_builder = (function(){
+  const COMPANY_INFO = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', address:'台南市永康區中正路 337 巷 106 號' };
+  const COLOR_HEADER='D9E1F2', COLOR_SUBTOTAL='F2F2F2', COLOR_TOTAL='FFE699', COLOR_AREA='BDD7EE';
+  function fmt(n){ return n==null?'':Number(n).toLocaleString(); }
+  function getDocx(){
+    if(typeof window.docx === 'undefined') throw new Error('docx 函式庫尚未載入，請稍候再試');
+    return window.docx;
+  }
+  function thinBorder(){ const {BorderStyle}=getDocx(); return {style:BorderStyle.SINGLE,size:4,color:'888888'}; }
+  function allBorders(){ return {top:thinBorder(),bottom:thinBorder(),left:thinBorder(),right:thinBorder()}; }
+  function noBorders(){ const {BorderStyle}=getDocx(); const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'}; return {top:none,bottom:none,left:none,right:none}; }
+  function txt(text,opts){
+    opts=opts||{};
+    const {TextRun}=getDocx();
+    return new TextRun({text:String(text==null?'':text), bold:!!opts.bold, color:opts.color, size:opts.size||20, font:opts.font||'微軟正黑體'});
+  }
+  function para(text,opts){
+    opts=opts||{};
+    const {Paragraph,AlignmentType}=getDocx();
+    const runs = Array.isArray(text) ? text : [txt(text,opts)];
+    return new Paragraph({alignment:opts.alignment||AlignmentType.LEFT, spacing:{before:0,after:0}, children:runs});
+  }
+  function cell(content,opts){
+    opts=opts||{};
+    const {TableCell,VerticalAlign,ShadingType}=getDocx();
+    const paragraphs = Array.isArray(content) ? content : [para(content,opts)];
+    return new TableCell({width:opts.width, shading:opts.fill?{type:ShadingType.CLEAR,color:'auto',fill:opts.fill}:undefined, verticalAlign:VerticalAlign.CENTER, borders:allBorders(), columnSpan:opts.colSpan, rowSpan:opts.rowSpan, children:paragraphs});
+  }
+  function buildTitle(){
+    const {Paragraph,AlignmentType}=getDocx();
+    return [new Paragraph({alignment:AlignmentType.CENTER, spacing:{after:120}, children:[txt('報　價　單',{bold:true,size:36})]})];
+  }
+  function buildCustomerHeader(quote){
+    const {Table,TableRow,TableCell,WidthType,BorderStyle}=getDocx();
+    const left=[para([txt('客戶名稱：',{bold:true}),txt(quote.client||'')])];
+    if(quote.show.customerNumber) left.push(para([txt('統一編號：',{bold:true}),txt(quote.customerInfo.taxId||'')]));
+    if(quote.customerInfo.contact) left.push(para([txt('聯絡人：',{bold:true}),txt(quote.customerInfo.contact)]));
+    if(quote.customerInfo.phone) left.push(para([txt('電話：',{bold:true}),txt(quote.customerInfo.phone)]));
+    if(quote.customerInfo.address) left.push(para([txt('地址：',{bold:true}),txt(quote.customerInfo.address)]));
+    const right=[
+      para([txt('報價日期：',{bold:true}),txt(quote.date||'')]),
+      para([txt('承辦人：',{bold:true}),txt(COMPANY_INFO.contact)]),
+      para([txt('手機：',{bold:true}),txt(COMPANY_INFO.mobile)]),
+      para([txt('電話：',{bold:true}),txt(COMPANY_INFO.phone)]),
+      para([txt('地址：',{bold:true}),txt(COMPANY_INFO.address)])
+    ];
+    const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'};
+    return new Table({
+      width:{size:100,type:WidthType.PERCENTAGE},
+      borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none},
+      rows:[new TableRow({children:[
+        new TableCell({width:{size:55,type:WidthType.PERCENTAGE}, borders:noBorders(), children:left}),
+        new TableCell({width:{size:45,type:WidthType.PERCENTAGE}, borders:noBorders(), children:right})
+      ]})]
+    });
+  }
+  function buildItemTable(quote){
+    const {Table,TableRow,TableCell,WidthType,Paragraph,AlignmentType,VerticalAlign}=getDocx();
+    const showLoc = quote.show.location;
+    const headers = ['商品代號','品名','規格','數量','週期','單價(含稅)','4W月金額'];
+    const widths = [10, showLoc?24:30, 10,8,8, showLoc?14:18, 16];
+    if(showLoc){ headers.splice(2,0,'位置'); widths.splice(2,0,14); }
+    const rows = [];
+    rows.push(new TableRow({tableHeader:true, children:headers.map((h,i)=>cell(h,{bold:true,alignment:AlignmentType.CENTER,fill:COLOR_HEADER,width:{size:widths[i],type:WidthType.PERCENTAGE}}))}));
+    const multiArea = quote.areas.length > 1;
+    for(const area of quote.areas){
+      if(multiArea) rows.push(new TableRow({children:[cell(area.name,{bold:true,fill:COLOR_AREA,colSpan:headers.length})]}));
+      for(const it of area.items){
+        const priceText = (it.isDiscounted || (it.discountSource==='override' && it.unitPrice!==it.originalPrice))
+          ? [txt(fmt(it.unitPrice),{bold:true,color:'C00000'}), txt(' '), txt('(原 '+fmt(it.originalPrice)+')',{size:16,color:'808080'})]
+          : [txt(fmt(it.unitPrice))];
+        const cells = [cell(it.code,{alignment:AlignmentType.CENTER})];
+        if(showLoc) cells.push(cell(it.location,{alignment:AlignmentType.CENTER}));
+        cells.push(cell(it.name));
+        cells.push(cell(it.size||'',{alignment:AlignmentType.CENTER}));
+        cells.push(cell(it.qty,{alignment:AlignmentType.CENTER}));
+        cells.push(cell(it.cycle,{alignment:AlignmentType.CENTER}));
+        cells.push(new TableCell({verticalAlign:VerticalAlign.CENTER, borders:allBorders(), children:[new Paragraph({alignment:AlignmentType.RIGHT,spacing:{before:0,after:0},children:priceText})]}));
+        cells.push(cell(fmt(it.monthly),{alignment:AlignmentType.RIGHT}));
+        rows.push(new TableRow({children:cells}));
+      }
+      if(multiArea){
+        rows.push(new TableRow({children:[
+          cell('小計',{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_SUBTOTAL,colSpan:headers.length-1}),
+          cell(fmt(area.subtotal),{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_SUBTOTAL})
+        ]}));
+      }
+    }
+    const totalLabel = quote.overallDiscount != null
+      ? '月金額總合計 (每 4 週)　原價 '+fmt(quote.grandTotalAtOriginal)+'　已優惠 '+fmt(quote.overallSavings)
+      : '月金額總合計 (每 4 週)';
+    rows.push(new TableRow({children:[
+      cell(totalLabel,{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_TOTAL,colSpan:headers.length-1}),
+      cell(fmt(quote.grandTotal),{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_TOTAL})
+    ]}));
+    return new Table({width:{size:100,type:WidthType.PERCENTAGE},rows});
+  }
+  function buildNotes(quote){
+    const {Paragraph}=getDocx();
+    const out = [new Paragraph({spacing:{before:200,after:60},children:[txt('說明：',{bold:true})]})];
+    quote.notes.forEach((n,i)=>{
+      const runs = [txt((i+1)+'. ',{bold:true})];
+      if(n.text) runs.push(txt(n.text));
+      if(n.strong) runs.push(txt(n.strong,{bold:true,color:n.strongColor||'000000'}));
+      if(n.tail) runs.push(txt(n.tail));
+      out.push(new Paragraph({spacing:{before:0,after:40},children:runs}));
+    });
+    return out;
+  }
+  function buildStamp(){
+    const {Paragraph,Table,TableRow,TableCell,WidthType,VerticalAlign,AlignmentType,HeightRule}=getDocx();
+    const stampCell=label=>new TableCell({width:{size:33,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.CENTER, borders:allBorders(), children:[
+      new Paragraph({alignment:AlignmentType.CENTER, spacing:{before:60,after:60}, children:[txt(label,{bold:true})]}),
+      new Paragraph({alignment:AlignmentType.CENTER, spacing:{before:600,after:60}, children:[txt('')]})
+    ]});
+    return [
+      new Paragraph({spacing:{before:240,after:80}, children:[txt('核章：',{bold:true})]}),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({height:{value:1200,rule:HeightRule.ATLEAST}, children:[stampCell('客戶簽收'),stampCell('業務主管'),stampCell('承辦人')]})]})
+    ];
+  }
+  function buildDocument(quote){
+    const {Document,Paragraph}=getDocx();
+    const children = [
+      ...buildTitle(),
+      buildCustomerHeader(quote),
+      new Paragraph({spacing:{before:80,after:80},children:[txt('')]}),
+      buildItemTable(quote),
+      ...buildNotes(quote)
+    ];
+    if(quote.show.stamp) children.push(...buildStamp());
+    return new Document({creator:COMPANY_INFO.name, title:'報價單',
+      styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
+      sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
+  }
+  async function buildBlob(config){
+    const {Packer} = getDocx();
+    const quote = CM_engine.expandQuote(config);
+    return await Packer.toBlob(buildDocument(quote));
+  }
+  return {buildBlob};
+})();
+
+// ─── docx UMD 延遲載入 ───
+let CM_docxPromise = null;
+function cmLoadDocx(){
+  if(typeof window.docx !== 'undefined') return Promise.resolve();
+  if(CM_docxPromise) return CM_docxPromise;
+  CM_docxPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/docx@8.5.0/build/index.umd.js';
+    s.onload = () => resolve();
+    s.onerror = () => { CM_docxPromise = null; reject(new Error('無法下載 docx 函式庫，請檢查網路')); };
+    document.head.appendChild(s);
+  });
+  return CM_docxPromise;
+}
+
+// ─── 客戶 → 合約配置橋接 ───
+// 規則：
+// - 優先用 contractedItems（已成約品項），無則用 trialItems
+// - 排除 bundledTo（配件）
+// - 排除不在合約商品庫的代號（記錄到 _meta.skippedCodes）
+// - quoted = 4W 總額 → priceOverride = quoted / qty（依 4W 顯示週期解讀為 4W 單價）
+function clientToCMConfig(c){
+  c = c || {};
+  const useContracted = !!(c.contractedItems && c.contractedItems.length);
+  const src = useContracted ? c.contractedItems : (c.trialItems || []);
+  const filtered = src.filter(it => it && it.product && !it.bundledTo && CM_CATALOG.products[it.product]);
+  const skipped  = src.filter(it => it && it.product && !it.bundledTo && !CM_CATALOG.products[it.product]);
+  // 注意：salesystem 中 it.cycle 是換洗週期（catalog cycle 預設），不是顯示週期；
+  //       it.quoted 是「整行 4W 總額」。故品項一律用全域 4W 顯示週期解讀，
+  //       priceOverride = quoted / qty （即每 4W 每單位的客戶議價）。
+  const items = filtered.map(it => {
+    const out = { code: it.product, qty: it.qty || 1 };
+    if(it.quoted && it.quoted > 0 && (it.qty || 1) > 0){
+      out.priceOverride = Math.round(it.quoted / (it.qty || 1));
+    }
+    if(it.loc) out.loc = it.loc;
+    return out;
+  });
+  const dt = (typeof today === 'function' ? today() : '').replace(/-/g, '/');
+  return {
+    client: c.name || '',
+    version: '',
+    date: dt,
+    customerInfo: { contact: c.contact || '', address: c.addr || '', phone: '', taxId: '' },
+    displayCycle: '4W',
+    discount: '',
+    roundTotalToHundred: false,
+    showLocation: true, showStamp: true, showCustomerNumber: true,
+    extraNotes: '',
+    items,
+    _meta: { skippedCodes: skipped.map(it=>it.product), srcIsContracted: useContracted }
+  };
+}
+
+// ─── 模態狀態與 UI ───
+let CM_state = null;
+let CM_pickContext = null;
+
+function cmSet(path, val){
+  if(!CM_state) return;
+  const parts = path.split('.');
+  let cur = CM_state;
+  for(let i=0;i<parts.length-1;i++){
+    if(cur[parts[i]] == null) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length-1]] = val;
+}
+
+function openCM(){
+  if(typeof S === 'undefined' || S.curIdx < 0){ alert('請先開啟客戶詳情'); return; }
+  const c = DB.clients[S.curIdx];
+  CM_state = clientToCMConfig(c);
+  document.getElementById('cm-client-name').textContent = c.name ? '· '+c.name : '';
+  cmSyncToUI();
+  cmRenderItems();
+  cmShowMessage();
+  document.getElementById('cm-preview-wrap').style.display = 'none';
+  document.getElementById('cm-modal').classList.add('on');
+  cmLoadDocx().catch(e => console.warn('[CM] docx preload failed:', e.message));
+}
+function closeCM(){
+  document.getElementById('cm-modal').classList.remove('on');
+  CM_state = null;
+}
+function cmSyncToUI(){
+  const s = CM_state;
+  document.getElementById('cm-client').value = s.client || '';
+  document.getElementById('cm-version').value = s.version || '';
+  document.getElementById('cm-date').value = s.date || '';
+  document.getElementById('cm-taxId').value = (s.customerInfo && s.customerInfo.taxId) || '';
+  document.getElementById('cm-contact').value = (s.customerInfo && s.customerInfo.contact) || '';
+  document.getElementById('cm-phone').value = (s.customerInfo && s.customerInfo.phone) || '';
+  document.getElementById('cm-address').value = (s.customerInfo && s.customerInfo.address) || '';
+  document.getElementById('cm-displayCycle').value = s.displayCycle || '';
+  document.getElementById('cm-discount').value = s.discount || '';
+  document.getElementById('cm-roundTotalToHundred').checked = !!s.roundTotalToHundred;
+  document.getElementById('cm-showLocation').checked = s.showLocation !== false;
+  document.getElementById('cm-showStamp').checked = s.showStamp !== false;
+  document.getElementById('cm-showCustomerNumber').checked = s.showCustomerNumber !== false;
+  document.getElementById('cm-extraNotes').value = s.extraNotes || '';
+}
+function cmShowMessage(){
+  const box = document.getElementById('cm-msg-box');
+  box.className = 'cm-msg'; box.textContent = '';
+  if(!CM_state) return;
+  const m = CM_state._meta || {};
+  const msgs = [];
+  if(CM_state.items.length === 0){
+    msgs.push('此客戶尚無可帶入的品項，請手動新增商品。');
+  } else if(m.srcIsContracted){
+    msgs.push('已從成約品項帶入 '+CM_state.items.length+' 筆。');
+  } else {
+    msgs.push('客戶尚無成約品項，已從試用品項帶入 '+CM_state.items.length+' 筆。');
+  }
+  if(m.skippedCodes && m.skippedCodes.length){
+    msgs.push('以下代號不在合約商品庫，已略過：'+m.skippedCodes.join('、')+'。');
+  }
+  if(msgs.length){ box.classList.add('info'); box.textContent = msgs.join(' '); }
+}
+function cmField(label, type, value, onChange, attrs){
+  const wrap = document.createElement('label'); wrap.className = 'cm-field';
+  const sp = document.createElement('span'); sp.textContent = label; wrap.appendChild(sp);
+  const inp = document.createElement('input'); inp.type = type;
+  inp.value = value == null ? '' : value;
+  if(attrs) for(const k in attrs) inp[k] = attrs[k];
+  inp.oninput = () => onChange(inp.value);
+  wrap.appendChild(inp);
+  return wrap;
+}
+function cmRenderItems(){
+  const cont = document.getElementById('cm-items');
+  cont.innerHTML = '';
+  CM_state.items.forEach((it, idx) => {
+    const div = document.createElement('div');
+    div.className = 'cm-item';
+    const head = document.createElement('div');
+    head.className = 'cm-item-head';
+    const pick = document.createElement('button');
+    pick.type = 'button';
+    pick.className = 'cm-item-pick' + (it.code ? '' : ' empty');
+    if(it.code && CM_CATALOG.products[it.code]){
+      const p = CM_CATALOG.products[it.code];
+      pick.innerHTML = '<span class="code">'+escHtml(it.code)+'</span>'+escHtml(p.name)+'<span class="price">'+escHtml(p.cycle||'')+' / 單價 '+(p.price==null?'—':p.price)+'</span>';
+    } else {
+      pick.textContent = '👉 點此選擇商品';
+    }
+    pick.onclick = () => cmOpenProdPicker(idx);
+    const rm = document.createElement('button');
+    rm.type='button'; rm.className='btn btn-outline btn-sm'; rm.textContent='✕'; rm.title='刪除品項';
+    rm.style.flexShrink = '0';
+    rm.onclick = () => cmRemoveItem(idx);
+    head.appendChild(pick); head.appendChild(rm);
+    div.appendChild(head);
+    const fields = document.createElement('div');
+    fields.className = 'cm-item-fields';
+    fields.appendChild(cmField('數量','number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; }, {min:1}));
+    fields.appendChild(cmField('位置','text', it.loc || '', v => { it.loc = v; }, {placeholder:'例：大門'}));
+    fields.appendChild(cmField('特殊單價','number', it.priceOverride == null ? '' : it.priceOverride, v => { it.priceOverride = v === '' ? undefined : Number(v); }, {placeholder:'依顯示週期', step:'any'}));
+    const cw = document.createElement('label'); cw.className = 'cm-field';
+    const cs = document.createElement('span'); cs.textContent = '此項顯示週期'; cw.appendChild(cs);
+    const sel = document.createElement('select');
+    [['','隨全域'],['2W','2W'],['4W','4W']].forEach(([v,t]) => {
+      const o = document.createElement('option'); o.value = v; o.textContent = t;
+      if((it.displayCycle || '') === v) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => { it.displayCycle = sel.value || undefined; };
+    cw.appendChild(sel); fields.appendChild(cw);
+    div.appendChild(fields);
+    cont.appendChild(div);
+  });
+}
+function cmAddItem(){
+  CM_state.items.push({code:'', qty:1});
+  cmRenderItems();
+}
+function cmRemoveItem(idx){
+  CM_state.items.splice(idx, 1);
+  cmRenderItems();
+}
+function cmOpenProdPicker(idx){
+  CM_pickContext = idx;
+  document.getElementById('cm-prod-search').value = '';
+  cmRenderProdList();
+  document.getElementById('cm-prod-modal').classList.add('on');
+}
+function cmCloseProdPicker(){
+  document.getElementById('cm-prod-modal').classList.remove('on');
+  CM_pickContext = null;
+}
+function cmRenderProdList(){
+  const q = (document.getElementById('cm-prod-search').value || '').trim().toLowerCase();
+  const list = document.getElementById('cm-prod-list'); list.innerHTML = '';
+  const byCat = {};
+  for(const code in CM_CATALOG.products){
+    const p = CM_CATALOG.products[code];
+    const text = (code+' '+p.name+' '+(p.size||'')+' '+(p.color||'')).toLowerCase();
+    if(q && !text.includes(q)) continue;
+    const cat = p.category || 'other';
+    (byCat[cat] = byCat[cat] || []).push({code, ...p});
+  }
+  let total = 0;
+  for(const cat in byCat){
+    const head = document.createElement('div');
+    head.className = 'cm-prod-cat';
+    head.textContent = CM_CATALOG.categories[cat] || cat;
+    list.appendChild(head);
+    for(const p of byCat[cat]){
+      total++;
+      const row = document.createElement('div');
+      row.className = 'cm-prod-row';
+      row.innerHTML = '<div><div class="name"><b>'+escHtml(p.code)+'</b> '+escHtml(p.name)+'</div><div class="meta">'+escHtml([p.size,p.color,p.cycle].filter(Boolean).join(' · '))+'</div></div><div class="price">$'+(p.price==null?'—':p.price)+'</div>';
+      row.onclick = () => {
+        if(CM_pickContext != null && CM_state.items[CM_pickContext]){
+          CM_state.items[CM_pickContext].code = p.code;
+          cmRenderItems();
+        }
+        cmCloseProdPicker();
+      };
+      list.appendChild(row);
+    }
+  }
+  if(total === 0) list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">沒有符合的商品</div>';
+}
+function cmBuildConfig(){
+  if(!CM_state) throw new Error('狀態為空');
+  if(!CM_state.client || !CM_state.client.trim()) throw new Error('請輸入客戶名稱');
+  if(!CM_state.date || !CM_state.date.trim()) throw new Error('請輸入報價日期');
+  const validItems = CM_state.items.filter(it => it.code).map(it => {
+    const out = {code: it.code, qty: parseInt(it.qty,10) || 1};
+    if(it.loc) out.loc = it.loc;
+    if(it.priceOverride !== '' && it.priceOverride != null && !Number.isNaN(Number(it.priceOverride))) out.priceOverride = Number(it.priceOverride);
+    if(it.displayCycle) out.displayCycle = it.displayCycle;
+    return out;
+  });
+  if(validItems.length === 0) throw new Error('請至少加入一筆有效商品');
+  const cfg = {
+    client: CM_state.client.trim(),
+    date: CM_state.date.trim(),
+    customerInfo: {
+      taxId: (CM_state.customerInfo && CM_state.customerInfo.taxId) || undefined,
+      contact: (CM_state.customerInfo && CM_state.customerInfo.contact) || undefined,
+      phone: (CM_state.customerInfo && CM_state.customerInfo.phone) || undefined,
+      address: (CM_state.customerInfo && CM_state.customerInfo.address) || undefined
+    },
+    showLocation: CM_state.showLocation !== false,
+    showStamp: CM_state.showStamp !== false,
+    showCustomerNumber: CM_state.showCustomerNumber !== false,
+    items: validItems,
+    areaName: '商品明細'
+  };
+  if(CM_state.version && CM_state.version.trim()) cfg.version = CM_state.version.trim();
+  if(CM_state.displayCycle) cfg.displayCycle = CM_state.displayCycle;
+  if(CM_state.discount !== '' && CM_state.discount != null){
+    const d = Number(CM_state.discount);
+    if(!Number.isNaN(d) && d > 0 && d <= 1) cfg.discount = d;
+  }
+  if(CM_state.roundTotalToHundred) cfg.roundTotalToHundred = true;
+  if(CM_state.extraNotes && CM_state.extraNotes.trim()){
+    cfg.extraNotes = CM_state.extraNotes.split('\n').map(s => s.trim()).filter(Boolean);
+  }
+  return cfg;
+}
+function cmShowError(msg){
+  const box = document.getElementById('cm-msg-box');
+  box.className = 'cm-msg error'; box.textContent = msg;
+}
+function cmPreview(){
+  try{
+    const cfg = cmBuildConfig();
+    document.getElementById('cm-preview').textContent = CM_engine.previewText(cfg);
+    document.getElementById('cm-preview-wrap').style.display = 'block';
+    document.getElementById('cm-preview-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+  } catch(e){
+    cmShowError(e.message || String(e));
+  }
+}
+function cmSafeFilename(s){ return String(s||'').replace(/[\s\/\\:*?"<>|]/g,''); }
+async function cmDownload(){
+  const btn = document.getElementById('cm-download-btn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '產生中...';
+  try{
+    const cfg = cmBuildConfig();
+    await cmLoadDocx();
+    const blob = await CM_builder.buildBlob(cfg);
+    const fname = '報價單_'+cmSafeFilename(cfg.client)+(cfg.version?'_'+cmSafeFilename(cfg.version):'')+'.docx';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    if(typeof S !== 'undefined' && S.curIdx >= 0 && DB.clients[S.curIdx]){
+      const c = DB.clients[S.curIdx];
+      c.visits = c.visits || [];
+      c.visits.unshift({ date: today(), note: '已產生報價單：'+fname, statusChange:'', insight:'', mood:0 });
+      c.updatedAt = Date.now();
+      saveLocal();
+      if(typeof autoSync === 'function') autoSync('save', { client: c });
+      if(typeof renderVisits === 'function') renderVisits();
+    }
+    const box = document.getElementById('cm-msg-box');
+    box.className = 'cm-msg info'; box.textContent = '✅ 已下載 '+fname+'，並寫入拜訪紀錄。';
+  } catch(e){
+    cmShowError('產生失敗：'+(e.message || String(e)));
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+// ESC 與背景點擊關閉
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    if(document.getElementById('cm-prod-modal') && document.getElementById('cm-prod-modal').classList.contains('on')){ cmCloseProdPicker(); return; }
+    if(document.getElementById('cm-modal') && document.getElementById('cm-modal').classList.contains('on')){ closeCM(); }
+  }
+});
+document.addEventListener('click', (e) => {
+  if(e.target && e.target.id === 'cm-modal') closeCM();
+  if(e.target && e.target.id === 'cm-prod-modal') cmCloseProdPicker();
+});
+
+// ═══════════════════════════════════════════════════════════
 // TEST MODE — 加 ?test=1 啟動，console + 頁面顯示結果
 // ═══════════════════════════════════════════════════════════
 if(location.search.includes('test=1')){
@@ -4742,6 +5500,59 @@ if(location.search.includes('test=1')){
   assert('parseRegion 永康區',parseRegion('永康區中山路12號'),'永康區');
   assert('parseRegion 空',parseRegion(''),'');
   assert('parseRegion 無區',parseRegion('台南市中山路'),'');
+
+  // --- CONTRACTMAKER 整合 ---
+  // CM_CATALOG 已載入
+  assert('CM_CATALOG 有 products',!!CM_CATALOG&&!!CM_CATALOG.products,true);
+  assert('CM_CATALOG 包含 DECSR',!!CM_CATALOG.products.DECSR,true);
+  // clientToCMConfig: 基本欄位帶入
+  const cmC1=clientToCMConfig({name:'某某店',contact:'王老闆',addr:'永康區中山路1號',contractedItems:[],trialItems:[]});
+  assert('clientToCMConfig client 名稱',cmC1.client,'某某店');
+  assert('clientToCMConfig contact',cmC1.customerInfo.contact,'王老闆');
+  assert('clientToCMConfig address',cmC1.customerInfo.address,'永康區中山路1號');
+  assert('clientToCMConfig 預設 4W',cmC1.displayCycle,'4W');
+  assert('clientToCMConfig 預設無品項長度',cmC1.items.length,0);
+  assert('clientToCMConfig date 為 / 格式',/^\d{4}\/\d{2}\/\d{2}$/.test(cmC1.date),true);
+  // 成約品項優先（DECSR 在合約商品庫內）
+  const cmC2=clientToCMConfig({name:'A店',contact:'',addr:'',
+    contractedItems:[{product:'DECSR',qty:2,quoted:0,cycle:'2W'}],
+    trialItems:[{product:'DECSR',qty:9,quoted:0}]});
+  assert('clientToCMConfig 優先用成約品項',cmC2.items.length,1);
+  assert('clientToCMConfig 成約 qty 帶入',cmC2.items[0].qty,2);
+  assert('clientToCMConfig srcIsContracted',cmC2._meta.srcIsContracted,true);
+  // 沒成約 → 用試用
+  const cmC3=clientToCMConfig({name:'B店',trialItems:[{product:'DECSR',qty:1,cycle:'2W'}]});
+  assert('clientToCMConfig 退回試用',cmC3.items.length,1);
+  assert('clientToCMConfig srcIsContracted=false',cmC3._meta.srcIsContracted,false);
+  // 過濾 bundledTo (配件)
+  const cmC4=clientToCMConfig({name:'C店',contractedItems:[
+    {product:'DECSR',qty:1},
+    {product:'BT3',qty:4,bundledTo:'AFDW'}  // bundled 應排除
+  ]});
+  assert('clientToCMConfig 排除 bundledTo',cmC4.items.length,1);
+  assert('clientToCMConfig 排除後留 DECSR',cmC4.items[0].code,'DECSR');
+  // 不在合約商品庫的代號 → skipped
+  const cmC5=clientToCMConfig({name:'D店',contractedItems:[
+    {product:'DECSR',qty:1},
+    {product:'NONEXISTENT-CODE',qty:1}
+  ]});
+  assert('clientToCMConfig 過濾不存在代號',cmC5.items.length,1);
+  assert('clientToCMConfig 記錄 skippedCodes 數',cmC5._meta.skippedCodes.length,1);
+  assert('clientToCMConfig skippedCodes 內容',cmC5._meta.skippedCodes[0],'NONEXISTENT-CODE');
+  // quoted → priceOverride（4W 總額 / qty）
+  const cmC6=clientToCMConfig({name:'E店',contractedItems:[{product:'DECSR',qty:2,quoted:600,cycle:'2W'}]});
+  assert('clientToCMConfig priceOverride=quoted/qty',cmC6.items[0].priceOverride,300);
+  // quoted=0 → 不設 priceOverride
+  const cmC7=clientToCMConfig({name:'F店',contractedItems:[{product:'DECSR',qty:1,quoted:0}]});
+  assert('clientToCMConfig quoted=0 不設 override',cmC7.items[0].priceOverride,undefined);
+  // 完整流程：cmBuildConfig + CM_engine.expandQuote 算出合理金額
+  CM_state=clientToCMConfig({name:'測試店',contractedItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}]});
+  const cmCfg=cmBuildConfig();
+  const cmQ=CM_engine.expandQuote(cmCfg);
+  // DECSR price=170, cycle=2W, displayCycle=4W → unitPrice=340, monthly=340
+  assert('CM_engine grandTotal DECSR 4W',cmQ.grandTotal,340);
+  assert('CM_engine items 1 筆',cmQ.areas[0].items.length,1);
+  CM_state=null;
 
   // --- 結果顯示 ---
   const pass=results.filter(r=>r.pass).length;
