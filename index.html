@@ -402,10 +402,10 @@ tbody tr:hover{background:var(--surface-hover)}
 /* ═══════════════════════════════════════════════════════════
    CONTRACTMAKER (報價單產生器) — 整合自 contractmaker repo
    ═══════════════════════════════════════════════════════════ */
-.cm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px}
+.cm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 12px}
 .cm-overlay.on{display:flex}
-.cm-panel{background:var(--bg);border-radius:var(--radius);width:100%;max-width:760px;box-shadow:0 8px 32px rgba(0,0,0,.25);margin:auto}
-.cm-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1;border-radius:var(--radius) var(--radius) 0 0}
+.cm-panel{background:var(--bg);border-radius:var(--radius);width:100%;max-width:760px;box-shadow:0 8px 32px rgba(0,0,0,.25);margin:auto;display:flex;flex-direction:column}
+.cm-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2;border-radius:var(--radius) var(--radius) 0 0}
 .cm-head h3{margin:0;font-size:16px;font-weight:700}
 .cm-body{padding:14px 18px}
 .cm-body .cm-section{margin-bottom:16px}
@@ -415,34 +415,50 @@ tbody tr:hover{background:var(--surface-hover)}
 .cm-row.three{grid-template-columns:1fr 1fr 1fr}
 .cm-field{display:flex;flex-direction:column;gap:4px}
 .cm-field>span{font-size:11px;color:var(--text2)}
-.cm-field input,.cm-field select,.cm-field textarea{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;width:100%;box-sizing:border-box}
+/* font-size:16px 避免 iOS Safari focus 時自動放大頁面 */
+.cm-field input,.cm-field select,.cm-field textarea{padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:16px;font-family:inherit;width:100%;box-sizing:border-box}
 .cm-field textarea{min-height:60px;resize:vertical}
-.cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:13px}
-.cm-flags label{display:flex;align-items:center;gap:5px;cursor:pointer}
-.cm-items{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
-.cm-item{background:var(--bg2);border-radius:var(--radius-sm);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:14px}
+.cm-flags label{display:flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
+.cm-flags input[type=checkbox]{width:18px;height:18px}
+.cm-items{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.cm-item{background:var(--bg2);border-radius:var(--radius-sm);padding:10px;display:flex;flex-direction:column;gap:8px}
 .cm-item-head{display:flex;align-items:center;gap:8px}
-.cm-item-pick{flex:1;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm-item-pick{flex:1;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:40px}
 .cm-item-pick.empty{color:var(--text3);font-style:italic}
 .cm-item-pick .code{display:inline-block;font-weight:700;color:var(--green-d);margin-right:6px}
-.cm-item-pick .price{display:inline-block;color:var(--text3);font-size:11px;margin-left:6px}
-.cm-item-fields{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.cm-item-fields .cm-field>span{font-size:10px}
-.cm-item-fields input,.cm-item-fields select{padding:5px 7px;font-size:13px}
-.cm-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg);border-radius:0 0 var(--radius) var(--radius)}
-.cm-preview{font-family:'Courier New',monospace;font-size:12px;background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;border:1px solid var(--border)}
-.cm-prod-list{max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)}
-.cm-prod-cat{position:sticky;top:0;background:#D9E1F2;color:#1f4e79;font-weight:700;padding:6px 10px;font-size:12px;z-index:1}
-.cm-prod-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px}
-.cm-prod-row:hover{background:var(--bg)}
+.cm-item-pick .price{display:inline-block;color:var(--text3);font-size:12px;margin-left:6px}
+.cm-item-rm{background:#FCEBEB;color:#A32D2D;border:1px solid #F0B5B5;border-radius:var(--radius-sm);width:40px;height:40px;font-size:18px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cm-item-fields{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cm-item-fields .cm-field>span{font-size:11px}
+.cm-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;padding-bottom:calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg);border-radius:0 0 var(--radius) var(--radius);z-index:2}
+.cm-actions .btn{min-height:40px;padding:8px 14px;font-size:14px}
+.cm-preview{font-family:'Courier New',monospace;font-size:12px;background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border)}
+.cm-prod-list{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)}
+.cm-prod-cat{position:sticky;top:0;background:#D9E1F2;color:#1f4e79;font-weight:700;padding:8px 12px;font-size:13px;z-index:1}
+.cm-prod-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px;min-height:48px}
+.cm-prod-row:active{background:var(--bg)}
 .cm-prod-row .name{font-weight:500}
-.cm-prod-row .meta{color:var(--text3);font-size:11px}
-.cm-prod-row .price{color:var(--green-d);font-weight:600;font-variant-numeric:tabular-nums}
-.cm-msg{padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;display:none}
+.cm-prod-row .meta{color:var(--text3);font-size:12px;margin-top:2px}
+.cm-prod-row .price{color:var(--green-d);font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0}
+.cm-msg{padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;display:none;line-height:1.4}
 .cm-msg.warn{display:block;background:#FAEEDA;color:#633806;border:1px solid #E5C68A}
 .cm-msg.error{display:block;background:#FCEBEB;color:#A32D2D;border:1px solid #F0B5B5}
 .cm-msg.info{display:block;background:#E6F1FB;color:#0C447C;border:1px solid #B4D2EE}
-@media(max-width:480px){.cm-row,.cm-row.three{grid-template-columns:1fr}.cm-item-fields{grid-template-columns:1fr 1fr}.cm-overlay{padding:0}.cm-panel{border-radius:0;max-width:none;min-height:100vh}}
+.cm-msg.success{display:block;background:#E1F5EE;color:#085041;border:1px solid #9CD8C0}
+.cm-ios-tip{font-size:12px;color:var(--text2);background:var(--bg2);padding:8px 10px;border-radius:var(--radius-sm);margin-top:8px;display:none;line-height:1.5}
+.cm-ios-tip.on{display:block}
+.cm-ios-tip b{color:var(--text)}
+@media(max-width:600px){
+  .cm-overlay{padding:0;align-items:stretch}
+  .cm-panel{border-radius:0;max-width:none;min-height:100vh;min-height:100dvh}
+  .cm-head{padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top))}
+  .cm-body{padding:12px 14px}
+  .cm-actions{padding-left:14px;padding-right:14px}
+  .cm-row,.cm-row.three{grid-template-columns:1fr}
+  .cm-item-fields{grid-template-columns:1fr 1fr}
+  .cm-prod-list{max-height:none;flex:1}
+}
 </style>
 </head>
 <body>
@@ -750,10 +766,13 @@ tbody tr:hover{background:var(--surface-hover)}
         <h4>文字預覽</h4>
         <div class="cm-preview" id="cm-preview"></div>
       </div>
+      <div class="cm-ios-tip" id="cm-ios-tip">
+        <b>📱 iPhone / iPad 提示：</b>點「下載 Word」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、Mail、訊息、LINE 任一都可保存或傳出。若沒跳分享面板，會在新分頁開啟下載連結。
+      </div>
     </div>
     <div class="cm-actions">
-      <button class="btn btn-outline btn-sm" onclick="cmPreview()">📋 預覽</button>
-      <button class="btn btn-primary btn-sm" id="cm-download-btn" onclick="cmDownload()">📥 下載 Word</button>
+      <button class="btn btn-outline" onclick="cmPreview()">📋 預覽</button>
+      <button class="btn btn-primary" id="cm-download-btn" onclick="cmDownload()">📥 下載 Word</button>
     </div>
   </div>
 </div>
@@ -5038,6 +5057,13 @@ function cmSet(path, val){
   cur[parts[parts.length-1]] = val;
 }
 
+// iOS Safari 偵測：不支援 <a download> 觸發下載；改用「分享」面板
+function cmIsIOS(){
+  const ua = navigator.userAgent || '';
+  // iPad in desktop mode (iPadOS 13+) 也算 iOS
+  const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return /iPad|iPhone|iPod/.test(ua) || iPadOS;
+}
 function openCM(){
   if(typeof S === 'undefined' || S.curIdx < 0){ alert('請先開啟客戶詳情'); return; }
   const c = DB.clients[S.curIdx];
@@ -5047,11 +5073,17 @@ function openCM(){
   cmRenderItems();
   cmShowMessage();
   document.getElementById('cm-preview-wrap').style.display = 'none';
+  // iOS 上顯示「分享儲存」提示
+  const tip = document.getElementById('cm-ios-tip');
+  if(tip) tip.classList.toggle('on', cmIsIOS());
   document.getElementById('cm-modal').classList.add('on');
+  // 鎖住 body 滾動，避免背景 momentum scroll 干擾 modal
+  document.body.style.overflow = 'hidden';
   cmLoadDocx().catch(e => console.warn('[CM] docx preload failed:', e.message));
 }
 function closeCM(){
   document.getElementById('cm-modal').classList.remove('on');
+  document.body.style.overflow = '';
   CM_state = null;
 }
 function cmSyncToUI(){
@@ -5118,8 +5150,8 @@ function cmRenderItems(){
     }
     pick.onclick = () => cmOpenProdPicker(idx);
     const rm = document.createElement('button');
-    rm.type='button'; rm.className='btn btn-outline btn-sm'; rm.textContent='✕'; rm.title='刪除品項';
-    rm.style.flexShrink = '0';
+    rm.type='button'; rm.className='cm-item-rm'; rm.textContent='✕'; rm.title='刪除品項';
+    rm.setAttribute('aria-label', '刪除此品項');
     rm.onclick = () => cmRemoveItem(idx);
     head.appendChild(pick); head.appendChild(rm);
     div.appendChild(head);
@@ -5248,21 +5280,67 @@ function cmPreview(){
   }
 }
 function cmSafeFilename(s){ return String(s||'').replace(/[\s\/\\:*?"<>|]/g,''); }
+// iOS Safari 無法用 <a download> 觸發下載；改用 File.saveAs / Web Share API / 在新視窗開啟（觸發系統「分享」面板）
+async function cmTriggerSave(blob, filename){
+  // 1) 優先：Web Share API（iOS 14+ Safari、Chrome Android 都支援，會跳系統分享面板）
+  if(navigator.canShare){
+    try{
+      const file = new File([blob], filename, {type: blob.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title: filename});
+        return 'shared';
+      }
+    }catch(e){
+      // 使用者取消 share sheet 不算錯誤；其他錯誤則 fallback
+      if(e && e.name === 'AbortError') return 'cancelled';
+    }
+  }
+  // 2) iOS Safari fallback：在新分頁打開 blob，使用者可從預覽頁按「分享」儲存
+  if(cmIsIOS()){
+    const reader = new FileReader();
+    return await new Promise((resolve, reject) => {
+      reader.onload = () => {
+        const w = window.open();
+        if(!w){
+          reject(new Error('瀏覽器擋下了新分頁，請允許彈出視窗或改用「分享」'));
+          return;
+        }
+        // 寫一個含下載連結 + 自動嘗試下載的頁面（純文字、最小 HTML）
+        w.document.open();
+        w.document.write('<!doctype html><meta charset="utf-8"><title>'+filename+'</title>'+
+          '<body style="font-family:sans-serif;padding:20px;text-align:center">'+
+          '<h3 style="margin:0 0 12px">報價單已產生</h3>'+
+          '<p style="color:#555;margin:0 0 16px">請點下方按鈕，或點右上角「分享」⤴ 儲存／傳送檔案。</p>'+
+          '<a id="dl" href="'+reader.result+'" download="'+filename+'" style="display:inline-block;padding:12px 20px;background:#1f4e79;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">📥 下載 '+filename+'</a>'+
+          '</body>');
+        w.document.close();
+        resolve('newtab');
+      };
+      reader.onerror = () => reject(reader.error || new Error('無法讀取檔案'));
+      reader.readAsDataURL(blob);
+    });
+  }
+  // 3) 桌面 / Android：標準 <a download>
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  return 'downloaded';
+}
 async function cmDownload(){
   const btn = document.getElementById('cm-download-btn');
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '產生中...';
   try{
     const cfg = cmBuildConfig();
+    btn.textContent = '載入函式庫...';
     await cmLoadDocx();
+    btn.textContent = '組裝中...';
     const blob = await CM_builder.buildBlob(cfg);
     const fname = '報價單_'+cmSafeFilename(cfg.client)+(cfg.version?'_'+cmSafeFilename(cfg.version):'')+'.docx';
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fname;
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
-    if(typeof S !== 'undefined' && S.curIdx >= 0 && DB.clients[S.curIdx]){
+    const result = await cmTriggerSave(blob, fname);
+    if(result !== 'cancelled' && typeof S !== 'undefined' && S.curIdx >= 0 && DB.clients[S.curIdx]){
       const c = DB.clients[S.curIdx];
       c.visits = c.visits || [];
       c.visits.unshift({ date: today(), note: '已產生報價單：'+fname, statusChange:'', insight:'', mood:0 });
@@ -5272,7 +5350,15 @@ async function cmDownload(){
       if(typeof renderVisits === 'function') renderVisits();
     }
     const box = document.getElementById('cm-msg-box');
-    box.className = 'cm-msg info'; box.textContent = '✅ 已下載 '+fname+'，並寫入拜訪紀錄。';
+    if(result === 'cancelled'){
+      box.className = 'cm-msg warn'; box.textContent = '已取消分享。';
+    } else if(result === 'shared'){
+      box.className = 'cm-msg success'; box.textContent = '✅ 已透過系統分享 '+fname;
+    } else if(result === 'newtab'){
+      box.className = 'cm-msg success'; box.textContent = '✅ 已在新分頁開啟 '+fname+'，請於該頁點「分享」→「儲存到檔案」';
+    } else {
+      box.className = 'cm-msg success'; box.textContent = '✅ 已下載 '+fname+'，並寫入拜訪紀錄。';
+    }
   } catch(e){
     cmShowError('產生失敗：'+(e.message || String(e)));
   } finally {
