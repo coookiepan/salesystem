@@ -4778,11 +4778,7 @@ const CM_engine = (function(catalog){
       const years = uniq[0].years;
       notes.push({text: list+' 為訂製品，合約期間為 ', strong: years+' 年', strongColor:'C00000', tail:'。'});
     }
-    if(options.discount && options.discount < 1){
-      const t = options.discount * 10;
-      const ds = Number.isInteger(t) ? (t+' 折') : (t.toFixed(1)+' 折');
-      notes.push({text:'部分品項享有 ', strong: ds+'優惠', strongColor:'C00000', tail:'，表中顯示為折扣後價格。'});
-    }
+    // 不顯示「部分品項享有 X 折優惠」備註 — 客戶端看到的價格就是最終價，不揭露折扣
     for(const en of extraNotes) notes.push(typeof en === 'string' ? {text:en} : en);
     return notes;
   }
@@ -4815,24 +4811,15 @@ const CM_engine = (function(catalog){
     lines.push('報價日期：'+q.date);
     lines.push('');
     for(const area of q.areas){
-      lines.push(area.isDiscounted ? '【'+area.name+'】 ★有折扣' : '【'+area.name+'】');
+      lines.push('【'+area.name+'】');
       for(const it of area.items){
-        let priceCol;
-        if(it.isDiscounted) priceCol = '單價 '+fmtN(it.unitPrice)+'（原價 '+fmtN(it.originalPrice)+'，省 '+it.discountPct+'%）';
-        else if(it.discountSource === 'override' && it.unitPrice !== it.originalPrice) priceCol = '單價 '+fmtN(it.unitPrice)+'（原價 '+fmtN(it.originalPrice)+'）';
-        else priceCol = '單價 '+fmtN(it.unitPrice);
-        lines.push('  '+it.code+' '+it.name+' × '+it.qty+' '+it.cycle+'  '+priceCol+'  → 月 '+fmtN(it.monthly)+(it.location?'  位置: '+it.location:''));
+        // 預覽僅顯示最終單價，與 Word 輸出一致；不揭露原價／折扣
+        lines.push('  '+it.code+' '+it.name+' × '+it.qty+' '+it.cycle+'  單價 '+fmtN(it.unitPrice)+'  → 月 '+fmtN(it.monthly)+(it.location?'  位置: '+it.location:''));
       }
-      lines.push(area.isDiscounted ? '  小計: '+fmtN(area.subtotal)+'（原價 '+fmtN(area.subtotalAtOriginal)+'）' : '  小計: '+fmtN(area.subtotal));
+      lines.push('  小計: '+fmtN(area.subtotal));
       lines.push('');
     }
-    if(q.overallDiscount != null){
-      const pct = Math.round((1-q.overallDiscount)*1000)/10;
-      lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
-      lines.push('  原價：'+fmtN(q.grandTotalAtOriginal)+'　已優惠：'+fmtN(q.overallSavings)+'（約 '+pct+'%，相當於 '+(q.overallDiscount*10).toFixed(1)+' 折）');
-    } else {
-      lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
-    }
+    lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
     lines.push(''); lines.push('說明：');
     q.notes.forEach((n,i)=>{
       let s = '  '+(i+1)+'. '+(n.text||'');
@@ -4914,9 +4901,8 @@ const CM_builder = (function(){
     for(const area of quote.areas){
       if(multiArea) rows.push(new TableRow({children:[cell(area.name,{bold:true,fill:COLOR_AREA,colSpan:headers.length})]}));
       for(const it of area.items){
-        const priceText = (it.isDiscounted || (it.discountSource==='override' && it.unitPrice!==it.originalPrice))
-          ? [txt(fmt(it.unitPrice),{bold:true,color:'C00000'}), txt(' '), txt('(原 '+fmt(it.originalPrice)+')',{size:16,color:'808080'})]
-          : [txt(fmt(it.unitPrice))];
+        // Word 輸出統一顯示最終單價，不揭露原價／折扣對照
+        const priceText = [txt(fmt(it.unitPrice))];
         const cells = [cell(it.code,{alignment:AlignmentType.CENTER})];
         if(showLoc) cells.push(cell(it.location,{alignment:AlignmentType.CENTER}));
         cells.push(cell(it.name));
@@ -4934,9 +4920,8 @@ const CM_builder = (function(){
         ]}));
       }
     }
-    const totalLabel = quote.overallDiscount != null
-      ? '月金額總合計 (每 4 週)　原價 '+fmt(quote.grandTotalAtOriginal)+'　已優惠 '+fmt(quote.overallSavings)
-      : '月金額總合計 (每 4 週)';
+    // 不顯示原價/已優惠對照，只給最終總額
+    const totalLabel = '月金額總合計 (每 4 週)';
     rows.push(new TableRow({children:[
       cell(totalLabel,{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_TOTAL,colSpan:headers.length-1}),
       cell(fmt(quote.grandTotal),{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_TOTAL})
@@ -5638,6 +5623,15 @@ if(location.search.includes('test=1')){
   // DECSR price=170, cycle=2W, displayCycle=4W → unitPrice=340, monthly=340
   assert('CM_engine grandTotal DECSR 4W',cmQ.grandTotal,340);
   assert('CM_engine items 1 筆',cmQ.areas[0].items.length,1);
+  // Word 輸出 / 預覽不揭露原價／折扣（特殊單價是內部操作用）
+  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',discount:'0.8',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,items:[{code:'DECSR',qty:1}]};
+  const cmDiscPreview=CM_engine.previewText(cmBuildConfig());
+  assert('previewText 不含「原價」',cmDiscPreview.includes('原價'),false);
+  assert('previewText 不含「已優惠」',cmDiscPreview.includes('已優惠'),false);
+  assert('previewText 不含「★有折扣」',cmDiscPreview.includes('★'),false);
+  assert('previewText 不含「省 」%',cmDiscPreview.includes('省 '),false);
+  assert('previewText 不含「部分品項享有」',cmDiscPreview.includes('部分品項享有'),false);
+  assert('previewText 仍含最終單價',cmDiscPreview.includes('單價 272'),true);
   CM_state=null;
 
   // --- 結果顯示 ---
