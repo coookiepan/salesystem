@@ -752,9 +752,12 @@ tbody tr:hover{background:var(--surface-hover)}
       </div>
 
       <div class="cm-section">
-        <h4>商品明細 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（從成約／試用品項自動帶入；不在合約商品庫的代號會被略過）</span></h4>
+        <h4>商品明細 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（代號／品名／單價皆可手動編輯；按「臨時新品」可加入商品庫沒有的品項）</span></h4>
         <div id="cm-items" class="cm-items"></div>
-        <button class="btn btn-outline btn-sm" onclick="cmAddItem()">＋ 新增品項</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="cmAddItem(false)">＋ 從商品庫新增</button>
+          <button class="btn btn-outline btn-sm" onclick="cmAddItem(true)">🆕 臨時新品</button>
+        </div>
       </div>
 
       <div class="cm-section">
@@ -4698,8 +4701,23 @@ const CM_engine = (function(catalog){
     options = options || {};
     const { code, qty, loc, priceOverride, nameOverride,
             displayCycle: itemDisplayCycle, discount: itemDiscount } = item;
-    const product = catalog.products[code];
-    if(!product) throw new Error('商品代號不存在於合約商品庫: '+code);
+    let product = catalog.products[code];
+    if(!product){
+      // 臨時自訂品項：商品庫沒有此代號，要求填特殊單價，並用 nameOverride 或代號當品名
+      if(priceOverride == null){
+        throw new Error('代號「'+code+'」不在商品庫，請填特殊單價');
+      }
+      if(!nameOverride){
+        throw new Error('代號「'+code+'」不在商品庫，請填品名');
+      }
+      product = {
+        name: nameOverride,
+        size: item.customSize || '',
+        cycle: item.customCycle || itemDisplayCycle || options.defaultDisplayCycle || '4W',
+        price: null,
+        discountable: false
+      };
+    }
     const name = nameOverride || product.name;
     const productCycle = product.cycle;
     const displayCycle = itemDisplayCycle || options.defaultDisplayCycle || productCycle;
@@ -4992,23 +5010,36 @@ function cmLoadDocx(){
 // 規則：
 // - 優先用 contractedItems（已成約品項），無則用 trialItems
 // - 排除 bundledTo（配件）
-// - 排除不在合約商品庫的代號（記錄到 _meta.skippedCodes）
+// - 不在合約商品庫的代號 → 自動建為「臨時新品」（從 salesystem 商品庫補品名/單價），記錄到 _meta.autoCustomCodes
 // - quoted = 4W 總額 → priceOverride = quoted / qty（依 4W 顯示週期解讀為 4W 單價）
 function clientToCMConfig(c){
   c = c || {};
   const useContracted = !!(c.contractedItems && c.contractedItems.length);
   const src = useContracted ? c.contractedItems : (c.trialItems || []);
-  const filtered = src.filter(it => it && it.product && !it.bundledTo && CM_CATALOG.products[it.product]);
-  const skipped  = src.filter(it => it && it.product && !it.bundledTo && !CM_CATALOG.products[it.product]);
+  // 排除 bundled 配件與空品項；不在合約商品庫的代號改用 salesystem 商品庫資料當「臨時新品」
+  const usable = src.filter(it => it && it.product && !it.bundledTo);
   // 注意：salesystem 中 it.cycle 是換洗週期（catalog cycle 預設），不是顯示週期；
   //       it.quoted 是「整行 4W 總額」。故品項一律用全域 4W 顯示週期解讀，
   //       priceOverride = quoted / qty （即每 4W 每單位的客戶議價）。
-  const items = filtered.map(it => {
+  const autoCustomCodes = [];
+  const items = usable.map(it => {
     const out = { code: it.product, qty: it.qty || 1 };
     if(it.quoted && it.quoted > 0 && (it.qty || 1) > 0){
       out.priceOverride = Math.round(it.quoted / (it.qty || 1));
     }
     if(it.loc) out.loc = it.loc;
+    // 如果代號不在合約商品庫，從 salesystem DB.products 補品名/單價
+    if(!CM_CATALOG.products[it.product]){
+      autoCustomCodes.push(it.product);
+      const sp = (typeof DB !== 'undefined' && DB.products) ? DB.products.find(p => p.code === it.product) : null;
+      out.name = (sp && sp.desc) ? sp.desc : it.product;  // 給 UI 顯示用；cmBuildConfig 會轉 nameOverride
+      // 若沒設 priceOverride，且 salesystem 有 price>0，則自動推 4W 單價
+      // （配件等 price=0 的項目不自動帶，讓使用者手動填或刪除）
+      if(out.priceOverride == null && sp && sp.price != null && sp.price > 0){
+        const fw4unit = sp.price * (sp.cycle === '2W' ? 2 : 1);
+        out.priceOverride = fw4unit;
+      }
+    }
     return out;
   });
   const dt = (typeof today === 'function' ? today() : '').replace(/-/g, '/');
@@ -5023,7 +5054,7 @@ function clientToCMConfig(c){
     showLocation: true, showStamp: true, showCustomerNumber: true,
     extraNotes: '',
     items,
-    _meta: { skippedCodes: skipped.map(it=>it.product), srcIsContracted: useContracted }
+    _meta: { autoCustomCodes, srcIsContracted: useContracted }
   };
 }
 
@@ -5101,8 +5132,8 @@ function cmShowMessage(){
   } else {
     msgs.push('客戶尚無成約品項，已從試用品項帶入 '+CM_state.items.length+' 筆。');
   }
-  if(m.skippedCodes && m.skippedCodes.length){
-    msgs.push('以下代號不在合約商品庫，已略過：'+m.skippedCodes.join('、')+'。');
+  if(m.autoCustomCodes && m.autoCustomCodes.length){
+    msgs.push('以下代號不在合約商品庫，已自動建為「臨時新品」（品名／單價自動帶入，請確認）：'+m.autoCustomCodes.join('、')+'。');
   }
   if(msgs.length){ box.classList.add('info'); box.textContent = msgs.join(' '); }
 }
@@ -5122,16 +5153,23 @@ function cmRenderItems(){
   CM_state.items.forEach((it, idx) => {
     const div = document.createElement('div');
     div.className = 'cm-item';
+    const inCatalog = !!(it.code && CM_CATALOG.products[it.code]);
+    const catalogName = inCatalog ? CM_CATALOG.products[it.code].name : '';
+    const displayName = it.name != null ? it.name : catalogName;
     const head = document.createElement('div');
     head.className = 'cm-item-head';
     const pick = document.createElement('button');
     pick.type = 'button';
     pick.className = 'cm-item-pick' + (it.code ? '' : ' empty');
-    if(it.code && CM_CATALOG.products[it.code]){
-      const p = CM_CATALOG.products[it.code];
-      pick.innerHTML = '<span class="code">'+escHtml(it.code)+'</span>'+escHtml(p.name)+'<span class="price">'+escHtml(p.cycle||'')+' / 單價 '+(p.price==null?'—':p.price)+'</span>';
+    if(it.code){
+      if(inCatalog){
+        const p = CM_CATALOG.products[it.code];
+        pick.innerHTML = '<span class="code">'+escHtml(it.code)+'</span>'+escHtml(catalogName)+'<span class="price">'+escHtml(p.cycle||'')+' / 單價 '+(p.price==null?'—':p.price)+'</span>';
+      } else {
+        pick.innerHTML = '<span class="code" style="color:#A36B00">🆕 '+escHtml(it.code)+'</span><span style="color:var(--text2)">'+escHtml(displayName || '臨時新品')+'</span><span class="price" style="color:#A36B00">(自訂)</span>';
+      }
     } else {
-      pick.textContent = '👉 點此選擇商品';
+      pick.textContent = '👉 點此從商品庫選擇';
     }
     pick.onclick = () => cmOpenProdPicker(idx);
     const rm = document.createElement('button');
@@ -5140,11 +5178,27 @@ function cmRenderItems(){
     rm.onclick = () => cmRemoveItem(idx);
     head.appendChild(pick); head.appendChild(rm);
     div.appendChild(head);
+
+    // 代號 + 品名 可編輯欄（永遠顯示）
+    const idRow = document.createElement('div');
+    idRow.className = 'cm-row';
+    idRow.style.cssText = 'gap:8px;margin-bottom:0';
+    idRow.appendChild(cmField('代號 *', 'text', it.code || '', v => {
+      it.code = (v||'').trim().toUpperCase();
+      cmRenderItems();
+    }, {placeholder:'例：DECSR 或自訂代號'}));
+    idRow.appendChild(cmField('品名 *', 'text', displayName, v => {
+      const cat = CM_CATALOG.products[it.code];
+      if(cat && v === cat.name){ delete it.name; }
+      else { it.name = v; }
+    }, {placeholder: inCatalog ? '預設商品庫品名，可改' : '臨時新品請填品名'}));
+    div.appendChild(idRow);
+
     const fields = document.createElement('div');
     fields.className = 'cm-item-fields';
     fields.appendChild(cmField('數量','number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; }, {min:1}));
     fields.appendChild(cmField('位置','text', it.loc || '', v => { it.loc = v; }, {placeholder:'例：大門'}));
-    fields.appendChild(cmField('特殊單價','number', it.priceOverride == null ? '' : it.priceOverride, v => { it.priceOverride = v === '' ? undefined : Number(v); }, {placeholder:'依顯示週期', step:'any'}));
+    fields.appendChild(cmField(inCatalog ? '特殊單價' : '單價 *','number', it.priceOverride == null ? '' : it.priceOverride, v => { it.priceOverride = v === '' ? undefined : Number(v); }, {placeholder: inCatalog ? '依顯示週期' : '4W 單價 (必填)', step:'any'}));
     const cw = document.createElement('label'); cw.className = 'cm-field';
     const cs = document.createElement('span'); cs.textContent = '此項顯示週期'; cw.appendChild(cs);
     const sel = document.createElement('select');
@@ -5156,12 +5210,33 @@ function cmRenderItems(){
     sel.onchange = () => { it.displayCycle = sel.value || undefined; };
     cw.appendChild(sel); fields.appendChild(cw);
     div.appendChild(fields);
+
+    if(!inCatalog && it.code){
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:11px;color:#A36B00;margin-top:2px';
+      hint.textContent = '🆕 此代號不在商品庫，請確認品名與單價已填寫。';
+      div.appendChild(hint);
+    }
+
     cont.appendChild(div);
   });
 }
-function cmAddItem(){
+function cmAddItem(isCustom){
+  const newIdx = CM_state.items.length;
   CM_state.items.push({code:'', qty:1});
   cmRenderItems();
+  if(!isCustom){
+    cmOpenProdPicker(newIdx);
+  } else {
+    setTimeout(() => {
+      const items = document.querySelectorAll('#cm-items .cm-item');
+      const itemEl = items[newIdx];
+      if(itemEl){
+        const inputs = itemEl.querySelectorAll('input[type=text]');
+        if(inputs[0]) inputs[0].focus();
+      }
+    }, 50);
+  }
 }
 function cmRemoveItem(idx){
   CM_state.items.splice(idx, 1);
@@ -5201,7 +5276,10 @@ function cmRenderProdList(){
       row.innerHTML = '<div><div class="name"><b>'+escHtml(p.code)+'</b> '+escHtml(p.name)+'</div><div class="meta">'+escHtml([p.size,p.color,p.cycle].filter(Boolean).join(' · '))+'</div></div><div class="price">$'+(p.price==null?'—':p.price)+'</div>';
       row.onclick = () => {
         if(CM_pickContext != null && CM_state.items[CM_pickContext]){
-          CM_state.items[CM_pickContext].code = p.code;
+          const it = CM_state.items[CM_pickContext];
+          it.code = p.code;
+          // 從商品庫選取 → 清掉之前的自訂品名（讓 it.name 為 undefined，恢復用 catalog 預設）
+          delete it.name;
           cmRenderItems();
         }
         cmCloseProdPicker();
@@ -5220,6 +5298,17 @@ function cmBuildConfig(){
     if(it.loc) out.loc = it.loc;
     if(it.priceOverride !== '' && it.priceOverride != null && !Number.isNaN(Number(it.priceOverride))) out.priceOverride = Number(it.priceOverride);
     if(it.displayCycle) out.displayCycle = it.displayCycle;
+    // 品名覆寫：若 it.name 有值，且非空，傳給 engine
+    if(it.name != null && String(it.name).trim()){
+      const cat = CM_CATALOG.products[it.code];
+      // 與 catalog 預設品名相同 → 不傳；不同（或自訂品項）→ 傳
+      if(!cat || it.name !== cat.name) out.nameOverride = String(it.name).trim();
+    }
+    // 臨時自訂品項驗證：代號不在商品庫 → 必須有 nameOverride + priceOverride
+    if(!CM_CATALOG.products[it.code]){
+      if(!out.nameOverride) throw new Error('代號「'+it.code+'」不在商品庫，請填品名');
+      if(out.priceOverride == null) throw new Error('代號「'+it.code+'」不在商品庫，請填單價');
+    }
     return out;
   });
   if(validItems.length === 0) throw new Error('請至少加入一筆有效商品');
@@ -5602,14 +5691,22 @@ if(location.search.includes('test=1')){
   ]});
   assert('clientToCMConfig 排除 bundledTo',cmC4.items.length,1);
   assert('clientToCMConfig 排除後留 DECSR',cmC4.items[0].code,'DECSR');
-  // 不在合約商品庫的代號 → skipped
+  // 不在合約商品庫的代號 → 自動建為臨時新品（從 salesystem 商品庫補品名/單價）
   const cmC5=clientToCMConfig({name:'D店',contractedItems:[
+    {product:'DECSR',qty:1},
+    {product:'S-20',qty:1}  // S-20 在 CM_CATALOG 但 price=null；在 salesystem DB 有 price=100, cycle=2W
+  ]});
+  assert('clientToCMConfig 全部品項保留',cmC5.items.length,2);
+  // S-20 在 CM_CATALOG 但 price=null → 不算 autoCustom（catalog 有，只是沒原價）
+  assert('clientToCMConfig S-20 在 catalog 不算 autoCustom',cmC5._meta.autoCustomCodes.length,0);
+  // 完全不在 CM_CATALOG 的代號
+  const cmC5b=clientToCMConfig({name:'D2店',contractedItems:[
     {product:'DECSR',qty:1},
     {product:'NONEXISTENT-CODE',qty:1}
   ]});
-  assert('clientToCMConfig 過濾不存在代號',cmC5.items.length,1);
-  assert('clientToCMConfig 記錄 skippedCodes 數',cmC5._meta.skippedCodes.length,1);
-  assert('clientToCMConfig skippedCodes 內容',cmC5._meta.skippedCodes[0],'NONEXISTENT-CODE');
+  assert('clientToCMConfig 非合約代號記入 autoCustomCodes',cmC5b._meta.autoCustomCodes.length,1);
+  assert('clientToCMConfig autoCustomCodes 內容',cmC5b._meta.autoCustomCodes[0],'NONEXISTENT-CODE');
+  assert('clientToCMConfig 非合約代號仍保留品項',cmC5b.items.length,2);
   // quoted → priceOverride（4W 總額 / qty）
   const cmC6=clientToCMConfig({name:'E店',contractedItems:[{product:'DECSR',qty:2,quoted:600,cycle:'2W'}]});
   assert('clientToCMConfig priceOverride=quoted/qty',cmC6.items[0].priceOverride,300);
@@ -5632,6 +5729,49 @@ if(location.search.includes('test=1')){
   assert('previewText 不含「省 」%',cmDiscPreview.includes('省 '),false);
   assert('previewText 不含「部分品項享有」',cmDiscPreview.includes('部分品項享有'),false);
   assert('previewText 仍含最終單價',cmDiscPreview.includes('單價 272'),true);
+  CM_state=null;
+
+  // --- 臨時新品（不在 CM_CATALOG）---
+  // 純自訂代號 + 品名 + 單價，engine 應接受
+  const cmCustomCfg={client:'Y',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'CUSTOM-1',qty:2,nameOverride:'我的特製品',priceOverride:500}]};
+  const cmCustomQ=CM_engine.expandQuote(cmCustomCfg);
+  // 虛擬產品 cycle='4W'，cycleMultiplier=1，monthly = 500 × 1 × 2 = 1000
+  assert('臨時新品 4W 總額',cmCustomQ.grandTotal,1000);
+  assert('臨時新品 品名',cmCustomQ.areas[0].items[0].name,'我的特製品');
+  // 臨時新品缺單價 → 丟錯
+  let threw=false;
+  try{ CM_engine.expandQuote({client:'Y',date:'2026/05/07',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'CUSTOM-X',qty:1,nameOverride:'X'}]}); }catch(e){ threw=true; }
+  assert('臨時新品無單價 → 丟錯',threw,true);
+  // 臨時新品缺品名 → 丟錯
+  threw=false;
+  try{ CM_engine.expandQuote({client:'Y',date:'2026/05/07',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'CUSTOM-Y',qty:1,priceOverride:300}]}); }catch(e){ threw=true; }
+  assert('臨時新品無品名 → 丟錯',threw,true);
+
+  // --- 品名覆寫（既有商品改名）---
+  // 既有 DECSR + nameOverride 應使用覆寫名而非 catalog 預設
+  const cmRenameQ=CM_engine.expandQuote({client:'Y',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'DECSR',qty:1,nameOverride:'歡迎光臨地墊（特製版）'}]});
+  assert('既有商品 nameOverride 生效',cmRenameQ.areas[0].items[0].name,'歡迎光臨地墊（特製版）');
+  assert('既有商品 nameOverride 不影響原價計算',cmRenameQ.grandTotal,340);
+
+  // --- cmBuildConfig 對 it.name 的轉換 ---
+  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'DECSR',qty:1,name:'歡迎光臨地墊S紅'}]};  // 與 catalog 同名
+  const cmBC1=cmBuildConfig();
+  assert('cmBuildConfig 同 catalog 名 → 不傳 nameOverride',cmBC1.items[0].nameOverride,undefined);
+  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'DECSR',qty:1,name:'我的客製名稱'}]};
+  const cmBC2=cmBuildConfig();
+  assert('cmBuildConfig 不同名 → 傳 nameOverride',cmBC2.items[0].nameOverride,'我的客製名稱');
+  // 完全自訂 + name + priceOverride
+  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'NEWITEM-1',qty:1,name:'臨時新品 A',priceOverride:280}]};
+  const cmBC3=cmBuildConfig();
+  assert('cmBuildConfig 自訂代號保留 nameOverride',cmBC3.items[0].nameOverride,'臨時新品 A');
+  assert('cmBuildConfig 自訂代號保留 priceOverride',cmBC3.items[0].priceOverride,280);
   CM_state=null;
 
   // --- 結果顯示 ---
