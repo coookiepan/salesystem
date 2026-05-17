@@ -3888,9 +3888,12 @@ function genReport(){
     const prod=rptProd(c.trialItems);
     const mon=rptAmountMonth(c,from,to);
     // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
+    // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於 status=試用中/報價/將成約
+    // 但本期間沒新動作的客戶），改填到「報表結束日月份」，讓金額不至於漏掉
     const monthCells=['','','','','',''];
-    if(mon!==null&&fw>0){
-      const idx=mon-startMonth;
+    if(fw>0){
+      const targetMon = mon!==null ? mon : parseInt(to.split('-')[1],10);
+      const idx=targetMon-startMonth;
       if(idx>=0&&idx<=5) monthCells[idx]=String(fw);
     }
     // 14 欄：NO, name, '', contact, '', prod, '', H, I, J, K, L, M, note
