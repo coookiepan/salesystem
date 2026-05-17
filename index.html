@@ -2466,9 +2466,10 @@ function renderShops(query){
 // STATUS PILLS
 // ═══════════════════════════════════════════════════════════
 // 分類定義（新系統）
-const CATEGORIES=['銷售紀錄','未拜訪','試用中未報價','複訪順序','已成約','拒絕','全部'];
+const CATEGORIES=['銷售紀錄','未拜訪','試用回收','全部'];
 let activeCat='銷售紀錄';
 let activeRegion=''; // 「未拜訪」分類時的區域篩選
+let activeStatusSub=''; // 「全部」分類時的狀態子篩選
 function initPills(){
   document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
     `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}',this)">${s}</button>`
@@ -2476,7 +2477,8 @@ function initPills(){
 }
 function toggleCat(s,el){
   activeCat=s;
-  activeRegion=''; // 切換分類時清空區域篩選
+  activeRegion=''; // 切換分類時清空區域/狀態子篩選
+  activeStatusSub='';
   document.querySelectorAll('#status-pills .pill').forEach(p=>p.classList.remove('on'));
   if(el)el.classList.add('on');
   else{
@@ -2492,40 +2494,57 @@ function parseRegion(addr){
   const m=addr.match(/([\u4e00-\u9fa5]{1,3}區)/);
   return m?m[1]:'';
 }
-// 蒐集指定分類客戶的區域清單
+// 蒐集「未拜訪」分類客戶的區域清單
 function collectRegions(){
   const regions=new Set();
   DB.clients.forEach(c=>{
-    // 依目前分類決定篩選條件
-    if(activeCat==='複訪順序'){
-      if(!c.nextdate)return;
-    }else{
-      // 未拜訪
-      if((c.visits||[]).length>0)return;
-      const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
-      if(mains.length>0)return;
-      if(statusEq(c.status,STATUS.REFUSE))return;
-    }
+    if((c.visits||[]).length>0)return;
+    const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    if(mains.length>0)return;
+    if(statusEq(c.status,STATUS.REFUSE))return;
     const r=parseRegion(c.addr);
     if(r)regions.add(r);
   });
   return [...regions].sort();
 }
-// 渲染「未拜訪」分類下的區域 sub-bar
+// 渲染分類底下的 sub-bar：
+//   - 未拜訪：區域 pills
+//   - 全部：狀態下拉
 function renderRegionBar(){
   const bar=document.getElementById('region-bar');
   if(!bar)return;
-  if(activeCat!==STATUS.UNVISITED&&activeCat!=='複訪順序'){bar.style.display='none';bar.innerHTML='';return;}
-  const regions=collectRegions();
-  if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
-  bar.style.display='flex';
-  bar.innerHTML='<button class="pill pill-sm'+(activeRegion===''?' on':'')+'" onclick="setRegion(\'\',this)">全部區域</button>'+
-    regions.map(r=>`<button class="pill pill-sm${activeRegion===r?' on':''}" onclick="setRegion('${escHtml(r)}',this)">${escHtml(r)}</button>`).join('');
+  if(activeCat===STATUS.UNVISITED){
+    const regions=collectRegions();
+    if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
+    bar.style.display='flex';
+    bar.innerHTML='<button class="pill pill-sm'+(activeRegion===''?' on':'')+'" onclick="setRegion(\'\',this)">全部區域</button>'+
+      regions.map(r=>`<button class="pill pill-sm${activeRegion===r?' on':''}" onclick="setRegion('${escHtml(r)}',this)">${escHtml(r)}</button>`).join('');
+    return;
+  }
+  if(activeCat==='全部'){
+    bar.style.display='flex';
+    bar.style.alignItems='center';
+    const opts=SO.map(s=>`<option value="${s}"${s===activeStatusSub?' selected':''}>${s}</option>`).join('');
+    const cnt=activeStatusSub
+      ? DB.clients.filter(c=>activeStatusSub===STATUS.REFUSE?statusEq(c.status,STATUS.REFUSE):(c.status||STATUS.UNVISITED)===activeStatusSub).length
+      : DB.clients.length;
+    bar.innerHTML=`<span style="font-size:13px;color:var(--text2)">狀態：</span>`
+      +`<select onchange="setStatusSub(this.value)" style="width:auto;padding:4px 8px;font-size:13px">`
+      +`<option value=""${!activeStatusSub?' selected':''}>全部狀態</option>${opts}</select>`
+      +`<span style="font-size:12px;color:var(--text3);margin-left:6px">${cnt} 家</span>`;
+    return;
+  }
+  bar.style.display='none';bar.innerHTML='';
 }
 function setRegion(r,el){
   activeRegion=r;
   document.querySelectorAll('#region-bar .pill').forEach(p=>p.classList.remove('on'));
   if(el)el.classList.add('on');
+  renderClients();
+}
+function setStatusSub(s){
+  activeStatusSub=s;
+  renderRegionBar();
   renderClients();
 }
 
@@ -2692,17 +2711,12 @@ function matchCategory(c){
       }
       return true;
     }
-    case '試用中未報價': return c.status===STATUS.TRIAL&&mains.length>0&&hasUnquoted;
-    case '複訪順序': {
-      if(!c.nextdate)return false;
-      if(activeRegion){
-        return parseRegion(c.addr)===activeRegion;
-      }
-      return true;
+    case '試用回收': return c.status===STATUS.TRIAL;
+    case '全部': {
+      if(!activeStatusSub)return true;
+      if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
+      return (c.status||STATUS.UNVISITED)===activeStatusSub;
     }
-    case '已成約': return isDeal;
-    case '拒絕': return isRefused;
-    case '全部': return true;
   }
   return true;
 }
@@ -3124,8 +3138,10 @@ function renderClients(){
   const sort=document.getElementById('csort').value;
   let list=DB.clients.map((c,i)=>({c,i}));
   list=list.filter(({c})=>matchCategory(c));
-  // 狀態開關過濾（所有分類都生效，除了「拒絕」分類本身）
-  if(activeCat!=='拒絕'){
+  // 狀態開關過濾（所有分類都生效；但「全部」分類已選定特定狀態子篩選時跳過，
+  // 否則使用者選了被 statusFilter 隱藏的狀態會看不到任何東西）
+  const skipStatusFilter=(activeCat==='全部'&&activeStatusSub);
+  if(!skipStatusFilter){
     list=list.filter(({c})=>statusVisible(c.status));
   }
   if(q)list=list.filter(({c})=>(c.name+(c.addr||'')+(c.type||'')+(c.contact||'')).toLowerCase().includes(q));
@@ -3134,13 +3150,8 @@ function renderClients(){
   list.sort((a,b)=>{
     if(useDefault){
       if(activeCat==='銷售紀錄'){
-        // 試用日最靠近今天的在上；兩邊皆無則 fallback 到 updatedAt
-        const da=trialStartDate(a.c);
-        const db=trialStartDate(b.c);
-        if(!da&&!db)return(b.c.updatedAt||0)-(a.c.updatedAt||0);
-        if(!da)return 1;
-        if(!db)return -1;
-        return da<db?1:da>db?-1:0;
+        // 最後更新時間降序
+        return(b.c.updatedAt||0)-(a.c.updatedAt||0);
       }
       if(activeCat===STATUS.UNVISITED){
         // 區域 → 名稱
@@ -3148,13 +3159,16 @@ function renderClients(){
         if(ra!==rb)return ra.localeCompare(rb,'zh-Hant');
         return a.c.name.localeCompare(b.c.name,'zh-Hant');
       }
-      if(activeCat==='複訪順序'){
-        return(a.c.nextdate||'9999')>(b.c.nextdate||'9999')?1:-1;
+      if(activeCat==='試用回收'){
+        // 試用日離現在最遠（=越早）放最前面；空值排到最後
+        const da=trialStartDate(a.c);
+        const db=trialStartDate(b.c);
+        if(!da&&!db)return(b.c.updatedAt||0)-(a.c.updatedAt||0);
+        if(!da)return 1;
+        if(!db)return -1;
+        return da<db?-1:da>db?1:0;
       }
-      if(activeCat==='試用中未報價'){
-        return(b.c.updatedAt||0)-(a.c.updatedAt||0);
-      }
-      // 全部 / 已成約 / 拒絕 → 試用日降序（空值在上）
+      // 全部 → 試用日降序（空值在上）→ 名稱
       const da=trialStartDate(a.c);
       const db=trialStartDate(b.c);
       if(!da&&!db)return a.c.name.localeCompare(b.c.name,'zh-Hant');
@@ -3888,9 +3902,12 @@ function genReport(){
     const prod=rptProd(c.trialItems);
     const mon=rptAmountMonth(c,from,to);
     // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
+    // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於 status=試用中/報價/將成約
+    // 但本期間沒新動作的客戶），改填到「報表結束日月份」，讓金額不至於漏掉
     const monthCells=['','','','','',''];
-    if(mon!==null&&fw>0){
-      const idx=mon-startMonth;
+    if(fw>0){
+      const targetMon = mon!==null ? mon : parseInt(to.split('-')[1],10);
+      const idx=targetMon-startMonth;
       if(idx>=0&&idx<=5) monthCells[idx]=String(fw);
     }
     // 14 欄：NO, name, '', contact, '', prod, '', H, I, J, K, L, M, note
@@ -5706,21 +5723,23 @@ if(location.search.includes('test=1')){
   const mcUnvisited={status:STATUS.UNVISITED,visits:[],trialItems:[],contractedItems:[]};
   const mcDeal={status:STATUS.DEAL,visits:[{date:'2026-01-01'}],trialItems:[],contractedItems:[{product:'S-20',qty:1}]};
   const mcRefuse={status:STATUS.REFUSE,visits:[{date:'2026-01-01'}],trialItems:[],contractedItems:[]};
-  const origCat=activeCat;const origRegion=activeRegion;
-  activeCat='試用中未報價';
-  assert('matchCategory 試用未報價-是',matchCategory(mcTrial),true);
-  assert('matchCategory 試用未報價-不是(未拜訪)',matchCategory(mcUnvisited),false);
+  const origCat=activeCat;const origRegion=activeRegion;const origSub=activeStatusSub;
+  activeCat='試用回收';activeStatusSub='';
+  assert('matchCategory 試用回收-是(試用中)',matchCategory(mcTrial),true);
+  assert('matchCategory 試用回收-不是(未拜訪)',matchCategory(mcUnvisited),false);
+  assert('matchCategory 試用回收-不是(已成約)',matchCategory(mcDeal),false);
   activeCat='未拜訪';activeRegion='';
   assert('matchCategory 未拜訪-是',matchCategory(mcUnvisited),true);
   assert('matchCategory 未拜訪-不是(有visit)',matchCategory(mcTrial),false);
-  activeCat='已成約';
-  assert('matchCategory 已成約',matchCategory(mcDeal),true);
-  activeCat='拒絕';
-  assert('matchCategory 拒絕',matchCategory(mcRefuse),true);
-  activeCat='複訪順序';activeRegion='';
-  assert('matchCategory 複訪順序-無nextdate',matchCategory({...mcTrial,nextdate:''}),false);
-  assert('matchCategory 複訪順序-有nextdate',matchCategory({...mcTrial,nextdate:'2026-05-01'}),true);
-  activeCat=origCat;activeRegion=origRegion;
+  activeCat='全部';activeStatusSub='';
+  assert('matchCategory 全部-無 sub-成約',matchCategory(mcDeal),true);
+  assert('matchCategory 全部-無 sub-拒絕',matchCategory(mcRefuse),true);
+  activeStatusSub=STATUS.DEAL;
+  assert('matchCategory 全部+sub=已成約-是',matchCategory(mcDeal),true);
+  assert('matchCategory 全部+sub=已成約-不是',matchCategory(mcTrial),false);
+  activeStatusSub=STATUS.REFUSE;
+  assert('matchCategory 全部+sub=拒絕',matchCategory(mcRefuse),true);
+  activeCat=origCat;activeRegion=origRegion;activeStatusSub=origSub;
 
   // --- getInventoryDiffs ---
   const diffOld=[{product:'AFDW',qty:1},{product:'BT3',qty:4,bundledTo:'AFDW'}];
