@@ -824,12 +824,12 @@ tbody tr:hover{background:var(--surface-hover)}
     </div>
     <div id="rpt-output" style="display:none">
       <div class="alert-info alert" style="font-size:12px;margin-bottom:12px">
-        💡 三段內容請分別貼到 RS 模板的 <b>A20</b>（推進表）、<b>A54</b>（未來兩週規劃）、本週日報 <b>A7</b>。<br>
+        💡 三段內容請分別貼到 RS 模板：① 推進表貼 <b>A20</b>　② 未來兩週貼 <b>A74</b>　③ 本週日報貼 <b>A7</b>。<br>
         💡 大客戶（4W ≥ 3000）會列在每段下方的提示，請在 Excel 中按住 Ctrl 點選那幾列再上色。Q2 專案請自行手動標色。
       </div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ① RS 推進表 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶）</span>
+        ① RS 推進表 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶，最多 50 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-4w')">📋 複製</button>
@@ -840,7 +840,7 @@ tbody tr:hover{background:var(--surface-hover)}
       <div id="rpt-4w-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A54，未拜訪的客戶清單）</span>
+        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A74，未拜訪的客戶清單，最多 35 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-plan')">📋 複製</button>
@@ -851,7 +851,7 @@ tbody tr:hover{background:var(--surface-hover)}
       <div id="rpt-plan-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ③ 本週日報 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到本週日報 A7，週一~週五橫向展開）</span>
+        ③ 本週日報 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到本週日報 A7，每筆拜訪一列，最多 50 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">📋 複製</button>
@@ -3919,13 +3919,13 @@ function genReport(){
   });
   document.getElementById('rpt-4w').value=rows4w.join('\n');
   document.getElementById('rpt-4w-cnt').textContent=
-    `共 ${rows4w.length} 筆${rows4w.length>30?'（⚠ 超過模板 30 列上限，請刪減後再貼）':''}`;
+    `共 ${rows4w.length} 筆${rows4w.length>50?'（⚠ 超過模板 50 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-4w-vip').textContent=rptVipHint(vip4w);
 
   // ═════════════════════════════════════════════
-  // ② 未來兩週拜訪規劃（A54:N73，14 欄，最多 20 列）
+  // ② 未來兩週拜訪規劃（A74:N108，14 欄，最多 35 列）
   //   來源：c.status === STATUS.UNVISITED（含 status 未設值，視為未拜訪）
-  //   合併：B-C 預定日期 / D-F 客戶 / G-H 窗口 / I-J 商品 / K-M 拜訪目的 / N 預估4W
+  //   合併：B-E 客戶 / F-G 商品 / H-M 備註 / N 預估 4W
   // ═════════════════════════════════════════════
   const isUnvisited=c=>!c.status||c.status===STATUS.UNVISITED;
   const planList=DB.clients.filter(isUnvisited);
@@ -3941,89 +3941,71 @@ function genReport(){
     const fw=calcReportAmt(c);
     const prod=rptProd(c.trialItems);
     const note=(c.note||'').replace(/[\t\n\r]/g,' ');
-    // 14 欄：NO, '', '', name, '', '', contact, '', prod, '', note, '', '', fw
-    const cols=[String(i+1), '', '', c.name, '', '', c.contact||'', '', prod, '',
-                note, '', '', fw>0?String(fw):''];
+    // 14 欄：NO, name, '', '', '', prod, '', note, '', '', '', '', '', fw
+    const cols=[String(i+1), c.name, '', '', '', prod, '',
+                note, '', '', '', '', '', fw>0?String(fw):''];
     rowsPlan.push(cols.join('\t'));
     if(fw>=RPT_VIP_THRESHOLD) vipPlan.push({row:i+1,name:c.name});
   });
   document.getElementById('rpt-plan').value=rowsPlan.join('\n');
   document.getElementById('rpt-plan-cnt').textContent=
-    `共 ${rowsPlan.length} 筆${rowsPlan.length>20?'（⚠ 超過模板 20 列上限，請刪減後再貼）':''}`;
+    `共 ${rowsPlan.length} 筆${rowsPlan.length>35?'（⚠ 超過模板 35 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-plan-vip').textContent=rptVipHint(vipPlan);
 
   // ═════════════════════════════════════════════
-  // ③ 本週日報（A7:J26，10 欄，最多 20 列）
-  //   橫向展開：每客戶一列，D~H = 週一~週五
-  //   起始週：以 from 那天往前推到當週週一
-  //   格式：[動作] 商品 試用額（試用才帶試用額；多動作以 + 串）
+  // ③ 本週日報（A7:G56，7 欄，最多 50 列）
+  //   縱向逐筆：每次拜訪一列
+  //   起始週：以 from 那天往前推到當週週一（涵蓋整週週一~週日）
+  //   欄位：NO / 客戶名稱 / 日期 / 提案商品 / 狀態 / 備註 / 預估 4W
+  //   預估 4W：僅 [試] 動作有值（用 calcReportAmt(c)，為合計試用額用）
   // ═════════════════════════════════════════════
   const fromD=new Date(from+'T00:00:00');
   const dowOffset=(fromD.getDay()+6)%7; // 週一=0
-  const mon=new Date(fromD); mon.setDate(fromD.getDate()-dowOffset);
+  const monDate=new Date(fromD); monDate.setDate(fromD.getDate()-dowOffset);
   const weekDates=[];
-  for(let i=0;i<5;i++){
-    const d=new Date(mon); d.setDate(mon.getDate()+i);
+  for(let i=0;i<7;i++){
+    const d=new Date(monDate); d.setDate(monDate.getDate()+i);
     weekDates.push(rptFmt(d));
   }
-  // 聚合 (client → 每日 visits[])
-  const byClient=new Map();
+  const weekSet=new Set(weekDates);
+  // 攤平：每次拜訪一筆
+  const visitRows=[];
   DB.clients.forEach(c=>{
     (c.visits||[]).forEach(v=>{
-      if(v.date&&weekDates.includes(v.date)){
-        if(!byClient.has(c)) byClient.set(c,{Mon:[],Tue:[],Wed:[],Thu:[],Fri:[]});
-        const key=['Mon','Tue','Wed','Thu','Fri'][weekDates.indexOf(v.date)];
-        byClient.get(c)[key].push(v);
+      if(v&&v.date&&weekSet.has(v.date)){
+        visitRows.push({c,v});
       }
     });
   });
-  // 排序：依該週首次拜訪日
-  const clientArr=[...byClient.keys()].sort((a,b)=>{
-    const firstA=weekDates.find(d=>(a.visits||[]).some(v=>v.date===d))||'9999';
-    const firstB=weekDates.find(d=>(b.visits||[]).some(v=>v.date===d))||'9999';
-    return firstA<firstB?-1:firstA>firstB?1:0;
+  // 排序：日期升序 → 客戶名
+  visitRows.sort((a,b)=>{
+    if(a.v.date!==b.v.date) return a.v.date<b.v.date?-1:1;
+    return (a.c.name||'').localeCompare(b.c.name||'');
   });
   const rowsDaily=[];
   const vipDaily=[];
-  clientArr.forEach((c,i)=>{
-    const day=byClient.get(c);
+  visitRows.forEach((r,i)=>{
+    const c=r.c, v=r.v;
     const prod=rptProd(c.trialItems);
+    const action=rptVisitAction(v.statusChange);
+    const isTrial=action==='試';
     const fwClient=calcReportAmt(c);
-    // 每日格內容
-    const cellFor=(visits)=>{
-      if(!visits.length) return '';
-      // 收集動作代號（去重，保留順序）
-      const acts=[];
-      visits.forEach(v=>{
-        const a=rptVisitAction(v.statusChange);
-        if(!acts.includes(a)) acts.push(a);
-      });
-      const hasTrial=acts.includes('試');
-      const fwPart=hasTrial?` ${calcFW4(c)}`:'';
-      return `[${acts.join('+')}] ${prod||'-'}${fwPart}`;
-    };
-    // 備註：本週所有 visits 的 note/insight 串接
+    const fwCell=(isTrial&&fwClient>0)?String(fwClient):'';
+    // 備註：該次 visit 的 note + insight 串接
     const noteParts=[];
-    const seen=new Set();
-    ['Mon','Tue','Wed','Thu','Fri'].forEach(k=>{
-      day[k].forEach(v=>{
-        [v.note,v.insight].forEach(x=>{
-          const s=(x||'').trim();
-          if(s&&!seen.has(s)){seen.add(s);noteParts.push(s);}
-        });
-      });
+    [v.note,v.insight].forEach(x=>{
+      const s=(x||'').trim();
+      if(s) noteParts.push(s);
     });
     const noteStr=noteParts.join('；').replace(/[\t\n\r]/g,' ');
-    // 10 欄：NO, name, prod, Mon, Tue, Wed, Thu, Fri, fwEst, note
-    const cols=[String(i+1), c.name, prod||'',
-                cellFor(day.Mon), cellFor(day.Tue), cellFor(day.Wed), cellFor(day.Thu), cellFor(day.Fri),
-                fwClient>0?String(fwClient):'', noteStr];
+    // 7 欄：NO, name, date, prod, action, note, fw
+    const cols=[String(i+1), c.name, v.date, prod||'', action, noteStr, fwCell];
     rowsDaily.push(cols.join('\t'));
-    if(fwClient>=RPT_VIP_THRESHOLD) vipDaily.push({row:i+1,name:c.name});
+    if(isTrial&&fwClient>=RPT_VIP_THRESHOLD) vipDaily.push({row:i+1,name:c.name});
   });
   document.getElementById('rpt-daily').value=rowsDaily.join('\n');
   document.getElementById('rpt-daily-cnt').textContent=
-    `週一 ${weekDates[0]} ~ 週五 ${weekDates[4]}・${rowsDaily.length} 軒${rowsDaily.length>20?'（⚠ 超過模板 20 列上限，請刪減後再貼）':''}`;
+    `週一 ${weekDates[0]} ~ 週日 ${weekDates[6]}・共 ${rowsDaily.length} 筆拜訪${rowsDaily.length>50?'（⚠ 超過模板 50 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-daily-vip').textContent=rptVipHint(vipDaily);
 
   document.getElementById('rpt-output').style.display='block';
