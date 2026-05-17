@@ -798,12 +798,21 @@ tbody tr:hover{background:var(--surface-hover)}
 <div id="report-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:16px">
   <div style="background:var(--bg);max-width:960px;margin:10px auto;border-radius:var(--radius);padding:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:17px;font-weight:700">產出日報／4W推進表</div>
+      <div style="font-size:17px;font-weight:700">產出週報（RS 模板用）</div>
       <button class="btn btn-outline btn-sm" onclick="closeReportModal()">關閉</button>
     </div>
     <div class="g2" style="margin-bottom:10px">
-      <div class="f"><label class="lbl">起始日</label><input id="rpt-from" type="date"></div>
+      <div class="f"><label class="lbl">起始日（日報週一）</label><input id="rpt-from" type="date"></div>
       <div class="f"><label class="lbl">結束日</label><input id="rpt-to" type="date"></div>
+    </div>
+    <div class="f" style="margin-bottom:10px">
+      <label class="lbl">RS 推進表起始月份（往後 6 個月）</label>
+      <select id="rpt-start-month" style="width:auto">
+        <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+        <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+        <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+        <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+      </select>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
       <button class="btn btn-outline btn-xs" onclick="setRptRange('today')">今天</button>
@@ -814,27 +823,43 @@ tbody tr:hover{background:var(--surface-hover)}
       <button class="btn btn-primary btn-sm" onclick="genReport()" style="margin-left:auto">產出</button>
     </div>
     <div id="rpt-output" style="display:none">
+      <div class="alert-info alert" style="font-size:12px;margin-bottom:12px">
+        💡 三段內容請分別貼到 RS 模板的 <b>A20</b>（推進表）、<b>A54</b>（未來兩週規劃）、本週日報 <b>A7</b>。<br>
+        💡 大客戶（4W ≥ 3000）會列在每段下方的提示，請在 Excel 中按住 Ctrl 點選那幾列再上色。Q2 專案請自行手動標色。
+      </div>
+
       <div class="form-section" style="margin-bottom:6px">
-        4W 推進表
-        <span style="font-weight:400;font-size:11px;color:var(--text3)">（未回收試用＋區間內有拜訪且有試用品項的店家）</span>
+        ① RS 推進表 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-4w')">📋 複製</button>
         <span id="rpt-4w-cnt" style="font-size:11px;color:var(--text3)"></span>
         <span id="rpt-4w-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
       </div>
-      <textarea id="rpt-4w" readonly style="width:100%;min-height:180px;font-family:'Courier New',monospace;font-size:11px;margin-bottom:16px;white-space:pre;tab-size:4"></textarea>
+      <textarea id="rpt-4w" readonly style="width:100%;min-height:160px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
+      <div id="rpt-4w-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
 
       <div class="form-section" style="margin-bottom:6px">
-        日報 SERVE 拜訪進度
-        <span style="font-weight:400;font-size:11px;color:var(--text3)">（有拜訪紀錄的日期才會出現區塊）</span>
+        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A54，未拜訪的客戶清單）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
-        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">📋 複製全部</button>
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-plan')">📋 複製</button>
+        <span id="rpt-plan-cnt" style="font-size:11px;color:var(--text3)"></span>
+        <span id="rpt-plan-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
+      </div>
+      <textarea id="rpt-plan" readonly style="width:100%;min-height:140px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
+      <div id="rpt-plan-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
+
+      <div class="form-section" style="margin-bottom:6px">
+        ③ 本週日報 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到本週日報 A7，週一~週五橫向展開）</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">📋 複製</button>
         <span id="rpt-daily-cnt" style="font-size:11px;color:var(--text3)"></span>
         <span id="rpt-daily-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
       </div>
-      <textarea id="rpt-daily" readonly style="width:100%;min-height:280px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
+      <textarea id="rpt-daily" readonly style="width:100%;min-height:220px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
+      <div id="rpt-daily-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
     </div>
   </div>
 </div>
@@ -3756,8 +3781,9 @@ function renderDaily(){
 // REPORT GENERATOR (4W 推進表 + 日報)
 // ═══════════════════════════════════════════════════════════
 function openReportModal(){
-  // 預設：本週
+  // 預設：本週、起始月份=今天月份
   setRptRange('week');
+  document.getElementById('rpt-start-month').value=String(new Date().getMonth()+1);
   document.getElementById('rpt-output').style.display='none';
   document.getElementById('report-modal').style.display='block';
 }
@@ -3813,17 +3839,34 @@ function rptVisitsInRange(c,from,to){
   return (c.visits||[]).filter(v=>v.date&&v.date>=from&&v.date<=to);
 }
 
+// 大客戶門檻：4W ≥ 3000
+const RPT_VIP_THRESHOLD=3000;
+// 單筆 visit 對應日報動作代號：初/複/報/試/約
+function rptVisitAction(sc){
+  if(sc===STATUS.FIRST) return '初';
+  if(sc===STATUS.REVISIT) return '複';
+  if(sc===STATUS.QUOTE) return '報';
+  if(sc===STATUS.TRIAL||sc===STATUS.CLOSING||sc===STATUS.DEAL) return '試';
+  return '約';
+}
+// 大客戶提示文字：依列號排序、附客戶名
+function rptVipHint(list){
+  if(!list.length) return '';
+  return `🔴 大客戶（4W≥${RPT_VIP_THRESHOLD}，建議標色）：第 ${list.map(x=>x.row).join(', ')} 列（${list.map(x=>x.name).join('、')}）`;
+}
+
 function genReport(){
   const from=document.getElementById('rpt-from').value;
   const to=document.getElementById('rpt-to').value;
   if(!from||!to||from>to){alert('請選擇正確的日期區間');return;}
+  const startMonth=parseInt(document.getElementById('rpt-start-month').value,10)||((new Date()).getMonth()+1);
 
-  // ─── 4W 推進表 ───
-  // A: status ∈ {試用中, 報價, 將成約}
-  // B: 區間內有 visits 且有試用品項
-  // 聯集 A ∪ B
+  // ═════════════════════════════════════════════
+  // ① RS 推進表（A20:N49，14 欄，最多 30 列）
+  //   合併欄位：B-C 客戶 / D-E 窗口 / F-G 商品 / H-M 月份 6 格 / N 進度說明
+  //   月份範圍：startMonth, startMonth+1, ..., startMonth+5（不跨年循環）
+  // ═════════════════════════════════════════════
   const STATUS_A=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
-  const rows4w=[];
   const picked=DB.clients.filter(c=>{
     const a=STATUS_A.has(c.status);
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
@@ -3833,102 +3876,138 @@ function genReport(){
     if(b&&hasMain) return true;
     return false;
   });
-  // 依第一次 visit 日期排序
   picked.sort((a,b)=>{
     const va=(a.visits||[]).filter(v=>v.date).map(v=>v.date).sort()[0]||'9999';
     const vb=(b.visits||[]).filter(v=>v.date).map(v=>v.date).sort()[0]||'9999';
     return va<vb?-1:va>vb?1:0;
   });
+  const rows4w=[];
+  const vip4w=[];
   picked.forEach((c,i)=>{
     const fw=calcReportAmt(c);
     const prod=rptProd(c.trialItems);
-    // 月份欄：區間內最早成約月優先，否則區間內首訪月，皆無則留白
     const mon=rptAmountMonth(c,from,to);
-    // 欄位（依照月報 RS sheet 結構）: NO, 客戶名稱, (空=C欄), 窗口/職位, 提案商品, 1月, 2月, 3月, 4月, 5月, 6月, 拜訪進度說明
-    const cols=[String(i+1), c.name, '', c.contact||'', prod];
-    for(let m=1;m<=6;m++){
-      cols.push((mon!==null&&m===mon&&fw>0)?String(fw):'');
+    // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
+    const monthCells=['','','','','',''];
+    if(mon!==null&&fw>0){
+      const idx=mon-startMonth;
+      if(idx>=0&&idx<=5) monthCells[idx]=String(fw);
     }
-    // 拜訪進度說明：預填 note，讓使用者自行修改
-    cols.push((c.note||'').replace(/[\t\n\r]/g,' '));
+    // 14 欄：NO, name, '', contact, '', prod, '', H, I, J, K, L, M, note
+    const cols=[String(i+1), c.name, '', c.contact||'', '', prod, '',
+                ...monthCells,
+                (c.note||'').replace(/[\t\n\r]/g,' ')];
     rows4w.push(cols.join('\t'));
+    if(fw>=RPT_VIP_THRESHOLD) vip4w.push({row:i+1,name:c.name});
   });
   document.getElementById('rpt-4w').value=rows4w.join('\n');
-  document.getElementById('rpt-4w-cnt').textContent=`共 ${rows4w.length} 筆`;
+  document.getElementById('rpt-4w-cnt').textContent=
+    `共 ${rows4w.length} 筆${rows4w.length>30?'（⚠ 超過模板 30 列上限，請刪減後再貼）':''}`;
+  document.getElementById('rpt-4w-vip').textContent=rptVipHint(vip4w);
 
-  // ─── 日報區塊 ───
-  // 依日期聚合：區間內所有 visits，同一 (client,date) 合併成單列
-  // （note/insight 串接去重，勾選取聯集；避免同客戶同日多訪重複出現）
-  const byDate={};
+  // ═════════════════════════════════════════════
+  // ② 未來兩週拜訪規劃（A54:N73，14 欄，最多 20 列）
+  //   來源：c.status === STATUS.UNVISITED（含 status 未設值，視為未拜訪）
+  //   合併：B-C 預定日期 / D-F 客戶 / G-H 窗口 / I-J 商品 / K-M 拜訪目的 / N 預估4W
+  // ═════════════════════════════════════════════
+  const isUnvisited=c=>!c.status||c.status===STATUS.UNVISITED;
+  const planList=DB.clients.filter(isUnvisited);
+  // 排序：有預估 4W 的優先（金額大→小），其次按名稱
+  planList.sort((a,b)=>{
+    const fa=calcReportAmt(a), fb=calcReportAmt(b);
+    if(fa!==fb) return fb-fa;
+    return (a.name||'').localeCompare(b.name||'');
+  });
+  const rowsPlan=[];
+  const vipPlan=[];
+  planList.forEach((c,i)=>{
+    const fw=calcReportAmt(c);
+    const prod=rptProd(c.trialItems);
+    const note=(c.note||'').replace(/[\t\n\r]/g,' ');
+    // 14 欄：NO, '', '', name, '', '', contact, '', prod, '', note, '', '', fw
+    const cols=[String(i+1), '', '', c.name, '', '', c.contact||'', '', prod, '',
+                note, '', '', fw>0?String(fw):''];
+    rowsPlan.push(cols.join('\t'));
+    if(fw>=RPT_VIP_THRESHOLD) vipPlan.push({row:i+1,name:c.name});
+  });
+  document.getElementById('rpt-plan').value=rowsPlan.join('\n');
+  document.getElementById('rpt-plan-cnt').textContent=
+    `共 ${rowsPlan.length} 筆${rowsPlan.length>20?'（⚠ 超過模板 20 列上限，請刪減後再貼）':''}`;
+  document.getElementById('rpt-plan-vip').textContent=rptVipHint(vipPlan);
+
+  // ═════════════════════════════════════════════
+  // ③ 本週日報（A7:J26，10 欄，最多 20 列）
+  //   橫向展開：每客戶一列，D~H = 週一~週五
+  //   起始週：以 from 那天往前推到當週週一
+  //   格式：[動作] 商品 試用額（試用才帶試用額；多動作以 + 串）
+  // ═════════════════════════════════════════════
+  const fromD=new Date(from+'T00:00:00');
+  const dowOffset=(fromD.getDay()+6)%7; // 週一=0
+  const mon=new Date(fromD); mon.setDate(fromD.getDate()-dowOffset);
+  const weekDates=[];
+  for(let i=0;i<5;i++){
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    weekDates.push(rptFmt(d));
+  }
+  // 聚合 (client → 每日 visits[])
+  const byClient=new Map();
   DB.clients.forEach(c=>{
     (c.visits||[]).forEach(v=>{
-      if(v.date&&v.date>=from&&v.date<=to){
-        if(!byDate[v.date]) byDate[v.date]={order:[],map:new Map()};
-        const bucket=byDate[v.date];
-        const key=DB.clients.indexOf(c);
-        if(!bucket.map.has(key)){
-          bucket.map.set(key,{c,visits:[v]});
-          bucket.order.push(key);
-        }else{
-          bucket.map.get(key).visits.push(v);
-        }
+      if(v.date&&weekDates.includes(v.date)){
+        if(!byClient.has(c)) byClient.set(c,{Mon:[],Tue:[],Wed:[],Thu:[],Fri:[]});
+        const key=['Mon','Tue','Wed','Thu','Fri'][weekDates.indexOf(v.date)];
+        byClient.get(c)[key].push(v);
       }
     });
   });
-  const dates=Object.keys(byDate).sort();
-  const dowArr=['日','一','二','三','四','五','六'];
-  const blocks=[];
-  let totalShops=0;
-  dates.forEach(date=>{
-    const bucket=byDate[date];
-    const entries=bucket.order.map(k=>bucket.map.get(k));
-    totalShops+=entries.length;
-    const dow=dowArr[new Date(date+'T00:00:00').getDay()];
-    blocks.push(`=== ${date} (週${dow}) ===`);
-    entries.forEach((e,i)=>{
-      const c=e.c;
-      // note/insight 合併所有當日 visits，去重並串接
-      const noteParts=[];
-      const seen=new Set();
-      e.visits.forEach(v=>{
+  // 排序：依該週首次拜訪日
+  const clientArr=[...byClient.keys()].sort((a,b)=>{
+    const firstA=weekDates.find(d=>(a.visits||[]).some(v=>v.date===d))||'9999';
+    const firstB=weekDates.find(d=>(b.visits||[]).some(v=>v.date===d))||'9999';
+    return firstA<firstB?-1:firstA>firstB?1:0;
+  });
+  const rowsDaily=[];
+  const vipDaily=[];
+  clientArr.forEach((c,i)=>{
+    const day=byClient.get(c);
+    const prod=rptProd(c.trialItems);
+    const fwClient=calcReportAmt(c);
+    // 每日格內容
+    const cellFor=(visits)=>{
+      if(!visits.length) return '';
+      // 收集動作代號（去重，保留順序）
+      const acts=[];
+      visits.forEach(v=>{
+        const a=rptVisitAction(v.statusChange);
+        if(!acts.includes(a)) acts.push(a);
+      });
+      const hasTrial=acts.includes('試');
+      const fwPart=hasTrial?` ${calcFW4(c)}`:'';
+      return `[${acts.join('+')}] ${prod||'-'}${fwPart}`;
+    };
+    // 備註：本週所有 visits 的 note/insight 串接
+    const noteParts=[];
+    const seen=new Set();
+    ['Mon','Tue','Wed','Thu','Fri'].forEach(k=>{
+      day[k].forEach(v=>{
         [v.note,v.insight].forEach(x=>{
           const s=(x||'').trim();
           if(s&&!seen.has(s)){seen.add(s);noteParts.push(s);}
         });
       });
-      const note=noteParts.join('；').replace(/[\t\n\r]/g,' ');
-      // 勾選取聯集：任一 visit 命中就算數
-      const scs=e.visits.map(v=>v.statusChange||'');
-      const isInit=scs.includes(STATUS.FIRST);
-      const isRe=scs.includes(STATUS.REVISIT);
-      const isQuote=scs.includes(STATUS.QUOTE);
-      const isTrial=isQuote||scs.some(s=>s===STATUS.TRIAL||s===STATUS.CLOSING||s===STATUS.DEAL);
-      // 初訪/複訪 互斥，擇一
-      const initMark=isInit&&!isRe?'✓':'';
-      const reMark=isRe&&!isInit?'✓':'';
-      const qMark=isQuote?'✓':'';
-      const tMark=isTrial?'✓':'';
-      // 試用金額 = 4W 原價（只有勾試用才填）
-      const fw=isTrial?calcFW4(c):0;
-      const prod=rptProd(c.trialItems);
-      // 欄位：NO, 時間, 客戶名稱, 姓名/職稱, 提案商品, 拜訪內容說明, 初訪, 複訪, 報價, 試用, 試用金額, 預估4W(空)
-      const cols=[
-        String(i+1),
-        '',           // 時間（留空）
-        c.name,
-        c.contact||'',
-        prod,
-        note,
-        initMark, reMark, qMark, tMark,
-        fw>0?String(fw):'',
-        ''            // 預估4W，使用者自填
-      ];
-      blocks.push(cols.join('\t'));
     });
-    blocks.push(''); // 空行分隔
+    const noteStr=noteParts.join('；').replace(/[\t\n\r]/g,' ');
+    // 10 欄：NO, name, prod, Mon, Tue, Wed, Thu, Fri, fwEst, note
+    const cols=[String(i+1), c.name, prod||'',
+                cellFor(day.Mon), cellFor(day.Tue), cellFor(day.Wed), cellFor(day.Thu), cellFor(day.Fri),
+                fwClient>0?String(fwClient):'', noteStr];
+    rowsDaily.push(cols.join('\t'));
+    if(fwClient>=RPT_VIP_THRESHOLD) vipDaily.push({row:i+1,name:c.name});
   });
-  document.getElementById('rpt-daily').value=blocks.join('\n').replace(/\n+$/,'');
-  document.getElementById('rpt-daily-cnt').textContent=`${dates.length} 天・${totalShops} 軒`;
+  document.getElementById('rpt-daily').value=rowsDaily.join('\n');
+  document.getElementById('rpt-daily-cnt').textContent=
+    `週一 ${weekDates[0]} ~ 週五 ${weekDates[4]}・${rowsDaily.length} 軒${rowsDaily.length>20?'（⚠ 超過模板 20 列上限，請刪減後再貼）':''}`;
+  document.getElementById('rpt-daily-vip').textContent=rptVipHint(vipDaily);
 
   document.getElementById('rpt-output').style.display='block';
 }
