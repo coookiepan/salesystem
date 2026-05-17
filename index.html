@@ -2577,6 +2577,9 @@ function calcFW4(c){
 // - 一律以 cycle='2W' 餵 displayFw4，地墊也用 2W 原價（不套 4W 0.8 折）
 // - 忽略 quoted 報價、忽略 contractedItems、忽略日期區間
 function calcReportAmt(c){
+  if(!c) return 0;
+  // 拒絕（含舊「已結案」）視為已無試用商品，保留歷史紀錄但不計入報表金額
+  if(statusEq(c.status,STATUS.REFUSE)) return 0;
   return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
@@ -3882,6 +3885,8 @@ function genReport(){
   // ═════════════════════════════════════════════
   const STATUS_A=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
   const picked=DB.clients.filter(c=>{
+    // 拒絕的客戶視為已無試用品，不出現在推進表
+    if(statusEq(c.status,STATUS.REFUSE)) return false;
     const a=STATUS_A.has(c.status);
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
     const hasMain=mains.length>0;
@@ -3968,9 +3973,10 @@ function genReport(){
     weekDates.push(rptFmt(d));
   }
   const weekSet=new Set(weekDates);
-  // 攤平：每次拜訪一筆
+  // 攤平：每次拜訪一筆（拒絕的客戶整筆排除）
   const visitRows=[];
   DB.clients.forEach(c=>{
+    if(statusEq(c.status,STATUS.REFUSE)) return;
     (c.visits||[]).forEach(v=>{
       if(v&&v.date&&weekSet.has(v.date)){
         visitRows.push({c,v});
@@ -5699,6 +5705,10 @@ if(location.search.includes('test=1')){
   assert('calcReportAmt 只看試用 - 忽略 quoted', calcReportAmt(testClient2), 200);
   const testClient3={trialItems:[],fw4:500};
   assert('calcReportAmt 只看試用 - 不用 c.fw4', calcReportAmt(testClient3), 0);
+  const testClient4={status:STATUS.REFUSE,trialItems:[{product:'S-20',qty:1}]};
+  assert('calcReportAmt 拒絕→0（不算試用）', calcReportAmt(testClient4), 0);
+  const testClient5={status:STATUS.CLOSED,trialItems:[{product:'S-20',qty:1}]};
+  assert('calcReportAmt 已結案→0（拒絕別名）', calcReportAmt(testClient5), 0);
 
   // --- matchCategory ---
   const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trialItems:[{product:'S-20',qty:1,quoted:0}],contractedItems:[]};
