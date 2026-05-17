@@ -459,6 +459,74 @@ tbody tr:hover{background:var(--surface-hover)}
   .cm-item-fields{grid-template-columns:1fr 1fr}
   .cm-prod-list{max-height:none;flex:1}
 }
+
+/* ═══════════════════════════════════════════════════════════
+   DOC CHOOSER + PLAN COMPARE (方案比較圖卡)
+   ═══════════════════════════════════════════════════════════ */
+.dc-choice{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;cursor:pointer;font-family:inherit;text-align:left;width:100%;transition:background .15s, border-color .15s}
+.dc-choice:hover{background:var(--bg);border-color:var(--green-d)}
+.dc-icon{font-size:30px;line-height:1;flex-shrink:0;width:44px;text-align:center}
+.dc-info{flex:1;min-width:0}
+.dc-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.dc-desc{font-size:12px;color:var(--text3);line-height:1.4}
+
+.pc-plan{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px}
+.pc-plan-head{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px}
+.pc-plan-badge{font-weight:700;color:var(--green-d);font-size:13px;background:var(--green-l);padding:6px 10px;border-radius:var(--radius-sm);align-self:end;height:36px;display:flex;align-items:center}
+.pc-plan-rec{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;height:36px;align-self:end}
+.pc-plan-rec input{width:18px;height:18px;margin:0}
+.pc-items{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.pc-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;display:grid;grid-template-columns:1fr 70px 100px 36px;gap:6px;align-items:center}
+.pc-item-pick{text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:36px}
+.pc-item-pick.empty{color:var(--text3);font-style:italic}
+.pc-item-pick .code{font-weight:700;color:var(--green-d);margin-right:4px}
+.pc-item input{padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);width:100%;box-sizing:border-box}
+.pc-item-rm{background:#FCEBEB;color:#A32D2D;border:1px solid #F0B5B5;border-radius:var(--radius-sm);width:36px;height:36px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pc-plan-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px dashed var(--border);padding-top:8px;gap:8px;flex-wrap:wrap}
+.pc-plan-total{font-size:13px;color:var(--text2)}
+.pc-plan-total b{font-size:16px;color:var(--green-d);font-variant-numeric:tabular-nums;margin-left:4px}
+
+/* 預覽容器 */
+#pc-preview-shell{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#pc-card-canvas{margin:0 auto}
+
+/* ─── 圖卡本體（用於 html2canvas 截圖；尺寸固定以利分享）─── */
+.pcc-card{width:960px;background:#FFFFFF;color:#1A1A1A;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC","Segoe UI",sans-serif;padding:36px 36px 30px;box-sizing:border-box;border-radius:18px}
+.pcc-head{text-align:center;border-bottom:3px solid #1f4e79;padding-bottom:14px;margin-bottom:22px}
+.pcc-head h1{margin:0;font-size:30px;font-weight:800;color:#1f4e79;letter-spacing:.04em}
+.pcc-head .pcc-sub{font-size:14px;color:#555;margin-top:6px}
+.pcc-grid{display:grid;gap:14px}
+.pcc-grid.cols2{grid-template-columns:1fr 1fr}
+.pcc-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.pcc-col{background:#F7F9FC;border:2px solid #D8E3F0;border-radius:14px;padding:18px 18px 16px;display:flex;flex-direction:column;position:relative}
+.pcc-col.rec{background:#FFF8E6;border-color:#E8B743}
+.pcc-col .pcc-rec-tag{display:inline-block;background:#E8B743;color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:99px;letter-spacing:.05em;white-space:nowrap;margin:0 auto 10px;align-self:center}
+.pcc-col h2{margin:0 0 4px;font-size:22px;font-weight:800;color:#1f4e79;text-align:center}
+.pcc-col.rec h2{color:#8A5A00}
+.pcc-col .pcc-st{font-size:12px;color:#666;text-align:center;margin-bottom:14px;min-height:16px}
+.pcc-items{flex:1;display:flex;flex-direction:column;gap:6px;padding:0;margin:0 0 14px;list-style:none}
+.pcc-items li{display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:13px;line-height:1.5;padding:6px 8px;background:#FFFFFF;border-radius:6px;align-items:baseline}
+.pcc-items .nm{font-weight:600;color:#1A1A1A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcc-items .qty{color:#666;font-variant-numeric:tabular-nums;font-size:12px}
+.pcc-items .pr{color:#1f4e79;font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
+.pcc-col.rec .pcc-items li{background:#FFFEFA}
+.pcc-empty{padding:14px;text-align:center;color:#999;font-size:13px;background:#fff;border-radius:6px;font-style:italic}
+.pcc-tot{border-top:2px dashed #C7D4E5;padding-top:12px;text-align:center}
+.pcc-tot .pcc-tot-lbl{font-size:12px;color:#666;letter-spacing:.05em}
+.pcc-tot .pcc-tot-amt{font-size:30px;font-weight:800;color:#1f4e79;font-variant-numeric:tabular-nums;margin-top:2px;line-height:1.1}
+.pcc-tot .pcc-tot-cyc{font-size:13px;color:#666;font-weight:500;margin-left:2px}
+.pcc-col.rec .pcc-tot .pcc-tot-amt{color:#C28100}
+.pcc-foot{text-align:center;color:#888;font-size:11px;margin-top:18px;border-top:1px solid #E5E5E5;padding-top:10px}
+
+@media(max-width:600px){
+  .pc-plan-head{grid-template-columns:auto 1fr;gap:6px}
+  .pc-plan-head .pc-plan-rec{grid-column:1/-1}
+  .pc-item{grid-template-columns:1fr 60px 36px;grid-template-rows:auto auto}
+  .pc-item .pc-item-pick{grid-column:1/-1}
+  .pc-item input[data-pc=qty]{grid-column:1}
+  .pc-item input[data-pc=price]{grid-column:2/3}
+  .pc-item-rm{grid-column:3/4}
+}
 </style>
 </head>
 <body>
@@ -631,7 +699,7 @@ tbody tr:hover{background:var(--surface-hover)}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
-          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="openCM()" title="產生報價單／合約 Word">📄 產生合約</button>
+          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="openDocChooser()" title="產生報價單／合約 或 方案比較圖卡">📄 產出文件</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -793,6 +861,79 @@ tbody tr:hover{background:var(--surface-hover)}
     </div>
   </div>
 </div>
+
+<!-- ═══ 文件類型選擇 ═══ -->
+<div class="cm-overlay" id="doc-chooser-modal" style="z-index:1005">
+  <div class="cm-panel" style="max-width:460px">
+    <header class="cm-head">
+      <h3>選擇要產出的文件</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeDocChooser()">關閉</button>
+    </header>
+    <div class="cm-body">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button type="button" class="dc-choice" onclick="closeDocChooser();openCM()">
+          <div class="dc-icon">📄</div>
+          <div class="dc-info">
+            <div class="dc-title">合約 / 報價單</div>
+            <div class="dc-desc">Word .docx · 含商品明細表、說明、核章區</div>
+          </div>
+        </button>
+        <button type="button" class="dc-choice" onclick="closeDocChooser();openPC()">
+          <div class="dc-icon">📊</div>
+          <div class="dc-info">
+            <div class="dc-title">方案比較圖卡</div>
+            <div class="dc-desc">PNG 圖片 · 可用 LINE 傳給客戶比較 2~3 個方案</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PLAN COMPARE MODAL — 方案比較圖卡 PNG ═══ -->
+<div class="cm-overlay" id="pc-modal">
+  <div class="cm-panel" style="max-width:920px">
+    <header class="cm-head">
+      <h3>📊 方案比較圖卡 <span id="pc-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
+      <button class="btn btn-outline btn-sm" onclick="closePC()">關閉</button>
+    </header>
+    <div class="cm-body">
+      <div id="pc-msg-box" class="cm-msg"></div>
+
+      <div class="cm-section">
+        <h4>標題資訊</h4>
+        <div class="cm-row three">
+          <label class="cm-field"><span>客戶名稱</span><input id="pc-client" oninput="pcSet('client',this.value)"></label>
+          <label class="cm-field"><span>日期 (YYYY/MM/DD)</span><input id="pc-date" oninput="pcSet('date',this.value)"></label>
+          <label class="cm-field"><span>顯示週期</span>
+            <select id="pc-cycle" onchange="pcSet('displayCycle',this.value);pcRenderPlans()">
+              <option value="2W">2W（每 2 週）</option>
+              <option value="4W" selected>4W（月單價）</option>
+            </select>
+          </label>
+        </div>
+        <label class="cm-field" style="margin-top:4px"><span>標題（顯示在圖卡頂端）</span><input id="pc-title" oninput="pcSet('title',this.value)" placeholder="例：DUSKIN 方案建議"></label>
+      </div>
+
+      <div class="cm-section">
+        <h4>方案（最多 3 個；留空欄位 / 無商品的方案不會出現在圖卡上）</h4>
+        <div id="pc-plans"></div>
+      </div>
+
+      <div class="cm-section" id="pc-preview-wrap" style="display:none">
+        <h4>圖卡預覽</h4>
+        <div id="pc-preview-shell"><div id="pc-card-canvas"></div></div>
+      </div>
+    </div>
+    <div class="cm-actions">
+      <button class="btn btn-outline" onclick="pcRenderPreview()">👁 預覽圖卡</button>
+      <button class="btn btn-primary" id="pc-download-btn" onclick="pcDownload()">📥 下載 PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- 用於 html2canvas 截圖的離螢幕容器 -->
+<div id="pc-render-stage" aria-hidden="true" style="position:fixed;left:-99999px;top:0;pointer-events:none"></div>
 
 <!-- ═══ REPORT MODAL ═══ -->
 <div id="report-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:16px">
@@ -5625,13 +5766,468 @@ async function cmDownload(){
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape'){
     if(document.getElementById('cm-prod-modal') && document.getElementById('cm-prod-modal').classList.contains('on')){ cmCloseProdPicker(); return; }
-    if(document.getElementById('cm-modal') && document.getElementById('cm-modal').classList.contains('on')){ closeCM(); }
+    if(document.getElementById('cm-modal') && document.getElementById('cm-modal').classList.contains('on')){ closeCM(); return; }
+    if(document.getElementById('pc-modal') && document.getElementById('pc-modal').classList.contains('on')){ closePC(); return; }
+    if(document.getElementById('doc-chooser-modal') && document.getElementById('doc-chooser-modal').classList.contains('on')){ closeDocChooser(); return; }
   }
 });
 document.addEventListener('click', (e) => {
   if(e.target && e.target.id === 'cm-modal') closeCM();
   if(e.target && e.target.id === 'cm-prod-modal') cmCloseProdPicker();
+  if(e.target && e.target.id === 'pc-modal') closePC();
+  if(e.target && e.target.id === 'doc-chooser-modal') closeDocChooser();
 });
+
+// ═══════════════════════════════════════════════════════════
+// 文件類型選擇器（合約 vs 方案比較圖卡）
+// ═══════════════════════════════════════════════════════════
+function openDocChooser(){
+  if(typeof S === 'undefined' || S.curIdx < 0){ alert('請先開啟客戶詳情'); return; }
+  document.getElementById('doc-chooser-modal').classList.add('on');
+}
+function closeDocChooser(){
+  document.getElementById('doc-chooser-modal').classList.remove('on');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PLAN COMPARE — 方案比較圖卡（輸出 PNG）
+// 使用 CM_CATALOG 商品庫；每方案可手動編輯單價／數量
+// ═══════════════════════════════════════════════════════════
+let PC_state = null;
+let PC_pickContext = null; // {planIdx, itemIdx}
+let PC_html2canvasPromise = null;
+
+function pcLoadHtml2Canvas(){
+  if(typeof window.html2canvas !== 'undefined') return Promise.resolve();
+  if(PC_html2canvasPromise) return PC_html2canvasPromise;
+  PC_html2canvasPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => { PC_html2canvasPromise = null; reject(new Error('無法下載 html2canvas，請檢查網路')); };
+    document.head.appendChild(s);
+  });
+  return PC_html2canvasPromise;
+}
+
+function pcSet(path, val){
+  if(!PC_state) return;
+  const parts = path.split('.');
+  let cur = PC_state;
+  for(let i=0;i<parts.length-1;i++){
+    if(cur[parts[i]] == null) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length-1]] = val;
+}
+
+// 單位價（在指定顯示週期下）— 用於從合約商品庫帶入初始 priceOverride
+function pcUnitPrice(code, cycle){
+  if(!code) return 0;
+  if(typeof displayFw4 === 'function'){
+    const v = displayFw4(code, 1, cycle || '4W');
+    if(v) return v;
+  }
+  // 後備：直接從 CM_CATALOG
+  const p = CM_CATALOG.products[code];
+  if(!p || p.price == null) return 0;
+  if(cycle === '4W' && p.cycle === '2W'){
+    // 地墊類用 *0.8 折換月
+    return Math.round(p.price * 2 * 0.8);
+  }
+  if(cycle === '2W' && p.cycle === '2W') return p.price;
+  if(p.cycle === '4W') return p.price;
+  return p.price;
+}
+
+function pcInitState(c){
+  c = c || {};
+  const dt = (typeof today === 'function' ? today() : '').replace(/-/g,'/');
+  // 預設帶入：把客戶現有試用／成約品項放到「方案 A」當基礎
+  const baseItems = [];
+  const src = (c.contractedItems && c.contractedItems.length) ? c.contractedItems : (c.trialItems || []);
+  src.filter(it => it && it.product && !it.bundledTo).forEach(it => {
+    const item = { code: it.product, qty: it.qty || 1 };
+    if(it.quoted && it.quoted > 0 && (it.qty || 1) > 0){
+      // it.quoted 是 4W 總額；轉成 4W 單價
+      item.priceOverride = Math.round(it.quoted / (it.qty || 1));
+    } else if(CM_CATALOG.products[it.product]){
+      item.priceOverride = pcUnitPrice(it.product, '4W');
+    }
+    baseItems.push(item);
+  });
+  return {
+    client: c.name || '',
+    date: dt,
+    displayCycle: '4W',
+    title: 'DUSKIN 方案建議',
+    plans: [
+      { name: '方案 A', subtitle: '基礎版', recommended: false, items: JSON.parse(JSON.stringify(baseItems)) },
+      { name: '方案 B', subtitle: '推薦版', recommended: true, items: [] },
+      { name: '方案 C', subtitle: '完整版', recommended: false, items: [] }
+    ]
+  };
+}
+
+function openPC(){
+  if(typeof S === 'undefined' || S.curIdx < 0){ alert('請先開啟客戶詳情'); return; }
+  const c = DB.clients[S.curIdx];
+  PC_state = pcInitState(c);
+  document.getElementById('pc-client-name').textContent = c.name ? '· '+c.name : '';
+  document.getElementById('pc-client').value = PC_state.client;
+  document.getElementById('pc-date').value = PC_state.date;
+  document.getElementById('pc-cycle').value = PC_state.displayCycle;
+  document.getElementById('pc-title').value = PC_state.title;
+  pcRenderPlans();
+  document.getElementById('pc-preview-wrap').style.display = 'none';
+  const box = document.getElementById('pc-msg-box');
+  box.className = 'cm-msg info';
+  box.textContent = '已從客戶現有品項帶入「方案 A」。請編輯各方案的商品內容與單價，按「預覽圖卡」確認後下載 PNG。';
+  document.getElementById('pc-modal').classList.add('on');
+  document.body.style.overflow = 'hidden';
+  pcLoadHtml2Canvas().catch(e => console.warn('[PC] html2canvas preload failed:', e.message));
+}
+
+function closePC(){
+  document.getElementById('pc-modal').classList.remove('on');
+  document.body.style.overflow = '';
+  PC_state = null;
+}
+
+function pcPlanTotal(plan){
+  if(!plan || !plan.items) return 0;
+  let sum = 0;
+  for(const it of plan.items){
+    if(!it.code) continue;
+    const qty = parseInt(it.qty,10) || 0;
+    let unit;
+    if(it.priceOverride != null && it.priceOverride !== '' && !Number.isNaN(Number(it.priceOverride))){
+      unit = Number(it.priceOverride);
+    } else {
+      unit = pcUnitPrice(it.code, PC_state.displayCycle);
+    }
+    sum += unit * qty;
+  }
+  return sum;
+}
+
+function pcRenderPlans(){
+  const cont = document.getElementById('pc-plans');
+  cont.innerHTML = '';
+  PC_state.plans.forEach((plan, pi) => {
+    const planEl = document.createElement('div');
+    planEl.className = 'pc-plan';
+    const head = document.createElement('div');
+    head.className = 'pc-plan-head';
+    head.innerHTML = '<div class="pc-plan-badge">方案 '+String.fromCharCode(65+pi)+'</div>';
+    const nameWrap = document.createElement('label');
+    nameWrap.className = 'cm-field';
+    nameWrap.innerHTML = '<span>名稱</span>';
+    const nameInp = document.createElement('input');
+    nameInp.type = 'text'; nameInp.value = plan.name || '';
+    nameInp.placeholder = '例：基礎版';
+    nameInp.oninput = () => { plan.name = nameInp.value; };
+    nameWrap.appendChild(nameInp);
+    const subWrap = document.createElement('label');
+    subWrap.className = 'cm-field';
+    subWrap.innerHTML = '<span>副標（一行說明，可留空）</span>';
+    const subInp = document.createElement('input');
+    subInp.type = 'text'; subInp.value = plan.subtitle || '';
+    subInp.placeholder = '例：適合小店面';
+    subInp.oninput = () => { plan.subtitle = subInp.value; };
+    subWrap.appendChild(subInp);
+    const recWrap = document.createElement('label');
+    recWrap.className = 'pc-plan-rec';
+    const rec = document.createElement('input');
+    rec.type = 'checkbox'; rec.checked = !!plan.recommended;
+    rec.onchange = () => {
+      plan.recommended = rec.checked;
+      // 推薦只能一個；其他取消
+      if(rec.checked){
+        PC_state.plans.forEach((p, j) => { if(j !== pi) p.recommended = false; });
+        pcRenderPlans();
+      }
+    };
+    recWrap.appendChild(rec);
+    recWrap.appendChild(document.createTextNode('推薦'));
+    head.appendChild(nameWrap);
+    head.appendChild(subWrap);
+    head.appendChild(recWrap);
+    planEl.appendChild(head);
+
+    const itemsBox = document.createElement('div');
+    itemsBox.className = 'pc-items';
+    plan.items.forEach((it, ii) => {
+      const row = document.createElement('div');
+      row.className = 'pc-item';
+      const cat = CM_CATALOG.products[it.code];
+      const pick = document.createElement('button');
+      pick.type = 'button';
+      pick.className = 'pc-item-pick' + (it.code ? '' : ' empty');
+      if(it.code){
+        if(cat){
+          pick.innerHTML = '<span class="code">'+escHtml(it.code)+'</span>'+escHtml(it.name || cat.name);
+        } else {
+          pick.innerHTML = '<span class="code" style="color:#A36B00">🆕 '+escHtml(it.code)+'</span><span>'+escHtml(it.name || '臨時新品')+'</span>';
+        }
+      } else {
+        pick.textContent = '👉 點此選商品';
+      }
+      pick.onclick = () => pcOpenProdPicker(pi, ii);
+      const qtyInp = document.createElement('input');
+      qtyInp.type = 'number'; qtyInp.min = '1'; qtyInp.value = it.qty || 1;
+      qtyInp.setAttribute('data-pc','qty');
+      qtyInp.placeholder = '數量';
+      qtyInp.oninput = () => {
+        it.qty = parseInt(qtyInp.value,10) || 1;
+        pcUpdateTotalDisplay(pi);
+      };
+      const priceInp = document.createElement('input');
+      priceInp.type = 'number'; priceInp.step = 'any';
+      priceInp.value = (it.priceOverride == null ? '' : it.priceOverride);
+      priceInp.setAttribute('data-pc','price');
+      priceInp.placeholder = '單價';
+      priceInp.oninput = () => {
+        it.priceOverride = priceInp.value === '' ? undefined : Number(priceInp.value);
+        pcUpdateTotalDisplay(pi);
+      };
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'pc-item-rm'; rm.textContent = '×'; rm.title = '移除';
+      rm.onclick = () => { plan.items.splice(ii, 1); pcRenderPlans(); };
+      row.appendChild(pick); row.appendChild(qtyInp); row.appendChild(priceInp); row.appendChild(rm);
+      itemsBox.appendChild(row);
+    });
+    planEl.appendChild(itemsBox);
+
+    const foot = document.createElement('div');
+    foot.className = 'pc-plan-foot';
+    const total = pcPlanTotal(plan);
+    foot.innerHTML = '<div class="pc-plan-total">月費小計（'+escHtml(PC_state.displayCycle)+'）<b id="pc-total-'+pi+'">$'+total.toLocaleString()+'</b></div>';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-outline btn-sm';
+    addBtn.textContent = '＋ 加入商品';
+    addBtn.onclick = () => {
+      plan.items.push({ code:'', qty:1 });
+      pcRenderPlans();
+      // 自動開啟商品選擇器
+      pcOpenProdPicker(pi, plan.items.length - 1);
+    };
+    foot.appendChild(addBtn);
+    planEl.appendChild(foot);
+
+    cont.appendChild(planEl);
+  });
+}
+
+function pcUpdateTotalDisplay(pi){
+  const plan = PC_state.plans[pi];
+  const el = document.getElementById('pc-total-'+pi);
+  if(el) el.textContent = '$' + pcPlanTotal(plan).toLocaleString();
+}
+
+// 共用商品選擇器（複用 cm-prod-modal）
+function pcOpenProdPicker(pi, ii){
+  PC_pickContext = { planIdx: pi, itemIdx: ii };
+  CM_pickContext = null; // 確保不會干擾 CM
+  document.getElementById('cm-prod-search').value = '';
+  pcRenderProdList();
+  document.getElementById('cm-prod-modal').classList.add('on');
+}
+
+function pcRenderProdList(){
+  // 與 cmRenderProdList 類似，但點擊回呼指向 PC_pickContext
+  const q = (document.getElementById('cm-prod-search').value || '').trim().toLowerCase();
+  const list = document.getElementById('cm-prod-list'); list.innerHTML = '';
+  const byCat = {};
+  for(const code in CM_CATALOG.products){
+    const p = CM_CATALOG.products[code];
+    const text = (code+' '+p.name+' '+(p.size||'')+' '+(p.color||'')).toLowerCase();
+    if(q && !text.includes(q)) continue;
+    const cat = p.category || 'other';
+    (byCat[cat] = byCat[cat] || []).push({code, ...p});
+  }
+  let total = 0;
+  for(const cat in byCat){
+    const catLabel = CM_CATALOG.categories[cat] || cat;
+    const ch = document.createElement('div'); ch.className='cm-prod-cat'; ch.textContent = catLabel;
+    list.appendChild(ch);
+    for(const p of byCat[cat]){
+      total++;
+      const row = document.createElement('div');
+      row.className = 'cm-prod-row';
+      row.innerHTML = '<div><div class="name"><b>'+escHtml(p.code)+'</b> '+escHtml(p.name)+'</div><div class="meta">'+escHtml([p.size,p.color,p.cycle].filter(Boolean).join(' · '))+'</div></div><div class="price">$'+(p.price==null?'—':p.price)+'</div>';
+      row.onclick = () => {
+        if(PC_pickContext){
+          const plan = PC_state.plans[PC_pickContext.planIdx];
+          const it = plan && plan.items[PC_pickContext.itemIdx];
+          if(it){
+            it.code = p.code;
+            delete it.name;
+            // 自動帶入該週期單價
+            if(it.priceOverride == null || it.priceOverride === ''){
+              it.priceOverride = pcUnitPrice(p.code, PC_state.displayCycle);
+            }
+          }
+          pcRenderPlans();
+          PC_pickContext = null;
+        }
+        cmCloseProdPicker();
+      };
+      list.appendChild(row);
+    }
+  }
+  if(total === 0) list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">沒有符合的商品</div>';
+}
+
+// 覆寫 cmRenderProdList 入口：若是 PC 開啟的，走 pcRenderProdList
+const _origCmRenderProdList = (typeof cmRenderProdList === 'function') ? cmRenderProdList : null;
+window.cmRenderProdList = function(){
+  if(PC_pickContext){ pcRenderProdList(); return; }
+  if(_origCmRenderProdList) return _origCmRenderProdList.apply(this, arguments);
+};
+// 攔截 cmCloseProdPicker 清掉 PC context
+const _origCmCloseProdPicker = (typeof cmCloseProdPicker === 'function') ? cmCloseProdPicker : null;
+window.cmCloseProdPicker = function(){
+  PC_pickContext = null;
+  if(_origCmCloseProdPicker) return _origCmCloseProdPicker.apply(this, arguments);
+};
+
+// 渲染圖卡 HTML（用於預覽 + 截圖）
+function pcBuildCardHTML(){
+  const s = PC_state;
+  const activePlans = s.plans.filter(p => p.items && p.items.some(it => it.code));
+  if(activePlans.length === 0) throw new Error('請至少在一個方案加入商品');
+  const cols = Math.min(activePlans.length, 3);
+  const cycleLabel = s.displayCycle === '2W' ? '每 2 週' : '月費';
+  const customerLine = [s.client && '客戶：'+s.client, s.date && '日期：'+s.date].filter(Boolean).join('　|　');
+  const planHTML = activePlans.map((plan) => {
+    const items = (plan.items || []).filter(it => it.code);
+    const cat = (code) => CM_CATALOG.products[code];
+    const itemsHTML = items.length ? items.map(it => {
+      const c = cat(it.code);
+      const name = it.name || (c && c.name) || it.code;
+      const qty = parseInt(it.qty,10) || 1;
+      const unit = (it.priceOverride != null && it.priceOverride !== '' && !Number.isNaN(Number(it.priceOverride)))
+        ? Number(it.priceOverride) : pcUnitPrice(it.code, s.displayCycle);
+      const lineTotal = unit * qty;
+      return '<li><span class="nm">'+escHtml(name)+'</span><span class="qty">×'+qty+'</span><span class="pr">$'+lineTotal.toLocaleString()+'</span></li>';
+    }).join('') : '<div class="pcc-empty">（無商品）</div>';
+    const total = pcPlanTotal(plan);
+    return ''+
+      '<div class="pcc-col'+(plan.recommended?' rec':'')+'">' +
+        (plan.recommended ? '<div class="pcc-rec-tag">★ 推薦方案</div>' : '') +
+        '<h2>'+escHtml(plan.name || '方案')+'</h2>' +
+        '<div class="pcc-st">'+escHtml(plan.subtitle || '')+'</div>' +
+        (items.length ? '<ul class="pcc-items">'+itemsHTML+'</ul>' : itemsHTML) +
+        '<div class="pcc-tot"><div class="pcc-tot-lbl">'+escHtml(cycleLabel)+'</div><div class="pcc-tot-amt">$'+total.toLocaleString()+'<span class="pcc-tot-cyc">／'+escHtml(s.displayCycle)+'</span></div></div>' +
+      '</div>';
+  }).join('');
+  return ''+
+    '<div class="pcc-card">' +
+      '<div class="pcc-head">' +
+        '<h1>'+escHtml(s.title || 'DUSKIN 方案建議')+'</h1>' +
+        (customerLine ? '<div class="pcc-sub">'+escHtml(customerLine)+'</div>' : '') +
+      '</div>' +
+      '<div class="pcc-grid cols'+cols+'">' + planHTML + '</div>' +
+      '<div class="pcc-foot">DUSKIN · 本圖卡僅供方案比較參考，正式報價請以合約／報價單為準。</div>' +
+    '</div>';
+}
+
+function pcRenderPreview(){
+  try{
+    const html = pcBuildCardHTML();
+    const wrap = document.getElementById('pc-preview-wrap');
+    const canvas = document.getElementById('pc-card-canvas');
+    canvas.innerHTML = html;
+    // 預覽時縮小顯示以適配螢幕
+    const w = canvas.querySelector('.pcc-card');
+    if(w){ w.style.transformOrigin = 'top left'; }
+    pcFitPreview();
+    wrap.style.display = 'block';
+    wrap.scrollIntoView({behavior:'smooth', block:'start'});
+    const box = document.getElementById('pc-msg-box');
+    box.className = 'cm-msg success'; box.textContent = '✅ 已產生預覽。按「下載 PNG」儲存圖片。';
+  } catch(e){
+    const box = document.getElementById('pc-msg-box');
+    box.className = 'cm-msg error'; box.textContent = e.message || String(e);
+  }
+}
+function pcFitPreview(){
+  const shell = document.getElementById('pc-preview-shell');
+  const card = shell && shell.querySelector('.pcc-card');
+  if(!card) return;
+  const maxW = shell.clientWidth - 20;
+  if(maxW > 0 && maxW < 960){
+    const scale = maxW / 960;
+    card.style.transform = 'scale('+scale+')';
+    card.style.marginBottom = ((scale - 1) * card.offsetHeight) + 'px';
+  } else {
+    card.style.transform = 'none';
+    card.style.marginBottom = '0';
+  }
+}
+window.addEventListener('resize', () => { if(document.getElementById('pc-modal').classList.contains('on')) pcFitPreview(); });
+
+async function pcRenderToBlob(){
+  const stage = document.getElementById('pc-render-stage');
+  stage.innerHTML = pcBuildCardHTML();
+  await pcLoadHtml2Canvas();
+  const card = stage.querySelector('.pcc-card');
+  const canvas = await window.html2canvas(card, {
+    backgroundColor: '#FFFFFF',
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    windowWidth: card.scrollWidth,
+    windowHeight: card.scrollHeight
+  });
+  stage.innerHTML = '';
+  return await new Promise((resolve, reject) => {
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('無法產生 PNG')), 'image/png');
+  });
+}
+
+function pcSafeFilename(s){ return String(s||'').replace(/[\s\/\\:*?"<>|]/g,''); }
+
+async function pcDownload(){
+  const btn = document.getElementById('pc-download-btn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '產生中...';
+  try{
+    btn.textContent = '載入函式庫...';
+    await pcLoadHtml2Canvas();
+    btn.textContent = '繪製圖卡...';
+    const blob = await pcRenderToBlob();
+    const fname = '方案比較_' + pcSafeFilename(PC_state.client || '客戶') + '_' + pcSafeFilename(PC_state.date || today()) + '.png';
+    btn.textContent = '儲存中...';
+    const result = await cmTriggerSave(blob, fname);
+    // 寫入拜訪紀錄
+    if(result !== 'cancelled' && typeof S !== 'undefined' && S.curIdx >= 0 && DB.clients[S.curIdx]){
+      const c = DB.clients[S.curIdx];
+      c.visits = c.visits || [];
+      c.visits.unshift({ date: today(), note: '已產生方案比較圖卡：'+fname, statusChange:'', insight:'', mood:0 });
+      c.updatedAt = Date.now();
+      saveLocal();
+      if(typeof autoSync === 'function') autoSync('save', { client: c });
+      if(typeof renderVisits === 'function') renderVisits();
+    }
+    const box = document.getElementById('pc-msg-box');
+    if(result === 'cancelled'){
+      box.className = 'cm-msg warn'; box.textContent = '已取消分享。';
+    } else if(result === 'shared'){
+      box.className = 'cm-msg success'; box.textContent = '✅ 已透過系統分享 '+fname;
+    } else if(result === 'newtab'){
+      box.className = 'cm-msg success'; box.textContent = '✅ 已在新分頁開啟 '+fname;
+    } else {
+      box.className = 'cm-msg success'; box.textContent = '✅ 已下載 '+fname+'，並寫入拜訪紀錄。';
+    }
+  } catch(e){
+    const box = document.getElementById('pc-msg-box');
+    box.className = 'cm-msg error'; box.textContent = '產生失敗：'+(e.message || String(e));
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // TEST MODE — 加 ?test=1 啟動，console + 頁面顯示結果
