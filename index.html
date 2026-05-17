@@ -645,7 +645,7 @@ tbody tr:hover{background:var(--surface-hover)}
       </div>
       <div id="cd-env-w" style="display:none"><div class="detail-label">環境觀察</div><div class="detail-val" id="cd-env"></div></div>
       <div id="cd-note-w" style="display:none"><div class="detail-label">備註</div><div class="detail-val" id="cd-note"></div></div>
-      <div id="cd-tri-w" style="display:none"><div class="detail-label">試用品項</div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
+      <div id="cd-tri-w"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="detail-label" style="margin-bottom:0">試用 / 成約品項</div><button class="btn btn-outline btn-xs" onclick="openCDItems()">✏️ 編輯品項</button></div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1063,6 +1063,26 @@ tbody tr:hover{background:var(--surface-hover)}
 </div>
 
 <!-- ═══ TODO MODAL（取代 prompt，相容 iOS PWA） ═══ -->
+<div class="modal-bg" id="cd-items-modal" onclick="if(event.target===this)closeCDItems()">
+  <div class="modal" style="max-width:560px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-title" id="cdm-title">編輯品項</div>
+    <div style="overflow-y:auto;flex:1;padding-right:4px">
+      <div class="form-section">試用品項</div>
+      <div id="cdm-items"></div>
+      <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin:6px 0 10px 0">+ 新增品項</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text2);margin-bottom:14px">
+        <span>試用合計 4W 原價：</span><span id="cdm-total" style="font-weight:600;color:var(--green-d)">$0</span>
+      </div>
+      <div class="form-section">成約品項</div>
+      <div id="cdm-contracted"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="saveCDItems()">儲存</button>
+      <button class="btn btn-outline" onclick="closeCDItems()">取消</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="todo-modal" onclick="if(event.target===this)closeTodoModal()">
   <div class="modal">
     <div class="modal-title">新增待辦</div>
@@ -3226,13 +3246,16 @@ function renderClients(){
 // ═══════════════════════════════════════════════════════════
 // CLIENT FORM
 // ═══════════════════════════════════════════════════════════
-let S={curIdx:-1,editIdx:-1,cfItems:[],cfTodos:[],curMood:3,editVisitIdx:-1};
+let S={curIdx:-1,editIdx:-1,cfItems:[],cfTodos:[],curMood:3,editVisitIdx:-1,itemsTarget:'cf-items',contractedTarget:'cf-contracted-list',cdmActive:false,cdmStatusOverride:null};
 
 function showView(id){
   ['view-list','view-form','view-detail'].forEach(v=>document.getElementById(v).style.display='none');
   document.getElementById(id).style.display='block';window.scrollTo(0,0);
 }
 function openCF(idx){
+  // 進入完整編輯表單前，確保 renderItems/renderContracted 指回原本 form 的容器
+  S.itemsTarget='cf-items';S.contractedTarget='cf-contracted-list';
+  S.cdmActive=false;S.cdmStatusOverride=null;
   S.editIdx=idx;S.cfItems=[];S.cfTodos=[];
   // 記住舊的試用品項，存檔時比對新增的品項扣庫存
   S._prevTrialItems=idx>=0?JSON.parse(JSON.stringify(DB.clients[idx]?.trialItems||[])):[];
@@ -3256,7 +3279,7 @@ function openCF(idx){
   showView('view-form');
 }
 function closeForm(){showView('view-list');}
-function updProd(){document.getElementById('cf-product').value=autoProd(S.cfItems);}
+function updProd(){const el=document.getElementById('cf-product');if(el)el.value=autoProd(S.cfItems);}
 
 // 商品選單 options
 function buildOpts(sel){
@@ -3269,10 +3292,15 @@ function buildOpts(sel){
 }
 
 function addItem(){S.cfItems.push({product:'',qty:1,cycle:'2W',quoted:0});renderItems();updProd();}
-function updCfTotal(){document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+displayFw4(it.product,it.qty,it.cycle||'2W'),0)).toLocaleString();}
+function updCfTotal(){
+  const total=(S.cfItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty,it.cycle||'2W'),0);
+  const txt='$'+total.toLocaleString();
+  ['cf-total','cdm-total'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=txt;});
+}
 function renderItems(){
-  const cont=document.getElementById('cf-items');
-  if(!S.cfItems.length){cont.innerHTML='';document.getElementById('cf-total').textContent='$0';return;}
+  const cont=document.getElementById(S.itemsTarget||'cf-items');
+  if(!cont){updCfTotal();return;}
+  if(!S.cfItems.length){cont.innerHTML='';updCfTotal();return;}
   cont.innerHTML=S.cfItems.map((it,i)=>{
     // ── 配件 row (bundled) ──
     if(it.bundledTo){
@@ -3334,7 +3362,7 @@ function renderItems(){
       </div>
     </div>`;
   }).join('');
-  document.getElementById('cf-total').textContent='$'+(S.cfItems.reduce((s,it)=>s+displayFw4(it.product,it.qty,it.cycle||'2W'),0)).toLocaleString();
+  updCfTotal();
 }
 // 把試用品項轉成成約品項（連同配件）
 function promoteToContract(i){
@@ -3350,7 +3378,9 @@ function promoteToContract(i){
     if(newIdx>=0)S.cfItems.splice(newIdx,1);
     if(!S.cfContracted)S.cfContracted=[];
     moved.forEach(it=>{it.contractDate=today();S.cfContracted.push(it);});
-    const st=document.getElementById('cf-status');if(st)st.value=STATUS.DEAL;
+    const st=document.getElementById('cf-status');
+    if(st)st.value=STATUS.DEAL;
+    else if(S.cdmActive)S.cdmStatusOverride=STATUS.DEAL;
     renderItems();renderContracted();updProd();
   }catch(e){
     alert('成約操作失敗：'+(e.message||e));
@@ -3370,14 +3400,16 @@ function removeContracted(i){
     }
     if(!S.cfItems)S.cfItems=[];
     S.cfItems.push(...moved);
-    const st=document.getElementById('cf-status');if(st)st.value=STATUS.TRIAL;
+    const st=document.getElementById('cf-status');
+    if(st)st.value=STATUS.TRIAL;
+    else if(S.cdmActive)S.cdmStatusOverride=STATUS.TRIAL;
     renderItems();renderContracted();updProd();
   }catch(e){
     alert('操作失敗：'+(e.message||e));
   }
 }
 function renderContracted(){
-  const el=document.getElementById('cf-contracted-list');
+  const el=document.getElementById(S.contractedTarget||'cf-contracted-list');
   if(!el)return;
   const items=S.cfContracted||[];
   if(!items.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">（無）</div>';return;}
@@ -3592,16 +3624,29 @@ function openCD(i){
   const ew=document.getElementById('cd-env-w');c.env?(ew.style.display='block',document.getElementById('cd-env').textContent=c.env):ew.style.display='none';
   const nw=document.getElementById('cd-note-w');c.note?(nw.style.display='block',document.getElementById('cd-note').textContent=c.note):nw.style.display='none';
   const tw=document.getElementById('cd-tri-w');
-  if(c.trialItems?.length){
-    tw.style.display='block';
-    // 只顯示主商品（非 bundled），配件以 +配件 方式附加
-    const mains=c.trialItems.filter(it=>it.product&&!it.bundledTo);
-    document.getElementById('cd-tri').innerHTML=mains.map(it=>{
-      const f=displayFw4(it.product,it.qty||1,it.cycle||'2W');const r=ref9(it.product,it.qty,it.cycle||'2W');
+  tw.style.display='block';
+  const triEl=document.getElementById('cd-tri');
+  const mainsTri=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+  const mainsCon=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo);
+  if(!mainsTri.length&&!mainsCon.length){
+    triEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">尚無試用 / 成約品項</div>';
+  }else{
+    const conHtml=mainsCon.map(it=>{
+      const f=itemFW4(it);
+      const accs=(c.contractedItems||[]).filter(x=>x.bundledTo===it.product&&x.product);
+      const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
+      return`<div style="background:#E1F5EE;border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
+        <span style="color:#085041;font-weight:600">成約</span>
+        <b>${it.product}</b> ×${it.qty||1}
+        <span style="color:#085041;font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
+        ${accTxt}
+      </div>`;
+    }).join('');
+    const triHtml=mainsTri.map(it=>{
+      const f=displayFw4(it.product,it.qty||1,it.cycle||'2W');
       const p=getProd(it.product);const isMat=p?.cat==='地墊';
       const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
       const discountLow=discount!==null&&discount<9;
-      // 找此主商品對應的 bundled 配件/口味
       const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
       const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
       return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
@@ -3611,12 +3656,65 @@ function openCD(i){
         ${accTxt}
       </div>`;
     }).join('');
-  }else tw.style.display='none';
+    triEl.innerHTML=conHtml+triHtml;
+  }
   document.getElementById('vl-form').style.display='none';
   renderCDTodos();renderVisits();showView('view-detail');
 }
 function closeDetail(){showView('view-list');}
 function editCur(){if(S.curIdx<0)return;const i=S.curIdx;closeDetail();openCF(i);}
+
+// 客戶卡 → 編輯品項 modal（共用編輯表單的 renderItems/renderContracted 邏輯）
+function openCDItems(){
+  if(S.curIdx<0)return;
+  const c=DB.clients[S.curIdx];
+  if(!c)return;
+  S.cdmActive=true;
+  S.cdmStatusOverride=null;
+  S._cdmPrevTrial=JSON.parse(JSON.stringify(c.trialItems||[]));
+  S.cfItems=JSON.parse(JSON.stringify(c.trialItems||[]));
+  S.cfContracted=JSON.parse(JSON.stringify(c.contractedItems||[]));
+  S.itemsTarget='cdm-items';
+  S.contractedTarget='cdm-contracted';
+  rebuildAllBundles();
+  renderItems();renderContracted();
+  document.getElementById('cdm-title').textContent='編輯品項｜'+c.name;
+  document.getElementById('cd-items-modal').classList.add('on');
+}
+function closeCDItems(){
+  document.getElementById('cd-items-modal').classList.remove('on');
+  S.cdmActive=false;
+  S.cdmStatusOverride=null;
+  S.itemsTarget='cf-items';
+  S.contractedTarget='cf-contracted-list';
+  // 清掉草稿避免影響後續開「編輯」表單
+  S.cfItems=[];S.cfContracted=[];
+}
+function saveCDItems(){
+  if(S.curIdx<0){closeCDItems();return;}
+  const c=DB.clients[S.curIdx];
+  if(!c){closeCDItems();return;}
+  try{
+    c.trialItems=JSON.parse(JSON.stringify(S.cfItems||[]));
+    c.contractedItems=JSON.parse(JSON.stringify(S.cfContracted||[]));
+    if(S.cdmStatusOverride)c.status=S.cdmStatusOverride;
+    c.updatedAt=Date.now();
+    saveLocal();
+    autoSync('save',{client:c});
+    // 庫存扣減
+    const pendingDiffs=getInventoryDiffs(S._cdmPrevTrial||[],c.trialItems);
+    closeCDItems();
+    renderClients();openCD(S.curIdx);
+    if(pendingDiffs.length){
+      setTimeout(()=>{
+        const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n')+'\n\n是否從庫存扣減？';
+        if(confirm(msg))applyInventoryDeduct(pendingDiffs);
+      },100);
+    }
+  }catch(e){
+    alert('儲存失敗：'+(e.message||e));
+  }
+}
 async function delCur(){
   if(S.curIdx<0)return;
   if(!confirm(`確認刪除「${DB.clients[S.curIdx].name}」？`))return;
