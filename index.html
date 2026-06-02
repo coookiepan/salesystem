@@ -8,6 +8,13 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>DUSKIN 銷售系統</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#085041">
+<link rel="apple-touch-icon" href="icon.svg">
+<script>
+// H2 PWA：註冊 Service Worker（離線可開）。失敗不影響 App 正常運作。
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
@@ -1191,7 +1198,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.02-sync1';
+const APP_VERSION='v2026.06.02-offline1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1201,9 +1208,20 @@ function doGet(e){return handleRequest(e);}
 function doPost(e){return handleRequest(e);}
 
 function handleRequest(e){
+  let lock=null;
   try{
     const action=e.parameter.action||(e.postData?JSON.parse(e.postData.contents).action:null);
     const body=e.postData?JSON.parse(e.postData.contents):{};
+    // H1 並發鎖：寫入類動作序列化，避免兩位使用者同時寫同一份試算表時，
+    // 「找列→寫列」交錯造成 lost update 或 appendRow 撞列。讀取不需鎖。
+    const WRITE_ACTIONS={save:1,delete:1,deleteByName:1,saveInventory:1,saveProducts:1};
+    if(WRITE_ACTIONS[action]){
+      lock=LockService.getScriptLock();
+      if(!lock.tryLock(20000)){
+        lock=null;
+        return ContentService.createTextOutput(JSON.stringify({error:'系統忙碌中，請稍後再試（寫入鎖逾時）'})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
     let result;
     switch(action){
       case 'getAll':        result=getAllClients();break;
@@ -1223,6 +1241,8 @@ function handleRequest(e){
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }catch(err){
     return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON);
+  }finally{
+    if(lock)lock.releaseLock();
   }
 }
 

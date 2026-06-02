@@ -40,9 +40,15 @@ const SpreadsheetApp = { getActiveSpreadsheet() { return {
 }; } };
 const ContentService = { MimeType: { JSON: 'json' }, createTextOutput(t) { return { _t: t, setMimeType() { return this; }, getContent() { return this._t; } }; } };
 const PropertiesService = { getScriptProperties() { return { getProperty() { return null; } }; } };
+// H1：紀錄取鎖 / 放鎖次數，驗證寫入動作有序列化、且結束一定釋放
+const lockLog = { acquired: 0, released: 0, held: false };
+const LockService = { getScriptLock() { return {
+  tryLock() { lockLog.acquired++; lockLog.held = true; return true; },
+  releaseLock() { lockLog.released++; lockLog.held = false; }
+}; } };
 
-const api = new Function('SpreadsheetApp', 'ContentService', 'PropertiesService',
-  code + '\n;return {handleRequest, getAllClients};')(SpreadsheetApp, ContentService, PropertiesService);
+const api = new Function('SpreadsheetApp', 'ContentService', 'PropertiesService', 'LockService',
+  code + '\n;return {handleRequest, getAllClients};')(SpreadsheetApp, ContentService, PropertiesService, LockService);
 
 let failed = 0;
 function assert(name, cond) { console.log((cond ? '  ✓ ' : '  ✗ ') + name); if (!cond) failed++; }
@@ -58,6 +64,14 @@ assert('回報跳過列號 [4]', res && JSON.stringify(res.skipped) === '[4]');
 const out = api.handleRequest({ parameter: {}, postData: { contents: JSON.stringify({ action: 'getAll' }) } });
 const parsed = JSON.parse(out.getContent());
 assert('handleRequest(getAll) 回 3 筆 + skipped=[4]', parsed.clients.length === 3 && JSON.stringify(parsed.skipped) === '[4]');
+assert('讀取動作不取鎖', lockLog.acquired === 0);
 
-console.log(failed ? `C4 FAILED (${failed})` : 'C4 PASSED ✅');
+console.log('H1 — 寫入動作並發鎖');
+const saveOut = api.handleRequest({ parameter: {}, postData: { contents: JSON.stringify({ action: 'save', client: { id: 'd', name: '丁' } }) } });
+const saved = JSON.parse(saveOut.getContent());
+assert('save 動作成功寫入', saved.ok === true);
+assert('save 取得鎖一次', lockLog.acquired === 1);
+assert('save 結束釋放鎖（finally 保證）', lockLog.released === 1 && lockLog.held === false);
+
+console.log(failed ? `C4/H1 FAILED (${failed})` : 'C4 + H1 PASSED ✅');
 process.exit(failed ? 1 : 0);
