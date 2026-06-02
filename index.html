@@ -1155,7 +1155,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.26-admin2';
+const APP_VERSION='v2026.06.02-admin3';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -4495,6 +4495,13 @@ function calcAdminMetrics(clients){
   const conversionRate=totalEngaged>0?(contractShop/totalEngaged):0;
   return{trialAmount,trialShop,contractAmount,contractShop,conversionRate,totalEngaged};
 }
+// 呼叫單一業務員 Apps Script，回傳解析後 JSON；非 JSON（例：登入頁 HTML）給出明確錯誤
+async function fetchAdminAction(url,action){
+  const res=await fetch(url,{method:'POST',body:JSON.stringify({action})});
+  const text=await res.text();
+  try{return JSON.parse(text);}
+  catch(e){throw new Error('回應非 JSON（請確認 Apps Script 部署權限為「任何人」且網址正確）');}
+}
 async function loadAdminSnapshot(){
   saveAdminUrls();
   const urls=getAdminUrls();
@@ -4505,11 +4512,17 @@ async function loadAdminSnapshot(){
   // 並行抓取（每個業務 Sheet 互不影響）
   await Promise.all(urls.map(async (url,i)=>{
     try{
-      const res=await fetch(url,{method:'POST',body:JSON.stringify({action:'getSnapshot'})});
-      const json=await res.json();
-      if(json.error)throw new Error(json.error);
-      if(!json.ok||!Array.isArray(json.clients))throw new Error('回應格式不正確');
-      results[i]={sheetName:json.sheetName||('業務'+(i+1)),clients:json.clients,generatedAt:json.generatedAt,url};
+      let snap=await fetchAdminAction(url,'getSnapshot');
+      // 舊版 Apps Script（2026-04-26 前部署）未含 getSnapshot 端點，會回 {error:'Unknown action'}。
+      // 自動退回 getAll 仍可取得客戶資料，僅缺業務員姓名（以「業務N」代稱，提示更新）。
+      if(!snap||!Array.isArray(snap.clients)){
+        const fb=await fetchAdminAction(url,'getAll');
+        if(!fb||!Array.isArray(fb.clients)){
+          throw new Error((fb&&fb.error)||(snap&&snap.error)||'回應格式不正確');
+        }
+        snap={ok:true,clients:fb.clients,sheetName:'業務'+(i+1)+'（請更新 Apps Script 以顯示姓名）'};
+      }
+      results[i]={sheetName:snap.sheetName||('業務'+(i+1)),clients:snap.clients,generatedAt:snap.generatedAt,url};
     }catch(e){
       results[i]={sheetName:'(URL'+(i+1)+')',clients:[],error:e.message||String(e),url};
     }
