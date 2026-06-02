@@ -1349,7 +1349,9 @@ function getShops(){
 // 工廠登記編號／行政區／路名／行業別／主要產品／員工數／核准年月／網址／負責人）。
 function getProspects(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();
-  const sheet=ss.getSheetByName(PROSPECT_SHEET_NAME);
+  // 優先讀名為 prospects 的分頁；若沒有，就讀第一個分頁（整份名錄表可直接用，免改分頁名）。
+  let sheet=ss.getSheetByName(PROSPECT_SHEET_NAME);
+  if(!sheet)sheet=ss.getSheets()[0];
   if(!sheet)return{ok:true,prospects:[]};
   const lastRow=sheet.getLastRow(),lastCol=sheet.getLastColumn();
   if(lastRow<2||lastCol<1)return{ok:true,prospects:[]};
@@ -2567,16 +2569,19 @@ function setQueryMode(mode,el){
   if(mode==='shops'){renderShops(document.getElementById('shop-search')?.value||'');}
   else{
     // 首次進入且尚無快取 → 自動載入
-    if(!PROSPECTS.length&&PROSPECTS_URL)loadProspects();
+    if(!PROSPECTS.length&&prospectsUrl())loadProspects();
     else{renderProspectRegions();renderProspects(document.getElementById('prospect-search')?.value||'');}
   }
 }
+// 名單 URL：未另外設定時，沿用主同步 URL（名錄放在自己 CRM 試算表的 prospects 分頁即可，免再部署一組）
+function prospectsUrl(){return PROSPECTS_URL||SHEET_URL;}
 async function loadProspects(){
   const statusEl=document.getElementById('prospects-status');
-  if(!PROSPECTS_URL){if(statusEl)statusEl.textContent='尚未設定名單 URL，請到設定頁填入';return;}
+  const url=prospectsUrl();
+  if(!url){if(statusEl)statusEl.textContent='尚未設定名單 URL，請到設定頁填入（或先設定 Google Sheets 同步）';return;}
   if(statusEl)statusEl.textContent='載入中…';
   try{
-    const res=await fetch(PROSPECTS_URL,{method:'POST',body:JSON.stringify({action:'getProspects'})});
+    const res=await fetch(url,{method:'POST',body:JSON.stringify({action:'getProspects'})});
     const text=await res.text();let json;
     try{json=JSON.parse(text);}catch(e){throw new Error('回應非 JSON（請確認部署權限為「任何人」且網址正確）');}
     if(!Array.isArray(json.prospects)){if(json.error)throw new Error(json.error);throw new Error('回應格式不正確');}
