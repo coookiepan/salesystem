@@ -639,12 +639,12 @@ tbody tr:hover{background:var(--surface-hover)}
       <button class="back-btn" onclick="closeDetail()"><svg aria-hidden="true" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>返回</button>
     </div>
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div>
-          <div style="font-size:18px;font-weight:700" id="cd-name"></div>
-          <div style="font-size:13px;color:var(--text2);margin-top:3px" id="cd-sub"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="flex:1 1 200px;min-width:0">
+          <div style="font-size:18px;font-weight:700;overflow-wrap:break-word" id="cd-name"></div>
+          <div style="font-size:13px;color:var(--text2);margin-top:3px;overflow-wrap:break-word" id="cd-sub"></div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
           <button class="btn btn-outline btn-sm" id="cd-quickquote-btn" onclick="ContractMaker.quickQuote()" title="一鍵以現有品項產生報價單 Word">⚡ 快速報價</button>
           <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單／合約 Word（可調整明細與條款）">📄 報價／合約</button>
