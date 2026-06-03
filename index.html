@@ -425,6 +425,10 @@ tbody tr:hover{background:var(--surface-hover)}
 /* font-size:16px 避免 iOS Safari focus 時自動放大頁面 */
 .cm-field input,.cm-field select,.cm-field textarea{padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:16px;font-family:inherit;width:100%;box-sizing:border-box}
 .cm-field textarea{min-height:60px;resize:vertical}
+.cm-doctype{display:flex;gap:10px;flex-wrap:wrap}
+.cm-doctype label{flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);cursor:pointer;font-size:15px;font-weight:600;min-height:44px}
+.cm-doctype label:has(input:checked){border-color:var(--green-d);background:var(--green-l);color:var(--green-d)}
+.cm-doctype input[type=radio]{width:18px;height:18px}
 .cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:14px}
 .cm-flags label{display:flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
 .cm-flags input[type=checkbox]{width:18px;height:18px}
@@ -642,7 +646,8 @@ tbody tr:hover{background:var(--surface-hover)}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
-          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="openCM()" title="產生報價單／合約 Word">📄 產生合約</button>
+          <button class="btn btn-outline btn-sm" id="cd-quickquote-btn" onclick="quickQuote()" title="一鍵以現有品項產生報價單 Word">⚡ 快速報價</button>
+          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="openCM()" title="產生報價單／合約 Word（可調整明細與條款）">📄 報價／合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -727,6 +732,14 @@ tbody tr:hover{background:var(--surface-hover)}
       <div id="cm-msg-box" class="cm-msg"></div>
 
       <div class="cm-section">
+        <h4>文件類型</h4>
+        <div class="cm-doctype">
+          <label><input type="radio" name="cm-doctype" value="quote" checked onchange="cmSetDocType('quote')"> 📋 報價單</label>
+          <label><input type="radio" name="cm-doctype" value="contract" onchange="cmSetDocType('contract')"> 📄 合約書</label>
+        </div>
+      </div>
+
+      <div class="cm-section">
         <h4>客戶資料</h4>
         <div class="cm-row">
           <label class="cm-field"><span>客戶名稱 *</span><input id="cm-client" oninput="cmSet('client',this.value)"></label>
@@ -741,6 +754,15 @@ tbody tr:hover{background:var(--surface-hover)}
           <label class="cm-field"><span>客戶電話</span><input id="cm-phone" oninput="cmSet('customerInfo.phone',this.value)"></label>
           <label class="cm-field"><span>客戶地址</span><input id="cm-address" oninput="cmSet('customerInfo.address',this.value)"></label>
         </div>
+      </div>
+
+      <div class="cm-section" id="cm-contract-section" style="display:none">
+        <h4>合約設定 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（僅合約書使用）</span></h4>
+        <div class="cm-row">
+          <label class="cm-field"><span>合約起始日 (YYYY/MM/DD)</span><input id="cm-contractStart" oninput="cmSet('contractStart',this.value)"></label>
+          <label class="cm-field"><span>合約期間（年）</span><input id="cm-contractYears" type="number" min="1" step="1" placeholder="例：1" oninput="cmSet('contractYears',this.value)"></label>
+        </div>
+        <label class="cm-field"><span>合約條款（一行一條，可自由增刪）</span><textarea id="cm-contractTerms" rows="7" oninput="cmSet('contractTerms',this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea></label>
       </div>
 
       <div class="cm-section">
@@ -758,7 +780,7 @@ tbody tr:hover{background:var(--surface-hover)}
         <div class="cm-flags">
           <label><input type="checkbox" id="cm-roundTotalToHundred" onchange="cmSet('roundTotalToHundred',this.checked)"> 總額向上取整百</label>
           <label><input type="checkbox" id="cm-showLocation" onchange="cmSet('showLocation',this.checked)"> 顯示位置欄</label>
-          <label><input type="checkbox" id="cm-showStamp" onchange="cmSet('showStamp',this.checked)"> 顯示核章區</label>
+          <label><input type="checkbox" id="cm-showStamp" onchange="cmSet('showStamp',this.checked)"> 顯示核章／簽章區</label>
           <label><input type="checkbox" id="cm-showCustomerNumber" onchange="cmSet('showCustomerNumber',this.checked)"> 顯示統編</label>
         </div>
       </div>
@@ -1206,7 +1228,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.03-l1';
+const APP_VERSION='v2026.06.03-m1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -5449,6 +5471,10 @@ const CM_engine = (function(catalog){
     for(const area of areas) for(const item of area.items)
       if(item._product.contractYears) customItems.push({code:item.code, name:item.name, years:item._product.contractYears});
     return {client: config.client, version: config.version, date: config.date,
+      docType: config.docType === 'contract' ? 'contract' : 'quote',
+      contractStart: config.contractStart || config.date,
+      contractYears: config.contractYears || null,
+      contractTerms: config.contractTerms || null,
       customerInfo: config.customerInfo || {}, areas,
       grandTotal, grandTotalAtOriginal, overallDiscount, overallSavings,
       discount: options.discount, customItems,
@@ -5456,11 +5482,32 @@ const CM_engine = (function(catalog){
       notes: buildCMNotes(areas, options, customItems, config.extraNotes || [])};
   }
   function fmtN(n){ return n.toLocaleString(); }
+  function contractTermLines(q){
+    // 合約條款：使用者輸入的條款 + 自動補上的訂製品期間條款
+    const terms = [];
+    if(q.contractTerms){
+      for(const line of String(q.contractTerms).split('\n').map(s=>s.trim()).filter(Boolean)) terms.push(line);
+    }
+    if(q.customItems && q.customItems.length){
+      const uniq = [...new Map(q.customItems.map(c=>[c.code,c])).values()];
+      const list = uniq.map(c=>c.name+'（'+c.code+'）').join('、');
+      terms.push(list+' 為訂製品，合約期間為 '+uniq[0].years+' 年，期間內不得中途解約。');
+    }
+    return terms;
+  }
   function previewText(config){
     const q = expandQuote(config);
+    const isContract = q.docType === 'contract';
     const lines = [];
-    lines.push('客戶名稱：'+q.client+(q.version?' （'+q.version+'）':''));
-    lines.push('報價日期：'+q.date);
+    if(isContract){
+      lines.push('【服務合約書】');
+      lines.push('甲方（客戶）：'+q.client+(q.version?' （'+q.version+'）':''));
+      lines.push('乙方（服務商）：樂清服務股份有限公司 台南營業所');
+      lines.push('合約期間：自 '+(q.contractStart||q.date)+' 起'+(q.contractYears?'，為期 '+q.contractYears+' 年':'')+'。');
+    } else {
+      lines.push('客戶名稱：'+q.client+(q.version?' （'+q.version+'）':''));
+      lines.push('報價日期：'+q.date);
+    }
     lines.push('');
     for(const area of q.areas){
       lines.push('【'+area.name+'】');
@@ -5472,16 +5519,22 @@ const CM_engine = (function(catalog){
       lines.push('');
     }
     lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
-    lines.push(''); lines.push('說明：');
-    q.notes.forEach((n,i)=>{
-      let s = '  '+(i+1)+'. '+(n.text||'');
-      if(n.strong) s += '['+n.strong+']';
-      if(n.tail) s += n.tail;
-      lines.push(s);
-    });
+    lines.push('');
+    if(isContract){
+      lines.push('合約條款：');
+      contractTermLines(q).forEach((t,i)=>lines.push('  '+(i+1)+'. '+t));
+    } else {
+      lines.push('說明：');
+      q.notes.forEach((n,i)=>{
+        let s = '  '+(i+1)+'. '+(n.text||'');
+        if(n.strong) s += '['+n.strong+']';
+        if(n.tail) s += n.tail;
+        lines.push(s);
+      });
+    }
     return lines.join('\n');
   }
-  return {expandQuote, expandItem, expandArea, previewText, catalog};
+  return {expandQuote, expandItem, expandArea, previewText, contractTermLines, catalog};
 })(CM_CATALOG);
 
 // ─── Word builder（自 builders/quote.js 改寫；需 docx UMD） ───
@@ -5603,17 +5656,83 @@ const CM_builder = (function(){
       new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({height:{value:1200,rule:HeightRule.ATLEAST}, children:[stampCell('客戶簽收'),stampCell('業務主管'),stampCell('承辦人')]})]})
     ];
   }
+  // ─── 合約書專用區塊 ───
+  function buildContractTitle(){
+    const {Paragraph,AlignmentType}=getDocx();
+    return [new Paragraph({alignment:AlignmentType.CENTER, spacing:{after:160}, children:[txt('服　務　合　約　書',{bold:true,size:36})]})];
+  }
+  function buildContractParties(quote){
+    const {Table,TableRow,TableCell,WidthType,VerticalAlign}=getDocx();
+    const left=[para([txt('甲方（客戶）',{bold:true})])];
+    left.push(para([txt('名稱：',{bold:true}),txt(quote.client||'')]));
+    if(quote.show.customerNumber) left.push(para([txt('統一編號：',{bold:true}),txt(quote.customerInfo.taxId||'')]));
+    if(quote.customerInfo.contact) left.push(para([txt('聯絡人：',{bold:true}),txt(quote.customerInfo.contact)]));
+    if(quote.customerInfo.phone) left.push(para([txt('電話：',{bold:true}),txt(quote.customerInfo.phone)]));
+    if(quote.customerInfo.address) left.push(para([txt('地址：',{bold:true}),txt(quote.customerInfo.address)]));
+    const right=[para([txt('乙方（服務商）',{bold:true})])];
+    right.push(para([txt('名稱：',{bold:true}),txt(COMPANY_INFO.name)]));
+    right.push(para([txt('承辦人：',{bold:true}),txt(COMPANY_INFO.contact)]));
+    right.push(para([txt('電話：',{bold:true}),txt(COMPANY_INFO.phone)]));
+    right.push(para([txt('手機：',{bold:true}),txt(COMPANY_INFO.mobile)]));
+    right.push(para([txt('地址：',{bold:true}),txt(COMPANY_INFO.address)]));
+    return new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({children:[
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.TOP, borders:allBorders(), children:left}),
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.TOP, borders:allBorders(), children:right})
+    ]})]});
+  }
+  function buildContractPeriod(quote){
+    const {Paragraph}=getDocx();
+    const start=quote.contractStart||quote.date||'';
+    const runs=[txt('合約期間：',{bold:true}),txt('自 '+start+' 起')];
+    if(quote.contractYears) runs.push(txt('，為期 '),txt(String(quote.contractYears),{bold:true,color:'C00000'}),txt(' 年'));
+    runs.push(txt('。'));
+    return new Paragraph({spacing:{before:160,after:80}, children:runs});
+  }
+  function buildContractTerms(quote){
+    const {Paragraph}=getDocx();
+    const out=[new Paragraph({spacing:{before:200,after:60}, children:[txt('合約條款：',{bold:true})]})];
+    const terms = CM_engine.contractTermLines(quote);
+    terms.forEach((t,i)=>{
+      out.push(new Paragraph({spacing:{before:0,after:40}, children:[txt((i+1)+'. ',{bold:true}),txt(t)]}));
+    });
+    return out;
+  }
+  function buildSignature(){
+    const {Paragraph,Table,TableRow,TableCell,WidthType,VerticalAlign,HeightRule}=getDocx();
+    const sigCell=label=>new TableCell({width:{size:50,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.TOP, borders:allBorders(), children:[
+      new Paragraph({spacing:{before:60,after:200}, children:[txt(label,{bold:true})]}),
+      new Paragraph({spacing:{before:200,after:60}, children:[txt('簽章：')]}),
+      new Paragraph({spacing:{before:120,after:60}, children:[txt('日期：　　　年　　月　　日')]})
+    ]});
+    return [
+      new Paragraph({spacing:{before:300,after:80}, children:[txt('立合約書人：',{bold:true})]}),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({height:{value:1600,rule:HeightRule.ATLEAST}, children:[sigCell('甲方（客戶）'),sigCell('乙方（服務商）')]})]})
+    ];
+  }
   function buildDocument(quote){
     const {Document,Paragraph}=getDocx();
-    const children = [
-      ...buildTitle(),
-      buildCustomerHeader(quote),
-      new Paragraph({spacing:{before:80,after:80},children:[txt('')]}),
-      buildItemTable(quote),
-      ...buildNotes(quote)
-    ];
-    if(quote.show.stamp) children.push(...buildStamp());
-    return new Document({creator:COMPANY_INFO.name, title:'報價單',
+    let children;
+    if(quote.docType === 'contract'){
+      children = [
+        ...buildContractTitle(),
+        buildContractParties(quote),
+        buildContractPeriod(quote),
+        new Paragraph({spacing:{before:120,after:80}, children:[txt('服務商品明細：',{bold:true})]}),
+        buildItemTable(quote),
+        ...buildContractTerms(quote)
+      ];
+      if(quote.show.stamp) children.push(...buildSignature());
+    } else {
+      children = [
+        ...buildTitle(),
+        buildCustomerHeader(quote),
+        new Paragraph({spacing:{before:80,after:80},children:[txt('')]}),
+        buildItemTable(quote),
+        ...buildNotes(quote)
+      ];
+      if(quote.show.stamp) children.push(...buildStamp());
+    }
+    return new Document({creator:COMPANY_INFO.name, title: quote.docType==='contract' ? '服務合約書' : '報價單',
       styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
       sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
   }
@@ -5638,6 +5757,20 @@ function cmLoadDocx(){
     document.head.appendChild(s);
   });
   return CM_docxPromise;
+}
+
+// ─── 合約預設條款範本（可在視窗內自由編輯） ───
+// 純函式：回傳一份白話、通用的服務合約條款，使用者可逐行增刪。
+// 訂製品的「合約期間 X 年」條款由 builder 依品項自動補上，不在此重複。
+function cmDefaultContractTermsText(){
+  return [
+    '本合約所列服務商品費用均已含 5% 營業稅。',
+    '乙方依約定更換週期，定期為甲方更換、清洗本合約所列之商品。',
+    '甲方應於每期帳款到期日，依約定金額支付服務費用予乙方。',
+    '本合約所列商品所有權均屬乙方所有；合約終止時甲方應如數返還，如有遺失或損壞，甲方應照價賠償。',
+    '合約期間屆滿前一個月，雙方未以書面表示異議者，視同續約一年，並依此類推。',
+    '本合約一式二份，由甲乙雙方各執一份為憑。'
+  ].join('\n');
 }
 
 // ─── 客戶 → 合約配置橋接 ───
@@ -5677,10 +5810,20 @@ function clientToCMConfig(c){
     return out;
   });
   const dt = (typeof today === 'function' ? today() : '').replace(/-/g, '/');
+  // 合約期間預設：若品項含訂製品（catalog 有 contractYears），取最大值，否則 1 年
+  let contractYears = 1;
+  for(const it of items){
+    const p = CM_CATALOG.products[it.code];
+    if(p && p.contractYears && p.contractYears > contractYears) contractYears = p.contractYears;
+  }
   return {
     client: c.name || '',
     version: '',
     date: dt,
+    docType: 'quote',
+    contractStart: dt,
+    contractYears: contractYears,
+    contractTerms: cmDefaultContractTermsText(),
     customerInfo: { contact: c.contact || '', address: c.addr || '', phone: '', taxId: '' },
     displayCycle: '4W',
     discount: '',
@@ -5752,6 +5895,30 @@ function cmSyncToUI(){
   document.getElementById('cm-showStamp').checked = s.showStamp !== false;
   document.getElementById('cm-showCustomerNumber').checked = s.showCustomerNumber !== false;
   document.getElementById('cm-extraNotes').value = s.extraNotes || '';
+  // 文件類型 + 合約欄位
+  const dtv = s.docType === 'contract' ? 'contract' : 'quote';
+  const radio = document.querySelector('input[name=cm-doctype][value="'+dtv+'"]');
+  if(radio) radio.checked = true;
+  document.getElementById('cm-contractStart').value = s.contractStart || '';
+  document.getElementById('cm-contractYears').value = s.contractYears || '';
+  document.getElementById('cm-contractTerms').value = s.contractTerms || '';
+  cmApplyDocTypeUI(dtv);
+}
+// 依文件類型切換 UI（顯示合約設定區、下載按鈕文字、視窗標題）
+function cmApplyDocTypeUI(type){
+  const isContract = type === 'contract';
+  const sec = document.getElementById('cm-contract-section');
+  if(sec) sec.style.display = isContract ? 'block' : 'none';
+  const dl = document.getElementById('cm-download-btn');
+  if(dl) dl.textContent = isContract ? '📥 下載合約' : '📥 下載 Word';
+}
+function cmSetDocType(type){
+  if(!CM_state) return;
+  CM_state.docType = type === 'contract' ? 'contract' : 'quote';
+  cmApplyDocTypeUI(CM_state.docType);
+  // 切換後隱藏舊預覽，避免顯示另一種文件的內容
+  const pw = document.getElementById('cm-preview-wrap');
+  if(pw) pw.style.display = 'none';
 }
 function cmShowMessage(){
   const box = document.getElementById('cm-msg-box');
@@ -5971,6 +6138,14 @@ function cmBuildConfig(){
   if(CM_state.extraNotes && CM_state.extraNotes.trim()){
     cfg.extraNotes = CM_state.extraNotes.split('\n').map(s => s.trim()).filter(Boolean);
   }
+  // 文件類型與合約設定
+  cfg.docType = CM_state.docType === 'contract' ? 'contract' : 'quote';
+  if(cfg.docType === 'contract'){
+    cfg.contractStart = (CM_state.contractStart || CM_state.date || '').trim();
+    const yrs = parseInt(CM_state.contractYears, 10);
+    if(!Number.isNaN(yrs) && yrs > 0) cfg.contractYears = yrs;
+    if(CM_state.contractTerms != null) cfg.contractTerms = CM_state.contractTerms;
+  }
   return cfg;
 }
 function cmShowError(msg){
@@ -6017,7 +6192,7 @@ async function cmTriggerSave(blob, filename){
         w.document.open();
         w.document.write('<!doctype html><meta charset="utf-8"><title>'+filename+'</title>'+
           '<body style="font-family:sans-serif;padding:20px;text-align:center">'+
-          '<h3 style="margin:0 0 12px">報價單已產生</h3>'+
+          '<h3 style="margin:0 0 12px">文件已產生</h3>'+
           '<p style="color:#555;margin:0 0 16px">請點下方按鈕，或點右上角「分享」⤴ 儲存／傳送檔案。</p>'+
           '<a id="dl" href="'+reader.result+'" download="'+filename+'" style="display:inline-block;padding:12px 20px;background:#1f4e79;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">📥 下載 '+filename+'</a>'+
           '</body>');
@@ -6036,22 +6211,74 @@ async function cmTriggerSave(blob, filename){
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
   return 'downloaded';
 }
+// ⚡ 快速報價：用客戶現有品項一鍵產生報價單 Word 並下載，免開視窗。
+// 若品項不全（無品項，或臨時新品缺品名／單價）→ 退回開啟完整視窗讓使用者補。
+async function quickQuote(){
+  if(typeof S === 'undefined' || S.curIdx < 0){ alert('請先開啟客戶詳情'); return; }
+  const c = DB.clients[S.curIdx];
+  const cfg = clientToCMConfig(c);   // 預設 docType:'quote'
+  if(!cfg.items.some(it => it.code)){
+    // 完全沒有可帶入的品項 → 開視窗手動新增
+    openCM();
+    const box = document.getElementById('cm-msg-box');
+    if(box){ box.className = 'cm-msg warn'; box.textContent = '此客戶尚無可帶入的品項，請手動新增商品後再產生報價單。'; }
+    return;
+  }
+  const btn = document.getElementById('cd-quickquote-btn');
+  const orig = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '產生中…'; }
+  try{
+    CM_state = cfg;
+    let buildCfg;
+    try{
+      buildCfg = cmBuildConfig();
+    } catch(e){
+      // 資料不全（如臨時新品缺品名／單價）→ 開完整視窗讓使用者補
+      openCM();
+      const box = document.getElementById('cm-msg-box');
+      if(box){ box.className = 'cm-msg warn'; box.textContent = '需補充資料才能產生報價單：'+(e.message || String(e)); }
+      return;
+    }
+    await cmLoadDocx();
+    const blob = await CM_builder.buildBlob(buildCfg);
+    const fname = '報價單_'+cmSafeFilename(buildCfg.client)+'.docx';
+    const result = await cmTriggerSave(blob, fname);
+    CM_state = null;
+    if(result !== 'cancelled'){
+      c.visits = c.visits || [];
+      c.visits.unshift({ date: today(), note: '已產生報價單（快速）：'+fname, statusChange:'', insight:'', mood:0 });
+      c.updatedAt = Date.now();
+      saveLocal();
+      if(typeof autoSync === 'function') autoSync('save', { client: c });
+      if(typeof renderVisits === 'function') renderVisits();
+      alert(result === 'shared' ? '✅ 已透過系統分享 '+fname
+          : result === 'newtab' ? '✅ 已在新分頁開啟 '+fname+'，請於該頁點「分享」→「儲存到檔案」'
+          : '✅ 已產生報價單並寫入拜訪紀錄：'+fname);
+    }
+  } catch(e){
+    CM_state = null;
+    alert('快速報價產生失敗：'+(e.message || String(e)));
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = orig; }
+  }
+}
 async function cmDownload(){
   const btn = document.getElementById('cm-download-btn');
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '產生中...';
   try{
     const cfg = cmBuildConfig();
+    const docLabel = cfg.docType === 'contract' ? '合約書' : '報價單';
     btn.textContent = '載入函式庫...';
     await cmLoadDocx();
     btn.textContent = '組裝中...';
     const blob = await CM_builder.buildBlob(cfg);
-    const fname = '報價單_'+cmSafeFilename(cfg.client)+(cfg.version?'_'+cmSafeFilename(cfg.version):'')+'.docx';
+    const fname = docLabel+'_'+cmSafeFilename(cfg.client)+(cfg.version?'_'+cmSafeFilename(cfg.version):'')+'.docx';
     const result = await cmTriggerSave(blob, fname);
     if(result !== 'cancelled' && typeof S !== 'undefined' && S.curIdx >= 0 && DB.clients[S.curIdx]){
       const c = DB.clients[S.curIdx];
       c.visits = c.visits || [];
-      c.visits.unshift({ date: today(), note: '已產生報價單：'+fname, statusChange:'', insight:'', mood:0 });
+      c.visits.unshift({ date: today(), note: '已產生'+docLabel+'：'+fname, statusChange:'', insight:'', mood:0 });
       c.updatedAt = Date.now();
       saveLocal();
       if(typeof autoSync === 'function') autoSync('save', { client: c });
@@ -6412,6 +6639,47 @@ if(location.search.includes('test=1')){
   const cmBC3=cmBuildConfig();
   assert('cmBuildConfig 自訂代號保留 nameOverride',cmBC3.items[0].nameOverride,'臨時新品 A');
   assert('cmBuildConfig 自訂代號保留 priceOverride',cmBC3.items[0].priceOverride,280);
+  CM_state=null;
+
+  // --- 合約書（docType=contract）---
+  // clientToCMConfig 預設文件類型與合約欄位
+  const cmDT=clientToCMConfig({name:'合約店',contractedItems:[{product:'DECSR',qty:1,cycle:'2W'}]});
+  assert('clientToCMConfig 預設 docType=quote',cmDT.docType,'quote');
+  assert('clientToCMConfig 預設 contractStart=date',cmDT.contractStart,cmDT.date);
+  assert('clientToCMConfig 預設 contractYears=1',cmDT.contractYears,1);
+  assert('clientToCMConfig 預設帶入合約條款',cmDT.contractTerms.length>0,true);
+  // 訂製品（HPL contractYears=4）→ 合約期間預設取 4
+  const cmDTc=clientToCMConfig({name:'訂製店',contractedItems:[{product:'HPL',qty:1}]});
+  assert('clientToCMConfig 訂製品 contractYears=4',cmDTc.contractYears,4);
+  // cmDefaultContractTermsText 為多行非空字串
+  assert('cmDefaultContractTermsText 多行',cmDefaultContractTermsText().split('\n').length>=5,true);
+  assert('cmDefaultContractTermsText 含營業稅條款',cmDefaultContractTermsText().includes('營業稅'),true);
+  // cmBuildConfig 帶出合約欄位
+  CM_state={client:'合約A',date:'2026/05/07',docType:'contract',contractStart:'2026/06/01',contractYears:'2',
+    contractTerms:'條款一\n條款二',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'DECSR',qty:1}]};
+  const cmCt=cmBuildConfig();
+  assert('cmBuildConfig docType=contract',cmCt.docType,'contract');
+  assert('cmBuildConfig contractStart 帶出',cmCt.contractStart,'2026/06/01');
+  assert('cmBuildConfig contractYears 轉數字',cmCt.contractYears,2);
+  assert('cmBuildConfig contractTerms 帶出',cmCt.contractTerms,'條款一\n條款二');
+  // expandQuote 透傳 docType / 合約欄位
+  const cmCtQ=CM_engine.expandQuote(cmCt);
+  assert('expandQuote docType 透傳',cmCtQ.docType,'contract');
+  assert('expandQuote contractYears 透傳',cmCtQ.contractYears,2);
+  // contractTermLines：使用者條款 + 訂製品自動補條款
+  const cmTermsCustom=CM_engine.contractTermLines({contractTerms:'A\nB',customItems:[{code:'HPL',name:'訂做地墊2色L',years:4}]});
+  assert('contractTermLines 使用者條款數',cmTermsCustom.length,3);
+  assert('contractTermLines 訂製品條款附加',cmTermsCustom[2].includes('訂製品'),true);
+  assert('contractTermLines 訂製品年限',cmTermsCustom[2].includes('4 年'),true);
+  // 預設 docType=quote 不帶合約欄位
+  const cmQuoteCfg=CM_engine.expandQuote({client:'Q',date:'2026/05/07',displayCycle:'4W',customerInfo:{},items:[{code:'DECSR',qty:1}]});
+  assert('expandQuote 預設 docType=quote',cmQuoteCfg.docType,'quote');
+  // 合約預覽含合約專屬字樣
+  const cmCtPreview=CM_engine.previewText(cmCt);
+  assert('contract previewText 含服務合約書',cmCtPreview.includes('服務合約書'),true);
+  assert('contract previewText 含甲方',cmCtPreview.includes('甲方'),true);
+  assert('contract previewText 含合約條款',cmCtPreview.includes('合約條款'),true);
   CM_state=null;
 
   // --- 結果顯示 ---
