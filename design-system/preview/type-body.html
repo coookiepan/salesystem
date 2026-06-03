@@ -1,0 +1,26 @@
+<!-- @dsCard group="Type" -->
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{font-family:var(--font-sans);background:var(--bg);color:var(--text);padding:24px;-webkit-font-smoothing:antialiased}
+  .ttl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+  .row{display:flex;align-items:baseline;gap:14px;margin-bottom:12px}
+  .spec{color:var(--text3);font-size:11px;font-variant-numeric:tabular-nums;width:118px;flex-shrink:0}
+  .num{font-variant-numeric:tabular-nums}
+  /* the rule: a thin space sits between digits and adjacent CJK / currency / units */
+  .num .u{margin-left:.32em;color:var(--text2)}     /* unit / CJK after a number */
+  .num .c{margin-right:.3em;color:var(--text2)}      /* currency mark before a number */
+  .body{font-size:14px}
+  .sub{font-size:12.5px;color:var(--text2)}
+  .meta{font-size:11.5px;color:var(--text3)}
+  .big{font-size:18px;font-weight:600;letter-spacing:-.01em}
+</style></head>
+<body>
+  <div class="ttl">Body, meta & comfortable numbers</div>
+  <div class="row"><span class="spec">amount</span><span class="big num"><span class="c">NT$</span>1,620<span class="u">/ 4W</span></span></div>
+  <div class="row"><span class="spec">14 / 400</span><span class="body">門口換了 <span class="num">2</span> 張地墊，客戶反應良好。</span></div>
+  <div class="row"><span class="spec">12.5 / 400</span><span class="sub">中正區忠孝東路 <span class="num">100</span> 號 · 王老闆</span></div>
+  <div class="row"><span class="spec">11.5 / 400</span><span class="meta">下次拜訪 <span class="num">2026-05-01</span> · 拜訪 <span class="num">3</span> 次</span></div>
+  <div class="row"><span class="spec">tabular-nums</span><span class="num sub">DECSLR <span class="u">85 × 120 cm</span> · 電話 06-1234567</span></div>
+</body></html>

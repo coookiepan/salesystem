@@ -1,0 +1,38 @@
+<!-- @dsCard group="Colors" -->
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{font-family:var(--font-sans);background:var(--bg);color:var(--text);padding:22px 24px}
+  .ttl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:22px}
+  .flow{display:flex;justify-content:space-between;position:relative;margin:0 4px}
+  .track{position:absolute;left:14px;right:14px;top:13px;height:4px;border-radius:2px;
+    background:linear-gradient(90deg,#C9C8C0 0%,#9CC0D9 28%,#D8B97A 50%,#B6A8E0 70%,#12A673 100%)}
+  .node{display:flex;flex-direction:column;align-items:center;gap:9px;position:relative;z-index:1;flex:1}
+  .dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;border:3px solid var(--bg);font-variant-numeric:tabular-nums}
+  .nm{font-size:11.5px;font-weight:600;white-space:nowrap}
+  .branch{display:flex;align-items:center;gap:10px;margin-top:20px;padding-top:16px;border-top:1px dashed var(--border2)}
+  .blbl{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+  .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;line-height:1.7}
+  .cap{font-size:11px;color:var(--text3);margin-left:auto}
+</style></head>
+<body>
+  <div class="ttl">Status pipeline · a progression, cold → won</div>
+  <div class="flow">
+    <div class="track"></div>
+    <div class="node"><div class="dot" style="background:#6E6E66">1</div><div class="nm" style="color:#444441">未拜訪</div></div>
+    <div class="node"><div class="dot" style="background:#2A6BB0">2</div><div class="nm" style="color:#0C447C">初訪</div></div>
+    <div class="node"><div class="dot" style="background:#B5701A">3</div><div class="nm" style="color:#633806">複訪</div></div>
+    <div class="node"><div class="dot" style="background:#2A6BB0">4</div><div class="nm" style="color:#0C447C">試用中</div></div>
+    <div class="node"><div class="dot" style="background:#B5701A">5</div><div class="nm" style="color:#633806">報價</div></div>
+    <div class="node"><div class="dot" style="background:#5B4FB0">6</div><div class="nm" style="color:#3C3489">將成約</div></div>
+    <div class="node"><div class="dot" style="background:#12A673">7</div><div class="nm" style="color:#085041">已成約</div></div>
+  </div>
+  <div class="branch">
+    <span class="blbl">終局 ↳</span>
+    <span class="badge" style="background:#D4EDDA;color:#155724">已轉交</span>
+    <span class="badge" style="background:#FCEBEB;color:#A32D2D">拒絕</span>
+    <span class="cap">tint-bg + deep-fg badge pairs · track gradients toward the brand green</span>
+  </div>
+</body></html>

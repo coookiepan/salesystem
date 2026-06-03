@@ -1,0 +1,34 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{font-family:var(--font-sans);background:var(--bg);color:var(--text);padding:24px}
+  .ttl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+  .row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .pill{padding:5px 12px;font-size:12.5px;font-weight:500;border:1px solid var(--border);border-radius:999px;cursor:pointer;background:var(--bg);color:var(--text2);font-family:inherit;white-space:nowrap}
+  .pill.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+  /* emphasis treatment for actionable buckets */
+  .pill.hot{display:inline-flex;align-items:center;gap:7px;padding:5px 7px 5px 12px;font-weight:600;
+    color:var(--text);border-color:color-mix(in srgb,var(--c) 45%,var(--border));
+    background:color-mix(in srgb,var(--c) 9%,var(--bg));box-shadow:0 1px 6px color-mix(in srgb,var(--c) 18%,transparent)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .count{font-size:11px;font-weight:700;color:#fff;background:var(--c);border-radius:999px;padding:1px 7px;font-variant-numeric:tabular-nums;line-height:1.5}
+  .cap{font-size:11px;color:var(--text3);margin-top:18px;line-height:1.6}
+</style></head>
+<body>
+  <div class="ttl">Filter pills · actionable buckets get a live, enticing treatment</div>
+  <div class="row">
+    <span class="pill on">全部</span>
+    <span class="pill hot" style="--c:#12A673"><span class="dot"></span>未拜訪<span class="count">12</span></span>
+    <span class="pill">初訪</span>
+    <span class="pill">複訪</span>
+    <span class="pill hot" style="--c:#2A6BB0"><span class="dot"></span>試用中<span class="count">5</span></span>
+    <span class="pill">報價</span>
+    <span class="pill">將成約</span>
+    <span class="pill">已成約</span>
+    <span class="pill">拒絕</span>
+  </div>
+  <div class="cap">未拜訪 (fresh leads, green) &amp; 試用中 (live trials, blue) pulse with a count chip — the two buckets a rep should act on. All other pills stay quiet hairline chips.</div>
+</body></html>

@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+/* ═══════════════════════════════════════════════════════════
+   DUSKIN 銷售系統 — Colors & Type
+   Lifted verbatim from coookiepan/salesystem (index.html :root).
+   A warm-neutral, single-green-accent CRM system for field sales.
+   ─────────────────────────────────────────────────────────────
+   Fonts are the native system stack — no webfonts ship with this
+   product. Traditional-Chinese rendering relies on PingFang TC
+   (Apple) / Microsoft JhengHei (Windows). See README ▸ Visual
+   Foundations for substitution notes.
+   ═══════════════════════════════════════════════════════════ */
+
+:root{
+  /* ── Brand — single green accent ───────────────────────── */
+  --green:#12A673;     /* primary action, active icon, focus    */
+  --green-d:#0A6849;   /* hover / pressed primary               */
+  --green-l:#E3F4ED;   /* tinted fill (success bg, mood-on)     */
+  --green-b:#A1DFC7;   /* tinted border                         */
+  --theme:#085041;     /* PWA theme colour / logo plate / deal  */
+
+  /* ── Semantic — muted, never neon ──────────────────────── */
+  --red:#B73838;    --red-l:#FBEAEA;
+  --amber:#B5701A;  --amber-l:#FAEEDA;  --amber-d:#633806;
+  --blue:#2A6BB0;   --blue-l:#E6F0FA;   --blue-d:#0C447C;
+  --purple-l:#EEEDFE; --purple-d:#3C3489;
+  --yellow:#BA7517; --yellow-b:#EF9F27;
+
+  /* ── Neutrals — warm grey, slightly green-shifted ──────── */
+  --bg:#ffffff;     --bg2:#F8F8F5;    --bg3:#EFEEE9;
+  --text:#14140F;   --text2:#56564F;  --text3:#8F8F87;
+  --border:#E8E7E0; --border2:#D4D3CB;
+  --surface-hover:#F9F9F5;
+
+  /* ── Radius scale ──────────────────────────────────────── */
+  --r-sm:6px; --r:10px; --r-lg:14px;
+  --radius:var(--r); --radius-sm:var(--r-sm); --radius-lg:var(--r-lg);
+
+  /* ── Shadow — minimal, low-alpha, neutral-tinted ───────── */
+  --shadow-sm:0 1px 2px rgba(20,20,15,.04);
+  --shadow:0 1px 3px rgba(20,20,15,.05);
+  --shadow-md:0 4px 14px rgba(20,20,15,.07);
+  --shadow-lg:0 12px 32px rgba(20,20,15,.14);
+  --ring:0 0 0 3px rgba(18,166,115,.18);   /* focus ring */
+
+  /* ── Motion ────────────────────────────────────────────── */
+  --ease:cubic-bezier(.22,.61,.36,1);
+
+  /* ═══════════════════════════════════════════════════════
+     TYPE — system stack, one family, weight + size for hierarchy
+     Latin → Inter; Traditional-Chinese → Noto Sans TC (both web-
+     loaded above for consistent rendering); then the native
+     system fonts. Inter was already in the product's own stack.
+     ═══════════════════════════════════════════════════════ */
+  --font-sans:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,
+              'SF Pro Text','PingFang TC','Microsoft JhengHei',sans-serif;
+  --font-num:var(--font-sans); /* numbers use font-variant-numeric:tabular-nums */
+
+  /* Base */
+  --fs-base:14.5px;     --lh-base:1.55;
+  --fs-input:14px;
+
+  /* Semantic sizes (px / weight / tracking) */
+  --fs-page-title:20px; --fw-page-title:600; --tr-page-title:-.012em;
+  --fs-modal-title:16px;--fw-modal-title:600; --tr-modal-title:-.008em;
+  --fs-card-name:15.5px;--fw-card-name:600;   --tr-card-name:-.008em;
+  --fs-stat:22px;       --fw-stat:600;        --tr-stat:-.015em;
+  --fs-body:14px;       --fs-sub:12.5px;      --fs-meta:11.5px;
+  --fs-label:11.5px;    --fw-label:500;       /* form labels */
+  --fs-section:10.5px;  --fw-section:600;     --tr-section:.1em; /* UPPERCASE eyebrows */
+  --fs-badge:11px;      --fw-badge:600;
+  --fs-btn:13.5px;      --fw-btn:500;
+}
+
+/* ── Dark mode — shipped, honours prefers-color-scheme ─────
+   Opt out on a subtree with [data-theme="light"] (used by the
+   specimen cards so the canonical light palette always shows). */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1A1B19; --bg2:#121311; --bg3:#25262A;
+    --text:#ECECE7; --text2:#A4A49C; --text3:#6A6A63;
+    --border:#292A26; --border2:#3A3A34;
+    --surface-hover:#242520;
+    --green:#1AB180; --green-d:#7BDFBA; --green-l:#163A2C; --green-b:#2A6551;
+    --red:#E66B6B; --red-l:#3A1F1F;
+    --amber-l:#3A2F1A; --amber-d:#F0C878;
+    --blue-l:#1A2A3D; --blue-d:#9ECCFF;
+    --purple-l:#24223D; --purple-d:#C5C0FA;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+    --shadow-md:0 4px 14px rgba(0,0,0,.5);
+    --shadow-lg:0 12px 32px rgba(0,0,0,.6);
+    --ring:0 0 0 3px rgba(26,177,128,.3);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SEMANTIC ELEMENT DEFAULTS — opt-in helper layer.
+   The product itself styles by class; these mirror the same
+   values so prose/markup picks up the brand without extra work.
+   ═══════════════════════════════════════════════════════════ */
+.ds-scope{
+  font-family:var(--font-sans);
+  font-size:var(--fs-base);
+  line-height:var(--lh-base);
+  color:var(--text);
+  background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+}
+.ds-scope h1{font-size:var(--fs-page-title);font-weight:var(--fw-page-title);letter-spacing:var(--tr-page-title);color:var(--text);line-height:1.25;}
+.ds-scope h2{font-size:var(--fs-modal-title);font-weight:var(--fw-modal-title);letter-spacing:var(--tr-modal-title);color:var(--text);}
+.ds-scope h3{font-size:var(--fs-card-name);font-weight:var(--fw-card-name);letter-spacing:var(--tr-card-name);color:var(--text);}
+.ds-scope .eyebrow{font-size:var(--fs-section);font-weight:var(--fw-section);letter-spacing:var(--tr-section);text-transform:uppercase;color:var(--text3);}
+.ds-scope p{font-size:var(--fs-body);color:var(--text);line-height:var(--lh-base);}
+.ds-scope small,.ds-scope .sub{font-size:var(--fs-sub);color:var(--text2);}
+.ds-scope .meta{font-size:var(--fs-meta);color:var(--text3);}
+.ds-scope .num{font-variant-numeric:tabular-nums;}
+.ds-scope code{font-family:ui-monospace,'SF Mono','Menlo',monospace;font-size:.92em;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:1px 5px;}
