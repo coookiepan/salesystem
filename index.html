@@ -1012,6 +1012,14 @@ tbody tr:hover{background:var(--surface-hover)}
     </div>
   </div>
   <div class="card">
+    <div class="form-section">診斷紀錄</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">遇到問題時，按下方按鈕可複製最近的錯誤紀錄，回報給維護人員協助排查。</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="showErrorLog()">🩺 複製診斷紀錄</button>
+      <button class="btn btn-outline btn-sm" onclick="clearErrorLog()">清除</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="form-section">工業區開發名單</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
       全公司共用一份「工廠名錄」試算表（分頁命名為 <b>prospects</b>，第一列沿用名錄原始欄名）。
@@ -1651,7 +1659,7 @@ function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)=
 const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 
-function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
+function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){logErr('loadLocal',e);}return null;}
 let _quotaWarned=false;
 function saveLocal(){
   try{
@@ -1660,7 +1668,7 @@ function saveLocal(){
   }catch(e){
     // M5：本機空間滿屬靜默失敗最危險（使用者以為存了）。明確提示一次，引導先推雲端。
     const quota=e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014);
-    console.warn('[saveLocal] 寫入本機失敗：',(e&&e.message)||e);
+    logErr('saveLocal'+(quota?'(quota)':''),e);
     if(quota&&!_quotaWarned){
       _quotaWarned=true;
       try{alert('⚠ 本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。');}catch(_){}
@@ -1672,6 +1680,40 @@ let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[]};
 let SHEET_URL='';
 let PROSPECTS_URL='';
 const SYNC={state:'offline',lastSyncAt:0,lastPullAt:0,pending:0};
+
+// ─── L1: 診斷紀錄 ──────────────────────────────────────────
+// 保留最近 50 筆錯誤（含未捕捉的錯誤與 Promise rejection），讓非技術使用者
+// 遇到問題時能一鍵複製回報，取代過去到處 catch(e){} 的靜默吞錯。
+let ERR_LOG=[];
+try{const _el=localStorage.getItem('duskin_errlog');if(_el)ERR_LOG=JSON.parse(_el)||[];}catch(e){}
+function logErr(ctx,e){
+  try{
+    const msg=(e&&(e.message||(e.toString&&e.toString())))||String(e);
+    ERR_LOG.push({t:Date.now(),ctx:ctx,msg:String(msg).slice(0,300)});
+    if(ERR_LOG.length>50)ERR_LOG=ERR_LOG.slice(-50);
+    localStorage.setItem('duskin_errlog',JSON.stringify(ERR_LOG));
+  }catch(_){}
+  try{console.warn('['+ctx+']',e);}catch(_){}
+}
+if(typeof window!=='undefined'){
+  window.addEventListener('error',ev=>logErr('window.onerror',(ev&&(ev.error||ev.message))||'unknown'));
+  window.addEventListener('unhandledrejection',ev=>logErr('unhandledRejection',(ev&&ev.reason)||'unknown'));
+}
+function showErrorLog(){
+  if(!ERR_LOG.length){alert('診斷紀錄：目前沒有任何錯誤 🎉');return;}
+  const txt='DUSKIN '+APP_VERSION+' 診斷紀錄（最近 '+ERR_LOG.length+' 筆）\n'+
+    ERR_LOG.slice().reverse().map(e=>{
+      let ts;try{ts=new Date(e.t).toLocaleString('zh-Hant');}catch(_){ts=e.t;}
+      return ts+'  ['+e.ctx+']  '+e.msg;
+    }).join('\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(
+      ()=>alert('已複製最近 '+ERR_LOG.length+' 筆診斷紀錄到剪貼簿，可貼給維護人員。'),
+      ()=>{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){alert(txt);}}
+    );
+  }else{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){alert(txt);}}
+}
+function clearErrorLog(){ERR_LOG=[];try{localStorage.removeItem('duskin_errlog');}catch(_){}alert('已清除診斷紀錄。');}
 
 // ─── C2: 持久化待推送佇列（outbox）──────────────────────────
 // 每筆修改先入列再送出，成功才出列；失敗保留、重開 App 仍在，恢復網路自動補送。
@@ -1750,7 +1792,7 @@ async function flushOutbox(){
     return true;
   }catch(e){
     SYNC.state='err';setSyncBar('err');
-    console.warn('[flushOutbox] 推送失敗，保留 '+OUTBOX.length+' 筆待推送：',e.message||e);
+    logErr('flushOutbox(保留 '+OUTBOX.length+' 筆)',e);
     return false;
   }finally{
     _flushing=false;saveLocal();renderVerBadge();
@@ -1974,6 +2016,7 @@ async function syncFromSheet(silent){
     return true;
   }catch(e){
     SYNC.state='err';setSyncBar('err');renderVerBadge();
+    logErr('syncFromSheet',e);
     if(!silent)alert('❌ 拉取失敗：'+e.message);
     return false;
   }
