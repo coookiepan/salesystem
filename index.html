@@ -10,7 +10,11 @@
 <title>DUSKIN 銷售系統</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#085041">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="logo-mark.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="logo-mark.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap">
 <script>
 // H2 PWA：註冊 Service Worker（離線可開）。失敗不影響 App 正常運作。
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
@@ -24,6 +28,7 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 :root{
   /* Brand (single accent) */
   --green:#12A673;--green-d:#0A6849;--green-l:#E3F4ED;--green-b:#A1DFC7;
+  --theme:#085041;  /* PWA theme / logo plate / deal */
   /* Semantic (muted) */
   --red:#B73838;--red-l:#FBEAEA;
   --amber:#B5701A;--amber-l:#FAEEDA;--amber-d:#633806;
@@ -45,6 +50,20 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
   --shadow-lg:0 12px 32px rgba(20,20,15,.14);
   --ring:0 0 0 3px rgba(18,166,115,.18);
   --ease:cubic-bezier(.22,.61,.36,1);
+  /* Type — Inter (Latin) + Noto Sans TC (CJK), then native stack */
+  --font-sans:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Microsoft JhengHei',sans-serif;
+  --font-num:var(--font-sans);
+  /* Semantic type scale (size / weight / tracking) */
+  --fs-base:14.5px;--lh-base:1.55;--fs-input:14px;
+  --fs-page-title:20px;--fw-page-title:600;--tr-page-title:-.012em;
+  --fs-modal-title:16px;--fw-modal-title:600;--tr-modal-title:-.008em;
+  --fs-card-name:15.5px;--fw-card-name:600;--tr-card-name:-.008em;
+  --fs-stat:22px;--fw-stat:600;--tr-stat:-.015em;
+  --fs-body:14px;--fs-sub:12.5px;--fs-meta:11.5px;
+  --fs-label:11.5px;--fw-label:500;
+  --fs-section:10.5px;--fw-section:600;--tr-section:.1em;
+  --fs-badge:11px;--fw-badge:600;
+  --fs-btn:13.5px;--fw-btn:500;
 }
 @media(prefers-color-scheme:dark){
   :root{
@@ -70,7 +89,7 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
    BASE
    ═══════════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Helvetica Neue','PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.003em}
+body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.003em}
 .snum,.prod-price,.prod-code,#cf-total,#cd-fw4,#ds-v,#ds-t,#ds-a,.vb-ver{font-variant-numeric:tabular-nums}
 
 /* ═══════════════════════════════════════════════════════════
@@ -306,6 +325,7 @@ tbody tr:hover{background:var(--surface-hover)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 #ver-badge{position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:998;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border:1px solid var(--border);border-radius:999px;padding:4px 11px;font-size:10.5px;color:var(--text2);cursor:pointer;-webkit-user-select:none;user-select:none;display:inline-flex;align-items:center;gap:7px;line-height:1.3;white-space:nowrap;max-width:90vw;transition:border-color .12s var(--ease)}
 #ver-badge:hover{border-color:var(--border2)}
+#ver-badge .vb-logo{display:block;flex-shrink:0;border-radius:4px}
 #ver-badge .vb-ver{font-weight:600;color:var(--text)}
 #ver-badge .vb-sep{color:var(--border2)}
 #ver-badge .vb-sync{display:flex;align-items:center;gap:5px}
@@ -476,6 +496,7 @@ tbody tr:hover{background:var(--surface-hover)}
 
 <div id="sync-bar"></div>
 <div id="ver-badge" onclick="showVerMenu()">
+  <svg class="vb-logo" aria-hidden="true" viewBox="0 0 512 512" width="15" height="15"><rect width="512" height="512" rx="116" fill="#085041"/><path fill-rule="evenodd" fill="#fff" d="M150 122 L300 122 C356 122 394 154 394 192 C394 230 356 262 300 262 L210 262 L210 392 L150 392 Z M308 154 a34 34 0 1 0 0.1 0 Z"/><path fill="#EF9F27" d="M390 170 L460 164 Q474 190 460 214 L390 212 Z"/></svg>
   <span class="vb-ver" id="vb-ver">v...</span>
   <span class="vb-sep">·</span>
   <span class="vb-sync"><span class="vb-dot offline" id="vb-dot"></span><span id="vb-sync">—</span></span>
@@ -1228,7 +1249,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.03-m1';
+const APP_VERSION='v2026.06.03-m2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
