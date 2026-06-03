@@ -425,6 +425,10 @@ tbody tr:hover{background:var(--surface-hover)}
 /* font-size:16px 避免 iOS Safari focus 時自動放大頁面 */
 .cm-field input,.cm-field select,.cm-field textarea{padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:16px;font-family:inherit;width:100%;box-sizing:border-box}
 .cm-field textarea{min-height:60px;resize:vertical}
+.cm-doctype{display:flex;gap:10px;flex-wrap:wrap}
+.cm-doctype label{flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);cursor:pointer;font-size:15px;font-weight:600;min-height:44px}
+.cm-doctype label:has(input:checked){border-color:var(--green-d);background:var(--green-l);color:var(--green-d)}
+.cm-doctype input[type=radio]{width:18px;height:18px}
 .cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:14px}
 .cm-flags label{display:flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
 .cm-flags input[type=checkbox]{width:18px;height:18px}
@@ -642,7 +646,8 @@ tbody tr:hover{background:var(--surface-hover)}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
-          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="openCM()" title="產生報價單／合約 Word">📄 產生合約</button>
+          <button class="btn btn-outline btn-sm" id="cd-quickquote-btn" onclick="ContractMaker.quickQuote()" title="一鍵以現有品項產生報價單 Word">⚡ 快速報價</button>
+          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單／合約 Word（可調整明細與條款）">📄 報價／合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -716,50 +721,67 @@ tbody tr:hover{background:var(--surface-hover)}
   <div id="daily-list"></div>
 </div>
 
-<!-- ═══ CONTRACTMAKER MODAL — 產生合約／報價單 Word ═══ -->
+<!-- ═══ CONTRACTMAKER MODAL — 產生合約／報價單 Word（事件由 ContractMaker 模組於 mount() 綁定） ═══ -->
 <div class="cm-overlay" id="cm-modal">
   <div class="cm-panel">
     <header class="cm-head">
       <h3>📄 產生報價單／合約 <span id="cm-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
-      <button class="btn btn-outline btn-sm" onclick="closeCM()">關閉</button>
+      <button class="btn btn-outline btn-sm" id="cm-close-btn">關閉</button>
     </header>
     <div class="cm-body">
       <div id="cm-msg-box" class="cm-msg"></div>
 
       <div class="cm-section">
+        <h4>文件類型</h4>
+        <div class="cm-doctype">
+          <label><input type="radio" name="cm-doctype" value="quote" checked data-cm-doctype> 📋 報價單</label>
+          <label><input type="radio" name="cm-doctype" value="contract" data-cm-doctype> 📄 合約書</label>
+        </div>
+      </div>
+
+      <div class="cm-section">
         <h4>客戶資料</h4>
         <div class="cm-row">
-          <label class="cm-field"><span>客戶名稱 *</span><input id="cm-client" oninput="cmSet('client',this.value)"></label>
-          <label class="cm-field"><span>日期 * (YYYY/MM/DD)</span><input id="cm-date" oninput="cmSet('date',this.value)"></label>
+          <label class="cm-field"><span>客戶名稱 *</span><input id="cm-client" data-cm="client"></label>
+          <label class="cm-field"><span>日期 * (YYYY/MM/DD)</span><input id="cm-date" data-cm="date"></label>
         </div>
         <div class="cm-row three">
-          <label class="cm-field"><span>版本（檔名後綴）</span><input id="cm-version" placeholder="例：基礎版" oninput="cmSet('version',this.value)"></label>
-          <label class="cm-field"><span>統一編號</span><input id="cm-taxId" oninput="cmSet('customerInfo.taxId',this.value)"></label>
-          <label class="cm-field"><span>聯絡人</span><input id="cm-contact" oninput="cmSet('customerInfo.contact',this.value)"></label>
+          <label class="cm-field"><span>版本（檔名後綴）</span><input id="cm-version" placeholder="例：基礎版" data-cm="version"></label>
+          <label class="cm-field"><span>統一編號</span><input id="cm-taxId" data-cm="customerInfo.taxId"></label>
+          <label class="cm-field"><span>聯絡人</span><input id="cm-contact" data-cm="customerInfo.contact"></label>
         </div>
         <div class="cm-row">
-          <label class="cm-field"><span>客戶電話</span><input id="cm-phone" oninput="cmSet('customerInfo.phone',this.value)"></label>
-          <label class="cm-field"><span>客戶地址</span><input id="cm-address" oninput="cmSet('customerInfo.address',this.value)"></label>
+          <label class="cm-field"><span>客戶電話</span><input id="cm-phone" data-cm="customerInfo.phone"></label>
+          <label class="cm-field"><span>客戶地址</span><input id="cm-address" data-cm="customerInfo.address"></label>
         </div>
+      </div>
+
+      <div class="cm-section" id="cm-contract-section" style="display:none">
+        <h4>合約設定 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（僅合約書使用）</span></h4>
+        <div class="cm-row">
+          <label class="cm-field"><span>合約起始日 (YYYY/MM/DD)</span><input id="cm-contractStart" data-cm="contractStart"></label>
+          <label class="cm-field"><span>合約期間（年）</span><input id="cm-contractYears" type="number" min="1" step="1" placeholder="例：1" data-cm="contractYears"></label>
+        </div>
+        <label class="cm-field"><span>合約條款（一行一條，可自由增刪）</span><textarea id="cm-contractTerms" rows="7" data-cm="contractTerms" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea></label>
       </div>
 
       <div class="cm-section">
         <h4>全域設定</h4>
         <div class="cm-row">
           <label class="cm-field"><span>顯示週期</span>
-            <select id="cm-displayCycle" onchange="cmSet('displayCycle',this.value)">
+            <select id="cm-displayCycle" data-cm="displayCycle">
               <option value="">隨商品（混合）</option>
               <option value="2W">2W</option>
               <option value="4W" selected>4W（月單價）</option>
             </select>
           </label>
-          <label class="cm-field"><span>整體折扣（0~1，留空=無）</span><input id="cm-discount" type="number" step="0.01" min="0" max="1" placeholder="例：0.8 = 8 折" oninput="cmSet('discount',this.value)"></label>
+          <label class="cm-field"><span>整體折扣（0~1，留空=無）</span><input id="cm-discount" type="number" step="0.01" min="0" max="1" placeholder="例：0.8 = 8 折" data-cm="discount"></label>
         </div>
         <div class="cm-flags">
-          <label><input type="checkbox" id="cm-roundTotalToHundred" onchange="cmSet('roundTotalToHundred',this.checked)"> 總額向上取整百</label>
-          <label><input type="checkbox" id="cm-showLocation" onchange="cmSet('showLocation',this.checked)"> 顯示位置欄</label>
-          <label><input type="checkbox" id="cm-showStamp" onchange="cmSet('showStamp',this.checked)"> 顯示核章區</label>
-          <label><input type="checkbox" id="cm-showCustomerNumber" onchange="cmSet('showCustomerNumber',this.checked)"> 顯示統編</label>
+          <label><input type="checkbox" id="cm-roundTotalToHundred" data-cm="roundTotalToHundred"> 總額向上取整百</label>
+          <label><input type="checkbox" id="cm-showLocation" data-cm="showLocation"> 顯示位置欄</label>
+          <label><input type="checkbox" id="cm-showStamp" data-cm="showStamp"> 顯示核章／簽章區</label>
+          <label><input type="checkbox" id="cm-showCustomerNumber" data-cm="showCustomerNumber"> 顯示統編</label>
         </div>
       </div>
 
@@ -767,14 +789,14 @@ tbody tr:hover{background:var(--surface-hover)}
         <h4>商品明細 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（代號／品名／單價皆可手動編輯；按「臨時新品」可加入商品庫沒有的品項）</span></h4>
         <div id="cm-items" class="cm-items"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="cmAddItem(false)">＋ 從商品庫新增</button>
-          <button class="btn btn-outline btn-sm" onclick="cmAddItem(true)">🆕 臨時新品</button>
+          <button class="btn btn-outline btn-sm" id="cm-additem-cat">＋ 從商品庫新增</button>
+          <button class="btn btn-outline btn-sm" id="cm-additem-new">🆕 臨時新品</button>
         </div>
       </div>
 
       <div class="cm-section">
         <h4>額外備註（一行一條，可空白）</h4>
-        <textarea id="cm-extraNotes" rows="3" oninput="cmSet('extraNotes',this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
+        <textarea id="cm-extraNotes" rows="3" data-cm="extraNotes" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
       </div>
 
       <div class="cm-section" id="cm-preview-wrap" style="display:none">
@@ -786,8 +808,8 @@ tbody tr:hover{background:var(--surface-hover)}
       </div>
     </div>
     <div class="cm-actions">
-      <button class="btn btn-outline" onclick="cmPreview()">📋 預覽</button>
-      <button class="btn btn-primary" id="cm-download-btn" onclick="cmDownload()">📥 下載 Word</button>
+      <button class="btn btn-outline" id="cm-preview-btn">📋 預覽</button>
+      <button class="btn btn-primary" id="cm-download-btn">📥 下載 Word</button>
     </div>
   </div>
 </div>
@@ -797,10 +819,10 @@ tbody tr:hover{background:var(--surface-hover)}
   <div class="cm-panel" style="max-width:560px">
     <header class="cm-head">
       <h3>選擇商品</h3>
-      <button class="btn btn-outline btn-sm" onclick="cmCloseProdPicker()">關閉</button>
+      <button class="btn btn-outline btn-sm" id="cm-prod-close-btn">關閉</button>
     </header>
     <div class="cm-body">
-      <input id="cm-prod-search" placeholder="搜尋商品名稱 / 代號…" oninput="cmRenderProdList()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;box-sizing:border-box;background:var(--bg);color:var(--text);font-family:inherit">
+      <input id="cm-prod-search" placeholder="搜尋商品名稱 / 代號…" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;box-sizing:border-box;background:var(--bg);color:var(--text);font-family:inherit">
       <div id="cm-prod-list" class="cm-prod-list"></div>
     </div>
   </div>
@@ -1206,7 +1228,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.03-l1';
+const APP_VERSION='v2026.06.03-m1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -5320,11 +5342,36 @@ if(SHEET_URL){updateSheetStatus(true);loadShops();if(OUTBOX.length)flushOutbox()
 window.addEventListener('online',()=>{if(SHEET_URL&&OUTBOX.length)flushOutbox();});
 
 // ═══════════════════════════════════════════════════════════
-// CONTRACTMAKER (報價單／合約 Word 產生器) — 整合自 contractmaker repo
+// CONTRACTMAKER 模組（報價單／合約 Word 產生器） — 整合自 contractmaker repo
 // 來源: https://github.com/coookiepan/contractmaker
-// 高整合：客戶詳情頁「📄 產生合約」→ 自動帶入客戶資料 + 成約／試用品項
+//
+// 自我封裝模組：對外只暴露 window.ContractMaker = { init, open, quickQuote }。
+// 與主程式「以 host adapter 解耦」——模組不直接讀寫主程式全域（DB / S / today …），
+// 一律透過 init() 注入的 adapter 取得資料與動作；UI 事件於 mount() 內部綁定。
+//   ContractMaker.init({ getClients, getCurIdx, getProduct, today, save, sync, onChange, escapeHtml })
+//   ContractMaker.open()        → 客戶卡「📄 報價／合約」：開啟完整視窗
+//   ContractMaker.quickQuote()  → 客戶卡「⚡ 快速報價」：一鍵產生報價單
 // docx@8.5.0 UMD 庫於首次開啟時延遲載入（unpkg CDN）
 // ═══════════════════════════════════════════════════════════
+window.ContractMaker = (function(){
+'use strict';
+
+// ── host adapter（由主程式 init 注入；提供安全預設，未注入時不致崩潰） ──
+const HOST = {
+  getClients: () => [],
+  getCurIdx: () => -1,
+  getProduct: () => null,                                   // code → {code,desc,price,cycle,…} | null
+  today: () => new Date().toISOString().slice(0,10),
+  save: () => {},
+  sync: () => {},
+  onChange: () => {},                                       // 拜訪紀錄更新後重繪（= renderVisits）
+  escapeHtml: (s) => String(s==null?'':s)
+};
+function cmCurClient(){
+  const list = HOST.getClients() || [];
+  const idx = HOST.getCurIdx();
+  return (idx != null && idx >= 0 && list[idx]) ? list[idx] : null;
+}
 
 // 商品庫（內嵌自 contractmaker/catalog.json）
 const CM_CATALOG ={"categories":{"mat_welcome":"迎賓系列","mat_elegant":"雅緻系列","mat_basic":"Basic 系列","mat_forever":"Forever 系列","mat_dust":"吸塵吸水系列","mat_thin":"薄型吸塵吸水系列","mat_luxury":"豪華系列","mat_luxury_2tone":"豪華系列(2色)","mat_strong":"強力刮砂系列","mat_metal":"鐵屑油污系列","mat_gender":"男女辨識系列","mat_custom":"訂做系列","fragrance":"芳香劑","urinal":"小便斗清潔","mop":"拖把/抹布"},"products":{"LYSR":{"name":"高級迎賓地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"LYLR":{"name":"高級迎賓地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DECSR":{"name":"歡迎光臨地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"DECSLR":{"name":"歡迎光臨地墊SL紅","category":"mat_welcome","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"DECLR":{"name":"歡迎光臨地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"DECLLR":{"name":"歡迎光臨地墊LL紅","category":"mat_welcome","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"DECTR":{"name":"歡迎光臨地墊T紅","category":"mat_welcome","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"GSH":{"name":"雅緻地墊S灰","category":"mat_elegant","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"GSB":{"name":"雅緻地墊S棕","category":"mat_elegant","size":"S","color":"棕","cycle":"2W","price":190,"discountable":true},"GLH":{"name":"雅緻地墊L灰","category":"mat_elegant","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"GLB":{"name":"雅緻地墊L棕","category":"mat_elegant","size":"L","color":"棕","cycle":"2W","price":360,"discountable":true},"GLLH":{"name":"雅緻地墊LL灰","category":"mat_elegant","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"GLLB":{"name":"雅緻地墊LL棕","category":"mat_elegant","size":"LL","color":"棕","cycle":"2W","price":500,"discountable":true},"GTH":{"name":"雅緻地墊T灰","category":"mat_elegant","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"GTB":{"name":"雅緻地墊T棕","category":"mat_elegant","size":"T","color":"棕","cycle":"2W","price":900,"discountable":true},"BSH":{"name":"Basic地墊S灰","category":"mat_basic","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"BSR":{"name":"Basic地墊S紅","category":"mat_basic","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"BSLH":{"name":"Basic地墊SL灰","category":"mat_basic","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"BSLR":{"name":"Basic地墊SL紅","category":"mat_basic","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"BLH":{"name":"Basic地墊L灰","category":"mat_basic","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"BLR":{"name":"Basic地墊L紅","category":"mat_basic","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"BLLH":{"name":"Basic地墊LL灰","category":"mat_basic","size":"LL","color":"灰","cycle":"2W","price":420,"discountable":true},"BLLR":{"name":"Basic地墊LL紅","category":"mat_basic","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"BXH":{"name":"Basic地墊X灰","category":"mat_basic","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"BXR":{"name":"Basic地墊X紅","category":"mat_basic","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"BTH":{"name":"Basic地墊T灰","category":"mat_basic","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"BTR":{"name":"Basic地墊T紅","category":"mat_basic","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"B3H":{"name":"Basic地墊3M灰","category":"mat_basic","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"B3R":{"name":"Basic地墊3M紅","category":"mat_basic","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"B5H":{"name":"Basic地墊5M灰","category":"mat_basic","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"B5R":{"name":"Basic地墊5M紅","category":"mat_basic","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"FFSSK":{"name":"Forever地墊SS黑灰","category":"mat_forever","size":"SS","color":"黑灰","cycle":"2W","price":140,"discountable":true},"FFSSR":{"name":"Forever地墊SS紅","category":"mat_forever","size":"SS","color":"紅","cycle":"2W","price":140,"discountable":true},"FFSK":{"name":"Forever地墊S黑灰","category":"mat_forever","size":"S","color":"黑灰","cycle":"2W","price":170,"discountable":true},"FFSR":{"name":"Forever地墊S紅","category":"mat_forever","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"FFSLK":{"name":"Forever地墊SL黑灰","category":"mat_forever","size":"SL","color":"黑灰","cycle":"2W","price":220,"discountable":true},"FFSLR":{"name":"Forever地墊SL紅","category":"mat_forever","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"FFLK":{"name":"Forever地墊L黑灰","category":"mat_forever","size":"L","color":"黑灰","cycle":"2W","price":280,"discountable":true},"FFLR":{"name":"Forever地墊L紅","category":"mat_forever","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"FFMK":{"name":"Forever地墊M黑灰","category":"mat_forever","size":"M","color":"黑灰","cycle":"2W","price":420,"discountable":true},"FFMR":{"name":"Forever地墊M紅","category":"mat_forever","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"FFXK":{"name":"Forever地墊X黑灰","category":"mat_forever","size":"X","color":"黑灰","cycle":"2W","price":550,"discountable":true},"FFTK":{"name":"Forever地墊T黑灰","category":"mat_forever","size":"T","color":"黑灰","cycle":"2W","price":720,"discountable":true},"FF3MK":{"name":"Forever地墊3M黑灰","category":"mat_forever","size":"3M","color":"黑灰","cycle":"2W","price":610,"discountable":true},"FF5MK":{"name":"Forever地墊5M黑灰","category":"mat_forever","size":"5M","color":"黑灰","cycle":"2W","price":880,"discountable":true},"FF5MR":{"name":"Forever地墊5M紅","category":"mat_forever","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"DWSSH":{"name":"吸塵吸水地墊SS灰","category":"mat_dust","size":"SS","color":"灰","cycle":"2W","price":170,"discountable":true},"DWSSR":{"name":"吸塵吸水地墊SS紅","category":"mat_dust","size":"SS","color":"紅","cycle":"2W","price":170,"discountable":true},"DWSH":{"name":"吸塵吸水地墊S灰","category":"mat_dust","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"DWSR":{"name":"吸塵吸水地墊S紅","category":"mat_dust","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"DWSLH":{"name":"吸塵吸水地墊SL灰","category":"mat_dust","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"DWSLR":{"name":"吸塵吸水地墊SL紅","category":"mat_dust","size":"SL","color":"紅","cycle":"2W","price":310,"discountable":true},"DWLH":{"name":"吸塵吸水地墊L灰","category":"mat_dust","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"DWLR":{"name":"吸塵吸水地墊L紅","category":"mat_dust","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DWLLH":{"name":"吸塵吸水地墊LL灰","category":"mat_dust","size":"LL","color":"灰","cycle":"2W","price":530,"discountable":true},"DWLLR":{"name":"吸塵吸水地墊LL紅","category":"mat_dust","size":"LL","color":"紅","cycle":"2W","price":530,"discountable":true},"DWXH":{"name":"吸塵吸水地墊X灰","category":"mat_dust","size":"X","color":"灰","cycle":"2W","price":690,"discountable":true},"DWXR":{"name":"吸塵吸水地墊X紅","category":"mat_dust","size":"X","color":"紅","cycle":"2W","price":690,"discountable":true},"DWTH":{"name":"吸塵吸水地墊T灰","category":"mat_dust","size":"T","color":"灰","cycle":"2W","price":940,"discountable":true},"DWTR":{"name":"吸塵吸水地墊T紅","category":"mat_dust","size":"T","color":"紅","cycle":"2W","price":940,"discountable":true},"DW3MH":{"name":"吸塵吸水地墊3M灰","category":"mat_dust","size":"3M","color":"灰","cycle":"2W","price":680,"discountable":true},"DW3MR":{"name":"吸塵吸水地墊3M紅","category":"mat_dust","size":"3M","color":"紅","cycle":"2W","price":680,"discountable":true},"DW4MH":{"name":"吸塵吸水地墊4M灰","category":"mat_dust","size":"4M","color":"灰","cycle":"2W","price":830,"discountable":true},"DW4MR":{"name":"吸塵吸水地墊4M紅","category":"mat_dust","size":"4M","color":"紅","cycle":"2W","price":830,"discountable":true},"DW5MH":{"name":"吸塵吸水地墊5M灰","category":"mat_dust","size":"5M","color":"灰","cycle":"2W","price":1050,"discountable":true},"DW5MR":{"name":"吸塵吸水地墊5M紅","category":"mat_dust","size":"5M","color":"紅","cycle":"2W","price":1050,"discountable":true},"UQSH":{"name":"薄型吸塵吸水地墊S灰","category":"mat_thin","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"UQSLH":{"name":"薄型吸塵吸水地墊SL灰","category":"mat_thin","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"UQLH":{"name":"薄型吸塵吸水地墊L灰","category":"mat_thin","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"UQLLH":{"name":"薄型吸塵吸水地墊LL灰","category":"mat_thin","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"UQTH":{"name":"薄型吸塵吸水地墊T灰","category":"mat_thin","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"UQ4MH":{"name":"薄型吸塵吸水地墊4M灰","category":"mat_thin","size":"4M","color":"灰","cycle":"2W","price":730,"discountable":true},"UQ5MH":{"name":"薄型吸塵吸水地墊5M灰","category":"mat_thin","size":"5M","color":"灰","cycle":"2W","price":910,"discountable":true},"TJSR":{"name":"豪華地墊S紅","category":"mat_luxury","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"TJSH":{"name":"豪華地墊S灰","category":"mat_luxury","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"TJSLR":{"name":"豪華地墊SL紅","category":"mat_luxury","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"TJSLH":{"name":"豪華地墊SL灰","category":"mat_luxury","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"TJLR":{"name":"豪華地墊L紅","category":"mat_luxury","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"TJLH":{"name":"豪華地墊L灰","category":"mat_luxury","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"TJMR":{"name":"豪華地墊M紅","category":"mat_luxury","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"TJMH":{"name":"豪華地墊M灰","category":"mat_luxury","size":"M","color":"灰","cycle":"2W","price":420,"discountable":true},"TJXR":{"name":"豪華地墊X紅","category":"mat_luxury","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"TJXH":{"name":"豪華地墊X灰","category":"mat_luxury","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"TJTR":{"name":"豪華地墊T紅","category":"mat_luxury","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"TJTH":{"name":"豪華地墊T灰","category":"mat_luxury","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"TJ3MR":{"name":"豪華地墊3M紅","category":"mat_luxury","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"TJ3MH":{"name":"豪華地墊3M灰","category":"mat_luxury","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"TJ5MR":{"name":"豪華地墊5M紅","category":"mat_luxury","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"TJ5MH":{"name":"豪華地墊5M灰","category":"mat_luxury","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"2SN2":{"name":"豪華地墊S紅(2色)","category":"mat_luxury_2tone","size":"S","color":"紅(2色)","cycle":"2W","price":170,"discountable":true},"2SLN2":{"name":"豪華地墊SL紅(2色)","category":"mat_luxury_2tone","size":"SL","color":"紅(2色)","cycle":"2W","price":220,"discountable":true},"2LN2":{"name":"豪華地墊L紅(2色)","category":"mat_luxury_2tone","size":"L","color":"紅(2色)","cycle":"2W","price":280,"discountable":true},"2MN2":{"name":"豪華地墊M紅(2色)","category":"mat_luxury_2tone","size":"M","color":"紅(2色)","cycle":"2W","price":420,"discountable":true},"2TN2":{"name":"豪華地墊T紅(2色)","category":"mat_luxury_2tone","size":"T","color":"紅(2色)","cycle":"2W","price":720,"discountable":true},"EXSG":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSH":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSLG":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXSLH":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXLG":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"EXLH":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"ELLG":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"ELLH":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"EXTG":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"EXTH":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"KKSG":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSH":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSLG":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKSLH":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKLG":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"KKLH":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"MANSB":{"name":"男女辨識地墊(男)S棕","category":"mat_gender","size":"S","color":"棕","cycle":"2W","price":170,"discountable":true},"MWOSR":{"name":"男女辨識地墊(女)S紅","category":"mat_gender","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"AMWT":{"name":"小型擴香芳香系列-白茶","category":"fragrance","size":"120ml","cycle":"4W","price":500,"discountable":false},"BF-L":{"name":"BF複方精油芳香系列-檸檬馬鞭草","category":"fragrance","size":"240ml","cycle":"4W","price":200,"discountable":false},"DOME":{"name":"網狀尿石去除劑","category":"urinal","size":"40g","cycle":"4W","price":200,"discountable":false},"NSAC":{"name":"業務用除塵拖把","category":"mop","size":null,"cycle":"4W","price":200,"discountable":true},"M-90":{"name":"業務用除塵特大拖把","category":"mop","size":"34×120","cycle":"4W","price":null,"discountable":true},"S-20":{"name":"業務用握把式抹布","category":"mop","size":"18×32","cycle":"4W","price":null,"discountable":true},"HPL":{"name":"訂做地墊2色L","category":"mat_custom","size":"L","color":"2色","cycle":"2W","price":360,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"},"HPS":{"name":"訂做地墊2色S","category":"mat_custom","size":"S","color":"2色","cycle":"2W","price":230,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"}}};
@@ -5449,6 +5496,10 @@ const CM_engine = (function(catalog){
     for(const area of areas) for(const item of area.items)
       if(item._product.contractYears) customItems.push({code:item.code, name:item.name, years:item._product.contractYears});
     return {client: config.client, version: config.version, date: config.date,
+      docType: config.docType === 'contract' ? 'contract' : 'quote',
+      contractStart: config.contractStart || config.date,
+      contractYears: config.contractYears || null,
+      contractTerms: config.contractTerms || null,
       customerInfo: config.customerInfo || {}, areas,
       grandTotal, grandTotalAtOriginal, overallDiscount, overallSavings,
       discount: options.discount, customItems,
@@ -5456,11 +5507,32 @@ const CM_engine = (function(catalog){
       notes: buildCMNotes(areas, options, customItems, config.extraNotes || [])};
   }
   function fmtN(n){ return n.toLocaleString(); }
+  function contractTermLines(q){
+    // 合約條款：使用者輸入的條款 + 自動補上的訂製品期間條款
+    const terms = [];
+    if(q.contractTerms){
+      for(const line of String(q.contractTerms).split('\n').map(s=>s.trim()).filter(Boolean)) terms.push(line);
+    }
+    if(q.customItems && q.customItems.length){
+      const uniq = [...new Map(q.customItems.map(c=>[c.code,c])).values()];
+      const list = uniq.map(c=>c.name+'（'+c.code+'）').join('、');
+      terms.push(list+' 為訂製品，合約期間為 '+uniq[0].years+' 年，期間內不得中途解約。');
+    }
+    return terms;
+  }
   function previewText(config){
     const q = expandQuote(config);
+    const isContract = q.docType === 'contract';
     const lines = [];
-    lines.push('客戶名稱：'+q.client+(q.version?' （'+q.version+'）':''));
-    lines.push('報價日期：'+q.date);
+    if(isContract){
+      lines.push('【服務合約書】');
+      lines.push('甲方（客戶）：'+q.client+(q.version?' （'+q.version+'）':''));
+      lines.push('乙方（服務商）：樂清服務股份有限公司 台南營業所');
+      lines.push('合約期間：自 '+(q.contractStart||q.date)+' 起'+(q.contractYears?'，為期 '+q.contractYears+' 年':'')+'。');
+    } else {
+      lines.push('客戶名稱：'+q.client+(q.version?' （'+q.version+'）':''));
+      lines.push('報價日期：'+q.date);
+    }
     lines.push('');
     for(const area of q.areas){
       lines.push('【'+area.name+'】');
@@ -5472,16 +5544,22 @@ const CM_engine = (function(catalog){
       lines.push('');
     }
     lines.push('月金額總合計（每 4 週）：'+fmtN(q.grandTotal));
-    lines.push(''); lines.push('說明：');
-    q.notes.forEach((n,i)=>{
-      let s = '  '+(i+1)+'. '+(n.text||'');
-      if(n.strong) s += '['+n.strong+']';
-      if(n.tail) s += n.tail;
-      lines.push(s);
-    });
+    lines.push('');
+    if(isContract){
+      lines.push('合約條款：');
+      contractTermLines(q).forEach((t,i)=>lines.push('  '+(i+1)+'. '+t));
+    } else {
+      lines.push('說明：');
+      q.notes.forEach((n,i)=>{
+        let s = '  '+(i+1)+'. '+(n.text||'');
+        if(n.strong) s += '['+n.strong+']';
+        if(n.tail) s += n.tail;
+        lines.push(s);
+      });
+    }
     return lines.join('\n');
   }
-  return {expandQuote, expandItem, expandArea, previewText, catalog};
+  return {expandQuote, expandItem, expandArea, previewText, contractTermLines, catalog};
 })(CM_CATALOG);
 
 // ─── Word builder（自 builders/quote.js 改寫；需 docx UMD） ───
@@ -5603,17 +5681,83 @@ const CM_builder = (function(){
       new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({height:{value:1200,rule:HeightRule.ATLEAST}, children:[stampCell('客戶簽收'),stampCell('業務主管'),stampCell('承辦人')]})]})
     ];
   }
+  // ─── 合約書專用區塊 ───
+  function buildContractTitle(){
+    const {Paragraph,AlignmentType}=getDocx();
+    return [new Paragraph({alignment:AlignmentType.CENTER, spacing:{after:160}, children:[txt('服　務　合　約　書',{bold:true,size:36})]})];
+  }
+  function buildContractParties(quote){
+    const {Table,TableRow,TableCell,WidthType,VerticalAlign}=getDocx();
+    const left=[para([txt('甲方（客戶）',{bold:true})])];
+    left.push(para([txt('名稱：',{bold:true}),txt(quote.client||'')]));
+    if(quote.show.customerNumber) left.push(para([txt('統一編號：',{bold:true}),txt(quote.customerInfo.taxId||'')]));
+    if(quote.customerInfo.contact) left.push(para([txt('聯絡人：',{bold:true}),txt(quote.customerInfo.contact)]));
+    if(quote.customerInfo.phone) left.push(para([txt('電話：',{bold:true}),txt(quote.customerInfo.phone)]));
+    if(quote.customerInfo.address) left.push(para([txt('地址：',{bold:true}),txt(quote.customerInfo.address)]));
+    const right=[para([txt('乙方（服務商）',{bold:true})])];
+    right.push(para([txt('名稱：',{bold:true}),txt(COMPANY_INFO.name)]));
+    right.push(para([txt('承辦人：',{bold:true}),txt(COMPANY_INFO.contact)]));
+    right.push(para([txt('電話：',{bold:true}),txt(COMPANY_INFO.phone)]));
+    right.push(para([txt('手機：',{bold:true}),txt(COMPANY_INFO.mobile)]));
+    right.push(para([txt('地址：',{bold:true}),txt(COMPANY_INFO.address)]));
+    return new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({children:[
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.TOP, borders:allBorders(), children:left}),
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.TOP, borders:allBorders(), children:right})
+    ]})]});
+  }
+  function buildContractPeriod(quote){
+    const {Paragraph}=getDocx();
+    const start=quote.contractStart||quote.date||'';
+    const runs=[txt('合約期間：',{bold:true}),txt('自 '+start+' 起')];
+    if(quote.contractYears) runs.push(txt('，為期 '),txt(String(quote.contractYears),{bold:true,color:'C00000'}),txt(' 年'));
+    runs.push(txt('。'));
+    return new Paragraph({spacing:{before:160,after:80}, children:runs});
+  }
+  function buildContractTerms(quote){
+    const {Paragraph}=getDocx();
+    const out=[new Paragraph({spacing:{before:200,after:60}, children:[txt('合約條款：',{bold:true})]})];
+    const terms = CM_engine.contractTermLines(quote);
+    terms.forEach((t,i)=>{
+      out.push(new Paragraph({spacing:{before:0,after:40}, children:[txt((i+1)+'. ',{bold:true}),txt(t)]}));
+    });
+    return out;
+  }
+  function buildSignature(){
+    const {Paragraph,Table,TableRow,TableCell,WidthType,VerticalAlign,HeightRule}=getDocx();
+    const sigCell=label=>new TableCell({width:{size:50,type:WidthType.PERCENTAGE}, verticalAlign:VerticalAlign.TOP, borders:allBorders(), children:[
+      new Paragraph({spacing:{before:60,after:200}, children:[txt(label,{bold:true})]}),
+      new Paragraph({spacing:{before:200,after:60}, children:[txt('簽章：')]}),
+      new Paragraph({spacing:{before:120,after:60}, children:[txt('日期：　　　年　　月　　日')]})
+    ]});
+    return [
+      new Paragraph({spacing:{before:300,after:80}, children:[txt('立合約書人：',{bold:true})]}),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({height:{value:1600,rule:HeightRule.ATLEAST}, children:[sigCell('甲方（客戶）'),sigCell('乙方（服務商）')]})]})
+    ];
+  }
   function buildDocument(quote){
     const {Document,Paragraph}=getDocx();
-    const children = [
-      ...buildTitle(),
-      buildCustomerHeader(quote),
-      new Paragraph({spacing:{before:80,after:80},children:[txt('')]}),
-      buildItemTable(quote),
-      ...buildNotes(quote)
-    ];
-    if(quote.show.stamp) children.push(...buildStamp());
-    return new Document({creator:COMPANY_INFO.name, title:'報價單',
+    let children;
+    if(quote.docType === 'contract'){
+      children = [
+        ...buildContractTitle(),
+        buildContractParties(quote),
+        buildContractPeriod(quote),
+        new Paragraph({spacing:{before:120,after:80}, children:[txt('服務商品明細：',{bold:true})]}),
+        buildItemTable(quote),
+        ...buildContractTerms(quote)
+      ];
+      if(quote.show.stamp) children.push(...buildSignature());
+    } else {
+      children = [
+        ...buildTitle(),
+        buildCustomerHeader(quote),
+        new Paragraph({spacing:{before:80,after:80},children:[txt('')]}),
+        buildItemTable(quote),
+        ...buildNotes(quote)
+      ];
+      if(quote.show.stamp) children.push(...buildStamp());
+    }
+    return new Document({creator:COMPANY_INFO.name, title: quote.docType==='contract' ? '服務合約書' : '報價單',
       styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
       sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
   }
@@ -5640,6 +5784,20 @@ function cmLoadDocx(){
   return CM_docxPromise;
 }
 
+// ─── 合約預設條款範本（可在視窗內自由編輯） ───
+// 純函式：回傳一份白話、通用的服務合約條款，使用者可逐行增刪。
+// 訂製品的「合約期間 X 年」條款由 builder 依品項自動補上，不在此重複。
+function cmDefaultContractTermsText(){
+  return [
+    '本合約所列服務商品費用均已含 5% 營業稅。',
+    '乙方依約定更換週期，定期為甲方更換、清洗本合約所列之商品。',
+    '甲方應於每期帳款到期日，依約定金額支付服務費用予乙方。',
+    '本合約所列商品所有權均屬乙方所有；合約終止時甲方應如數返還，如有遺失或損壞，甲方應照價賠償。',
+    '合約期間屆滿前一個月，雙方未以書面表示異議者，視同續約一年，並依此類推。',
+    '本合約一式二份，由甲乙雙方各執一份為憑。'
+  ].join('\n');
+}
+
 // ─── 客戶 → 合約配置橋接 ───
 // 規則：
 // - 優先用 contractedItems（已成約品項），無則用 trialItems
@@ -5662,10 +5820,10 @@ function clientToCMConfig(c){
       out.priceOverride = Math.round(it.quoted / (it.qty || 1));
     }
     if(it.loc) out.loc = it.loc;
-    // 如果代號不在合約商品庫，從 salesystem DB.products 補品名/單價
+    // 如果代號不在合約商品庫，從主程式商品庫（host adapter）補品名/單價
     if(!CM_CATALOG.products[it.product]){
       autoCustomCodes.push(it.product);
-      const sp = (typeof DB !== 'undefined' && DB.products) ? DB.products.find(p => p.code === it.product) : null;
+      const sp = HOST.getProduct(it.product);
       out.name = (sp && sp.desc) ? sp.desc : it.product;  // 給 UI 顯示用；cmBuildConfig 會轉 nameOverride
       // 若沒設 priceOverride，且 salesystem 有 price>0，則自動推 4W 單價
       // （配件等 price=0 的項目不自動帶，讓使用者手動填或刪除）
@@ -5676,11 +5834,21 @@ function clientToCMConfig(c){
     }
     return out;
   });
-  const dt = (typeof today === 'function' ? today() : '').replace(/-/g, '/');
+  const dt = (HOST.today() || '').replace(/-/g, '/');
+  // 合約期間預設：若品項含訂製品（catalog 有 contractYears），取最大值，否則 1 年
+  let contractYears = 1;
+  for(const it of items){
+    const p = CM_CATALOG.products[it.code];
+    if(p && p.contractYears && p.contractYears > contractYears) contractYears = p.contractYears;
+  }
   return {
     client: c.name || '',
     version: '',
     date: dt,
+    docType: 'quote',
+    contractStart: dt,
+    contractYears: contractYears,
+    contractTerms: cmDefaultContractTermsText(),
     customerInfo: { contact: c.contact || '', address: c.addr || '', phone: '', taxId: '' },
     displayCycle: '4W',
     discount: '',
@@ -5715,8 +5883,8 @@ function cmIsIOS(){
   return /iPad|iPhone|iPod/.test(ua) || iPadOS;
 }
 function openCM(){
-  if(typeof S === 'undefined' || S.curIdx < 0){ alert('請先開啟客戶詳情'); return; }
-  const c = DB.clients[S.curIdx];
+  const c = cmCurClient();
+  if(!c){ alert('請先開啟客戶詳情'); return; }
   CM_state = clientToCMConfig(c);
   document.getElementById('cm-client-name').textContent = c.name ? '· '+c.name : '';
   cmSyncToUI();
@@ -5752,6 +5920,30 @@ function cmSyncToUI(){
   document.getElementById('cm-showStamp').checked = s.showStamp !== false;
   document.getElementById('cm-showCustomerNumber').checked = s.showCustomerNumber !== false;
   document.getElementById('cm-extraNotes').value = s.extraNotes || '';
+  // 文件類型 + 合約欄位
+  const dtv = s.docType === 'contract' ? 'contract' : 'quote';
+  const radio = document.querySelector('input[name=cm-doctype][value="'+dtv+'"]');
+  if(radio) radio.checked = true;
+  document.getElementById('cm-contractStart').value = s.contractStart || '';
+  document.getElementById('cm-contractYears').value = s.contractYears || '';
+  document.getElementById('cm-contractTerms').value = s.contractTerms || '';
+  cmApplyDocTypeUI(dtv);
+}
+// 依文件類型切換 UI（顯示合約設定區、下載按鈕文字、視窗標題）
+function cmApplyDocTypeUI(type){
+  const isContract = type === 'contract';
+  const sec = document.getElementById('cm-contract-section');
+  if(sec) sec.style.display = isContract ? 'block' : 'none';
+  const dl = document.getElementById('cm-download-btn');
+  if(dl) dl.textContent = isContract ? '📥 下載合約' : '📥 下載 Word';
+}
+function cmSetDocType(type){
+  if(!CM_state) return;
+  CM_state.docType = type === 'contract' ? 'contract' : 'quote';
+  cmApplyDocTypeUI(CM_state.docType);
+  // 切換後隱藏舊預覽，避免顯示另一種文件的內容
+  const pw = document.getElementById('cm-preview-wrap');
+  if(pw) pw.style.display = 'none';
 }
 function cmShowMessage(){
   const box = document.getElementById('cm-msg-box');
@@ -5798,9 +5990,9 @@ function cmRenderItems(){
     if(it.code){
       if(inCatalog){
         const p = CM_CATALOG.products[it.code];
-        pick.innerHTML = '<span class="code">'+escHtml(it.code)+'</span>'+escHtml(catalogName)+'<span class="price">'+escHtml(p.cycle||'')+' / 單價 '+(p.price==null?'—':p.price)+'</span>';
+        pick.innerHTML = '<span class="code">'+HOST.escapeHtml(it.code)+'</span>'+HOST.escapeHtml(catalogName)+'<span class="price">'+HOST.escapeHtml(p.cycle||'')+' / 單價 '+(p.price==null?'—':p.price)+'</span>';
       } else {
-        pick.innerHTML = '<span class="code" style="color:#A36B00">🆕 '+escHtml(it.code)+'</span><span style="color:var(--text2)">'+escHtml(displayName || '臨時新品')+'</span><span class="price" style="color:#A36B00">(自訂)</span>';
+        pick.innerHTML = '<span class="code" style="color:#A36B00">🆕 '+HOST.escapeHtml(it.code)+'</span><span style="color:var(--text2)">'+HOST.escapeHtml(displayName || '臨時新品')+'</span><span class="price" style="color:#A36B00">(自訂)</span>';
       }
     } else {
       pick.textContent = '👉 點此從商品庫選擇';
@@ -5907,7 +6099,7 @@ function cmRenderProdList(){
       total++;
       const row = document.createElement('div');
       row.className = 'cm-prod-row';
-      row.innerHTML = '<div><div class="name"><b>'+escHtml(p.code)+'</b> '+escHtml(p.name)+'</div><div class="meta">'+escHtml([p.size,p.color,p.cycle].filter(Boolean).join(' · '))+'</div></div><div class="price">$'+(p.price==null?'—':p.price)+'</div>';
+      row.innerHTML = '<div><div class="name"><b>'+HOST.escapeHtml(p.code)+'</b> '+HOST.escapeHtml(p.name)+'</div><div class="meta">'+HOST.escapeHtml([p.size,p.color,p.cycle].filter(Boolean).join(' · '))+'</div></div><div class="price">$'+(p.price==null?'—':p.price)+'</div>';
       row.onclick = () => {
         if(CM_pickContext != null && CM_state.items[CM_pickContext]){
           const it = CM_state.items[CM_pickContext];
@@ -5971,6 +6163,14 @@ function cmBuildConfig(){
   if(CM_state.extraNotes && CM_state.extraNotes.trim()){
     cfg.extraNotes = CM_state.extraNotes.split('\n').map(s => s.trim()).filter(Boolean);
   }
+  // 文件類型與合約設定
+  cfg.docType = CM_state.docType === 'contract' ? 'contract' : 'quote';
+  if(cfg.docType === 'contract'){
+    cfg.contractStart = (CM_state.contractStart || CM_state.date || '').trim();
+    const yrs = parseInt(CM_state.contractYears, 10);
+    if(!Number.isNaN(yrs) && yrs > 0) cfg.contractYears = yrs;
+    if(CM_state.contractTerms != null) cfg.contractTerms = CM_state.contractTerms;
+  }
   return cfg;
 }
 function cmShowError(msg){
@@ -6017,7 +6217,7 @@ async function cmTriggerSave(blob, filename){
         w.document.open();
         w.document.write('<!doctype html><meta charset="utf-8"><title>'+filename+'</title>'+
           '<body style="font-family:sans-serif;padding:20px;text-align:center">'+
-          '<h3 style="margin:0 0 12px">報價單已產生</h3>'+
+          '<h3 style="margin:0 0 12px">文件已產生</h3>'+
           '<p style="color:#555;margin:0 0 16px">請點下方按鈕，或點右上角「分享」⤴ 儲存／傳送檔案。</p>'+
           '<a id="dl" href="'+reader.result+'" download="'+filename+'" style="display:inline-block;padding:12px 20px;background:#1f4e79;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">📥 下載 '+filename+'</a>'+
           '</body>');
@@ -6036,26 +6236,78 @@ async function cmTriggerSave(blob, filename){
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
   return 'downloaded';
 }
+// ⚡ 快速報價：用客戶現有品項一鍵產生報價單 Word 並下載，免開視窗。
+// 若品項不全（無品項，或臨時新品缺品名／單價）→ 退回開啟完整視窗讓使用者補。
+async function cmQuickQuote(){
+  const c = cmCurClient();
+  if(!c){ alert('請先開啟客戶詳情'); return; }
+  const cfg = clientToCMConfig(c);   // 預設 docType:'quote'
+  if(!cfg.items.some(it => it.code)){
+    // 完全沒有可帶入的品項 → 開視窗手動新增
+    openCM();
+    const box = document.getElementById('cm-msg-box');
+    if(box){ box.className = 'cm-msg warn'; box.textContent = '此客戶尚無可帶入的品項，請手動新增商品後再產生報價單。'; }
+    return;
+  }
+  const btn = document.getElementById('cd-quickquote-btn');
+  const orig = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '產生中…'; }
+  try{
+    CM_state = cfg;
+    let buildCfg;
+    try{
+      buildCfg = cmBuildConfig();
+    } catch(e){
+      // 資料不全（如臨時新品缺品名／單價）→ 開完整視窗讓使用者補
+      openCM();
+      const box = document.getElementById('cm-msg-box');
+      if(box){ box.className = 'cm-msg warn'; box.textContent = '需補充資料才能產生報價單：'+(e.message || String(e)); }
+      return;
+    }
+    await cmLoadDocx();
+    const blob = await CM_builder.buildBlob(buildCfg);
+    const fname = '報價單_'+cmSafeFilename(buildCfg.client)+'.docx';
+    const result = await cmTriggerSave(blob, fname);
+    CM_state = null;
+    if(result !== 'cancelled'){
+      c.visits = c.visits || [];
+      c.visits.unshift({ date: HOST.today(), note: '已產生報價單（快速）：'+fname, statusChange:'', insight:'', mood:0 });
+      c.updatedAt = Date.now();
+      HOST.save();
+      HOST.sync('save', { client: c });
+      HOST.onChange();
+      alert(result === 'shared' ? '✅ 已透過系統分享 '+fname
+          : result === 'newtab' ? '✅ 已在新分頁開啟 '+fname+'，請於該頁點「分享」→「儲存到檔案」'
+          : '✅ 已產生報價單並寫入拜訪紀錄：'+fname);
+    }
+  } catch(e){
+    CM_state = null;
+    alert('快速報價產生失敗：'+(e.message || String(e)));
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = orig; }
+  }
+}
 async function cmDownload(){
   const btn = document.getElementById('cm-download-btn');
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '產生中...';
   try{
     const cfg = cmBuildConfig();
+    const docLabel = cfg.docType === 'contract' ? '合約書' : '報價單';
     btn.textContent = '載入函式庫...';
     await cmLoadDocx();
     btn.textContent = '組裝中...';
     const blob = await CM_builder.buildBlob(cfg);
-    const fname = '報價單_'+cmSafeFilename(cfg.client)+(cfg.version?'_'+cmSafeFilename(cfg.version):'')+'.docx';
+    const fname = docLabel+'_'+cmSafeFilename(cfg.client)+(cfg.version?'_'+cmSafeFilename(cfg.version):'')+'.docx';
     const result = await cmTriggerSave(blob, fname);
-    if(result !== 'cancelled' && typeof S !== 'undefined' && S.curIdx >= 0 && DB.clients[S.curIdx]){
-      const c = DB.clients[S.curIdx];
+    const c = result !== 'cancelled' ? cmCurClient() : null;
+    if(c){
       c.visits = c.visits || [];
-      c.visits.unshift({ date: today(), note: '已產生報價單：'+fname, statusChange:'', insight:'', mood:0 });
+      c.visits.unshift({ date: HOST.today(), note: '已產生'+docLabel+'：'+fname, statusChange:'', insight:'', mood:0 });
       c.updatedAt = Date.now();
-      saveLocal();
-      if(typeof autoSync === 'function') autoSync('save', { client: c });
-      if(typeof renderVisits === 'function') renderVisits();
+      HOST.save();
+      HOST.sync('save', { client: c });
+      HOST.onChange();
     }
     const box = document.getElementById('cm-msg-box');
     if(result === 'cancelled'){
@@ -6073,16 +6325,76 @@ async function cmDownload(){
     btn.disabled = false; btn.textContent = orig;
   }
 }
-// ESC 與背景點擊關閉
-document.addEventListener('keydown', (e) => {
-  if(e.key === 'Escape'){
-    if(document.getElementById('cm-prod-modal') && document.getElementById('cm-prod-modal').classList.contains('on')){ cmCloseProdPicker(); return; }
-    if(document.getElementById('cm-modal') && document.getElementById('cm-modal').classList.contains('on')){ closeCM(); }
+// ── 事件綁定：取代原本 HTML 內的 inline on* 處理器（模組私有，不暴露全域） ──
+let CM_mounted = false;
+function cmMount(){
+  if(CM_mounted) return;
+  const modal = document.getElementById('cm-modal');
+  if(!modal) return;   // DOM 尚未就緒
+  CM_mounted = true;
+  // 資料欄位（data-cm="path"）：select / checkbox 用 change，其餘用 input
+  modal.querySelectorAll('[data-cm]').forEach(el => {
+    const path = el.dataset.cm;
+    const isCheck = el.type === 'checkbox';
+    const ev = (el.tagName === 'SELECT' || isCheck) ? 'change' : 'input';
+    el.addEventListener(ev, () => cmSet(path, isCheck ? el.checked : el.value));
+  });
+  // 文件類型切換
+  modal.querySelectorAll('[data-cm-doctype]').forEach(el => {
+    el.addEventListener('change', () => { if(el.checked) cmSetDocType(el.value); });
+  });
+  // 按鈕
+  const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+  bind('cm-close-btn', closeCM);
+  bind('cm-preview-btn', cmPreview);
+  bind('cm-download-btn', cmDownload);
+  bind('cm-additem-cat', () => cmAddItem(false));
+  bind('cm-additem-new', () => cmAddItem(true));
+  bind('cm-prod-close-btn', cmCloseProdPicker);
+  const search = document.getElementById('cm-prod-search');
+  if(search) search.addEventListener('input', cmRenderProdList);
+  // ESC 與背景點擊關閉
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape'){
+      if(document.getElementById('cm-prod-modal') && document.getElementById('cm-prod-modal').classList.contains('on')){ cmCloseProdPicker(); return; }
+      if(document.getElementById('cm-modal') && document.getElementById('cm-modal').classList.contains('on')){ closeCM(); }
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if(e.target && e.target.id === 'cm-modal') closeCM();
+    if(e.target && e.target.id === 'cm-prod-modal') cmCloseProdPicker();
+  });
+}
+
+// ── 對外 API ──
+return {
+  // 注入 host adapter（主程式啟動時呼叫一次）
+  init(host){ if(host) Object.assign(HOST, host); return this; },
+  // 客戶卡「📄 報價／合約」：開啟完整視窗
+  open(){ cmMount(); openCM(); },
+  // 客戶卡「⚡ 快速報價」：一鍵產生報價單
+  quickQuote(){ cmMount(); cmQuickQuote(); },
+  // 測試用內部 handle（正式 UI 不使用；供 ?test=1 驗證純函式）
+  _test: {
+    CATALOG: CM_CATALOG,
+    engine: CM_engine,
+    clientToConfig: clientToCMConfig,
+    defaultTerms: cmDefaultContractTermsText,
+    buildConfigFrom(state){ CM_state = state; return cmBuildConfig(); }
   }
-});
-document.addEventListener('click', (e) => {
-  if(e.target && e.target.id === 'cm-modal') closeCM();
-  if(e.target && e.target.id === 'cm-prod-modal') cmCloseProdPicker();
+};
+})();
+
+// 把主程式的資料／動作注入 ContractMaker 模組（解耦：模組內部不直接碰 DB / S / …）
+ContractMaker.init({
+  getClients: () => (typeof DB !== 'undefined' && DB.clients) ? DB.clients : [],
+  getCurIdx: () => (typeof S !== 'undefined' ? S.curIdx : -1),
+  getProduct: (code) => (typeof DB !== 'undefined' && DB.products) ? DB.products.find(p => p.code === code) : null,
+  today: () => (typeof today === 'function' ? today() : new Date().toISOString().slice(0,10)),
+  save: () => { if(typeof saveLocal === 'function') saveLocal(); },
+  sync: (action, payload) => { if(typeof autoSync === 'function') autoSync(action, payload); },
+  onChange: () => { if(typeof renderVisits === 'function') renderVisits(); },
+  escapeHtml: (s) => (typeof escHtml === 'function' ? escHtml(s) : String(s==null?'':s))
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -6302,6 +6614,16 @@ if(location.search.includes('test=1')){
   assert('parseRegion 無區',parseRegion('台南市中山路'),'');
 
   // --- CONTRACTMAKER 整合 ---
+  // 模組封裝後，透過 ContractMaker._test handle 取得內部純函式（正式 UI 不使用此 handle）
+  assert('ContractMaker 模組已載入',typeof ContractMaker==='object'&&typeof ContractMaker.open==='function',true);
+  assert('ContractMaker 暴露 quickQuote',typeof ContractMaker.quickQuote==='function',true);
+  const CMt=ContractMaker._test;
+  const CM_CATALOG=CMt.CATALOG;
+  const CM_engine=CMt.engine;
+  const clientToCMConfig=CMt.clientToConfig;
+  const cmDefaultContractTermsText=CMt.defaultTerms;
+  let CM_state=null;
+  const cmBuildConfig=()=>CMt.buildConfigFrom(CM_state);
   // CM_CATALOG 已載入
   assert('CM_CATALOG 有 products',!!CM_CATALOG&&!!CM_CATALOG.products,true);
   assert('CM_CATALOG 包含 DECSR',!!CM_CATALOG.products.DECSR,true);
@@ -6412,6 +6734,47 @@ if(location.search.includes('test=1')){
   const cmBC3=cmBuildConfig();
   assert('cmBuildConfig 自訂代號保留 nameOverride',cmBC3.items[0].nameOverride,'臨時新品 A');
   assert('cmBuildConfig 自訂代號保留 priceOverride',cmBC3.items[0].priceOverride,280);
+  CM_state=null;
+
+  // --- 合約書（docType=contract）---
+  // clientToCMConfig 預設文件類型與合約欄位
+  const cmDT=clientToCMConfig({name:'合約店',contractedItems:[{product:'DECSR',qty:1,cycle:'2W'}]});
+  assert('clientToCMConfig 預設 docType=quote',cmDT.docType,'quote');
+  assert('clientToCMConfig 預設 contractStart=date',cmDT.contractStart,cmDT.date);
+  assert('clientToCMConfig 預設 contractYears=1',cmDT.contractYears,1);
+  assert('clientToCMConfig 預設帶入合約條款',cmDT.contractTerms.length>0,true);
+  // 訂製品（HPL contractYears=4）→ 合約期間預設取 4
+  const cmDTc=clientToCMConfig({name:'訂製店',contractedItems:[{product:'HPL',qty:1}]});
+  assert('clientToCMConfig 訂製品 contractYears=4',cmDTc.contractYears,4);
+  // cmDefaultContractTermsText 為多行非空字串
+  assert('cmDefaultContractTermsText 多行',cmDefaultContractTermsText().split('\n').length>=5,true);
+  assert('cmDefaultContractTermsText 含營業稅條款',cmDefaultContractTermsText().includes('營業稅'),true);
+  // cmBuildConfig 帶出合約欄位
+  CM_state={client:'合約A',date:'2026/05/07',docType:'contract',contractStart:'2026/06/01',contractYears:'2',
+    contractTerms:'條款一\n條款二',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
+    items:[{code:'DECSR',qty:1}]};
+  const cmCt=cmBuildConfig();
+  assert('cmBuildConfig docType=contract',cmCt.docType,'contract');
+  assert('cmBuildConfig contractStart 帶出',cmCt.contractStart,'2026/06/01');
+  assert('cmBuildConfig contractYears 轉數字',cmCt.contractYears,2);
+  assert('cmBuildConfig contractTerms 帶出',cmCt.contractTerms,'條款一\n條款二');
+  // expandQuote 透傳 docType / 合約欄位
+  const cmCtQ=CM_engine.expandQuote(cmCt);
+  assert('expandQuote docType 透傳',cmCtQ.docType,'contract');
+  assert('expandQuote contractYears 透傳',cmCtQ.contractYears,2);
+  // contractTermLines：使用者條款 + 訂製品自動補條款
+  const cmTermsCustom=CM_engine.contractTermLines({contractTerms:'A\nB',customItems:[{code:'HPL',name:'訂做地墊2色L',years:4}]});
+  assert('contractTermLines 使用者條款數',cmTermsCustom.length,3);
+  assert('contractTermLines 訂製品條款附加',cmTermsCustom[2].includes('訂製品'),true);
+  assert('contractTermLines 訂製品年限',cmTermsCustom[2].includes('4 年'),true);
+  // 預設 docType=quote 不帶合約欄位
+  const cmQuoteCfg=CM_engine.expandQuote({client:'Q',date:'2026/05/07',displayCycle:'4W',customerInfo:{},items:[{code:'DECSR',qty:1}]});
+  assert('expandQuote 預設 docType=quote',cmQuoteCfg.docType,'quote');
+  // 合約預覽含合約專屬字樣
+  const cmCtPreview=CM_engine.previewText(cmCt);
+  assert('contract previewText 含服務合約書',cmCtPreview.includes('服務合約書'),true);
+  assert('contract previewText 含甲方',cmCtPreview.includes('甲方'),true);
+  assert('contract previewText 含合約條款',cmCtPreview.includes('合約條款'),true);
   CM_state=null;
 
   // --- 結果顯示 ---
