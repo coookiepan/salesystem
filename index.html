@@ -1198,7 +1198,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.02-offline1';
+const APP_VERSION='v2026.06.03-ml1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1224,8 +1224,8 @@ function handleRequest(e){
     }
     let result;
     switch(action){
-      case 'getAll':        result=getAllClients();break;
-      case 'save':          result=saveClient(body.client);break;
+      case 'getAll':        result=getAllClients(body.since);break;
+      case 'save':          result=saveClient(body.client,body.force);break;
       case 'delete':        result=deleteClient(body.id,body.name);break;
       case 'deleteByName':  result=deleteByName(body.name,body.keepId);break;
       case 'getInventory':  result=getInventory();break;
@@ -1260,19 +1260,28 @@ function getSnapshot(){
   const clientsResult=getAllClients();
   return{ok:true,sheetName:sheetName,clients:clientsResult.clients,generatedAt:new Date().toISOString()};
 }
-function getAllClients(){
+function getAllClients(since){
   const sheet=getSheet();const lastRow=sheet.getLastRow();
-  if(lastRow<2)return{clients:[],skipped:[]};
+  if(lastRow<2)return since?{clients:[],skipped:[],ids:[],incremental:true}:{clients:[],skipped:[]};
   const data=sheet.getRange(2,1,lastRow-1,1).getValues();
   // 逐列容錯解析：單一列 JSON 壞掉（手動誤改、截斷）只跳過該列，不讓整批 getAll 失敗。
-  const clients=[],skipped=[];
+  // M2 增量同步：帶 since(ms) 時只回傳 updatedAt 較新（或無 updatedAt 的舊資料）的列，
+  // 並附上目前所有 id（ids）讓前端能據以刪除雲端已不存在的客戶。
+  const sinceN=since?Number(since):0;
+  const clients=[],skipped=[],ids=[];
   for(let i=0;i<data.length;i++){
     const raw=data[i][0];
     if(raw==='')continue;
-    try{clients.push(JSON.parse(raw));}
-    catch(e){skipped.push(i+2);} // i+2 = 試算表實際列號
+    let c;
+    try{c=JSON.parse(raw);}
+    catch(e){skipped.push(i+2);continue;} // i+2 = 試算表實際列號
+    if(sinceN){
+      ids.push(c.id);
+      if(c.updatedAt&&Number(c.updatedAt)<=sinceN)continue; // 沒變的就不回傳整筆
+    }
+    clients.push(c);
   }
-  return{clients:clients,skipped:skipped};
+  return sinceN?{clients:clients,skipped:skipped,ids:ids,incremental:true}:{clients:clients,skipped:skipped};
 }
 function findRowById(sheet,id){
   if(!id)return -1;
@@ -1294,14 +1303,27 @@ function findRowsByName(sheet,name){
   }
   return rows;
 }
-function saveClient(client){
-  const sheet=getSheet();const json=JSON.stringify(client);
+function saveClient(client,force){
+  const sheet=getSheet();
   let row=findRowById(sheet,client.id);
   // 後備：若找不到 id（舊資料 row 無 id），改用正規化後店名比對第一筆
   if(row<0&&client.name){
     const ns=findRowsByName(sheet,client.name);
     if(ns.length)row=ns[0];
   }
+  // M3 樂觀並發：client.srvAt 是這次編輯所根據的「雲端版本時間」。
+  // 若雲端現值 updatedAt 比它新，代表你拉取後有人又改過 → 回衝突、不覆蓋（除非 force）。
+  // 只有在 srvAt 已知時才檢查，避免未同步過的本機資料被誤判。
+  if(!force&&row>0&&client.srvAt){
+    try{
+      const cur=JSON.parse(sheet.getRange(row,1).getValue());
+      if(cur&&cur.updatedAt&&Number(cur.updatedAt)>Number(client.srvAt)){
+        return{ok:false,conflict:true,server:cur};
+      }
+    }catch(e){}
+  }
+  const toSave=Object.assign({},client);delete toSave.srvAt; // srvAt 為前端本地概念，不寫入雲端
+  const json=JSON.stringify(toSave);
   if(row>0){sheet.getRange(row,1).setValue(json);}
   else{sheet.getRange(sheet.getLastRow()+1,1).setValue(json);}
   return{ok:true,row:row>0?row:-1};
@@ -1630,7 +1652,21 @@ const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'�
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
-function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));}catch(e){}}
+let _quotaWarned=false;
+function saveLocal(){
+  try{
+    localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
+    _quotaWarned=false;
+  }catch(e){
+    // M5：本機空間滿屬靜默失敗最危險（使用者以為存了）。明確提示一次，引導先推雲端。
+    const quota=e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014);
+    console.warn('[saveLocal] 寫入本機失敗：',(e&&e.message)||e);
+    if(quota&&!_quotaWarned){
+      _quotaWarned=true;
+      try{alert('⚠ 本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。');}catch(_){}
+    }
+  }
+}
 
 let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[]};
 let SHEET_URL='';
@@ -1662,6 +1698,29 @@ function enqueueOp(action,payload){
   saveOutbox();
   SYNC.pending=OUTBOX.length;
 }
+// M3 衝突處理：讓使用者抉擇「用我的覆蓋雲端」或「保留雲端、放棄這次修改」，
+// 兩條路都會讓佇列前進，不會無限重試也不會靜默覆蓋。
+async function handleSaveConflict(op,server){
+  const name=(op.payload.client&&op.payload.client.name)||'此客戶';
+  let useMine;
+  try{useMine=confirm('客戶「'+name+'」雲端已被其他人更新。\n\n按「確定」＝用你的版本覆蓋雲端\n按「取消」＝保留雲端版本、放棄你這次的修改');}
+  catch(e){useMine=false;}
+  if(useMine){
+    op.payload.force=true;                               // 下一輪強制覆寫
+    if(op.payload.client&&server&&server.updatedAt)op.payload.client.srvAt=server.updatedAt;
+    saveOutbox();
+    return true;                                          // 不出列，下一輪以 force 送出
+  }
+  // 放棄本次修改 → 以雲端版本覆蓋本機，並把這筆移出佇列
+  if(server&&server.id){
+    server.srvAt=server.updatedAt;
+    const idx=DB.clients.findIndex(c=>c&&c.id===server.id);
+    if(idx>=0)DB.clients[idx]=server;else DB.clients.push(server);
+    saveLocal();renderClients();
+  }
+  OUTBOX.shift();saveOutbox();SYNC.pending=OUTBOX.length;
+  return true;
+}
 let _flushing=false;
 async function flushOutbox(){
   if(!SHEET_URL){SYNC.state='offline';renderVerBadge();return false;}
@@ -1671,7 +1730,18 @@ async function flushOutbox(){
   try{
     while(OUTBOX.length){
       const op=OUTBOX[0];
-      await api({action:op.action,...op.payload});       // 失敗會 throw → 跳到 catch，保留佇列
+      const r=await api({action:op.action,...op.payload}); // 失敗會 throw → 跳到 catch，保留佇列
+      // M3 衝突：雲端比本次編輯所根據的版本還新 → 不出列，交給使用者抉擇
+      if(r&&r.conflict&&op.action==='save'){
+        const resolved=await handleSaveConflict(op,r.server);
+        if(!resolved){SYNC.state='err';setSyncBar('err');return false;} // 暫停，待使用者
+        continue; // 重新評估佇列頭（force 重送 或 已放棄出列）
+      }
+      // save 成功：把雲端已確認的版本時間記回本機客戶，作為下次衝突比對的基準
+      if(op.action==='save'&&op.payload.client&&op.payload.client.id){
+        const live=DB.clients.find(c=>c&&c.id===op.payload.client.id);
+        if(live)live.srvAt=op.payload.client.updatedAt;
+      }
       OUTBOX.shift();                                      // 成功才出列
       saveOutbox();
       SYNC.pending=OUTBOX.length;
@@ -1876,7 +1946,20 @@ async function syncFromSheet(silent){
   }
   SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
-    const res=await api({action:'getAll'});DB.clients=res.clients||[];
+    // M2 增量同步：本機資料「乾淨」（每筆都有 id）且非首次拉取時，只抓有更動的列；
+    // 否則退回整碗拉取，確保安全。
+    const clean=DB.clients.length>0&&DB.clients.every(c=>c&&c.id);
+    const since=(SYNC.lastPullAt&&clean)?SYNC.lastPullAt:0;
+    const res=await api({action:'getAll',since:since});
+    if(res.incremental){
+      const byId=new Map(DB.clients.filter(c=>c&&c.id).map(c=>[c.id,c]));
+      (res.clients||[]).forEach(c=>{if(c&&c.id){c.srvAt=c.updatedAt;byId.set(c.id,c);}});  // upsert + 標記版本
+      const keep=new Set((res.ids||[]).filter(Boolean));
+      // 刪除雲端已不存在者；無 id 的本機列保留不動（不誤刪）
+      DB.clients=[...byId.values()].filter(c=>!c.id||keep.has(c.id));
+    }else{
+      DB.clients=(res.clients||[]).map(c=>{if(c)c.srvAt=c.updatedAt;return c;});  // M3 標記雲端版本
+    }
     const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
     const prods=await api({action:'getProducts'});if(prods.products)DB.products=prods.products;
@@ -2487,11 +2570,11 @@ function renderProducts(){
     html+=items.map(p=>`
       <div class="prod-row${p.active?'':' prod-inactive'}" onclick="openProdModal(${p._i})">
         <div>
-          <div class="prod-code">${p.code}</div>
-          <div class="prod-desc">${p.desc}${p.note?` <span style="color:var(--text3)">${p.note}</span>`:''}</div>
+          <div class="prod-code">${escHtml(p.code)}</div>
+          <div class="prod-desc">${escHtml(p.desc)}${p.note?` <span style="color:var(--text3)">${escHtml(p.note)}</span>`:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${p.cycle||'-'}</div>`:'<div class="prod-cycle">配件/機台</div>'}
+          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${escHtml(p.cycle||'-')}</div>`:'<div class="prod-cycle">配件/機台</div>'}
         </div>
         ${!p.active?'<span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:10px;flex-shrink:0">停用</span>':''}
       </div>`).join('');
@@ -2771,6 +2854,11 @@ const CATEGORIES=['銷售紀錄','未拜訪','試用回收','全部'];
 let activeCat='銷售紀錄';
 let activeRegion=''; // 「未拜訪」分類時的區域篩選
 let activeStatusSub=''; // 「全部」分類時的狀態子篩選
+// M2 效能：客戶清單分頁渲染。初次只畫前 N 筆，按「載入更多」再加一頁，
+// 篩選條件改變時自動歸零。避免數百筆客戶時整碗渲染拖慢手機。
+const INITIAL_CLIENT_N=80, CLIENT_PAGE=80;
+let _clientShowN=INITIAL_CLIENT_N, _clientFilterSig=null;
+function loadMoreClients(){_clientShowN+=CLIENT_PAGE;renderClients();}
 function initPills(){
   document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
     `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}',this)">${s}</button>`
@@ -3495,7 +3583,12 @@ function renderClients(){
   });
   const el=document.getElementById('clients-list');
   if(!list.length){el.innerHTML='<div class="empty">尚無符合的客戶</div>';return;}
-  el.innerHTML=list.map(({c,i})=>{
+  // 篩選條件變了就把分頁歸零，避免停留在上一個清單的「載入更多」進度
+  const sig=q+'|'+sort+'|'+activeCat+'|'+activeStatusSub;
+  if(sig!==_clientFilterSig){_clientFilterSig=sig;_clientShowN=INITIAL_CLIENT_N;}
+  const total=list.length;
+  const shown=list.slice(0,_clientShowN);
+  el.innerHTML=shown.map(({c,i})=>{
     const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
@@ -3516,12 +3609,12 @@ function renderClients(){
       <div class="cc-meta">
         ${td?`<span>試用日：${td}</span>`:''}
         ${(() => {const t=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo).length;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'試用 '+t:''}</span>`:'';})()}
-        ${prod?`<span>提案：${prod}</span>`:''}
+        ${prod?`<span>提案：${escHtml(prod)}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
       </div>
     </div>`;
-  }).join('');
+  }).join('')+(total>_clientShowN?`<button class="btn btn-light" style="width:100%;margin-top:10px" onclick="loadMoreClients()">載入更多（已顯示 ${shown.length} / ${total}）</button>`:'');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3570,7 +3663,7 @@ function buildOpts(sel){
   return cats.map(cat=>{
     const items=activeProducts().filter(p=>p.cat===cat);
     if(!items.length)return'';
-    return`<optgroup label="${cat}">${items.map(p=>`<option value="${p.code}"${p.code===sel?' selected':''}>${p.code} ($${p.price}/${p.cycle})</option>`).join('')}</optgroup>`;
+    return`<optgroup label="${escHtml(cat)}">${items.map(p=>`<option value="${escHtml(p.code)}"${p.code===sel?' selected':''}>${escHtml(p.code)} ($${p.price}/${escHtml(p.cycle)})</option>`).join('')}</optgroup>`;
   }).join('');
 }
 
@@ -3600,7 +3693,7 @@ function renderItems(){
             <span class="ti-acc-mark">口味</span>
             <select style="flex:1;min-width:0;font-size:12px" onchange="setFlavor(${mainIdx},this.value)">
               <option value=""${!it.product?' selected':''}>請選擇口味</option>
-              ${choices.map(c=>`<option value="${c.code}"${c.code===it.product?' selected':''}>${c.code} ${c.desc}</option>`).join('')}
+              ${choices.map(c=>`<option value="${escHtml(c.code)}"${c.code===it.product?' selected':''}>${escHtml(c.code)} ${escHtml(c.desc)}</option>`).join('')}
             </select>
           </div>
         </div>`;
@@ -3609,7 +3702,7 @@ function renderItems(){
       return`<div class="ti-row ti-acc">
         <div class="ti-top">
           <span class="ti-acc-mark">配件</span>
-          <span style="flex:1;min-width:0;font-size:12px;color:var(--text2)">${it.product}${p?' '+p.desc:''}</span>
+          <span style="flex:1;min-width:0;font-size:12px;color:var(--text2)">${escHtml(it.product)}${p?' '+escHtml(p.desc):''}</span>
           <span style="font-size:12px;color:var(--text3)">×${it.qty}</span>
         </div>
       </div>`;
@@ -3702,7 +3795,7 @@ function renderContracted(){
     const amt=isAcc?'':'$'+itemFW4(it).toLocaleString();
     return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
-      <span style="flex:1;font-size:13px">${it.product} ${p?'· '+p.desc:''} ×${it.qty||1}</span>
+      <span style="flex:1;font-size:13px">${escHtml(it.product)} ${p?'· '+escHtml(p.desc):''} ×${it.qty||1}</span>
       <span style="font-size:13px;color:#085041;font-weight:600">${amt}</span>
       ${!isAcc?`<button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
     </div></div>`;
@@ -3924,7 +4017,7 @@ function openCD(i){
       const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
       return`<div style="background:#E1F5EE;border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
         <span style="color:#085041;font-weight:600">成約</span>
-        <b>${it.product}</b> ×${it.qty||1}
+        <b>${escHtml(it.product)}</b> ×${it.qty||1}
         <span style="color:#085041;font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
         ${accTxt}
       </div>`;
@@ -3937,7 +4030,7 @@ function openCD(i){
       const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
       const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
       return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
-        <b>${it.product}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${it.cycle||'2W'}換</span>`:''}
+        <b>${escHtml(it.product)}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${escHtml(it.cycle||'2W')}換</span>`:''}
         <span style="color:var(--text2);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
         ${it.quoted>0?`<span style="color:var(--text2);font-variant-numeric:tabular-nums">報價 $${it.quoted.toLocaleString()}</span><span style="color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`:''}
         ${accTxt}
@@ -5011,7 +5104,7 @@ function renderAdminClientDetailHTML(s,idx){
   const fmtItem=(it)=>{
     const acc=it.bundledTo?'<span style="color:var(--text3)">[配件]</span> ':'';
     const qStr=it.quoted>0?` <span style="color:var(--green-d)">報價 $${it.quoted}</span>`:'';
-    return `<div style="font-size:12px;padding:3px 6px">${acc}${escHtml(it.product)} ×${it.qty||1}${it.cycle?` <span style="color:var(--text3)">${it.cycle}</span>`:''}${qStr}${it.contractDate?` <span style="color:var(--text3)">[${it.contractDate}]</span>`:''}</div>`;
+    return `<div style="font-size:12px;padding:3px 6px">${acc}${escHtml(it.product)} ×${it.qty||1}${it.cycle?` <span style="color:var(--text3)">${escHtml(it.cycle)}</span>`:''}${qStr}${it.contractDate?` <span style="color:var(--text3)">[${it.contractDate}]</span>`:''}</div>`;
   };
   const trialHtml=(c.trialItems||[]).length?(c.trialItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
   const dealHtml=(c.contractedItems||[]).length?(c.contractedItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
