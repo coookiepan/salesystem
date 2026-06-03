@@ -1630,7 +1630,21 @@ const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'�
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
-function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));}catch(e){}}
+let _quotaWarned=false;
+function saveLocal(){
+  try{
+    localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
+    _quotaWarned=false;
+  }catch(e){
+    // M5：本機空間滿屬靜默失敗最危險（使用者以為存了）。明確提示一次，引導先推雲端。
+    const quota=e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014);
+    console.warn('[saveLocal] 寫入本機失敗：',(e&&e.message)||e);
+    if(quota&&!_quotaWarned){
+      _quotaWarned=true;
+      try{alert('⚠ 本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。');}catch(_){}
+    }
+  }
+}
 
 let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[]};
 let SHEET_URL='';
@@ -2487,11 +2501,11 @@ function renderProducts(){
     html+=items.map(p=>`
       <div class="prod-row${p.active?'':' prod-inactive'}" onclick="openProdModal(${p._i})">
         <div>
-          <div class="prod-code">${p.code}</div>
-          <div class="prod-desc">${p.desc}${p.note?` <span style="color:var(--text3)">${p.note}</span>`:''}</div>
+          <div class="prod-code">${escHtml(p.code)}</div>
+          <div class="prod-desc">${escHtml(p.desc)}${p.note?` <span style="color:var(--text3)">${escHtml(p.note)}</span>`:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${p.cycle||'-'}</div>`:'<div class="prod-cycle">配件/機台</div>'}
+          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${escHtml(p.cycle||'-')}</div>`:'<div class="prod-cycle">配件/機台</div>'}
         </div>
         ${!p.active?'<span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:10px;flex-shrink:0">停用</span>':''}
       </div>`).join('');
@@ -3516,7 +3530,7 @@ function renderClients(){
       <div class="cc-meta">
         ${td?`<span>試用日：${td}</span>`:''}
         ${(() => {const t=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo).length;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'試用 '+t:''}</span>`:'';})()}
-        ${prod?`<span>提案：${prod}</span>`:''}
+        ${prod?`<span>提案：${escHtml(prod)}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
       </div>
@@ -3570,7 +3584,7 @@ function buildOpts(sel){
   return cats.map(cat=>{
     const items=activeProducts().filter(p=>p.cat===cat);
     if(!items.length)return'';
-    return`<optgroup label="${cat}">${items.map(p=>`<option value="${p.code}"${p.code===sel?' selected':''}>${p.code} ($${p.price}/${p.cycle})</option>`).join('')}</optgroup>`;
+    return`<optgroup label="${escHtml(cat)}">${items.map(p=>`<option value="${escHtml(p.code)}"${p.code===sel?' selected':''}>${escHtml(p.code)} ($${p.price}/${escHtml(p.cycle)})</option>`).join('')}</optgroup>`;
   }).join('');
 }
 
@@ -3600,7 +3614,7 @@ function renderItems(){
             <span class="ti-acc-mark">口味</span>
             <select style="flex:1;min-width:0;font-size:12px" onchange="setFlavor(${mainIdx},this.value)">
               <option value=""${!it.product?' selected':''}>請選擇口味</option>
-              ${choices.map(c=>`<option value="${c.code}"${c.code===it.product?' selected':''}>${c.code} ${c.desc}</option>`).join('')}
+              ${choices.map(c=>`<option value="${escHtml(c.code)}"${c.code===it.product?' selected':''}>${escHtml(c.code)} ${escHtml(c.desc)}</option>`).join('')}
             </select>
           </div>
         </div>`;
@@ -3609,7 +3623,7 @@ function renderItems(){
       return`<div class="ti-row ti-acc">
         <div class="ti-top">
           <span class="ti-acc-mark">配件</span>
-          <span style="flex:1;min-width:0;font-size:12px;color:var(--text2)">${it.product}${p?' '+p.desc:''}</span>
+          <span style="flex:1;min-width:0;font-size:12px;color:var(--text2)">${escHtml(it.product)}${p?' '+escHtml(p.desc):''}</span>
           <span style="font-size:12px;color:var(--text3)">×${it.qty}</span>
         </div>
       </div>`;
@@ -3702,7 +3716,7 @@ function renderContracted(){
     const amt=isAcc?'':'$'+itemFW4(it).toLocaleString();
     return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
-      <span style="flex:1;font-size:13px">${it.product} ${p?'· '+p.desc:''} ×${it.qty||1}</span>
+      <span style="flex:1;font-size:13px">${escHtml(it.product)} ${p?'· '+escHtml(p.desc):''} ×${it.qty||1}</span>
       <span style="font-size:13px;color:#085041;font-weight:600">${amt}</span>
       ${!isAcc?`<button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
     </div></div>`;
@@ -3924,7 +3938,7 @@ function openCD(i){
       const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
       return`<div style="background:#E1F5EE;border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
         <span style="color:#085041;font-weight:600">成約</span>
-        <b>${it.product}</b> ×${it.qty||1}
+        <b>${escHtml(it.product)}</b> ×${it.qty||1}
         <span style="color:#085041;font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
         ${accTxt}
       </div>`;
@@ -3937,7 +3951,7 @@ function openCD(i){
       const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
       const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
       return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
-        <b>${it.product}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${it.cycle||'2W'}換</span>`:''}
+        <b>${escHtml(it.product)}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${escHtml(it.cycle||'2W')}換</span>`:''}
         <span style="color:var(--text2);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
         ${it.quoted>0?`<span style="color:var(--text2);font-variant-numeric:tabular-nums">報價 $${it.quoted.toLocaleString()}</span><span style="color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`:''}
         ${accTxt}
@@ -5011,7 +5025,7 @@ function renderAdminClientDetailHTML(s,idx){
   const fmtItem=(it)=>{
     const acc=it.bundledTo?'<span style="color:var(--text3)">[配件]</span> ':'';
     const qStr=it.quoted>0?` <span style="color:var(--green-d)">報價 $${it.quoted}</span>`:'';
-    return `<div style="font-size:12px;padding:3px 6px">${acc}${escHtml(it.product)} ×${it.qty||1}${it.cycle?` <span style="color:var(--text3)">${it.cycle}</span>`:''}${qStr}${it.contractDate?` <span style="color:var(--text3)">[${it.contractDate}]</span>`:''}</div>`;
+    return `<div style="font-size:12px;padding:3px 6px">${acc}${escHtml(it.product)} ×${it.qty||1}${it.cycle?` <span style="color:var(--text3)">${escHtml(it.cycle)}</span>`:''}${qStr}${it.contractDate?` <span style="color:var(--text3)">[${it.contractDate}]</span>`:''}</div>`;
   };
   const trialHtml=(c.trialItems||[]).length?(c.trialItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
   const dealHtml=(c.contractedItems||[]).length?(c.contractedItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
