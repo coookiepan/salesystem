@@ -88,6 +88,45 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('髒資料時 since=0（整碗）', req2 && req2.since === 0);
   assert('整碗拉取直接覆蓋為雲端內容', names2.join(',') === 'Z');
 
-  console.log(failed ? `M2(前端) FAILED (${failed})` : 'M2(前端) PASSED ✅');
+  // ---- M3 前端衝突流程 ----
+  function bootWithClient() {
+    const w = boot({ duskin_v2: JSON.stringify({
+      clients: [{ id: 'a', name: 'A', updatedAt: 200, srvAt: 100 }],
+      sheetUrl: 'https://script.google.com/x/exec', products: [], inventory: null
+    }) });
+    return w;
+  }
+  const SERVER = { id: 'a', name: 'SERVER', updatedAt: 999 };
+  function conflictFetch(captured) {
+    return async (u, o) => {
+      const b = JSON.parse(o.body); captured.push(b);
+      if (b.action === 'save') {
+        if (b.force) return resp({ ok: true });               // force → 寫入成功
+        return resp({ ok: false, conflict: true, server: SERVER }); // 否則回衝突
+      }
+      return resp({ ok: true });
+    };
+  }
+
+  console.log('M3 — 衝突：選「用我的覆蓋」→ force 重送');
+  let w2 = bootWithClient(); await wait(400);
+  let cap = []; w2.fetch = conflictFetch(cap); w2.confirm = () => true;
+  await w2.eval('autoSync("save",{client:DB.clients.find(c=>c.id==="a")})');
+  await wait(50);
+  const saves = cap.filter(b => b.action === 'save');
+  assert('衝突後以 force 重送（共兩次 save，第二次 force）', saves.length === 2 && saves[0].force !== true && saves[1].force === true);
+  assert('佇列已清空', JSON.parse(w2.eval('JSON.stringify(OUTBOX)')).length === 0);
+  assert('本機仍為我的版本 A', JSON.parse(w2.eval('JSON.stringify(DB.clients.find(c=>c.id==="a"))')).name === 'A');
+
+  console.log('M3 — 衝突：選「保留雲端」→ 採雲端版本、放棄本次');
+  let w3 = bootWithClient(); await wait(400);
+  let cap3 = []; w3.fetch = conflictFetch(cap3); w3.confirm = () => false;
+  await w3.eval('autoSync("save",{client:DB.clients.find(c=>c.id==="a")})');
+  await wait(50);
+  assert('只送一次 save（放棄、未 force 重送）', cap3.filter(b => b.action === 'save').length === 1);
+  assert('本機被雲端版本覆蓋為 SERVER', JSON.parse(w3.eval('JSON.stringify(DB.clients.find(c=>c.id==="a"))')).name === 'SERVER');
+  assert('佇列已清空（該筆已放棄）', JSON.parse(w3.eval('JSON.stringify(OUTBOX)')).length === 0);
+
+  console.log(failed ? `M2/M3(前端) FAILED (${failed})` : 'M2 + M3(前端) PASSED ✅');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('THROWN', e); process.exit(1); });

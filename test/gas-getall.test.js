@@ -93,5 +93,29 @@ assert('未更動的 X 被略過', !inc.clients.some(c => c.name === 'X'));
 assert('ids 含全部三筆（供前端偵測刪除）', (inc.ids || []).slice().sort().join(',') === 'x,y,z');
 assert('不帶 since 仍為整碗（無 incremental）', !api2.getAllClients().incremental);
 
-console.log(failed ? `C4/H1/M2 FAILED (${failed})` : 'C4 + H1 + M2 PASSED ✅');
+console.log('M3 — saveClient 樂觀並發衝突');
+const cfSheet = makeSheet(['data', JSON.stringify({ id: 'k', name: 'K', updatedAt: 5000 })]);
+const SA3 = { getActiveSpreadsheet() { return {
+  getName() { return 'S'; },
+  getSheetByName(n) { return n === 'clients' ? cfSheet : makeSheet([]); },
+  getSheets() { return [cfSheet]; }, insertSheet() { return makeSheet([]); }
+}; } };
+const api3 = new Function('SpreadsheetApp', 'ContentService', 'PropertiesService', 'LockService',
+  code + '\n;return {saveClient};')(SA3, ContentService, PropertiesService, LockService);
+// 雲端 updatedAt=5000；我方編輯所根據的 srvAt=3000（拉取後雲端又被改過）→ 衝突
+const cf1 = api3.saveClient({ id: 'k', name: 'Mine', updatedAt: 9000, srvAt: 3000 });
+assert('過時版本存檔回 conflict + 附雲端版本', cf1.ok === false && cf1.conflict === true && cf1.server.updatedAt === 5000);
+assert('衝突時未覆蓋雲端', JSON.parse(cfSheet.getRange(2, 1).getValue()).name === 'K');
+// force 強制覆寫
+const cf2 = api3.saveClient({ id: 'k', name: 'Forced', updatedAt: 9000, srvAt: 3000 }, true);
+assert('force 強制覆寫成功', cf2.ok === true && JSON.parse(cfSheet.getRange(2, 1).getValue()).name === 'Forced');
+assert('寫入雲端不含 srvAt（本地概念）', JSON.parse(cfSheet.getRange(2, 1).getValue()).srvAt === undefined);
+// srvAt 已對齊雲端（9000）→ 正常寫入
+const cf3 = api3.saveClient({ id: 'k', name: 'Next', updatedAt: 9999, srvAt: 9000 });
+assert('srvAt 對齊後正常寫入', cf3.ok === true);
+// 無 srvAt（未同步過的舊資料）→ 不檢查，維持原行為
+const cf4 = api3.saveClient({ id: 'k', name: 'NoBase', updatedAt: 1 });
+assert('無 srvAt 不做衝突檢查', cf4.ok === true);
+
+console.log(failed ? `C4/H1/M2/M3 FAILED (${failed})` : 'C4 + H1 + M2 + M3 PASSED ✅');
 process.exit(failed ? 1 : 0);

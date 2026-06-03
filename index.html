@@ -1225,7 +1225,7 @@ function handleRequest(e){
     let result;
     switch(action){
       case 'getAll':        result=getAllClients(body.since);break;
-      case 'save':          result=saveClient(body.client);break;
+      case 'save':          result=saveClient(body.client,body.force);break;
       case 'delete':        result=deleteClient(body.id,body.name);break;
       case 'deleteByName':  result=deleteByName(body.name,body.keepId);break;
       case 'getInventory':  result=getInventory();break;
@@ -1303,14 +1303,27 @@ function findRowsByName(sheet,name){
   }
   return rows;
 }
-function saveClient(client){
-  const sheet=getSheet();const json=JSON.stringify(client);
+function saveClient(client,force){
+  const sheet=getSheet();
   let row=findRowById(sheet,client.id);
   // 後備：若找不到 id（舊資料 row 無 id），改用正規化後店名比對第一筆
   if(row<0&&client.name){
     const ns=findRowsByName(sheet,client.name);
     if(ns.length)row=ns[0];
   }
+  // M3 樂觀並發：client.srvAt 是這次編輯所根據的「雲端版本時間」。
+  // 若雲端現值 updatedAt 比它新，代表你拉取後有人又改過 → 回衝突、不覆蓋（除非 force）。
+  // 只有在 srvAt 已知時才檢查，避免未同步過的本機資料被誤判。
+  if(!force&&row>0&&client.srvAt){
+    try{
+      const cur=JSON.parse(sheet.getRange(row,1).getValue());
+      if(cur&&cur.updatedAt&&Number(cur.updatedAt)>Number(client.srvAt)){
+        return{ok:false,conflict:true,server:cur};
+      }
+    }catch(e){}
+  }
+  const toSave=Object.assign({},client);delete toSave.srvAt; // srvAt 為前端本地概念，不寫入雲端
+  const json=JSON.stringify(toSave);
   if(row>0){sheet.getRange(row,1).setValue(json);}
   else{sheet.getRange(sheet.getLastRow()+1,1).setValue(json);}
   return{ok:true,row:row>0?row:-1};
@@ -1685,6 +1698,29 @@ function enqueueOp(action,payload){
   saveOutbox();
   SYNC.pending=OUTBOX.length;
 }
+// M3 衝突處理：讓使用者抉擇「用我的覆蓋雲端」或「保留雲端、放棄這次修改」，
+// 兩條路都會讓佇列前進，不會無限重試也不會靜默覆蓋。
+async function handleSaveConflict(op,server){
+  const name=(op.payload.client&&op.payload.client.name)||'此客戶';
+  let useMine;
+  try{useMine=confirm('客戶「'+name+'」雲端已被其他人更新。\n\n按「確定」＝用你的版本覆蓋雲端\n按「取消」＝保留雲端版本、放棄你這次的修改');}
+  catch(e){useMine=false;}
+  if(useMine){
+    op.payload.force=true;                               // 下一輪強制覆寫
+    if(op.payload.client&&server&&server.updatedAt)op.payload.client.srvAt=server.updatedAt;
+    saveOutbox();
+    return true;                                          // 不出列，下一輪以 force 送出
+  }
+  // 放棄本次修改 → 以雲端版本覆蓋本機，並把這筆移出佇列
+  if(server&&server.id){
+    server.srvAt=server.updatedAt;
+    const idx=DB.clients.findIndex(c=>c&&c.id===server.id);
+    if(idx>=0)DB.clients[idx]=server;else DB.clients.push(server);
+    saveLocal();renderClients();
+  }
+  OUTBOX.shift();saveOutbox();SYNC.pending=OUTBOX.length;
+  return true;
+}
 let _flushing=false;
 async function flushOutbox(){
   if(!SHEET_URL){SYNC.state='offline';renderVerBadge();return false;}
@@ -1694,7 +1730,18 @@ async function flushOutbox(){
   try{
     while(OUTBOX.length){
       const op=OUTBOX[0];
-      await api({action:op.action,...op.payload});       // 失敗會 throw → 跳到 catch，保留佇列
+      const r=await api({action:op.action,...op.payload}); // 失敗會 throw → 跳到 catch，保留佇列
+      // M3 衝突：雲端比本次編輯所根據的版本還新 → 不出列，交給使用者抉擇
+      if(r&&r.conflict&&op.action==='save'){
+        const resolved=await handleSaveConflict(op,r.server);
+        if(!resolved){SYNC.state='err';setSyncBar('err');return false;} // 暫停，待使用者
+        continue; // 重新評估佇列頭（force 重送 或 已放棄出列）
+      }
+      // save 成功：把雲端已確認的版本時間記回本機客戶，作為下次衝突比對的基準
+      if(op.action==='save'&&op.payload.client&&op.payload.client.id){
+        const live=DB.clients.find(c=>c&&c.id===op.payload.client.id);
+        if(live)live.srvAt=op.payload.client.updatedAt;
+      }
       OUTBOX.shift();                                      // 成功才出列
       saveOutbox();
       SYNC.pending=OUTBOX.length;
@@ -1906,12 +1953,12 @@ async function syncFromSheet(silent){
     const res=await api({action:'getAll',since:since});
     if(res.incremental){
       const byId=new Map(DB.clients.filter(c=>c&&c.id).map(c=>[c.id,c]));
-      (res.clients||[]).forEach(c=>{if(c&&c.id)byId.set(c.id,c);});   // upsert 變動列
+      (res.clients||[]).forEach(c=>{if(c&&c.id){c.srvAt=c.updatedAt;byId.set(c.id,c);}});  // upsert + 標記版本
       const keep=new Set((res.ids||[]).filter(Boolean));
       // 刪除雲端已不存在者；無 id 的本機列保留不動（不誤刪）
       DB.clients=[...byId.values()].filter(c=>!c.id||keep.has(c.id));
     }else{
-      DB.clients=res.clients||[];
+      DB.clients=(res.clients||[]).map(c=>{if(c)c.srvAt=c.updatedAt;return c;});  // M3 標記雲端版本
     }
     const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
