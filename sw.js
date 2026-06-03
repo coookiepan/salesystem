@@ -1,13 +1,36 @@
-// DUSKIN 銷售系統 — Service Worker（H2 PWA 離線）
+// DUSKIN 銷售系統 — Service Worker（H2 PWA 離線 / M4 離線地圖）
 // 目標：沒網路時也能開啟 App（搭配 localStorage 資料 + C2 待推送佇列離線作業）。
-// 策略：HTML 文件「網路優先、離線退回快取」（上線一定拿到最新程式）；
-//       其他同網域靜態資源「快取優先」。對 Apps Script 的寫入(POST/跨網域)完全不攔。
-const CACHE = 'duskin-shell-v1';
+// 策略：
+//   - HTML 文件：網路優先、離線退回快取（上線一定拿到最新程式）。
+//   - 同網域靜態資源：快取優先。
+//   - Leaflet CDN（版本固定、immutable，且帶 CORS 標頭可安全重播）：快取優先，
+//     讓離線也能載入地圖程式庫與樣式（M4）。地圖磚 tile 本質需連線，不快取。
+//   - 對 Apps Script 的寫入(POST)與其他跨網域請求：完全不攔。
+const CACHE = 'duskin-shell-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
+const CDN = [
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+];
+function isLeafletCDN(url) { return url.hostname === 'unpkg.com' && url.pathname.indexOf('leaflet') !== -1; }
+
+async function cacheFirst(req) {
+  const cached = await caches.match(req);
+  if (cached) return cached;
+  try {
+    const fresh = await fetch(req);
+    const c = await caches.open(CACHE);
+    c.put(req, fresh.clone());
+    return fresh;
+  } catch (e) { return cached || Response.error(); }
+}
 
 self.addEventListener('install', e => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all([
+    c.addAll(SHELL).catch(() => {}),
+    c.addAll(CDN).catch(() => {})   // best-effort：離線安裝時略過
+  ])));
 });
 
 self.addEventListener('activate', e => {
@@ -22,7 +45,12 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;                       // 寫入(POST 到 Apps Script)不攔
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;        // 跨網域(Google Script / unpkg)不攔
+
+  if (url.origin !== self.location.origin) {
+    // 跨網域：只特例處理 Leaflet CDN（快取優先），其餘（Apps Script、地圖磚等）不攔
+    if (isLeafletCDN(url)) e.respondWith(cacheFirst(req));
+    return;
+  }
 
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (isHTML) {
@@ -41,16 +69,5 @@ self.addEventListener('fetch', e => {
   }
 
   // 其他同網域 GET：快取優先，缺了再上網並補進快取
-  e.respondWith((async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-    try {
-      const fresh = await fetch(req);
-      const c = await caches.open(CACHE);
-      c.put(req, fresh.clone());
-      return fresh;
-    } catch (err) {
-      return cached || Response.error();
-    }
-  })());
+  e.respondWith(cacheFirst(req));
 });

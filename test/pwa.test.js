@@ -64,10 +64,22 @@ new Function('self', 'caches', 'fetch', 'Response', 'URL', swCode)(self, caches,
   handlers.fetch(ev);
   assert('寫入 POST 不被 SW 攔截', ev.called !== true);
 
-  // 跨網域 GET 不攔
-  ev = { request: { method: 'GET', url: 'https://unpkg.com/leaflet.js', mode: 'cors', headers: { get: () => '' } }, respondWith() { this.called = true; } };
+  // 一般跨網域 GET（非 leaflet）不攔，例如地圖磚
+  ev = { request: { method: 'GET', url: 'https://tile.openstreetmap.org/1/2/3.png', mode: 'cors', headers: { get: () => '' } }, respondWith() { this.called = true; } };
   handlers.fetch(ev);
-  assert('跨網域 GET 不被 SW 攔截', ev.called !== true);
+  assert('一般跨網域 GET（地圖磚）不被攔截', ev.called !== true);
+
+  // M4：Leaflet CDN 跨網域 GET → 被攔截並由快取提供（install 已預快取）
+  ev = { request: { method: 'GET', url: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', mode: 'cors', headers: { get: () => '' } }, respondWith(p) { this.p = p; this.called = true; } };
+  handlers.fetch(ev);
+  assert('Leaflet CDN 被 SW 攔截（快取優先）', ev.called === true);
+  res = await ev.p;
+  assert('Leaflet 由快取提供（離線可用地圖程式庫）', res && /leaflet/.test(res.tag));
+  // 離線時（fetch 失敗）leaflet 仍由快取回應
+  fetchImpl = async () => { throw new Error('offline'); };
+  ev = { request: { method: 'GET', url: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', mode: 'cors', headers: { get: () => '' } }, respondWith(p) { this.p = p; } };
+  handlers.fetch(ev); res = await ev.p;
+  assert('Leaflet CSS 離線時由快取提供', res && /leaflet/.test(res.tag));
 
   // ---- 靜態檢查 ----
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
