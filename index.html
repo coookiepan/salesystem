@@ -3930,6 +3930,14 @@ function renderTodoFields(){
       <button onclick="S.cfTodos.splice(${i},1);renderTodoFields()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0;flex-shrink:0">×</button>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);margin-bottom:8px">尚無待辦</div>';
 }
+// L2：客戶資料輕量檢查，回傳警告字串陣列（空陣列＝沒問題）。不阻擋儲存。
+function validateClient(c){
+  const w=[];
+  if(!c.name||c.name==='(未命名)'||!String(c.name).trim())w.push('尚未填寫客戶名稱（將以「(未命名)」儲存）');
+  if(c.regNo&&!/^\d{8}$/.test(String(c.regNo).trim()))w.push('統一編號「'+c.regNo+'」不是 8 碼數字');
+  if(c.phone&&/[^\d\s\-+()#＃分機轉ext.]/i.test(String(c.phone)))w.push('電話「'+c.phone+'」含不尋常字元，請確認');
+  return w;
+}
 async function saveClient(){
   const btn=document.getElementById('save-btn');btn.disabled=true;btn.textContent='儲存中...';
   try{
@@ -3951,6 +3959,12 @@ async function saveClient(){
     };
     const tdVal=document.getElementById('cf-trialdate').value;
     if(tdVal)c.trialDate=tdVal;
+    // L2 輸入檢查：彙整成一則提示，非阻擋（允許快速建檔），讓使用者自行決定
+    const warns=validateClient(c);
+    if(warns.length){
+      const ok=confirm('資料檢查：\n\n• '+warns.join('\n• ')+'\n\n仍要儲存嗎？');
+      if(!ok){btn.disabled=false;btn.textContent='儲存客戶';return;}
+    }
     const isEdit=S.editIdx>=0;
     // 新增時檢查店名正規化後是否與現有客戶重複（防止多裝置並行造成雲端重複）
     if(!isEdit){
