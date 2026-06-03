@@ -73,5 +73,25 @@ assert('save 動作成功寫入', saved.ok === true);
 assert('save 取得鎖一次', lockLog.acquired === 1);
 assert('save 結束釋放鎖（finally 保證）', lockLog.released === 1 && lockLog.held === false);
 
-console.log(failed ? `C4/H1 FAILED (${failed})` : 'C4 + H1 PASSED ✅');
+console.log('M2 — getAllClients(since) 增量同步');
+const incClients = ['data',
+  JSON.stringify({ id: 'x', name: 'X', updatedAt: 1000 }),   // 舊：應略過
+  JSON.stringify({ id: 'y', name: 'Y', updatedAt: 5000 }),   // 新：應回傳
+  JSON.stringify({ id: 'z', name: 'Z' })];                   // 無 updatedAt（舊資料）：應回傳
+const incSheet = makeSheet(incClients);
+const SA2 = { getActiveSpreadsheet() { return {
+  getName() { return 'S'; },
+  getSheetByName(n) { return n === 'clients' ? incSheet : makeSheet([]); },
+  getSheets() { return [incSheet]; }, insertSheet() { return makeSheet([]); }
+}; } };
+const api2 = new Function('SpreadsheetApp', 'ContentService', 'PropertiesService', 'LockService',
+  code + '\n;return {getAllClients};')(SA2, ContentService, PropertiesService, LockService);
+const inc = api2.getAllClients(3000); // since = 3000
+assert('帶 incremental 旗標', inc.incremental === true);
+assert('只回傳有更動/無時間的列（Y + Z）', inc.clients.map(c => c.name).sort().join(',') === 'Y,Z');
+assert('未更動的 X 被略過', !inc.clients.some(c => c.name === 'X'));
+assert('ids 含全部三筆（供前端偵測刪除）', (inc.ids || []).slice().sort().join(',') === 'x,y,z');
+assert('不帶 since 仍為整碗（無 incremental）', !api2.getAllClients().incremental);
+
+console.log(failed ? `C4/H1/M2 FAILED (${failed})` : 'C4 + H1 + M2 PASSED ✅');
 process.exit(failed ? 1 : 0);

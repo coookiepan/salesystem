@@ -1224,7 +1224,7 @@ function handleRequest(e){
     }
     let result;
     switch(action){
-      case 'getAll':        result=getAllClients();break;
+      case 'getAll':        result=getAllClients(body.since);break;
       case 'save':          result=saveClient(body.client);break;
       case 'delete':        result=deleteClient(body.id,body.name);break;
       case 'deleteByName':  result=deleteByName(body.name,body.keepId);break;
@@ -1260,19 +1260,28 @@ function getSnapshot(){
   const clientsResult=getAllClients();
   return{ok:true,sheetName:sheetName,clients:clientsResult.clients,generatedAt:new Date().toISOString()};
 }
-function getAllClients(){
+function getAllClients(since){
   const sheet=getSheet();const lastRow=sheet.getLastRow();
-  if(lastRow<2)return{clients:[],skipped:[]};
+  if(lastRow<2)return since?{clients:[],skipped:[],ids:[],incremental:true}:{clients:[],skipped:[]};
   const data=sheet.getRange(2,1,lastRow-1,1).getValues();
   // 逐列容錯解析：單一列 JSON 壞掉（手動誤改、截斷）只跳過該列，不讓整批 getAll 失敗。
-  const clients=[],skipped=[];
+  // M2 增量同步：帶 since(ms) 時只回傳 updatedAt 較新（或無 updatedAt 的舊資料）的列，
+  // 並附上目前所有 id（ids）讓前端能據以刪除雲端已不存在的客戶。
+  const sinceN=since?Number(since):0;
+  const clients=[],skipped=[],ids=[];
   for(let i=0;i<data.length;i++){
     const raw=data[i][0];
     if(raw==='')continue;
-    try{clients.push(JSON.parse(raw));}
-    catch(e){skipped.push(i+2);} // i+2 = 試算表實際列號
+    let c;
+    try{c=JSON.parse(raw);}
+    catch(e){skipped.push(i+2);continue;} // i+2 = 試算表實際列號
+    if(sinceN){
+      ids.push(c.id);
+      if(c.updatedAt&&Number(c.updatedAt)<=sinceN)continue; // 沒變的就不回傳整筆
+    }
+    clients.push(c);
   }
-  return{clients:clients,skipped:skipped};
+  return sinceN?{clients:clients,skipped:skipped,ids:ids,incremental:true}:{clients:clients,skipped:skipped};
 }
 function findRowById(sheet,id){
   if(!id)return -1;
@@ -1890,7 +1899,20 @@ async function syncFromSheet(silent){
   }
   SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
-    const res=await api({action:'getAll'});DB.clients=res.clients||[];
+    // M2 增量同步：本機資料「乾淨」（每筆都有 id）且非首次拉取時，只抓有更動的列；
+    // 否則退回整碗拉取，確保安全。
+    const clean=DB.clients.length>0&&DB.clients.every(c=>c&&c.id);
+    const since=(SYNC.lastPullAt&&clean)?SYNC.lastPullAt:0;
+    const res=await api({action:'getAll',since:since});
+    if(res.incremental){
+      const byId=new Map(DB.clients.filter(c=>c&&c.id).map(c=>[c.id,c]));
+      (res.clients||[]).forEach(c=>{if(c&&c.id)byId.set(c.id,c);});   // upsert 變動列
+      const keep=new Set((res.ids||[]).filter(Boolean));
+      // 刪除雲端已不存在者；無 id 的本機列保留不動（不誤刪）
+      DB.clients=[...byId.values()].filter(c=>!c.id||keep.has(c.id));
+    }else{
+      DB.clients=res.clients||[];
+    }
     const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
     const prods=await api({action:'getProducts'});if(prods.products)DB.products=prods.products;
@@ -2785,6 +2807,11 @@ const CATEGORIES=['銷售紀錄','未拜訪','試用回收','全部'];
 let activeCat='銷售紀錄';
 let activeRegion=''; // 「未拜訪」分類時的區域篩選
 let activeStatusSub=''; // 「全部」分類時的狀態子篩選
+// M2 效能：客戶清單分頁渲染。初次只畫前 N 筆，按「載入更多」再加一頁，
+// 篩選條件改變時自動歸零。避免數百筆客戶時整碗渲染拖慢手機。
+const INITIAL_CLIENT_N=80, CLIENT_PAGE=80;
+let _clientShowN=INITIAL_CLIENT_N, _clientFilterSig=null;
+function loadMoreClients(){_clientShowN+=CLIENT_PAGE;renderClients();}
 function initPills(){
   document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
     `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}',this)">${s}</button>`
@@ -3509,7 +3536,12 @@ function renderClients(){
   });
   const el=document.getElementById('clients-list');
   if(!list.length){el.innerHTML='<div class="empty">尚無符合的客戶</div>';return;}
-  el.innerHTML=list.map(({c,i})=>{
+  // 篩選條件變了就把分頁歸零，避免停留在上一個清單的「載入更多」進度
+  const sig=q+'|'+sort+'|'+activeCat+'|'+activeStatusSub;
+  if(sig!==_clientFilterSig){_clientFilterSig=sig;_clientShowN=INITIAL_CLIENT_N;}
+  const total=list.length;
+  const shown=list.slice(0,_clientShowN);
+  el.innerHTML=shown.map(({c,i})=>{
     const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
@@ -3535,7 +3567,7 @@ function renderClients(){
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
       </div>
     </div>`;
-  }).join('');
+  }).join('')+(total>_clientShowN?`<button class="btn btn-light" style="width:100%;margin-top:10px" onclick="loadMoreClients()">載入更多（已顯示 ${shown.length} / ${total}）</button>`:'');
 }
 
 // ═══════════════════════════════════════════════════════════
