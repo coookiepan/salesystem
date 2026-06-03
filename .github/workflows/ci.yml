@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install test deps
+        working-directory: test
+        run: npm install
+      - name: Run tests (語法檢查 + C4/H1 + C2 + H2)
+        working-directory: test
+        run: npm test

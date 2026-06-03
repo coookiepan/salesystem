@@ -8,6 +8,13 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>DUSKIN 銷售系統</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#085041">
+<link rel="apple-touch-icon" href="icon.svg">
+<script>
+// H2 PWA：註冊 Service Worker（離線可開）。失敗不影響 App 正常運作。
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
@@ -575,6 +582,10 @@ tbody tr:hover{background:var(--surface-hover)}
         <div class="f"><label class="lbl">窗口/職稱</label><input id="cf-contact" placeholder="陳小姐 / 老闆"></div>
       </div>
       <div class="g2">
+        <div class="f"><label class="lbl">電話</label><input id="cf-phone" inputmode="tel" placeholder="06-1234567"></div>
+        <div class="f"><label class="lbl">登記編號</label><input id="cf-regno" placeholder="工廠登記編號（選填）"></div>
+      </div>
+      <div class="g2">
         <div class="f"><label class="lbl">地址</label><input id="cf-addr"></div>
         <div class="f"><label class="lbl">類型</label>
           <select id="cf-type"><option value="">-</option><option>餐廳</option><option>診所</option><option>寵物</option><option>工廠</option><option>汽車</option><option>眼鏡行</option><option>接待中心</option><option>房仲</option><option>補習班</option><option>美容美甲</option><option>零售店</option><option>辦公室</option><option>遊樂場</option><option>其他</option></select>
@@ -643,6 +654,7 @@ tbody tr:hover{background:var(--surface-hover)}
         <div><div class="detail-label">下次拜訪</div><div class="detail-val" id="cd-next">-</div></div>
         <div><div class="detail-label">地址</div><div class="detail-val" id="cd-addr">-</div></div>
       </div>
+      <div id="cd-phone-w" style="display:none"><div class="detail-label">電話</div><div class="detail-val" id="cd-phone"></div></div>
       <div id="cd-env-w" style="display:none"><div class="detail-label">環境觀察</div><div class="detail-val" id="cd-env"></div></div>
       <div id="cd-note-w" style="display:none"><div class="detail-label">備註</div><div class="detail-val" id="cd-note"></div></div>
       <div id="cd-tri-w"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="detail-label" style="margin-bottom:0">試用 / 成約品項</div><button class="btn btn-outline btn-xs" onclick="openCDItems()">✏️ 編輯品項</button></div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
@@ -893,16 +905,36 @@ tbody tr:hover{background:var(--surface-hover)}
 
 <!-- ═══ SHOPS SEARCH ═══ -->
 <div class="panel" id="panel-shops">
-  <div class="page-title">店家查詢</div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <div class="page-subtitle" id="shops-status" style="flex:1;margin:0">公司現有客戶名單（從雲端載入）</div>
-    <button class="btn btn-outline btn-xs" onclick="loadShops()">🔄 重新載入</button>
+  <div class="page-title">查詢</div>
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <button class="pill on" id="qmode-shops" onclick="setQueryMode('shops',this)">公司客戶</button>
+    <button class="pill" id="qmode-prospects" onclick="setQueryMode('prospects',this)">🏭 工業區名單</button>
   </div>
-  <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
-    <input id="shop-search" placeholder="輸入店名、地址、電話、負責人…" oninput="renderShops(this.value)" autocomplete="off">
+
+  <div id="q-shops">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="page-subtitle" id="shops-status" style="flex:1;margin:0">公司現有客戶名單（從雲端載入）</div>
+      <button class="btn btn-outline btn-xs" onclick="loadShops()">🔄 重新載入</button>
+    </div>
+    <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
+      <input id="shop-search" placeholder="輸入店名、地址、電話、負責人…" oninput="renderShops(this.value)" autocomplete="off">
+    </div>
+    <div id="shops-stats" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+    <div id="shops-list"></div>
   </div>
-  <div id="shops-stats" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
-  <div id="shops-list"></div>
+
+  <div id="q-prospects" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="page-subtitle" id="prospects-status" style="flex:1;margin:0">工業區開發名單（從雲端載入）</div>
+      <button class="btn btn-outline btn-xs" onclick="loadProspects()">🔄 重新載入</button>
+    </div>
+    <div id="prospect-regions" class="toolbar-left" style="gap:6px;flex-wrap:wrap;margin:8px 0"></div>
+    <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
+      <input id="prospect-search" placeholder="搜尋廠名、地址、電話、負責人、行業…" oninput="renderProspects(this.value)" autocomplete="off">
+    </div>
+    <div id="prospects-stats" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+    <div id="prospects-list"></div>
+  </div>
 </div>
 
 <!-- ═══ INVENTORY ═══ -->
@@ -978,6 +1010,17 @@ tbody tr:hover{background:var(--surface-hover)}
       <button class="btn btn-outline btn-sm" onclick="syncFromSheet()">從雲端拉取</button>
       <button class="btn btn-outline btn-sm" onclick="pushAllToSheet()">全部推送</button>
     </div>
+  </div>
+  <div class="card">
+    <div class="form-section">工業區開發名單</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      全公司共用一份「工廠名錄」試算表（分頁命名為 <b>prospects</b>，第一列沿用名錄原始欄名）。
+      貼上該試算表的 Apps Script 部署 URL，即可在「查詢 → 工業區名單」搜尋、規劃路線並一鍵建檔為未拜訪客戶。
+    </div>
+    <div class="f"><label class="lbl">名單 Apps Script URL</label>
+      <input id="prospects-url" placeholder="https://script.google.com/macros/s/...../exec" oninput="saveProspectsUrl()">
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="loadProspects()" style="margin-top:4px">🔄 載入名單</button>
   </div>
   <div class="card">
     <div class="form-section">設定步驟</div>
@@ -1155,18 +1198,30 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.04.26-admin2';
+const APP_VERSION='v2026.06.02-offline1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
+const PROSPECT_SHEET_NAME='prospects';
 
 function doGet(e){return handleRequest(e);}
 function doPost(e){return handleRequest(e);}
 
 function handleRequest(e){
+  let lock=null;
   try{
     const action=e.parameter.action||(e.postData?JSON.parse(e.postData.contents).action:null);
     const body=e.postData?JSON.parse(e.postData.contents):{};
+    // H1 並發鎖：寫入類動作序列化，避免兩位使用者同時寫同一份試算表時，
+    // 「找列→寫列」交錯造成 lost update 或 appendRow 撞列。讀取不需鎖。
+    const WRITE_ACTIONS={save:1,delete:1,deleteByName:1,saveInventory:1,saveProducts:1};
+    if(WRITE_ACTIONS[action]){
+      lock=LockService.getScriptLock();
+      if(!lock.tryLock(20000)){
+        lock=null;
+        return ContentService.createTextOutput(JSON.stringify({error:'系統忙碌中，請稍後再試（寫入鎖逾時）'})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
     let result;
     switch(action){
       case 'getAll':        result=getAllClients();break;
@@ -1178,6 +1233,7 @@ function handleRequest(e){
       case 'getProducts':   result=getProducts();break;
       case 'saveProducts':  result=saveProducts(body.products);break;
       case 'getShops':      result=getShops();break;
+      case 'getProspects':  result=getProspects();break;
       case 'getSnapshot':   result=getSnapshot();break;
       case 'ping':          result={ok:true};break;
       default:              result={error:'Unknown action'};
@@ -1185,6 +1241,8 @@ function handleRequest(e){
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   }catch(err){
     return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON);
+  }finally{
+    if(lock)lock.releaseLock();
   }
 }
 
@@ -1204,9 +1262,17 @@ function getSnapshot(){
 }
 function getAllClients(){
   const sheet=getSheet();const lastRow=sheet.getLastRow();
-  if(lastRow<2)return{clients:[]};
+  if(lastRow<2)return{clients:[],skipped:[]};
   const data=sheet.getRange(2,1,lastRow-1,1).getValues();
-  return{clients:data.map(r=>r[0]).filter(c=>c!=='').map(c=>JSON.parse(c))};
+  // 逐列容錯解析：單一列 JSON 壞掉（手動誤改、截斷）只跳過該列，不讓整批 getAll 失敗。
+  const clients=[],skipped=[];
+  for(let i=0;i<data.length;i++){
+    const raw=data[i][0];
+    if(raw==='')continue;
+    try{clients.push(JSON.parse(raw));}
+    catch(e){skipped.push(i+2);} // i+2 = 試算表實際列號
+  }
+  return{clients:clients,skipped:skipped};
 }
 function findRowById(sheet,id){
   if(!id)return -1;
@@ -1277,7 +1343,8 @@ function getInvSheet(){
 function getInventory(){
   const sheet=getInvSheet();if(sheet.getLastRow()<2)return{inventory:null};
   const val=sheet.getRange(2,1).getValue();
-  return{inventory:val?JSON.parse(val):null};
+  try{return{inventory:val?JSON.parse(val):null};}
+  catch(e){return{inventory:null,error:'inventory JSON 解析失敗'};}
 }
 function saveInventory(inv){getInvSheet().getRange(2,1).setValue(JSON.stringify(inv));return{ok:true};}
 
@@ -1290,7 +1357,8 @@ function getProdSheet(){
 function getProducts(){
   const sheet=getProdSheet();if(sheet.getLastRow()<2)return{products:null};
   const val=sheet.getRange(2,1).getValue();
-  return{products:val?JSON.parse(val):null};
+  try{return{products:val?JSON.parse(val):null};}
+  catch(e){return{products:null,error:'products JSON 解析失敗'};}
 }
 function saveProducts(products){getProdSheet().getRange(2,1).setValue(JSON.stringify(products));return{ok:true};}
 
@@ -1305,6 +1373,35 @@ function getShops(){
   if(lastRow<2)return{shops:[]};
   const data=sheet.getRange(2,1,lastRow-1,4).getValues();
   return{shops:data.filter(r=>String(r[0]||'').trim()!=='').map(r=>({name:String(r[0]||'').trim(),phone:String(r[1]||'').trim(),addr:String(r[2]||'').trim(),owner:String(r[3]||'').trim()}))};
+}
+// 工業區開發名單（唯讀）：放在名為 prospects 的分頁，第一列為標題。
+// 標題沿用政府工廠名錄原始欄名即可（工廠名稱／工廠地址／工廠電話／工廠負責人／
+// 工廠登記編號／行政區／路名／行業別／主要產品／員工數／核准年月／網址／負責人）。
+function getProspects(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  // 優先讀名為 prospects 的分頁；若沒有，就讀第一個分頁（整份名錄表可直接用，免改分頁名）。
+  let sheet=ss.getSheetByName(PROSPECT_SHEET_NAME);
+  if(!sheet)sheet=ss.getSheets()[0];
+  if(!sheet)return{ok:true,prospects:[]};
+  const lastRow=sheet.getLastRow(),lastCol=sheet.getLastColumn();
+  if(lastRow<2||lastCol<1)return{ok:true,prospects:[]};
+  const values=sheet.getRange(1,1,lastRow,lastCol).getValues();
+  const header=values[0].map(h=>String(h||'').trim());
+  const col=(row,name)=>{const i=header.indexOf(name);return i>=0?String(row[i]||'').trim():'';};
+  const out=[];
+  for(let r=1;r<values.length;r++){
+    const row=values[r];
+    const name=col(row,'工廠名稱');
+    if(!name)continue;
+    out.push({
+      name:name, addr:col(row,'工廠地址'), phone:col(row,'工廠電話'),
+      owner:col(row,'工廠負責人'), regNo:col(row,'工廠登記編號'),
+      region:col(row,'行政區'), road:col(row,'路名'), industry:col(row,'行業別'),
+      products:col(row,'主要產品'), employees:col(row,'員工數'),
+      approved:col(row,'核准年月'), website:col(row,'網址'), assignee:col(row,'負責人')
+    });
+  }
+  return{ok:true,prospects:out};
 }`;
 
 // ═══════════════════════════════════════════════════════════
@@ -1533,11 +1630,62 @@ const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'�
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){}return null;}
-function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));}catch(e){}}
+function saveLocal(){try{localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));}catch(e){}}
 
 let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[]};
 let SHEET_URL='';
+let PROSPECTS_URL='';
 const SYNC={state:'offline',lastSyncAt:0,lastPullAt:0,pending:0};
+
+// ─── C2: 持久化待推送佇列（outbox）──────────────────────────
+// 每筆修改先入列再送出，成功才出列；失敗保留、重開 App 仍在，恢復網路自動補送。
+// 解決舊版「失敗的 save 被靜默丟棄、pending 假歸零」的資料遺失問題。
+let OUTBOX=[];
+try{const ob=localStorage.getItem('duskin_outbox');if(ob)OUTBOX=JSON.parse(ob)||[];}catch(e){}
+function saveOutbox(){try{localStorage.setItem('duskin_outbox',JSON.stringify(OUTBOX));}catch(e){}}
+function outboxKey(action,payload){
+  if(action==='save')return 'save:'+((payload.client&&payload.client.id)||'');
+  if(action==='delete')return 'delete:'+(payload.id||'');
+  if(action==='saveInventory')return 'saveInventory';
+  if(action==='saveProducts')return 'saveProducts';
+  return action+':'+JSON.stringify(payload);
+}
+function enqueueOp(action,payload){
+  const snap=JSON.parse(JSON.stringify(payload||{}));   // 快照，避免之後再編輯時連動竄改
+  const key=outboxKey(action,snap);
+  if(action==='delete'){                                 // 刪除蓋掉同 id 還沒送出的 save
+    const sk='save:'+(snap.id||'');
+    OUTBOX=OUTBOX.filter(o=>o.key!==sk);
+  }
+  OUTBOX=OUTBOX.filter(o=>o.key!==key);                  // 收斂：同 key 只留最新一筆
+  OUTBOX.push({key,action,payload:snap,ts:Date.now()});
+  saveOutbox();
+  SYNC.pending=OUTBOX.length;
+}
+let _flushing=false;
+async function flushOutbox(){
+  if(!SHEET_URL){SYNC.state='offline';renderVerBadge();return false;}
+  if(_flushing)return OUTBOX.length===0;
+  if(!OUTBOX.length){SYNC.state='ok';renderVerBadge();return true;}
+  _flushing=true;SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
+  try{
+    while(OUTBOX.length){
+      const op=OUTBOX[0];
+      await api({action:op.action,...op.payload});       // 失敗會 throw → 跳到 catch，保留佇列
+      OUTBOX.shift();                                      // 成功才出列
+      saveOutbox();
+      SYNC.pending=OUTBOX.length;
+    }
+    SYNC.lastSyncAt=Date.now();SYNC.state='ok';setSyncBar('ok');
+    return true;
+  }catch(e){
+    SYNC.state='err';setSyncBar('err');
+    console.warn('[flushOutbox] 推送失敗，保留 '+OUTBOX.length+' 筆待推送：',e.message||e);
+    return false;
+  }finally{
+    _flushing=false;saveLocal();renderVerBadge();
+  }
+}
 
 const local=loadLocal();
 if(local){
@@ -1545,9 +1693,10 @@ if(local){
   DB.inventory=local.inventory||JSON.parse(JSON.stringify(INV_INIT));
   DB.products=local.products&&local.products.length?local.products:JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
   SHEET_URL=local.sheetUrl||'';
+  PROSPECTS_URL=local.prospectsUrl||'';
   SYNC.lastSyncAt=local.lastSyncAt||0;
   SYNC.lastPullAt=local.lastPullAt||0;
-  SYNC.pending=local.pending||0;
+  SYNC.pending=OUTBOX.length;   // 真實待推送筆數（持久化佇列長度）
 }else{
   DB.clients=JSON.parse(JSON.stringify(SEED));
   DB.products=JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
@@ -1701,28 +1850,11 @@ async function api(body){
   const res=await fetch(SHEET_URL,{method:'POST',body:JSON.stringify(body)});
   const json=await res.json();if(json.error)throw new Error(json.error);return json;
 }
-async function autoSync(action,payload){
-  if(!SHEET_URL){SYNC.state='offline';renderVerBadge();return;}
-  SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
-  try{
-    await api({action,...payload});
-    SYNC.lastSyncAt=Date.now();
-    SYNC.pending=0;
-    SYNC.state='ok';
-    setSyncBar('ok');
-  }catch(e){
-    SYNC.pending=Math.min((SYNC.pending||0)+1, 999);
-    SYNC.state='err';
-    setSyncBar('err');
-    console.warn('[autoSync] 同步失敗 (pending:'+SYNC.pending+'):',e.message||e);
-    // delete 失敗加入重試佇列（delete 無法靠下次編輯自動補救）
-    if(action==='delete'&&payload){
-      if(!SYNC.failedDeletes)SYNC.failedDeletes=[];
-      SYNC.failedDeletes.push(payload);
-    }
-  }
-  saveLocal();
+function autoSync(action,payload){
+  if(!SHEET_URL){SYNC.state='offline';renderVerBadge();return Promise.resolve(false);}
+  enqueueOp(action,payload);     // 先持久化入列（即使接著送出失敗也不會掉）
   renderVerBadge();
+  return flushOutbox();          // 立刻嘗試送出；失敗保留待推送
 }
 async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
@@ -1734,25 +1866,28 @@ async function testConnection(){
 async function syncFromSheet(silent){
   if(!SHEET_URL){if(!silent)alert('請先設定 URL');return false;}
   if(!silent&&!confirm('從雲端拉取資料？這會覆蓋本機的客戶、商品資料。'))return false;
+  // C2: 拉取前先把待推送的本機修改送上雲，否則會被雲端覆蓋而遺失
+  if(OUTBOX.length){
+    const ok=await flushOutbox();
+    if(!ok||OUTBOX.length){
+      if(!silent)alert('⚠ 還有 '+OUTBOX.length+' 筆本機修改尚未上傳，已暫停拉取以免覆蓋你的修改。\n請確認網路後再試一次。');
+      return false;
+    }
+  }
   SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
     const res=await api({action:'getAll'});DB.clients=res.clients||[];
+    const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
     const prods=await api({action:'getProducts'});if(prods.products)DB.products=prods.products;
     SYNC.lastPullAt=Date.now();
     SYNC.lastSyncAt=Date.now();
-    SYNC.pending=0;
+    SYNC.pending=OUTBOX.length;
     SYNC.state='ok';
-    // 重試先前失敗的 delete
-    if(SYNC.failedDeletes&&SYNC.failedDeletes.length){
-      const retries=[...SYNC.failedDeletes];
-      SYNC.failedDeletes=[];
-      for(const p of retries){try{await api({action:'delete',...p});}catch(e){console.warn('[retry delete] failed:',e);}}
-    }
     saveLocal();renderClients();renderProducts();setSyncBar('ok');
     renderVerBadge();
     dismissPullBanner();
-    if(!silent)alert('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料');
+    if(!silent)alert('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料'+(skipped?'\n\n⚠ 有 '+skipped.length+' 列資料異常已跳過（試算表列號：'+skipped.join('、')+'），請檢查雲端該列 JSON。':''));
     return true;
   }catch(e){
     SYNC.state='err';setSyncBar('err');renderVerBadge();
@@ -1768,8 +1903,8 @@ async function pushAllToSheet(){
     for(const c of DB.clients){if(!c.id)c.id=genId();await api({action:'save',client:c});}
     await api({action:'saveInventory',inventory:DB.inventory});
     await api({action:'saveProducts',products:DB.products});
-    // 清空失敗佇列
-    if(SYNC.failedDeletes)SYNC.failedDeletes=[];
+    // 全部推送成功 → 清空待推送佇列
+    OUTBOX=[];saveOutbox();
     SYNC.lastSyncAt=Date.now();
     SYNC.pending=0;
     SYNC.state='ok';
@@ -1838,6 +1973,7 @@ function today(){return fmtDate();
 }
 function initSettings(){
   document.getElementById('sheet-url').value=SHEET_URL;
+  const pu=document.getElementById('prospects-url');if(pu)pu.value=PROSPECTS_URL;
   if(SHEET_URL)updateSheetStatus(true);
   const cnt=document.getElementById('prod-toggle-count');
   const sec=document.getElementById('prod-section');
@@ -2017,7 +2153,9 @@ function findDuplicateGroups(){
   const map=new Map();
   (DB.clients||[]).forEach((c,idx)=>{
     if(!c||!c.name)return;
-    const k=normalizeName(c.name);
+    // 有登記編號者以「reg:編號」為身分鍵：不同編號（即使同名）永不互相合併，
+    // 避免工業區名單裡「同名不同址」的獨立工廠被誤判為重複。
+    const k=c.regNo?('reg:'+String(c.regNo).trim()):normalizeName(c.name);
     if(!k)return;
     if(!map.has(k))map.set(k,[]);
     map.get(k).push({client:c,idx});
@@ -2480,6 +2618,149 @@ function renderShops(query){
       '<div style="font-size:15px;font-weight:600;margin-bottom:4px">'+name+'</div>'+
       phone+addr+owner+'</div>';
   }).join('')+(list.length>MAX?'<div class="empty">只顯示前 '+MAX+' 筆，請輸入更精確的關鍵字</div>':'');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROSPECTS — 工業區開發名單（唯讀層 + 一鍵建檔）
+// ═══════════════════════════════════════════════════════════
+let PROSPECTS=[];
+let prospectRegion='';      // 行政區篩選（空 = 全部）
+try{const pc=localStorage.getItem('duskin_prospects');if(pc)PROSPECTS=JSON.parse(pc)||[];}catch(e){}
+function saveProspectsUrl(){PROSPECTS_URL=document.getElementById('prospects-url').value.trim();saveLocal();}
+function setQueryMode(mode,el){
+  document.querySelectorAll('#qmode-shops,#qmode-prospects').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  document.getElementById('q-shops').style.display=mode==='shops'?'block':'none';
+  document.getElementById('q-prospects').style.display=mode==='prospects'?'block':'none';
+  if(mode==='shops'){renderShops(document.getElementById('shop-search')?.value||'');}
+  else{
+    // 首次進入且尚無快取 → 自動載入
+    if(!PROSPECTS.length&&prospectsUrl())loadProspects();
+    else{renderProspectRegions();renderProspects(document.getElementById('prospect-search')?.value||'');}
+  }
+}
+// 名單 URL：未另外設定時，沿用主同步 URL（名錄放在自己 CRM 試算表的 prospects 分頁即可，免再部署一組）
+function prospectsUrl(){return PROSPECTS_URL||SHEET_URL;}
+async function loadProspects(){
+  const statusEl=document.getElementById('prospects-status');
+  const url=prospectsUrl();
+  if(!url){if(statusEl)statusEl.textContent='尚未設定名單 URL，請到設定頁填入（或先設定 Google Sheets 同步）';return;}
+  if(statusEl)statusEl.textContent='載入中…';
+  try{
+    const res=await fetch(url,{method:'POST',body:JSON.stringify({action:'getProspects'})});
+    const text=await res.text();let json;
+    try{json=JSON.parse(text);}catch(e){throw new Error('回應非 JSON（請確認部署權限為「任何人」且網址正確）');}
+    if(!Array.isArray(json.prospects)){if(json.error)throw new Error(json.error);throw new Error('回應格式不正確');}
+    PROSPECTS=json.prospects;
+    try{localStorage.setItem('duskin_prospects',JSON.stringify(PROSPECTS));}catch(e){}
+    if(statusEl)statusEl.textContent='工業區名單（'+PROSPECTS.length+' 筆）· 上次更新 '+new Date().toLocaleTimeString();
+    renderProspectRegions();renderProspects(document.getElementById('prospect-search')?.value||'');
+  }catch(e){
+    const msg='載入失敗：'+(e.message||e);
+    console.error('[loadProspects]',e);
+    if(statusEl){statusEl.textContent=msg+(PROSPECTS.length?'（顯示離線快取 '+PROSPECTS.length+' 筆）':'');statusEl.title=msg;}
+  }
+}
+function prospectRegionOf(p){return (p.region||'').trim()||parseRegion(p.addr);}
+function renderProspectRegions(){
+  const bar=document.getElementById('prospect-regions');if(!bar)return;
+  const counts=new Map();
+  PROSPECTS.forEach(p=>{const r=prospectRegionOf(p);if(r)counts.set(r,(counts.get(r)||0)+1);});
+  const regions=[...counts.keys()].sort();
+  if(!regions.length){bar.innerHTML='';return;}
+  const pill=(label,val,extra)=>`<button class="pill pill-sm ${prospectRegion===val?'on':''}" onclick="setProspectRegion('${val.replace(/'/g,"\\'")}')">${label}${extra||''}</button>`;
+  bar.innerHTML=pill('全部','')+regions.map(r=>pill(escHtml(r),r,' <span style="opacity:.6">'+counts.get(r)+'</span>')).join('');
+}
+function setProspectRegion(r){
+  prospectRegion=r;
+  renderProspectRegions();
+  renderProspects(document.getElementById('prospect-search')?.value||'');
+}
+function clientIdxByRegNo(regNo){
+  const k=String(regNo||'').trim();if(!k)return -1;
+  return (DB.clients||[]).findIndex(c=>c&&c.regNo&&String(c.regNo).trim()===k);
+}
+function renderProspects(query){
+  const q=(query||'').trim().toLowerCase();
+  const keywords=q.split(/\s+/).filter(Boolean);
+  const statsEl=document.getElementById('prospects-stats');
+  const el=document.getElementById('prospects-list');
+  if(!el)return;
+  if(!PROSPECTS.length){
+    el.innerHTML='<div class="empty">尚無名單資料<br><button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="loadProspects()">從雲端載入</button></div>';
+    if(statsEl)statsEl.textContent='';return;
+  }
+  let list=PROSPECTS;
+  if(prospectRegion)list=list.filter(p=>prospectRegionOf(p)===prospectRegion);
+  if(keywords.length){
+    list=list.filter(p=>{
+      const blob=(p.name+' '+p.addr+' '+p.phone+' '+p.owner+' '+(p.industry||'')+' '+(p.products||'')+' '+(p.road||'')).toLowerCase();
+      return keywords.every(kw=>blob.includes(kw));
+    });
+  }
+  if(statsEl)statsEl.textContent='符合 '+list.length+' 筆（共 '+PROSPECTS.length+' 筆）'+(prospectRegion?' · '+prospectRegion:'');
+  if(!list.length){el.innerHTML='<div class="empty">沒有符合的資料</div>';return;}
+  const MAX=200;
+  const shown=list.slice(0,MAX);
+  el.innerHTML=shown.map(p=>{
+    const done=clientIdxByRegNo(p.regNo)>=0;
+    const phone=p.phone?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">電話</span><a href="tel:'+escHtml(String(p.phone).replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+shopHighlight(p.phone,keywords)+'</a></div>':'';
+    const addr=p.addr?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">地址</span><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.addr)+'" target="_blank" rel="noopener" style="color:var(--green)">'+shopHighlight(p.addr,keywords)+'</a></div>':'';
+    const owner=p.owner?'<span style="color:var(--text3);margin-right:4px">負責人</span>'+shopHighlight(p.owner,keywords):'';
+    const meta=[p.industry,p.products,p.employees?(p.employees+' 人'):''].filter(Boolean).map(escHtml).join('・');
+    const metaHtml=meta?'<div style="font-size:12px;color:var(--text3);margin:2px 0">'+meta+'</div>':'';
+    const regEsc=escHtml(String(p.regNo||'')).replace(/'/g,"&#39;");
+    const btn=done
+      ? '<button class="btn btn-outline btn-sm" onclick="openProspectClient(\''+regEsc+'\')" style="white-space:nowrap">✓ 已建檔</button>'
+      : '<button class="btn btn-primary btn-sm" onclick="createClientFromProspect(\''+regEsc+'\')" style="white-space:nowrap">＋ 建檔</button>';
+    return '<div class="card" style="border-left:3px solid '+(done?'var(--green)':'#8DB4D9')+'">'+
+      '<div style="display:flex;gap:8px;align-items:flex-start">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:15px;font-weight:600;margin-bottom:4px">'+shopHighlight(p.name||'(無名稱)',keywords)+'</div>'+
+          metaHtml+phone+addr+(owner?'<div style="font-size:13px;color:var(--text2);margin:2px 0">'+owner+'</div>':'')+
+        '</div>'+btn+
+      '</div></div>';
+  }).join('')+(list.length>MAX?'<div class="empty">只顯示前 '+MAX+' 筆，請用關鍵字或行政區縮小範圍</div>':'');
+}
+function openProspectClient(regNo){
+  const i=clientIdxByRegNo(regNo);if(i<0){createClientFromProspect(regNo);return;}
+  navTo('clients',document.getElementById('nav-clients'));
+  setTimeout(()=>openCD(i),60);
+}
+function createClientFromProspect(regNo){
+  const k=String(regNo||'').trim();
+  const p=PROSPECTS.find(x=>String(x.regNo||'').trim()===k);
+  if(!p){alert('找不到此工廠資料');return;}
+  // 冪等：已建檔 → 直接開啟，不重建
+  const exist=clientIdxByRegNo(k);
+  if(exist>=0){openProspectClient(k);return;}
+  const noteParts=[];
+  if(p.industry)noteParts.push('行業：'+p.industry);
+  if(p.products)noteParts.push('主要產品：'+p.products);
+  if(p.employees)noteParts.push('員工數：'+p.employees);
+  if(p.approved)noteParts.push('核准：'+p.approved);
+  if(p.website)noteParts.push('網址：'+p.website);
+  if(p.regNo)noteParts.push('登記編號：'+p.regNo);
+  const c={
+    id:genId(),
+    name:p.name||'(未命名)',
+    contact:p.owner||'',
+    phone:p.phone||'',
+    addr:p.addr||'',
+    type:'工廠',
+    status:STATUS.UNVISITED,
+    regNo:k,
+    nextdate:'',env:'',
+    note:noteParts.join('　'),
+    trialItems:[],contractedItems:[],todos:[],visits:[],
+    updatedAt:Date.now()
+  };
+  DB.clients.push(c);
+  saveLocal();autoSync('save',{client:c});
+  if(c.addr&&!c.lat){try{enqueueGeocode(c);processGeoQueue();}catch(e){}}
+  renderProspects(document.getElementById('prospect-search')?.value||'');
+  navTo('clients',document.getElementById('nav-clients'));
+  setTimeout(()=>openCD(DB.clients.length-1),60);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3263,6 +3544,8 @@ function openCF(idx){
   const c=idx>=0?DB.clients[idx]:null;
   document.getElementById('cf-name').value=c?.name||'';
   document.getElementById('cf-contact').value=c?.contact||'';
+  document.getElementById('cf-phone').value=c?.phone||'';
+  document.getElementById('cf-regno').value=c?.regNo||'';
   document.getElementById('cf-addr').value=c?.addr||'';
   document.getElementById('cf-type').value=c?.type||'';
   document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.UNVISITED;
@@ -3517,6 +3800,8 @@ async function saveClient(){
     const c={
       name:document.getElementById('cf-name').value||'(未命名)',
       contact:document.getElementById('cf-contact').value,
+      phone:document.getElementById('cf-phone').value,
+      regNo:document.getElementById('cf-regno').value.trim(),
       addr:document.getElementById('cf-addr').value,
       type:document.getElementById('cf-type').value,
       status:document.getElementById('cf-status').value,
@@ -3621,6 +3906,8 @@ function openCD(i){
   }
   document.getElementById('cd-next').textContent=c.nextdate||'-';
   document.getElementById('cd-addr').textContent=c.addr||'-';
+  const pw=document.getElementById('cd-phone-w');
+  if(pw){if(c.phone){pw.style.display='block';document.getElementById('cd-phone').innerHTML='<a href="tel:'+escHtml(String(c.phone).replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+escHtml(c.phone)+'</a>';}else{pw.style.display='none';}}
   const ew=document.getElementById('cd-env-w');c.env?(ew.style.display='block',document.getElementById('cd-env').textContent=c.env):ew.style.display='none';
   const nw=document.getElementById('cd-note-w');c.note?(nw.style.display='block',document.getElementById('cd-note').textContent=c.note):nw.style.display='none';
   const tw=document.getElementById('cd-tri-w');
@@ -4495,6 +4782,13 @@ function calcAdminMetrics(clients){
   const conversionRate=totalEngaged>0?(contractShop/totalEngaged):0;
   return{trialAmount,trialShop,contractAmount,contractShop,conversionRate,totalEngaged};
 }
+// 呼叫單一業務員 Apps Script，回傳解析後 JSON；非 JSON（例：登入頁 HTML）給出明確錯誤
+async function fetchAdminAction(url,action){
+  const res=await fetch(url,{method:'POST',body:JSON.stringify({action})});
+  const text=await res.text();
+  try{return JSON.parse(text);}
+  catch(e){throw new Error('回應非 JSON（請確認 Apps Script 部署權限為「任何人」且網址正確）');}
+}
 async function loadAdminSnapshot(){
   saveAdminUrls();
   const urls=getAdminUrls();
@@ -4505,11 +4799,17 @@ async function loadAdminSnapshot(){
   // 並行抓取（每個業務 Sheet 互不影響）
   await Promise.all(urls.map(async (url,i)=>{
     try{
-      const res=await fetch(url,{method:'POST',body:JSON.stringify({action:'getSnapshot'})});
-      const json=await res.json();
-      if(json.error)throw new Error(json.error);
-      if(!json.ok||!Array.isArray(json.clients))throw new Error('回應格式不正確');
-      results[i]={sheetName:json.sheetName||('業務'+(i+1)),clients:json.clients,generatedAt:json.generatedAt,url};
+      let snap=await fetchAdminAction(url,'getSnapshot');
+      // 舊版 Apps Script（2026-04-26 前部署）未含 getSnapshot 端點，會回 {error:'Unknown action'}。
+      // 自動退回 getAll 仍可取得客戶資料，僅缺業務員姓名（以「業務N」代稱，提示更新）。
+      if(!snap||!Array.isArray(snap.clients)){
+        const fb=await fetchAdminAction(url,'getAll');
+        if(!fb||!Array.isArray(fb.clients)){
+          throw new Error((fb&&fb.error)||(snap&&snap.error)||'回應格式不正確');
+        }
+        snap={ok:true,clients:fb.clients,sheetName:'業務'+(i+1)+'（請更新 Apps Script 以顯示姓名）'};
+      }
+      results[i]={sheetName:snap.sheetName||('業務'+(i+1)),clients:snap.clients,generatedAt:snap.generatedAt,url};
     }catch(e){
       results[i]={sheetName:'(URL'+(i+1)+')',clients:[],error:e.message||String(e),url};
     }
@@ -4570,7 +4870,7 @@ function renderAdminDashboard(){
 // 偵測指定 clients 陣列中的重複組數（複用 normalizeName 邏輯）
 function findDuplicateGroupsIn(clients){
   const map=new Map();
-  (clients||[]).forEach(c=>{if(!c||!c.name)return;const k=normalizeName(c.name);if(!k)return;map.set(k,(map.get(k)||0)+1);});
+  (clients||[]).forEach(c=>{if(!c||!c.name)return;const k=c.regNo?('reg:'+String(c.regNo).trim()):normalizeName(c.name);if(!k)return;map.set(k,(map.get(k)||0)+1);});
   let n=0;map.forEach(v=>{if(v>=2)n++;});
   return n;
 }
@@ -4865,7 +5165,9 @@ const MIGRATIONS=[
 })();
 autoAddRecycleTodos();validateClients();renderClients();
 document.getElementById('daily-date').value=today();
-if(SHEET_URL){updateSheetStatus(true);loadShops();}
+if(SHEET_URL){updateSheetStatus(true);loadShops();if(OUTBOX.length)flushOutbox();}
+// C2: 恢復網路時自動補送待推送佇列
+window.addEventListener('online',()=>{if(SHEET_URL&&OUTBOX.length)flushOutbox();});
 
 // ═══════════════════════════════════════════════════════════
 // CONTRACTMAKER (報價單／合約 Word 產生器) — 整合自 contractmaker repo
