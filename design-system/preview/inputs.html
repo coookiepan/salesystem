@@ -1,0 +1,29 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{font-family:var(--font-sans);background:var(--bg);color:var(--text);padding:24px 26px}
+  .ttl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:20px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:22px 28px}
+  .f{display:flex;flex-direction:column}
+  .lbl{font-size:11px;color:var(--text3);margin-bottom:7px;font-weight:500;letter-spacing:.04em}
+  .inp{font-family:inherit;font-size:14.5px;color:var(--text);background:transparent;border:none;
+    border-bottom:1.5px solid var(--border);border-radius:0;padding:6px 2px;width:100%;outline:none;
+    transition:border-color .15s var(--ease)}
+  .inp::placeholder{color:var(--text3)}
+  .inp.foc{border-bottom-color:var(--green)}
+  .sel{position:relative}
+  .sel::after{content:'';position:absolute;right:2px;bottom:13px;width:7px;height:7px;border-right:1.5px solid var(--text3);border-bottom:1.5px solid var(--text3);transform:rotate(45deg)}
+  .cap{font-size:11px;color:var(--text3);margin-top:22px}
+</style></head>
+<body>
+  <div class="ttl">Form controls · minimal underline style</div>
+  <div class="g2">
+    <div class="f"><label class="lbl">客戶名稱</label><input class="inp foc" value="範例-陽光餐廳"></div>
+    <div class="f"><label class="lbl">窗口 / 職稱</label><input class="inp" placeholder="陳小姐 / 老闆"></div>
+    <div class="f"><label class="lbl">電話</label><input class="inp" placeholder="06-1234567"></div>
+    <div class="f sel"><label class="lbl">類型</label><input class="inp" value="餐廳" readonly></div>
+  </div>
+  <div class="cap">No boxes — a single hairline underline per field; focus lifts it to green. Labels stay quiet and small.</div>
+</body></html>

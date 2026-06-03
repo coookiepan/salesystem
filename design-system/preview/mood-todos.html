@@ -1,0 +1,30 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0}
+  body{font-family:var(--font-sans);background:var(--bg);color:var(--text);padding:22px}
+  .ttl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
+  .mood-row{display:flex;gap:8px;margin-bottom:18px}
+  .mood-btn{width:46px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text2)}
+  .mood-btn svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .mood-btn.on{border-color:var(--green);background:var(--green-l);color:var(--green-d)}
+  .todo{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .todo:last-child{border-bottom:none}
+  .todo input{width:17px;height:17px;accent-color:var(--green)}
+  .done{text-decoration:line-through;color:var(--text3)}
+  .cap{font-size:11px;color:var(--text3);margin:6px 0 14px}
+</style></head>
+<body>
+  <div class="ttl">Mood picker & to-dos · flat line-icon faces</div>
+  <div class="mood-row">
+    <button class="mood-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 16s1.3-2 3.5-2 3.5 2 3.5 2"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/></svg></button>
+    <button class="mood-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><line x1="8.5" y1="15" x2="15.5" y2="15"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/></svg></button>
+    <button class="mood-btn on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 14s1.3 2 3.5 2 3.5-2 3.5-2"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/></svg></button>
+    <button class="mood-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 13.5c0 2.2 1.8 3.6 4 3.6s4-1.4 4-3.6z"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/></svg></button>
+  </div>
+  <div class="cap">Stroked faces (frown · meh · smile · grin) — active = green-l fill + green border</div>
+  <div class="todo"><input type="checkbox" checked><span class="done">補送 5 月報價單</span></div>
+  <div class="todo"><input type="checkbox"><span>下次帶 DECSLR 地墊樣品</span></div>
+  <div class="todo"><input type="checkbox"><span>確認芳香機台口味偏好</span></div>
+</body></html>
