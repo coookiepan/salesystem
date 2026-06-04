@@ -137,6 +137,12 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .cc-map-btn:hover{background:var(--bg);border-color:var(--border2);color:var(--text)}
 .cc-map-btn:active{background:var(--bg3)}
 .cc-name{font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px;color:var(--text);line-height:1.35}
+/* 新設計：名稱與狀態同行，狀態圓角膠囊推到右邊 */
+.cc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:2px}
+.cc-head .cc-name{flex:1;min-width:0;margin-bottom:0}
+.cc-mapped .cc-head{padding-right:36px}
+.cc-status{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.4;flex-shrink:0}
+.cc-status .sdot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
 .cc-sub{font-size:12.5px;color:var(--text2);margin-bottom:8px;line-height:1.45}
 .cc-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
 .cc-meta{font-size:11.5px;color:var(--text3);display:flex;flex-wrap:wrap;gap:3px 14px;line-height:1.55}
@@ -1702,6 +1708,8 @@ function displayStatus(s){return s===STATUS.CLOSED?STATUS.REFUSE:(s||STATUS.UNVI
 function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)===n(b);}
 const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
+// 新設計：客戶列表卡片專用 — 狀態圓角膠囊（含圓點），放在卡片右上角
+function statusPill(t){const[bg,fg]=SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="cc-status" style="background:${bg};color:${fg}"><span class="sdot"></span>${t}</span>`;}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){logErr('loadLocal',e);}return null;}
 let _quotaWarned=false;
@@ -3684,15 +3692,15 @@ function renderClients(){
     const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
     const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
     const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
-    return`<div class="cc" onclick="openCD(${i})">
+    const _extraBadges=`${fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${pTodos}待辦</span>`:''}`;
+    return`<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
-      <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
-      <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
-      <div class="cc-badges">
-        ${bdg(displayStatus(c.status))}
-        ${fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:''}
-        ${pTodos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${pTodos}待辦</span>`:''}
+      <div class="cc-head">
+        <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
+        ${statusPill(displayStatus(c.status))}
       </div>
+      <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
+      ${_extraBadges?`<div class="cc-badges">${_extraBadges}</div>`:''}
       <div class="cc-meta">
         ${td?`<span>試用日：${td}</span>`:''}
         ${(() => {const t=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo).length;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'試用 '+t:''}</span>`:'';})()}
