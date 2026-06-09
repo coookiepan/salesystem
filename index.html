@@ -5528,7 +5528,20 @@ function cmDetectContractType(items){
   }) ? 'B' : 'A';
 }
 // 公司（乙方／DUSKIN）預設資料 — 供合約精靈預填立契約書人乙方
-const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號' };
+const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號', dept:'台南營業所' };
+// 西元起始日 + 年數 → 民國「起訖日期」契約期間。結束日 = 起日 + years 年 - 1 日（例：115/6/9 起、1 年 → 116/6/8 止）。
+function cmRocPeriod(start, years){
+  const m = String(start || '').trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+  const y = parseInt(years, 10);
+  if(!m || !(y > 0)) return null;
+  const sy = +m[1], smo = +m[2], sd = +m[3];
+  const startD = new Date(sy, smo - 1, sd);
+  if(isNaN(startD.getTime()) || startD.getMonth() !== smo - 1) return null;   // 擋掉不存在的日期（如 2/30）
+  const endD = new Date(sy + y, smo - 1, sd);
+  endD.setDate(endD.getDate() - 1);
+  const roc = d => '中華民國' + (d.getFullYear() - 1911) + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  return { startStr: roc(startD), endStr: roc(endD), full: '自' + roc(startD) + '起至' + roc(endD) + '止' };
+}
 
 // ─── 引擎核心（自 engine.js 改寫，瀏覽器內嵌版） ───
 const CM_engine = (function(catalog){
@@ -5951,7 +5964,12 @@ const CM_builder = (function(){
     const p=d.payment||{}, l=d.lease||{};
     const out=[];
     out.push(para([txt('二、租賃期間及付款方式協議如下：',{bold:true})]));
-    out.push(para([txt('　租賃期間：自 '),txt(l.start||'　　　　　',{bold:true}),txt(' 起，為期 '),txt(String(l.years||'　'),{bold:true,color:'C00000'}),txt(' 年（亦等同契約有效期間）。')]));
+    const period = cmRocPeriod(l.start, l.years);
+    if(period){
+      out.push(para([txt('　租賃期間：'),txt(period.full,{bold:true}),txt('（為期 '),txt(String(l.years),{bold:true}),txt(' 年，亦等同契約有效期間）。')]));
+    } else {
+      out.push(para([txt('　租賃期間：自 '),txt(l.start||'　　　　　',{bold:true}),txt(' 起，為期 '),txt(String(l.years||'　'),{bold:true}),txt(' 年（亦等同契約有效期間）。')]));
+    }
     out.push(para([txt('　結帳日期：每月 '),txt(String(p.billingDay||'　'),{bold:true}),txt(' 日　　付款日期：次月 '),txt(String(p.paymentDay||'　'),{bold:true}),txt(' 日。')]));
     out.push(para([txt('　請款及統一發票送達方式：')]));
     out.push(para([txt('　　'+cmCk(p.invoiceDelivery==='onsite')+' DUSKIN每次送貨時開立統一發票並當場向甲方收取現金。')]));
@@ -6710,7 +6728,7 @@ function cmwInit(c){
                invoiceTitle: c.name || '', taxId: c.regNo || '' },
     parties: {
       partyA: { company: c.name || '', address: c.addr || '', phone: c.phone || '', dept: '', contact: c.contact || '' },
-      partyB: { company: CM_COMPANY.name, address: CM_COMPANY.address, phone: CM_COMPANY.phone, dept: '', contact: CM_COMPANY.contact }
+      partyB: { company: CM_COMPANY.name, address: CM_COMPANY.address, phone: CM_COMPANY.phone, dept: CM_COMPANY.dept || '台南營業所', contact: CM_COMPANY.contact }
     },
     attachedTerms: cmContractAttachedTerms(autoType).slice()
   };
@@ -6882,7 +6900,8 @@ function cmwPreview(){
   lines.push('【DUSKIN商品租賃契約書】');
   lines.push('甲方（承租人）：' + (d.client || ''));
   lines.push('合約類型：' + (d.contractType === 'B' ? 'B · 含特製地墊' : 'A · 無特製地墊'));
-  lines.push('租賃期間：自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年');
+  const period = cmRocPeriod(d.lease.start, d.lease.years);
+  lines.push('租賃期間：' + (period ? period.full + '（為期 ' + d.lease.years + ' 年）' : ('自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年')));
   lines.push('');
   lines.push('商品明細：');
   d.items.forEach(it => {
@@ -7041,6 +7060,7 @@ return {
     defaultTerms: cmDefaultContractTermsText,
     changesPer4W: cmChangesPer4W,
     detectContractType: cmDetectContractType,
+    rocPeriod: cmRocPeriod,
     contractAttachedTerms: cmContractAttachedTerms,
     buildConfigFrom(state){ CM_state = state; return cmBuildConfig(); }
   }
@@ -7164,6 +7184,12 @@ if(location.search.includes('test=1')){
   assert('附帶事項 B 含訂做地墊段', CMT.contractAttachedTerms('B').some(l=>l.indexOf('訂做地墊特別協議')>=0), true);
   assert('附帶事項 A 不含訂做地墊段', CMT.contractAttachedTerms('A').some(l=>l.indexOf('訂做地墊特別協議')>=0), false);
   assert('附帶事項 含廉潔條款 email', CMT.contractAttachedTerms('A').some(l=>l.indexOf('compliance@duskin.com.tw')>=0), true);
+  // 契約期間 民國起訖：2026/06/09 起、1 年 → 自中華民國115年6月9日起至中華民國116年6月8日止
+  assert('rocPeriod 1年', CMT.rocPeriod('2026/06/09',1).full, '自中華民國115年6月9日起至中華民國116年6月8日止');
+  assert('rocPeriod 4年', CMT.rocPeriod('2026/06/09',4).full, '自中華民國115年6月9日起至中華民國119年6月8日止');
+  assert('rocPeriod 月底', CMT.rocPeriod('2026/03/01',1).full, '自中華民國115年3月1日起至中華民國116年2月28日止');
+  assert('rocPeriod 無年數→null', CMT.rocPeriod('2026/06/09',0), null);
+  assert('rocPeriod 壞日期→null', CMT.rocPeriod('abc',1), null);
   assert('csvCell null', csvCell(null), '');
   assert('csvCell undefined', csvCell(undefined), '');
 
