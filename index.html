@@ -675,7 +675,8 @@ tbody tr:hover{background:var(--surface-hover)}
         <div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
           <button class="btn btn-outline btn-sm" id="cd-quickquote-btn" onclick="ContractMaker.quickQuote()" title="一鍵以現有品項產生報價單 Word">⚡ 快速報價</button>
-          <button class="btn btn-primary btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單／合約 Word（可調整明細與條款）">📄 報價／合約</button>
+          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單 Word（可調整明細與條款）">📄 報價單</button>
+          <button class="btn btn-primary btn-sm" id="cd-contract-btn" onclick="ContractMaker.openContract()" title="製作公版 DUSKIN商品租賃契約書（分步精靈）">📑 產生合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -753,17 +754,18 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="cm-overlay" id="cm-modal">
   <div class="cm-panel">
     <header class="cm-head">
-      <h3>📄 產生報價單／合約 <span id="cm-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
+      <h3>📋 產生報價單 <span id="cm-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
       <button class="btn btn-outline btn-sm" id="cm-close-btn">關閉</button>
     </header>
     <div class="cm-body">
       <div id="cm-msg-box" class="cm-msg"></div>
 
-      <div class="cm-section">
+      <!-- 文件類型：合約改用「📑 產生合約」公版精靈，此視窗專責報價單；保留 radio 結構供模組事件綁定，但隱藏不再使用的合約書選項 -->
+      <div class="cm-section" style="display:none">
         <h4>文件類型</h4>
         <div class="cm-doctype">
           <label><input type="radio" name="cm-doctype" value="quote" checked data-cm-doctype> 📋 報價單</label>
-          <label><input type="radio" name="cm-doctype" value="contract" data-cm-doctype> 📄 合約書</label>
+          <label style="display:none"><input type="radio" name="cm-doctype" value="contract" data-cm-doctype> 📄 合約書</label>
         </div>
       </div>
 
@@ -852,6 +854,102 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="cm-body">
       <input id="cm-prod-search" placeholder="搜尋商品名稱 / 代號…" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;box-sizing:border-box;background:var(--bg);color:var(--text);font-family:inherit">
       <div id="cm-prod-list" class="cm-prod-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTRACTMAKER 合約精靈 — 公版 DUSKIN商品租賃契約書（事件由 ContractMaker 模組於 cmwMount() 綁定） ═══ -->
+<div class="cm-overlay" id="cm-wiz" style="z-index:1005">
+  <div class="cm-panel">
+    <header class="cm-head">
+      <h3>📑 製作 DUSKIN 合約 <span id="cmw-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
+      <button class="btn btn-outline btn-sm" id="cmw-close-btn">關閉</button>
+    </header>
+    <div class="cm-body">
+      <div id="cmw-steps" style="margin-bottom:10px"></div>
+      <div id="cmw-msg" class="cm-msg"></div>
+
+      <section data-wiz-step="0" class="cm-section">
+        <h4>步驟 1／6 · 詢問客戶的公版訊息</h4>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 8px">把下面訊息複製、傳給客戶，請對方回覆製作合約所需的資料。已知欄位會自動帶入。</p>
+        <textarea id="cmw-inquiry" rows="13" readonly style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
+        <div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="cmw-copy-btn">📋 複製訊息</button></div>
+      </section>
+
+      <section data-wiz-step="1" class="cm-section" style="display:none">
+        <h4>步驟 2／6 · 商品明細</h4>
+        <div class="cm-row">
+          <label class="cm-field"><span>合約類型</span>
+            <select id="cmw-type"><option value="A">A · 無特製地墊</option><option value="B">B · 含特製地墊</option></select>
+          </label>
+          <div class="cm-field"><span>系統判定</span><div id="cmw-type-auto" style="font-size:12px;color:var(--text3);padding:6px 0"></div></div>
+        </div>
+        <div id="cmw-items" class="cm-items"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <button class="btn btn-outline btn-sm" id="cmw-additem">＋ 從商品庫新增</button>
+        </div>
+        <div id="cmw-total" style="margin-top:8px;font-weight:600;text-align:right"></div>
+        <p style="font-size:11px;color:var(--text3);margin:6px 0 0">契約單價＝每件每次更換的價格；4W租賃金額與遺失賠償費單價由系統依更換週期自動換算（遺失賠償費單價＝每件4W金額×5）。</p>
+      </section>
+
+      <section data-wiz-step="2" class="cm-section" style="display:none">
+        <h4>步驟 3／6 · 租賃與付款</h4>
+        <div class="cm-row">
+          <label class="cm-field"><span>租賃起始日</span><input id="cmw-start" placeholder="YYYY/MM/DD"></label>
+          <label class="cm-field"><span>租賃期間（年）</span><input id="cmw-years" type="number" min="1" step="1"></label>
+        </div>
+        <div class="cm-row">
+          <label class="cm-field"><span>結帳日（每月 __ 日）</span><input id="cmw-billingDay" type="number" min="1" max="31" step="1"></label>
+          <label class="cm-field"><span>付款日（次月 __ 日）</span><input id="cmw-paymentDay" type="number" min="1" max="31" step="1"></label>
+        </div>
+        <div style="margin:8px 0">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">請款及統一發票送達方式</div>
+          <label style="display:block;margin-bottom:4px"><input type="radio" name="cmw-inv" value="onsite"> 當場開立統一發票並收取現金</label>
+          <label style="display:block"><input type="radio" name="cmw-inv" value="monthly"> 結帳日彙總開立一張發票，於付款日付款</label>
+        </div>
+        <div style="margin:8px 0">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">付款方式</div>
+          <label style="display:block;margin-bottom:4px"><input type="radio" name="cmw-pay" value="cash"> 現金（至指定地點取款）</label>
+          <label style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="cmw-pay" value="wire"> 匯款，匯款日 <input id="cmw-wireDays" type="number" min="0" step="1" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)"> 天</label>
+          <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="cmw-pay" value="check"> 支票，兌現日 <input id="cmw-checkDays" type="number" min="0" step="1" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)"> 天</label>
+        </div>
+        <div class="cm-row">
+          <label class="cm-field"><span>發票抬頭</span><input id="cmw-invTitle"></label>
+          <label class="cm-field"><span>統一編號</span><input id="cmw-taxId"></label>
+        </div>
+      </section>
+
+      <section data-wiz-step="3" class="cm-section" style="display:none">
+        <h4>步驟 4／6 · 立契約書人</h4>
+        <div style="font-size:12px;color:var(--text2);margin:4px 0">甲方（承租人）</div>
+        <div class="cm-row"><label class="cm-field"><span>公司名稱</span><input id="cmw-A-company"></label><label class="cm-field"><span>聯絡電話</span><input id="cmw-A-phone"></label></div>
+        <div class="cm-row"><label class="cm-field"><span>聯絡地址</span><input id="cmw-A-address"></label></div>
+        <div class="cm-row"><label class="cm-field"><span>經辦單位</span><input id="cmw-A-dept"></label><label class="cm-field"><span>經辦人</span><input id="cmw-A-contact"></label></div>
+        <div style="font-size:12px;color:var(--text2);margin:10px 0 4px">DUSKIN（出租人）</div>
+        <div class="cm-row"><label class="cm-field"><span>公司名稱</span><input id="cmw-B-company"></label><label class="cm-field"><span>聯絡電話</span><input id="cmw-B-phone"></label></div>
+        <div class="cm-row"><label class="cm-field"><span>聯絡地址</span><input id="cmw-B-address"></label></div>
+        <div class="cm-row"><label class="cm-field"><span>經辦單位</span><input id="cmw-B-dept"></label><label class="cm-field"><span>經辦人</span><input id="cmw-B-contact"></label></div>
+      </section>
+
+      <section data-wiz-step="4" class="cm-section" style="display:none">
+        <h4>步驟 5／6 · 附帶事項條款</h4>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 8px">內建公版附帶事項（含特製地墊條款依合約類型自動增減）。可自由增刪，一行一段。</p>
+        <textarea id="cmw-terms" rows="16" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box"></textarea>
+      </section>
+
+      <section data-wiz-step="5" class="cm-section" style="display:none">
+        <h4>步驟 6／6 · 預覽與下載</h4>
+        <div class="cm-preview" id="cmw-preview"></div>
+      </section>
+
+      <div class="cm-ios-tip" id="cmw-ios-tip">
+        <b>📱 iPhone / iPad 提示：</b>點「下載合約」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、Mail、訊息、LINE 任一都可保存或傳出。
+      </div>
+    </div>
+    <div class="cm-actions">
+      <button class="btn btn-outline" id="cmw-prev-btn" style="display:none">← 上一步</button>
+      <button class="btn btn-primary" id="cmw-next-btn">下一步 →</button>
+      <button class="btn btn-primary" id="cmw-download-btn" style="display:none">📥 下載合約</button>
     </div>
   </div>
 </div>
@@ -5406,6 +5504,22 @@ function cmCurClient(){
 // 商品庫（內嵌自 contractmaker/catalog.json）
 const CM_CATALOG ={"categories":{"mat_welcome":"迎賓系列","mat_elegant":"雅緻系列","mat_basic":"Basic 系列","mat_forever":"Forever 系列","mat_dust":"吸塵吸水系列","mat_thin":"薄型吸塵吸水系列","mat_luxury":"豪華系列","mat_luxury_2tone":"豪華系列(2色)","mat_strong":"強力刮砂系列","mat_metal":"鐵屑油污系列","mat_gender":"男女辨識系列","mat_custom":"訂做系列","fragrance":"芳香劑","urinal":"小便斗清潔","mop":"拖把/抹布"},"products":{"LYSR":{"name":"高級迎賓地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"LYLR":{"name":"高級迎賓地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DECSR":{"name":"歡迎光臨地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"DECSLR":{"name":"歡迎光臨地墊SL紅","category":"mat_welcome","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"DECLR":{"name":"歡迎光臨地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"DECLLR":{"name":"歡迎光臨地墊LL紅","category":"mat_welcome","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"DECTR":{"name":"歡迎光臨地墊T紅","category":"mat_welcome","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"GSH":{"name":"雅緻地墊S灰","category":"mat_elegant","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"GSB":{"name":"雅緻地墊S棕","category":"mat_elegant","size":"S","color":"棕","cycle":"2W","price":190,"discountable":true},"GLH":{"name":"雅緻地墊L灰","category":"mat_elegant","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"GLB":{"name":"雅緻地墊L棕","category":"mat_elegant","size":"L","color":"棕","cycle":"2W","price":360,"discountable":true},"GLLH":{"name":"雅緻地墊LL灰","category":"mat_elegant","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"GLLB":{"name":"雅緻地墊LL棕","category":"mat_elegant","size":"LL","color":"棕","cycle":"2W","price":500,"discountable":true},"GTH":{"name":"雅緻地墊T灰","category":"mat_elegant","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"GTB":{"name":"雅緻地墊T棕","category":"mat_elegant","size":"T","color":"棕","cycle":"2W","price":900,"discountable":true},"BSH":{"name":"Basic地墊S灰","category":"mat_basic","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"BSR":{"name":"Basic地墊S紅","category":"mat_basic","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"BSLH":{"name":"Basic地墊SL灰","category":"mat_basic","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"BSLR":{"name":"Basic地墊SL紅","category":"mat_basic","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"BLH":{"name":"Basic地墊L灰","category":"mat_basic","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"BLR":{"name":"Basic地墊L紅","category":"mat_basic","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"BLLH":{"name":"Basic地墊LL灰","category":"mat_basic","size":"LL","color":"灰","cycle":"2W","price":420,"discountable":true},"BLLR":{"name":"Basic地墊LL紅","category":"mat_basic","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"BXH":{"name":"Basic地墊X灰","category":"mat_basic","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"BXR":{"name":"Basic地墊X紅","category":"mat_basic","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"BTH":{"name":"Basic地墊T灰","category":"mat_basic","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"BTR":{"name":"Basic地墊T紅","category":"mat_basic","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"B3H":{"name":"Basic地墊3M灰","category":"mat_basic","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"B3R":{"name":"Basic地墊3M紅","category":"mat_basic","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"B5H":{"name":"Basic地墊5M灰","category":"mat_basic","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"B5R":{"name":"Basic地墊5M紅","category":"mat_basic","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"FFSSK":{"name":"Forever地墊SS黑灰","category":"mat_forever","size":"SS","color":"黑灰","cycle":"2W","price":140,"discountable":true},"FFSSR":{"name":"Forever地墊SS紅","category":"mat_forever","size":"SS","color":"紅","cycle":"2W","price":140,"discountable":true},"FFSK":{"name":"Forever地墊S黑灰","category":"mat_forever","size":"S","color":"黑灰","cycle":"2W","price":170,"discountable":true},"FFSR":{"name":"Forever地墊S紅","category":"mat_forever","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"FFSLK":{"name":"Forever地墊SL黑灰","category":"mat_forever","size":"SL","color":"黑灰","cycle":"2W","price":220,"discountable":true},"FFSLR":{"name":"Forever地墊SL紅","category":"mat_forever","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"FFLK":{"name":"Forever地墊L黑灰","category":"mat_forever","size":"L","color":"黑灰","cycle":"2W","price":280,"discountable":true},"FFLR":{"name":"Forever地墊L紅","category":"mat_forever","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"FFMK":{"name":"Forever地墊M黑灰","category":"mat_forever","size":"M","color":"黑灰","cycle":"2W","price":420,"discountable":true},"FFMR":{"name":"Forever地墊M紅","category":"mat_forever","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"FFXK":{"name":"Forever地墊X黑灰","category":"mat_forever","size":"X","color":"黑灰","cycle":"2W","price":550,"discountable":true},"FFTK":{"name":"Forever地墊T黑灰","category":"mat_forever","size":"T","color":"黑灰","cycle":"2W","price":720,"discountable":true},"FF3MK":{"name":"Forever地墊3M黑灰","category":"mat_forever","size":"3M","color":"黑灰","cycle":"2W","price":610,"discountable":true},"FF5MK":{"name":"Forever地墊5M黑灰","category":"mat_forever","size":"5M","color":"黑灰","cycle":"2W","price":880,"discountable":true},"FF5MR":{"name":"Forever地墊5M紅","category":"mat_forever","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"DWSSH":{"name":"吸塵吸水地墊SS灰","category":"mat_dust","size":"SS","color":"灰","cycle":"2W","price":170,"discountable":true},"DWSSR":{"name":"吸塵吸水地墊SS紅","category":"mat_dust","size":"SS","color":"紅","cycle":"2W","price":170,"discountable":true},"DWSH":{"name":"吸塵吸水地墊S灰","category":"mat_dust","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"DWSR":{"name":"吸塵吸水地墊S紅","category":"mat_dust","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"DWSLH":{"name":"吸塵吸水地墊SL灰","category":"mat_dust","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"DWSLR":{"name":"吸塵吸水地墊SL紅","category":"mat_dust","size":"SL","color":"紅","cycle":"2W","price":310,"discountable":true},"DWLH":{"name":"吸塵吸水地墊L灰","category":"mat_dust","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"DWLR":{"name":"吸塵吸水地墊L紅","category":"mat_dust","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DWLLH":{"name":"吸塵吸水地墊LL灰","category":"mat_dust","size":"LL","color":"灰","cycle":"2W","price":530,"discountable":true},"DWLLR":{"name":"吸塵吸水地墊LL紅","category":"mat_dust","size":"LL","color":"紅","cycle":"2W","price":530,"discountable":true},"DWXH":{"name":"吸塵吸水地墊X灰","category":"mat_dust","size":"X","color":"灰","cycle":"2W","price":690,"discountable":true},"DWXR":{"name":"吸塵吸水地墊X紅","category":"mat_dust","size":"X","color":"紅","cycle":"2W","price":690,"discountable":true},"DWTH":{"name":"吸塵吸水地墊T灰","category":"mat_dust","size":"T","color":"灰","cycle":"2W","price":940,"discountable":true},"DWTR":{"name":"吸塵吸水地墊T紅","category":"mat_dust","size":"T","color":"紅","cycle":"2W","price":940,"discountable":true},"DW3MH":{"name":"吸塵吸水地墊3M灰","category":"mat_dust","size":"3M","color":"灰","cycle":"2W","price":680,"discountable":true},"DW3MR":{"name":"吸塵吸水地墊3M紅","category":"mat_dust","size":"3M","color":"紅","cycle":"2W","price":680,"discountable":true},"DW4MH":{"name":"吸塵吸水地墊4M灰","category":"mat_dust","size":"4M","color":"灰","cycle":"2W","price":830,"discountable":true},"DW4MR":{"name":"吸塵吸水地墊4M紅","category":"mat_dust","size":"4M","color":"紅","cycle":"2W","price":830,"discountable":true},"DW5MH":{"name":"吸塵吸水地墊5M灰","category":"mat_dust","size":"5M","color":"灰","cycle":"2W","price":1050,"discountable":true},"DW5MR":{"name":"吸塵吸水地墊5M紅","category":"mat_dust","size":"5M","color":"紅","cycle":"2W","price":1050,"discountable":true},"UQSH":{"name":"薄型吸塵吸水地墊S灰","category":"mat_thin","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"UQSLH":{"name":"薄型吸塵吸水地墊SL灰","category":"mat_thin","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"UQLH":{"name":"薄型吸塵吸水地墊L灰","category":"mat_thin","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"UQLLH":{"name":"薄型吸塵吸水地墊LL灰","category":"mat_thin","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"UQTH":{"name":"薄型吸塵吸水地墊T灰","category":"mat_thin","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"UQ4MH":{"name":"薄型吸塵吸水地墊4M灰","category":"mat_thin","size":"4M","color":"灰","cycle":"2W","price":730,"discountable":true},"UQ5MH":{"name":"薄型吸塵吸水地墊5M灰","category":"mat_thin","size":"5M","color":"灰","cycle":"2W","price":910,"discountable":true},"TJSR":{"name":"豪華地墊S紅","category":"mat_luxury","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"TJSH":{"name":"豪華地墊S灰","category":"mat_luxury","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"TJSLR":{"name":"豪華地墊SL紅","category":"mat_luxury","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"TJSLH":{"name":"豪華地墊SL灰","category":"mat_luxury","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"TJLR":{"name":"豪華地墊L紅","category":"mat_luxury","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"TJLH":{"name":"豪華地墊L灰","category":"mat_luxury","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"TJMR":{"name":"豪華地墊M紅","category":"mat_luxury","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"TJMH":{"name":"豪華地墊M灰","category":"mat_luxury","size":"M","color":"灰","cycle":"2W","price":420,"discountable":true},"TJXR":{"name":"豪華地墊X紅","category":"mat_luxury","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"TJXH":{"name":"豪華地墊X灰","category":"mat_luxury","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"TJTR":{"name":"豪華地墊T紅","category":"mat_luxury","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"TJTH":{"name":"豪華地墊T灰","category":"mat_luxury","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"TJ3MR":{"name":"豪華地墊3M紅","category":"mat_luxury","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"TJ3MH":{"name":"豪華地墊3M灰","category":"mat_luxury","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"TJ5MR":{"name":"豪華地墊5M紅","category":"mat_luxury","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"TJ5MH":{"name":"豪華地墊5M灰","category":"mat_luxury","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"2SN2":{"name":"豪華地墊S紅(2色)","category":"mat_luxury_2tone","size":"S","color":"紅(2色)","cycle":"2W","price":170,"discountable":true},"2SLN2":{"name":"豪華地墊SL紅(2色)","category":"mat_luxury_2tone","size":"SL","color":"紅(2色)","cycle":"2W","price":220,"discountable":true},"2LN2":{"name":"豪華地墊L紅(2色)","category":"mat_luxury_2tone","size":"L","color":"紅(2色)","cycle":"2W","price":280,"discountable":true},"2MN2":{"name":"豪華地墊M紅(2色)","category":"mat_luxury_2tone","size":"M","color":"紅(2色)","cycle":"2W","price":420,"discountable":true},"2TN2":{"name":"豪華地墊T紅(2色)","category":"mat_luxury_2tone","size":"T","color":"紅(2色)","cycle":"2W","price":720,"discountable":true},"EXSG":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSH":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSLG":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXSLH":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXLG":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"EXLH":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"ELLG":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"ELLH":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"EXTG":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"EXTH":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"KKSG":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSH":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSLG":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKSLH":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKLG":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"KKLH":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"MANSB":{"name":"男女辨識地墊(男)S棕","category":"mat_gender","size":"S","color":"棕","cycle":"2W","price":170,"discountable":true},"MWOSR":{"name":"男女辨識地墊(女)S紅","category":"mat_gender","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"AMWT":{"name":"小型擴香芳香系列-白茶","category":"fragrance","size":"120ml","cycle":"4W","price":500,"discountable":false},"BF-L":{"name":"BF複方精油芳香系列-檸檬馬鞭草","category":"fragrance","size":"240ml","cycle":"4W","price":200,"discountable":false},"DOME":{"name":"網狀尿石去除劑","category":"urinal","size":"40g","cycle":"4W","price":200,"discountable":false},"NSAC":{"name":"業務用除塵拖把","category":"mop","size":null,"cycle":"4W","price":200,"discountable":true},"M-90":{"name":"業務用除塵特大拖把","category":"mop","size":"34×120","cycle":"4W","price":null,"discountable":true},"S-20":{"name":"業務用握把式抹布","category":"mop","size":"18×32","cycle":"4W","price":null,"discountable":true},"HPL":{"name":"訂做地墊2色L","category":"mat_custom","size":"L","color":"2色","cycle":"2W","price":360,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"},"HPS":{"name":"訂做地墊2色S","category":"mat_custom","size":"S","color":"2色","cycle":"2W","price":230,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"}}};
 
+// ─── 合約共用工具（報價與合約共用的小算法） ───
+// 每 4 週更換次數：1週→4、2週→2、4週→1
+function cmChangesPer4W(cycle){ return cycle==='1W'?4 : cycle==='2W'?2 : 1; }
+// 是否含特製地墊（訂做系列 mat_custom / 有 contractYears）→ B 型合約，否則 A 型
+function cmDetectContractType(items){
+  return (items||[]).some(it=>{
+    if(!it) return false;
+    if(it.isCustomMat) return true;
+    const code = it.code || it.product;
+    const p = code && CM_CATALOG.products[code];
+    return !!(p && (p.category==='mat_custom' || p.contractYears));
+  }) ? 'B' : 'A';
+}
+// 公司（乙方／DUSKIN）預設資料 — 供合約精靈預填立契約書人乙方
+const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號' };
+
 // ─── 引擎核心（自 engine.js 改寫，瀏覽器內嵌版） ───
 const CM_engine = (function(catalog){
   function expandItem(item, options){
@@ -5791,12 +5905,110 @@ const CM_builder = (function(){
       styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
       sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
   }
+  // ═══ 公版「DUSKIN商品租賃契約書」專用 builder（與報價單完全獨立） ═══
+  function cmCk(on){ return on ? '☑' : '☐'; }
+  function cmCycleLabel(c){ return c==='1W'?'1週' : c==='2W'?'2週' : '4週'; }
+  function ctTitle(){
+    const {Paragraph,AlignmentType}=getDocx();
+    return new Paragraph({alignment:AlignmentType.CENTER, spacing:{after:120}, children:[txt('DUSKIN商品租賃契約書',{bold:true,size:32})]});
+  }
+  function ctPreamble(d){
+    return para([txt('茲有承租人 '),txt(d.client||'　　　　　　',{bold:true}),txt(' （以下簡稱甲方）與樂清服務股份有限公司（以下簡稱DUSKIN），雙方同意訂立商品租賃契約如下：')]);
+  }
+  function ctItemTable(d){
+    const {Table,TableRow,WidthType,AlignmentType}=getDocx();
+    const isB = d.contractType==='B';
+    const headers = isB
+      ? ['商品名稱','更換週期','契約數量','製作張數','契約單價','特製費單價','特製費','遺失賠償費單價','4W租賃金額']
+      : ['商品名稱','更換週期','契約數量','契約單價','遺失賠償費單價','4W租賃金額'];
+    const rows = [new TableRow({tableHeader:true, children:headers.map(h=>cell(h,{bold:true,alignment:AlignmentType.CENTER,fill:COLOR_HEADER}))})];
+    for(const it of (d.items||[])){
+      const cs = [ cell(it.name||it.code||'',{}), cell(cmCycleLabel(it.cycle),{alignment:AlignmentType.CENTER}), cell(it.qty,{alignment:AlignmentType.CENTER}) ];
+      if(isB) cs.push(cell((it.sheets==null||it.sheets==='')?'':it.sheets,{alignment:AlignmentType.CENTER}));
+      cs.push(cell(fmt(it.contractUnit),{alignment:AlignmentType.RIGHT}));
+      if(isB){ cs.push(cell('',{})); cs.push(cell('',{})); }   // 特製費單價／特製費 留白手填
+      cs.push(cell(fmt(it.lossUnit),{alignment:AlignmentType.RIGHT}));
+      cs.push(cell(fmt(it.row4W),{alignment:AlignmentType.RIGHT}));
+      rows.push(new TableRow({children:cs}));
+    }
+    rows.push(new TableRow({children:[
+      cell('合計',{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_TOTAL,colSpan:headers.length-1}),
+      cell(fmt(d.grandTotal),{bold:true,alignment:AlignmentType.RIGHT,fill:COLOR_TOTAL})
+    ]}));
+    return new Table({width:{size:100,type:WidthType.PERCENTAGE},rows});
+  }
+  function ctPaymentBlock(d){
+    const p=d.payment||{}, l=d.lease||{};
+    const out=[];
+    out.push(para([txt('二、租賃期間及付款方式協議如下：',{bold:true})]));
+    out.push(para([txt('　租賃期間：自 '),txt(l.start||'　　　　　',{bold:true}),txt(' 起，為期 '),txt(String(l.years||'　'),{bold:true,color:'C00000'}),txt(' 年（亦等同契約有效期間）。')]));
+    out.push(para([txt('　結帳日期：每月 '),txt(String(p.billingDay||'　'),{bold:true}),txt(' 日　　付款日期：次月 '),txt(String(p.paymentDay||'　'),{bold:true}),txt(' 日。')]));
+    out.push(para([txt('　請款及統一發票送達方式：')]));
+    out.push(para([txt('　　'+cmCk(p.invoiceDelivery==='onsite')+' DUSKIN每次送貨時開立統一發票並當場向甲方收取現金。')]));
+    out.push(para([txt('　　'+cmCk(p.invoiceDelivery==='monthly')+' DUSKIN每次送貨時不開立統一發票，而於結帳日彙總開立一張發票予甲方，甲方並於付款日期付款。')]));
+    out.push(para([txt('　付款方式：')]));
+    out.push(para([txt('　　'+cmCk(p.paymentMethod==='cash')+' 現金（DUSKIN至甲方指定地點取款）')]));
+    out.push(para([txt('　　'+cmCk(p.paymentMethod==='wire')+' 匯款，匯款日 '+((p.paymentMethod==='wire'&&p.wireDays)?p.wireDays:'　　')+' 天（依月結發票開立日起算）')]));
+    out.push(para([txt('　　'+cmCk(p.paymentMethod==='check')+' 支票，兌現日 '+((p.paymentMethod==='check'&&p.checkDays)?p.checkDays:'　　')+' 天（依月結發票開立日起算）')]));
+    out.push(para([txt('　發票抬頭：'),txt(p.invoiceTitle||''),txt('　　　統一編號：'),txt(p.taxId||'')]));
+    return out;
+  }
+  function ctClause34(d){
+    const addr=(d.parties&&d.parties.partyA&&d.parties.partyA.address)||'';
+    return [
+      para([txt('三、送貨地點以甲方契約地址（'+addr+'）為準，經甲方確認無誤；若日後有增加或減少，另以書面通知為憑。')]),
+      para([txt('四、酒精機台及芳香劑機台皆為DUSKIN提供，合約期限內由DUSKIN負責保固責任。')])
+    ];
+  }
+  function ctSigners(d){
+    const {Table,TableRow,TableCell,WidthType,VerticalAlign,Paragraph,AlignmentType}=getDocx();
+    const A=(d.parties&&d.parties.partyA)||{}, B=(d.parties&&d.parties.partyB)||{};
+    const side=(title,o)=>[ para([txt(title,{bold:true})]),
+      para([txt('公司名稱：'),txt(o.company||'')]),
+      para([txt('聯絡地址：'),txt(o.address||'')]),
+      para([txt('聯絡電話：'),txt(o.phone||'')]),
+      para([txt('經辦單位：'),txt(o.dept||'')]),
+      para([txt('經 辦 人：'),txt(o.contact||'')]) ];
+    const tbl=new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({children:[
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:side('甲方（承租人）',A)}),
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:side('DUSKIN（出租人）',B)})
+    ]})]});
+    return [
+      new Paragraph({spacing:{before:220,after:80},children:[txt('立契約書人',{bold:true})]}),
+      tbl,
+      new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:160,after:80},children:[txt('中　華　民　國　　　　年　　　月　　　日')]})
+    ];
+  }
+  function ctAttachedTerms(d){
+    const {Paragraph}=getDocx();
+    const lines=(d.attachedTerms&&d.attachedTerms.length)?d.attachedTerms:cmContractAttachedTerms(d.contractType);
+    return lines.map((ln,i)=>new Paragraph({spacing:{before:i===0?200:0,after:40},children:[txt(ln,i===0?{bold:true}:{})]}));
+  }
+  function buildContractDocument(d){
+    const {Document,Paragraph}=getDocx();
+    const children=[
+      ctTitle(),
+      ctPreamble(d),
+      new Paragraph({spacing:{before:120,after:60},children:[txt('一、DUSKIN將為顧客定期配送更換租賃商品。有關租賃商品數量、更換週期、契約價格如下表：',{bold:true})]}),
+      ctItemTable(d),
+      ...ctPaymentBlock(d),
+      ...ctClause34(d),
+      ...ctSigners(d),
+      ...ctAttachedTerms(d)
+    ];
+    return new Document({creator:'樂清服務股份有限公司', title:'DUSKIN商品租賃契約書',
+      styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
+      sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
+  }
   async function buildBlob(config){
     const {Packer} = getDocx();
+    if(config && config.docType==='contract' && config.contract){
+      return await Packer.toBlob(buildContractDocument(config.contract));
+    }
     const quote = CM_engine.expandQuote(config);
     return await Packer.toBlob(buildDocument(quote));
   }
-  return {buildBlob};
+  return {buildBlob, buildContractDocument};
 })();
 
 // ─── docx UMD 延遲載入 ───
@@ -5826,6 +6038,43 @@ function cmDefaultContractTermsText(){
     '合約期間屆滿前一個月，雙方未以書面表示異議者，視同續約一年，並依此類推。',
     '本合約一式二份，由甲乙雙方各執一份為憑。'
   ].join('\n');
+}
+
+// ─── 公版契約書「附帶事項」全文（A/B 變體；可在精靈內逐行增刪） ───
+// type==='B'（含特製地墊）才輸出三(二)訂做地墊特別協議。回傳逐行陣列，行首全形空白用於縮排。
+function cmContractAttachedTerms(type){
+  const isB = type === 'B';
+  const L = [];
+  L.push('附帶事項');
+  L.push('一、本契約期滿前任何一方未提出解約時，雙方一律視同依原條件及期間自動續約一年，並以一年為限。');
+  L.push('二、1.本契約中，DUSKIN提供之商品(包括租賃商品及服務性商品)僅供甲方使用，其所有權仍屬於DUSKIN。甲方應盡善良管理人之義務為DUSKIN保管商品，甲方不得轉貸、轉用以及挪用他處，且本合約屆期或終止時，需立即將所有商品交還予DUSKIN，甲方並授權DUSKIN得逕至該商品置放處所自行取回。');
+  L.push('2.若甲方有壹期(含)以上之款項積欠未支付或有開立票據不能兌現之情事時，DUSKIN可逕行終止本合約，並逕自取回所提供之商品。');
+  L.push('3.商品送達後甲方應即派員驗收並與出貨單上之明細核對後簽收，一經甲方或甲方指派之人員於出貨單上簽名後，即視為DUSKIN已完成交付，且甲方亦已對此確認。');
+  L.push('三、「DUSKIN租賃商品」特別協議內容如下：');
+  L.push('(一)甲方租用之商品(包括租賃商品以及服務性商品) 特別協議內容如下：');
+  L.push('1.甲方租用之商品(包括租賃商品以及服務性商品)遺失時，甲方須負賠償之責任。賠償金額如契約書第一條所定之 遺失賠償費單價×遺失數量。');
+  L.push('2.甲方提前終止違約金 ＝ （合約期－使用月數）× 商品契約單價 × 30% × 商品使用數量。');
+  L.push('3.甲方於收受並驗收商品時，若發現商品品質不良、損壞之情形，則由DUSKIN負擔相關責任或更換；但若是因甲方或第三人使用商品之疏失(如燒焦、異物附著、剪斷等)使得商品未達DUSKIN所訂之品質標準時，則甲方須負賠償之責，賠償金額如契約書第一項所定之 遺失賠償費單價×遺失數量，計算所得之結果。');
+  if(isB){
+    L.push('(二)甲方租用訂做地墊特別協議內容如下：');
+    L.push('1.特製地墊解約違約金 ＝（合約期－使用月數）× 商品契約單價 × 30% × 商品製作張數。');
+    L.push('※本商品租賃契約期間，若甲方於契約期滿前欲提前終止合約時，必須依上列算式所計算之違約金額支付予DUSKIN。');
+    L.push('2.甲方委託DUSKIN設計製作之商標、圖案及文字等地墊設計版權及智慧財產權均屬DUSKIN所有，在未經DUSKIN許可下，禁止侵權轉用，但若屬於甲方之著作權等智慧財產權則不在此限。');
+    L.push('3.對於甲方指定之商標等文字圖案，若有第三者提出著作權等智慧財產權侵害之訴時，則由甲方負擔責任與訴訟等相關費用自行解決，DUSKIN毋需負擔任何責任。若因此造成DUSKIN有任何損害或遭第三人提出主張及訴訟時，甲方應對DUSKIN負損害賠償責任，並負擔DUSKIN因此產生之相關費用。');
+    L.push('4.商品因遺失、破損等情形不堪使用時，DUSKIN可暫時逕自以其他同等級、類型之商品代替。');
+  }
+  L.push('四、甲方租賃商品之洗淨加工由DUSKIN指定之工廠負責。');
+  L.push('五、為提供商品試用/承租/購買等完善之服務，甲方須提供DUSKIN可聯絡對應之個人資料。甲方保證提供之個人資料已獲得當事者之同意，並同意提供予DUSKIN進行相關處理及利用。雙方應嚴守中華民國相關個人資料保護之法律，善盡妥善管理、保存責任。甲方若提出個人資料查詢、補充或更正，請求停止處理或利用，或要求刪除，DUSKIN應以誠實迅速之態度對甲方之請求。');
+  L.push('六、因本契約書而涉訟時，雙方同意以台北地方法院為第一審管轄法院。');
+  L.push('七、甲方就本合約書之履行得知DUSKIN業務或任何資訊均應保密，並不得透露予任何第三人。');
+  L.push('八、因可歸責於甲方之事由(如使用或設置不當，商品未有明顯瑕疵且未經充分舉證)而造成任何第三人損害要求賠償時，應由甲方出面負責處理並支付相關費用，若因而造成DUSKIN損害，亦應負一切賠償責任。');
+  L.push('九、為維護本合約簽署當事人之共同利益，確保交易清廉，同意並保證如下：');
+  L.push('一方及其成員(包括但不限於董事、經理人、受僱人、受任人或具有實質控制能力之人，下稱「所屬員工」)絕不以任何直接、間接方式要求、期約、收受、給予他方所屬員工或相關廠商(包括但不限於雙方交易有關之第三人)任何有形或無形之不正利益（包括但不限於賄賂、抽成費、回扣金、餽贈等)。');
+  L.push('一方知悉所屬員工或相關廠商(包括但不限於與雙方事項有關之第三人)，涉及上述不正利益時，應立即主動以書面或口頭指名告知對方， 雙方聯絡訊息如下:');
+  L.push('DUSKIN聯絡： compliance@duskin.com.tw');
+  L.push('甲方公司聯絡：');
+  L.push('任一方於本合約或本交易中如有涉及上述不正利益之情事者，他方有權隨時無條件終止本合約及其他合約或交易。');
+  return L;
 }
 
 // ─── 客戶 → 合約配置橋接 ───
@@ -5893,6 +6142,8 @@ function clientToCMConfig(c){
 // ─── 模態狀態與 UI ───
 let CM_state = null;
 let CM_pickContext = null;
+let CM_wiz = null;          // 合約精靈暫存狀態（不持久化，關閉即清）
+let CM_pickWiz = false;     // 商品選擇器目前是否服務於合約精靈
 
 function cmSet(path, val){
   if(!CM_state) return;
@@ -6107,6 +6358,7 @@ function cmOpenProdPicker(idx){
 function cmCloseProdPicker(){
   document.getElementById('cm-prod-modal').classList.remove('on');
   CM_pickContext = null;
+  CM_pickWiz = false;
 }
 function cmRenderProdList(){
   const q = (document.getElementById('cm-prod-search').value || '').trim().toLowerCase();
@@ -6131,6 +6383,13 @@ function cmRenderProdList(){
       row.className = 'cm-prod-row';
       row.innerHTML = '<div><div class="name"><b>'+HOST.escapeHtml(p.code)+'</b> '+HOST.escapeHtml(p.name)+'</div><div class="meta">'+HOST.escapeHtml([p.size,p.color,p.cycle].filter(Boolean).join(' · '))+'</div></div><div class="price">$'+(p.price==null?'—':p.price)+'</div>';
       row.onclick = () => {
+        if(CM_pickWiz){
+          if(CM_pickContext != null && CM_wiz && CM_wiz.items[CM_pickContext]){
+            cmwSetItemProduct(CM_pickContext, p.code);
+          }
+          cmCloseProdPicker();
+          return;
+        }
         if(CM_pickContext != null && CM_state.items[CM_pickContext]){
           const it = CM_state.items[CM_pickContext];
           it.code = p.code;
@@ -6396,12 +6655,364 @@ function cmMount(){
   });
 }
 
+// ═══════════════════════════════════════════════════════════
+// 合約精靈（公版 DUSKIN商品租賃契約書）— 分步、一步一頁、不持久化
+// ═══════════════════════════════════════════════════════════
+// 由商品庫／主程式商品庫推每件 4W 金額（無 quoted 時的後援）
+function cmwCatalogPer4W(code){
+  const p = CM_CATALOG.products[code];
+  if(p && p.price != null) return p.price * (p.cycle === '2W' ? 2 : 1);
+  const sp = HOST.getProduct(code);
+  if(sp && sp.price != null) return sp.price * (sp.cycle === '2W' ? 2 : 1);
+  return 0;
+}
+// 由客戶建立精靈暫存狀態
+function cmwInit(c){
+  c = c || {};
+  const useContracted = !!(c.contractedItems && c.contractedItems.length);
+  const src = useContracted ? c.contractedItems : (c.trialItems || []);
+  const usable = (src || []).filter(it => it && it.product && !it.bundledTo);
+  const items = usable.map(it => {
+    const qty = it.qty || 1;
+    const cycle = (it.cycle === '1W' || it.cycle === '2W' || it.cycle === '4W') ? it.cycle : '2W';
+    const per4W = (it.quoted && qty) ? Math.round(it.quoted / qty) : cmwCatalogPer4W(it.product);
+    const n = cmChangesPer4W(cycle);
+    const p = CM_CATALOG.products[it.product];
+    const sp = !p ? HOST.getProduct(it.product) : null;
+    return {
+      code: it.product,
+      name: p ? p.name : (sp && sp.desc ? sp.desc : it.product),
+      qty, cycle,
+      contractUnit: n ? Math.round(per4W / n) : per4W,
+      sheets: '',
+      isCustomMat: !!(p && (p.category === 'mat_custom' || p.contractYears))
+    };
+  });
+  const autoType = cmDetectContractType(items);
+  const dt = (HOST.today() || '').replace(/-/g, '/');
+  CM_wiz = {
+    step: 0, client: c.name || '', date: dt,
+    autoType, contractType: autoType, typeManual: false, termsManual: false,
+    items,
+    lease: { start: dt, years: autoType === 'B' ? 4 : 1 },
+    payment: { billingDay: '', paymentDay: '', invoiceDelivery: 'monthly',
+               paymentMethod: 'cash', wireDays: '', checkDays: '',
+               invoiceTitle: c.name || '', taxId: c.regNo || '' },
+    parties: {
+      partyA: { company: c.name || '', address: c.addr || '', phone: c.phone || '', dept: '', contact: c.contact || '' },
+      partyB: { company: CM_COMPANY.name, address: CM_COMPANY.address, phone: CM_COMPANY.phone, dept: '', contact: CM_COMPANY.contact }
+    },
+    attachedTerms: cmContractAttachedTerms(autoType).slice()
+  };
+}
+function cmwShowMsg(text, kind){
+  const box = document.getElementById('cmw-msg'); if(!box) return;
+  box.className = 'cm-msg' + (kind ? ' ' + kind : '');
+  box.textContent = text || '';
+}
+function cmwBuildInquiry(){
+  const w = CM_wiz, A = w.parties.partyA, p = w.payment;
+  const f = v => v || '';
+  return [
+    '您好，這裡是樂清服務（DUSKIN）。',
+    '為製作貴公司的「DUSKIN 商品租賃契約書」，煩請確認／補充以下資料，謝謝您！',
+    '',
+    '一、基本資料',
+    '公司名稱：' + f(A.company),
+    '統一編號：' + f(p.taxId),
+    '聯絡地址：' + f(A.address),
+    '公司電話：' + f(A.phone),
+    '經辦人：' + f(A.contact),
+    '發票抬頭（與公司名稱不同時再填）：',
+    '',
+    '二、付款方式（請擇一）',
+    '□ 現金（送貨當場收款）　□ 匯款　□ 支票',
+    '※ 選「匯款」者，請告知結帳日：每月 ____ 日',
+    '',
+    '三、租賃商品需求',
+    '商品與數量、更換週期（1／2／4 週）、放置位置：',
+    '',
+    '麻煩您回覆，感謝協助！'
+  ].join('\n');
+}
+function cmwCopyInquiry(){
+  const ta = document.getElementById('cmw-inquiry'); if(!ta) return;
+  const done = () => cmwShowMsg('已複製訊息，可貼給客戶。', 'success');
+  const fallback = () => { try{ ta.focus(); ta.select(); document.execCommand('copy'); done(); }catch(e){ cmwShowMsg('複製失敗，請手動選取複製。', 'warn'); } };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(done).catch(fallback);
+  } else { fallback(); }
+}
+function cmwAutoType(){
+  const auto = cmDetectContractType(CM_wiz.items);
+  CM_wiz.autoType = auto;
+  if(!CM_wiz.typeManual){
+    CM_wiz.contractType = auto;
+    if(auto === 'B' && (!CM_wiz.lease.years || CM_wiz.lease.years < 4)) CM_wiz.lease.years = 4;
+    if(!CM_wiz.termsManual) CM_wiz.attachedTerms = cmContractAttachedTerms(auto).slice();
+  }
+  const sel = document.getElementById('cmw-type'); if(sel) sel.value = CM_wiz.contractType;
+  const au = document.getElementById('cmw-type-auto');
+  if(au) au.textContent = '（自動判定：' + (auto === 'B' ? 'B · 含特製地墊' : 'A · 無特製地墊') + '）';
+}
+function cmwSetItemProduct(idx, code){
+  const it = CM_wiz.items[idx]; if(!it) return;
+  const p = CM_CATALOG.products[code];
+  it.code = code;
+  it.name = p ? p.name : (HOST.getProduct(code) && HOST.getProduct(code).desc) || code;
+  it.isCustomMat = !!(p && (p.category === 'mat_custom' || p.contractYears));
+  if(p && p.cycle) it.cycle = p.cycle;
+  if(it.contractUnit === '' || it.contractUnit == null){
+    const per4W = cmwCatalogPer4W(code), n = cmChangesPer4W(it.cycle);
+    it.contractUnit = n ? Math.round(per4W / n) : per4W;
+  }
+  cmwAutoType();
+  cmwRenderItems();
+}
+function cmwOpenPicker(idx){
+  CM_pickWiz = true; CM_pickContext = idx;
+  document.getElementById('cm-prod-search').value = '';
+  cmRenderProdList();
+  document.getElementById('cm-prod-modal').classList.add('on');
+}
+function cmwAddItem(){
+  CM_wiz.items.push({ code: '', name: '', qty: 1, cycle: '2W', contractUnit: '', sheets: '', isCustomMat: false });
+  cmwRenderItems();
+  cmwOpenPicker(CM_wiz.items.length - 1);
+}
+function cmwRemoveItem(idx){
+  CM_wiz.items.splice(idx, 1);
+  cmwAutoType();
+  cmwRenderItems();
+}
+function cmwRenderItems(){
+  const cont = document.getElementById('cmw-items'); if(!cont) return;
+  cont.innerHTML = '';
+  const isB = CM_wiz.contractType === 'B';
+  CM_wiz.items.forEach((it, idx) => {
+    const n = cmChangesPer4W(it.cycle), cu = Number(it.contractUnit) || 0, per4W = cu * n, qty = parseInt(it.qty, 10) || 1;
+    const div = document.createElement('div'); div.className = 'cm-item';
+    const head = document.createElement('div'); head.className = 'cm-item-head';
+    const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'cm-item-pick' + (it.code ? '' : ' empty');
+    pick.innerHTML = it.code
+      ? '<span class="code">' + HOST.escapeHtml(it.code) + '</span>' + HOST.escapeHtml(it.name || '') + (it.isCustomMat ? '<span class="price" style="color:#A36B00">特製地墊</span>' : '')
+      : '👉 點此從商品庫選擇';
+    pick.onclick = () => cmwOpenPicker(idx);
+    const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'cm-item-rm'; rm.textContent = '✕'; rm.title = '刪除品項'; rm.setAttribute('aria-label', '刪除此品項');
+    rm.onclick = () => cmwRemoveItem(idx);
+    head.appendChild(pick); head.appendChild(rm); div.appendChild(head);
+    const fields = document.createElement('div'); fields.className = 'cm-item-fields';
+    const cw = document.createElement('label'); cw.className = 'cm-field';
+    const cs = document.createElement('span'); cs.textContent = '更換週期'; cw.appendChild(cs);
+    const sel = document.createElement('select');
+    [['1W', '1週'], ['2W', '2週'], ['4W', '4週']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if(it.cycle === v) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { it.cycle = sel.value; cmwRenderItems(); };
+    cw.appendChild(sel); fields.appendChild(cw);
+    fields.appendChild(cmField('契約數量', 'number', it.qty || 1, v => { it.qty = parseInt(v, 10) || 1; cmwRenderItems(); }, { min: 1 }));
+    fields.appendChild(cmField('契約單價(每次更換)', 'number', it.contractUnit === '' ? '' : it.contractUnit, v => { it.contractUnit = v === '' ? '' : Number(v); cmwRenderItems(); }, { min: 0, step: 'any', placeholder: '每件每次更換' }));
+    if(isB) fields.appendChild(cmField('製作張數', 'number', it.sheets === '' ? '' : it.sheets, v => { it.sheets = v === '' ? '' : Number(v); }, { min: 0, step: '1', placeholder: '手填' }));
+    div.appendChild(fields);
+    const info = document.createElement('div'); info.style.cssText = 'font-size:11px;color:var(--text3);margin-top:4px';
+    info.textContent = '每件4W金額 ' + per4W.toLocaleString() + '　·　遺失賠償費單價 ' + (per4W * 5).toLocaleString() + '　·　4W租賃金額 ' + (per4W * qty).toLocaleString();
+    div.appendChild(info);
+    cont.appendChild(div);
+  });
+  if(CM_wiz.items.length === 0) cont.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3)">尚無商品，請按下方「＋ 從商品庫新增」。</div>';
+  cmwUpdateTotal();
+}
+function cmwUpdateTotal(){
+  const el = document.getElementById('cmw-total'); if(!el) return;
+  let t = 0;
+  CM_wiz.items.forEach(it => { const n = cmChangesPer4W(it.cycle); t += (Number(it.contractUnit) || 0) * n * (parseInt(it.qty, 10) || 1); });
+  el.textContent = '4W 租賃金額合計：' + t.toLocaleString();
+}
+function cmwSyncToUI(){
+  const w = CM_wiz, p = w.payment, l = w.lease;
+  const set = (id, v) => { const e = document.getElementById(id); if(e) e.value = (v == null ? '' : v); };
+  set('cmw-start', l.start); set('cmw-years', l.years);
+  set('cmw-billingDay', p.billingDay); set('cmw-paymentDay', p.paymentDay);
+  set('cmw-wireDays', p.wireDays); set('cmw-checkDays', p.checkDays);
+  set('cmw-invTitle', p.invoiceTitle); set('cmw-taxId', p.taxId);
+  const inv = document.querySelector('input[name=cmw-inv][value="' + p.invoiceDelivery + '"]'); if(inv) inv.checked = true;
+  const pay = document.querySelector('input[name=cmw-pay][value="' + p.paymentMethod + '"]'); if(pay) pay.checked = true;
+  const A = w.parties.partyA, B = w.parties.partyB;
+  set('cmw-A-company', A.company); set('cmw-A-address', A.address); set('cmw-A-phone', A.phone); set('cmw-A-dept', A.dept); set('cmw-A-contact', A.contact);
+  set('cmw-B-company', B.company); set('cmw-B-address', B.address); set('cmw-B-phone', B.phone); set('cmw-B-dept', B.dept); set('cmw-B-contact', B.contact);
+  set('cmw-terms', (w.attachedTerms || []).join('\n'));
+  const sel = document.getElementById('cmw-type'); if(sel) sel.value = w.contractType;
+}
+function cmwBuildContractData(){
+  const w = CM_wiz;
+  const items = w.items.filter(it => it.code).map(it => {
+    const n = cmChangesPer4W(it.cycle);
+    const contractUnit = Number(it.contractUnit) || 0;
+    const per4W = contractUnit * n;
+    const qty = parseInt(it.qty, 10) || 1;
+    return { code: it.code, name: it.name || it.code, cycle: it.cycle, qty, contractUnit, n,
+             per4W, row4W: per4W * qty, lossUnit: per4W * 5,
+             sheets: (it.sheets === '' || it.sheets == null) ? '' : it.sheets };
+  });
+  const grandTotal = items.reduce((s, i) => s + i.row4W, 0);
+  return { client: w.client, date: w.date, contractType: w.contractType, items, grandTotal,
+           lease: w.lease, payment: w.payment, parties: w.parties,
+           attachedTerms: (w.attachedTerms || []).filter(l => l != null) };
+}
+function cmwCycleText(c){ return c === '1W' ? '1週' : c === '2W' ? '2週' : '4週'; }
+function cmwPreview(){
+  const d = cmwBuildContractData();
+  const lines = [];
+  lines.push('【DUSKIN商品租賃契約書】');
+  lines.push('甲方（承租人）：' + (d.client || ''));
+  lines.push('合約類型：' + (d.contractType === 'B' ? 'B · 含特製地墊' : 'A · 無特製地墊'));
+  lines.push('租賃期間：自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年');
+  lines.push('');
+  lines.push('商品明細：');
+  d.items.forEach(it => {
+    let s = '  ・' + (it.name || it.code) + '（' + cmwCycleText(it.cycle) + '）×' + it.qty + '　契約單價 ' + it.contractUnit + '　遺失賠償費單價 ' + it.lossUnit + '　4W租賃金額 ' + it.row4W;
+    if(d.contractType === 'B') s += '　製作張數 ' + (it.sheets === '' ? '（手填）' : it.sheets);
+    lines.push(s);
+  });
+  lines.push('  合計（每 4 週）：' + d.grandTotal.toLocaleString());
+  lines.push('');
+  lines.push('結帳日：每月 ' + (d.payment.billingDay || '__') + ' 日　付款日：次月 ' + (d.payment.paymentDay || '__') + ' 日');
+  lines.push('發票送達：' + (d.payment.invoiceDelivery === 'onsite' ? '當場開立發票收現' : '結帳日彙總開立一張'));
+  lines.push('付款方式：' + (d.payment.paymentMethod === 'cash' ? '現金取款' : d.payment.paymentMethod === 'wire' ? ('匯款（' + (d.payment.wireDays || '__') + ' 天）') : ('支票（兌現 ' + (d.payment.checkDays || '__') + ' 天）')));
+  lines.push('');
+  lines.push('附帶事項：共 ' + d.attachedTerms.filter(Boolean).length + ' 行（可於「附帶事項」步驟編輯）');
+  const el = document.getElementById('cmw-preview'); if(el) el.textContent = lines.join('\n');
+}
+function cmwRenderSteps(){
+  const labels = ['公版訊息', '商品明細', '租賃付款', '立契約書人', '附帶事項', '預覽下載'];
+  const el = document.getElementById('cmw-steps'); if(!el) return;
+  el.innerHTML = labels.map((t, i) => '<span style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;font-size:11px;' + (i === CM_wiz.step ? 'background:var(--brand-d,#1f4e79);color:#fff' : 'background:var(--surface2,#eee);color:var(--text3,#888)') + '">' + (i + 1) + '. ' + t + '</span>').join('');
+}
+function cmwGoTo(n){
+  if(!CM_wiz) return;
+  if(n > CM_wiz.step && CM_wiz.step === 1){
+    const valid = CM_wiz.items.filter(it => it.code && (Number(it.contractUnit) || 0) > 0);
+    if(valid.length === 0){ cmwShowMsg('請至少加入一筆商品並填寫契約單價。', 'warn'); return; }
+  }
+  cmwShowMsg('', '');
+  n = Math.max(0, Math.min(5, n));
+  CM_wiz.step = n;
+  document.querySelectorAll('#cm-wiz [data-wiz-step]').forEach(s => { s.style.display = (Number(s.dataset.wizStep) === n) ? 'block' : 'none'; });
+  const prev = document.getElementById('cmw-prev-btn'), next = document.getElementById('cmw-next-btn'), dl = document.getElementById('cmw-download-btn');
+  if(prev) prev.style.display = n === 0 ? 'none' : '';
+  if(next) next.style.display = n === 5 ? 'none' : '';
+  if(dl) dl.style.display = n === 5 ? '' : 'none';
+  cmwRenderSteps();
+  if(n === 0){ const ta = document.getElementById('cmw-inquiry'); if(ta) ta.value = cmwBuildInquiry(); }
+  if(n === 1){ cmwAutoType(); cmwRenderItems(); }
+  if(n === 5) cmwPreview();
+  const body = document.querySelector('#cm-wiz .cm-body'); if(body) body.scrollTop = 0;
+}
+function cmwOpen(){
+  const c = cmCurClient();
+  if(!c){ alert('請先開啟客戶詳情'); return; }
+  cmwInit(c);
+  const nm = document.getElementById('cmw-client-name'); if(nm) nm.textContent = c.name ? '· ' + c.name : '';
+  cmwSyncToUI();
+  cmwShowMsg('', '');
+  const tip = document.getElementById('cmw-ios-tip'); if(tip) tip.classList.toggle('on', cmIsIOS());
+  document.getElementById('cm-wiz').classList.add('on');
+  document.body.style.overflow = 'hidden';
+  cmwGoTo(0);
+  cmLoadDocx().catch(e => console.warn('[CMW] docx preload failed:', e.message));
+}
+function cmwClose(){
+  document.getElementById('cm-wiz').classList.remove('on');
+  document.body.style.overflow = '';
+  CM_wiz = null;
+}
+async function cmwDownload(){
+  const btn = document.getElementById('cmw-download-btn'); const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '產生中…';
+  try{
+    const d = cmwBuildContractData();
+    if(!d.items.length) throw new Error('沒有可輸出的商品');
+    btn.textContent = '載入函式庫…'; await cmLoadDocx();
+    btn.textContent = '組裝中…';
+    const blob = await CM_builder.buildBlob({ docType: 'contract', contract: d });
+    const fname = 'DUSKIN商品租賃契約書_' + cmSafeFilename(d.client || '客戶') + '.docx';
+    const result = await cmTriggerSave(blob, fname);
+    const c = result !== 'cancelled' ? cmCurClient() : null;
+    if(c){
+      c.visits = c.visits || [];
+      c.visits.unshift({ date: HOST.today(), note: '已產生合約書：' + fname, statusChange: '', insight: '', mood: 0 });
+      c.updatedAt = Date.now();
+      HOST.save(); HOST.sync('save', { client: c }); HOST.onChange();
+    }
+    if(result === 'cancelled') cmwShowMsg('已取消分享。', 'warn');
+    else if(result === 'shared') cmwShowMsg('✅ 已透過系統分享 ' + fname, 'success');
+    else if(result === 'newtab') cmwShowMsg('✅ 已在新分頁開啟 ' + fname + '，請於該頁點「分享」→「儲存到檔案」', 'success');
+    else cmwShowMsg('✅ 已下載 ' + fname + '，並寫入拜訪紀錄。', 'success');
+  } catch(e){
+    cmwShowMsg('產生失敗：' + (e.message || String(e)), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+let CMW_mounted = false;
+function cmwMount(){
+  if(CMW_mounted) return;
+  const wiz = document.getElementById('cm-wiz'); if(!wiz) return;
+  CMW_mounted = true;
+  const bind = (id, fn) => { const e = document.getElementById(id); if(e) e.addEventListener('click', fn); };
+  bind('cmw-close-btn', cmwClose);
+  bind('cmw-prev-btn', () => { if(CM_wiz) cmwGoTo(CM_wiz.step - 1); });
+  bind('cmw-next-btn', () => { if(CM_wiz) cmwGoTo(CM_wiz.step + 1); });
+  bind('cmw-download-btn', cmwDownload);
+  bind('cmw-copy-btn', cmwCopyInquiry);
+  bind('cmw-additem', () => { if(CM_wiz) cmwAddItem(); });
+  const onInput = (id, fn) => { const e = document.getElementById(id); if(e) e.addEventListener('input', () => { if(CM_wiz) fn(e.value); }); };
+  onInput('cmw-start', v => CM_wiz.lease.start = v);
+  onInput('cmw-years', v => CM_wiz.lease.years = v === '' ? '' : Number(v));
+  onInput('cmw-billingDay', v => CM_wiz.payment.billingDay = v);
+  onInput('cmw-paymentDay', v => CM_wiz.payment.paymentDay = v);
+  onInput('cmw-wireDays', v => CM_wiz.payment.wireDays = v);
+  onInput('cmw-checkDays', v => CM_wiz.payment.checkDays = v);
+  onInput('cmw-invTitle', v => CM_wiz.payment.invoiceTitle = v);
+  onInput('cmw-taxId', v => CM_wiz.payment.taxId = v);
+  onInput('cmw-A-company', v => CM_wiz.parties.partyA.company = v);
+  onInput('cmw-A-address', v => CM_wiz.parties.partyA.address = v);
+  onInput('cmw-A-phone', v => CM_wiz.parties.partyA.phone = v);
+  onInput('cmw-A-dept', v => CM_wiz.parties.partyA.dept = v);
+  onInput('cmw-A-contact', v => CM_wiz.parties.partyA.contact = v);
+  onInput('cmw-B-company', v => CM_wiz.parties.partyB.company = v);
+  onInput('cmw-B-address', v => CM_wiz.parties.partyB.address = v);
+  onInput('cmw-B-phone', v => CM_wiz.parties.partyB.phone = v);
+  onInput('cmw-B-dept', v => CM_wiz.parties.partyB.dept = v);
+  onInput('cmw-B-contact', v => CM_wiz.parties.partyB.contact = v);
+  onInput('cmw-terms', v => { CM_wiz.attachedTerms = v.split('\n'); CM_wiz.termsManual = true; });
+  document.querySelectorAll('input[name=cmw-inv]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked) CM_wiz.payment.invoiceDelivery = r.value; }));
+  document.querySelectorAll('input[name=cmw-pay]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked) CM_wiz.payment.paymentMethod = r.value; }));
+  const typeSel = document.getElementById('cmw-type');
+  if(typeSel) typeSel.addEventListener('change', () => {
+    if(!CM_wiz) return;
+    CM_wiz.typeManual = true;
+    CM_wiz.contractType = typeSel.value === 'B' ? 'B' : 'A';
+    if(CM_wiz.contractType === 'B' && (!CM_wiz.lease.years || CM_wiz.lease.years < 4)) CM_wiz.lease.years = 4;
+    if(!CM_wiz.termsManual) CM_wiz.attachedTerms = cmContractAttachedTerms(CM_wiz.contractType).slice();
+    cmwSyncToUI();
+    cmwRenderItems();
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && wiz.classList.contains('on')){
+      if(document.getElementById('cm-prod-modal') && document.getElementById('cm-prod-modal').classList.contains('on')) return;
+      cmwClose();
+    }
+  });
+  wiz.addEventListener('click', e => { if(e.target === wiz) cmwClose(); });
+}
+
 // ── 對外 API ──
 return {
   // 注入 host adapter（主程式啟動時呼叫一次）
   init(host){ if(host) Object.assign(HOST, host); return this; },
   // 客戶卡「📄 報價／合約」：開啟完整視窗
   open(){ cmMount(); openCM(); },
+  // 客戶卡「📑 產生合約」：開啟公版合約精靈
+  openContract(){ cmwMount(); cmwOpen(); },
   // 客戶卡「⚡ 快速報價」：一鍵產生報價單
   quickQuote(){ cmMount(); cmQuickQuote(); },
   // 測試用內部 handle（正式 UI 不使用；供 ?test=1 驗證純函式）
@@ -6410,6 +7021,9 @@ return {
     engine: CM_engine,
     clientToConfig: clientToCMConfig,
     defaultTerms: cmDefaultContractTermsText,
+    changesPer4W: cmChangesPer4W,
+    detectContractType: cmDetectContractType,
+    contractAttachedTerms: cmContractAttachedTerms,
     buildConfigFrom(state){ CM_state = state; return cmBuildConfig(); }
   }
 };
@@ -6509,6 +7123,29 @@ if(location.search.includes('test=1')){
   assert('csvCell 含雙引號', csvCell('a"b'), '"a""b"');
   assert('csvCell 含換行', csvCell('a\nb'), '"a\nb"');
   assert('csvCell 數字', csvCell(100), '100');
+
+  // --- 合約精靈純函式（公版契約書）---
+  const CMT = ContractMaker._test;
+  assert('changesPer4W 1週', CMT.changesPer4W('1W'), 4);
+  assert('changesPer4W 2週', CMT.changesPer4W('2W'), 2);
+  assert('changesPer4W 4週', CMT.changesPer4W('4W'), 1);
+  // 反推：quoted=800（整列4W）, qty=2 → 每件4W=400；2W → 契約單價=200；遺失賠償=每件4W×5=2000
+  (function(){
+    const qty=2, quoted=800, per4W=Math.round(quoted/qty), n=CMT.changesPer4W('2W');
+    assert('每件4W金額 = quoted/qty', per4W, 400);
+    assert('契約單價 = 每件4W/n', Math.round(per4W/n), 200);
+    assert('遺失賠償費單價 = 每件4W×5', per4W*5, 2000);
+    assert('4W租賃金額 = 每件4W×qty', per4W*qty, 800);
+  })();
+  // 1週：契約單價150 → 每件4W=600、遺失賠償=3000、整列(qty2)=1200
+  assert('1週 每件4W = 契約單價×4', 150*CMT.changesPer4W('1W'), 600);
+  // A/B 判定：HPL（mat_custom）→ B；S-20（一般）→ A
+  assert('detectContractType 含訂做地墊 → B', CMT.detectContractType([{code:'HPL'},{code:'S-20'}]), 'B');
+  assert('detectContractType 無訂做地墊 → A', CMT.detectContractType([{code:'S-20'},{code:'DECSR'}]), 'A');
+  // 附帶事項：B 比 A 多出「訂做地墊特別協議」段
+  assert('附帶事項 B 含訂做地墊段', CMT.contractAttachedTerms('B').some(l=>l.indexOf('訂做地墊特別協議')>=0), true);
+  assert('附帶事項 A 不含訂做地墊段', CMT.contractAttachedTerms('A').some(l=>l.indexOf('訂做地墊特別協議')>=0), false);
+  assert('附帶事項 含廉潔條款 email', CMT.contractAttachedTerms('A').some(l=>l.indexOf('compliance@duskin.com.tw')>=0), true);
   assert('csvCell null', csvCell(null), '');
   assert('csvCell undefined', csvCell(undefined), '');
 
