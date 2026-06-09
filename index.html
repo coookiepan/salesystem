@@ -1317,7 +1317,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.09-c3';
+const APP_VERSION='v2026.06.09-c4';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -5506,8 +5506,10 @@ const CM_engine = (function(catalog){
     // 更換週期：以使用者選擇為準（1W/2W/4W）→ 商品庫週期 → 4W
     const cycle = item.cycle || (product && product.cycle) || '4W';
     const changes = cmChangesPer4W(cycle);   // 1週→4、2週→2、4週→1
-    // 單價＝每次更換單價：優先用 item.unit；否則用商品庫定價（price 本就是每次更換單價，不可預乘次數）
-    const unitPrice = (unit != null && unit !== '') ? Number(unit) : (product ? product.price : null);
+    // 單價＝每次更換單價：優先用 item.unit（使用者手填／已換算）；
+    // 否則退回商品庫 2週價，並依所選週期換算（4週每次更換＝2週價×2）
+    const unitPrice = (unit != null && unit !== '') ? Number(unit)
+                     : (product && product.price != null ? (cycle === '4W' ? product.price * 2 : product.price) : null);
     const name = nameOverride || (product && product.name) || code;
     if(!product){
       if(unitPrice == null) throw new Error('代號「'+code+'」不在商品庫，請填單價');
@@ -6002,12 +6004,19 @@ function cmContractAttachedTerms(type){
   return L;
 }
 
+// 商品庫 price 是「2週價」（以 2 週週期計的每次更換單價）。換算成所選週期的「每次更換單價」：
+//   4 週每次更換涵蓋 2 倍期間 → 2週價×2；2 週／1 週維持 2週價。
+function cmCatalogUnit(price, cycle){
+  if(price == null) return null;
+  return cycle === '4W' ? price * 2 : price;
+}
 // ─── 客戶 → 合約配置橋接 ───
 // 規則：
 // - 優先用 contractedItems（已成約品項），無則用 trialItems
 // - 排除 bundledTo（配件）
 // - 不在合約商品庫的代號 → 自動建為「臨時新品」（從 salesystem 商品庫補品名/單價），記錄到 _meta.autoCustomCodes
-// - 單價＝每次更換單價：有議價 quoted（整列每4週總額）→ unit = quoted /（換洗次數 × 數量）；否則用商品庫定價
+// - 單價＝每次更換單價：有議價 quoted（整列每4週總額）→ unit = quoted /（換洗次數 × 數量）；
+//   否則用商品庫 2週價經 cmCatalogUnit 換算（4週×2）
 function clientToCMConfig(c){
   c = c || {};
   const useContracted = !!(c.contractedItems && c.contractedItems.length);
@@ -6023,20 +6032,20 @@ function clientToCMConfig(c){
     const changes = cmChangesPer4W(cycle);   // 1週→4、2週→2、4週→1
     const out = { code: it.product, qty, cycle };
     // 單價＝每次更換單價：
-    //   有議價 quoted（整列每4週總額）→ 反推每次更換單價 = quoted /（換洗次數 × 數量）
-    //   否則用商品庫定價（price 本就是「每次更換單價」，不可預乘次數）
+    //   有議價 quoted（整列每4週總額）→ 反推每次更換單價 = quoted /（換洗次數 × 數量）（談定價）
+    //   否則用商品庫 2週價，經 cmCatalogUnit 換算成所選週期的每次更換單價（4週×2），並標記為自動帶入
     if(it.quoted && it.quoted > 0 && qty > 0 && changes > 0){
       out.unit = Math.round(it.quoted / (changes * qty));
     } else if(cat && cat.price != null){
-      out.unit = cat.price;
+      out.unit = cmCatalogUnit(cat.price, cycle); out._unitAuto = true;
     }
     if(it.loc) out.loc = it.loc;
-    // 不在合約商品庫的代號 → 從主程式商品庫補品名／單價（單價同為「每次更換單價」，不預乘次數）
+    // 不在合約商品庫的代號 → 從主程式商品庫補品名／單價（sp.price 同為 2週價，亦經 cmCatalogUnit 換算）
     if(!cat){
       autoCustomCodes.push(it.product);
       const sp = HOST.getProduct(it.product);
       out.name = (sp && sp.desc) ? sp.desc : it.product;
-      if(out.unit == null && sp && sp.price != null && sp.price > 0) out.unit = sp.price;
+      if(out.unit == null && sp && sp.price != null && sp.price > 0){ out.unit = cmCatalogUnit(sp.price, cycle); out._unitAuto = true; }
     }
     return out;
   });
@@ -6211,10 +6220,15 @@ function cmRenderItems(){
       if((it.cycle || '2W') === v) o.selected = true;
       sel.appendChild(o);
     });
-    sel.onchange = () => { it.cycle = sel.value; cmRenderItems(); };
+    sel.onchange = () => {
+      it.cycle = sel.value;
+      // 自動帶入的單價隨週期重算（商品庫 2週價→所選週期，4週×2）；手動改過的單價保留
+      if(it._unitAuto){ const cp = CM_CATALOG.products[it.code]; if(cp && cp.price != null) it.unit = cmCatalogUnit(cp.price, it.cycle); }
+      cmRenderItems();
+    };
     cw.appendChild(sel); fields.appendChild(cw);
     fields.appendChild(cmField('數量', 'number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; cmRenderItems(); }, {min:1}));
-    fields.appendChild(cmField('單價(每次更換)', 'number', (it.unit == null || it.unit === '') ? '' : it.unit, v => { it.unit = v === '' ? '' : Number(v); cmRenderItems(); }, {placeholder:'每次更換單價', step:'any', min:0}));
+    fields.appendChild(cmField('單價(每次更換)', 'number', (it.unit == null || it.unit === '') ? '' : it.unit, v => { it.unit = v === '' ? '' : Number(v); it._unitAuto = false; cmRenderItems(); }, {placeholder:'每次更換單價', step:'any', min:0}));
     div.appendChild(fields);
 
     // 位置：勾選才出現
@@ -6321,7 +6335,9 @@ function cmRenderProdList(){
           const cp = CM_CATALOG.products[p.code];
           if(cp){
             it.cycle = cp.cycle || it.cycle || '2W';
-            it.unit = (cp.price != null) ? cp.price : '';
+            const u = cmCatalogUnit(cp.price, it.cycle);
+            it.unit = (u != null) ? u : '';
+            it._unitAuto = true;
           }
           cmRenderItems();
         }
@@ -7203,9 +7219,13 @@ if(location.search.includes('test=1')){
   // DECSR 2週→次數2；quoted=600, qty=2 → unit = 600/(2×2) = 150
   const cmC6=clientToCMConfig({name:'E店',contractedItems:[{product:'DECSR',qty:2,quoted:600,cycle:'2W'}]});
   assert('clientToCMConfig unit=quoted/(次數×數量)',cmC6.items[0].unit,150);
-  // quoted=0 → 用商品庫定價（DECSR=170）
+  // quoted=0 → 用商品庫 2週價（DECSR=170），2週維持原價
   const cmC7=clientToCMConfig({name:'F店',contractedItems:[{product:'DECSR',qty:1,quoted:0}]});
-  assert('clientToCMConfig quoted=0→商品庫定價',cmC7.items[0].unit,170);
+  assert('clientToCMConfig quoted=0→商品庫2週價',cmC7.items[0].unit,170);
+  // 商品庫 price 是 2週價：4週每次更換單價 = 2週價×2（DECSR 170 → 340）
+  const cmC8=clientToCMConfig({name:'G店',contractedItems:[{product:'DECSR',qty:1,quoted:0,cycle:'4W'}]});
+  assert('clientToCMConfig 4週 unit=2週價×2',cmC8.items[0].unit,340);
+  assert('clientToCMConfig 4週 標記自動帶入',cmC8.items[0]._unitAuto,true);
 
   // 完整流程：DECSR 單價170(每次更換)、2週→次數2、qty1 → monthly = 170×2×1 = 340
   CM_state=clientToCMConfig({name:'測試店',contractedItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}]});
@@ -7222,13 +7242,19 @@ if(location.search.includes('test=1')){
   // 1週：單價150、數量2 → 次數4 → 150×4×2 = 1200
   CM_state={client:'M',date:'2026/05/07',items:[{code:'NSAC',qty:2,cycle:'1W',unit:150}]};
   assert('1週 單價150×4×2 = 1200',CM_engine.expandQuote(cmBuildConfig()).grandTotal,1200);
-  // 4週：DECSR 改 4週 → 次數1 → 170×1×1 = 170
+  // 4週：手填單價170（每次更換）→ 次數1 → 170×1×1 = 170（手填價不加倍）
   CM_state={client:'M',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'4W',unit:170}]};
-  assert('4週 DECSR 170×1×1 = 170',CM_engine.expandQuote(cmBuildConfig()).grandTotal,170);
-  // changesPer4W 確認
+  assert('4週 手填單價170×1×1 = 170',CM_engine.expandQuote(cmBuildConfig()).grandTotal,170);
+  // changesPer4W 確認（手填單價）
   assert('expandItem 換洗次數 1週=4',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'1W',unit:10}).monthly,40);
   assert('expandItem 換洗次數 2週=2',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'2W',unit:10}).monthly,20);
   assert('expandItem 換洗次數 4週=1',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'4W',unit:10}).monthly,10);
+  // 商品庫 2週價 + 未手填單價 → 依週期換算（4週每次更換×2、2/1週×1）
+  assert('考題 DWLH 4週(390 2週價) = 390×2×1 = 780',CM_engine.expandItem({code:'DWLH',qty:1,cycle:'4W'}).monthly,780);
+  assert('考題 UQSH 2週×2片(190) = 190×2×2 = 760',CM_engine.expandQuote({client:'X',date:'x',items:[{code:'UQSH',qty:2,cycle:'2W'}]}).grandTotal,760);
+  assert('考題 GLH 1週(360) = 360×4×1 = 1440',CM_engine.expandItem({code:'GLH',qty:1,cycle:'1W'}).monthly,1440);
+  assert('DECSR 4週 未手填 = 170×2(每次)×1 = 340',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'4W'}).monthly,340);
+  assert('DECSR 4週 未手填 unitPrice = 340',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'4W'}).unitPrice,340);
 
   // 預覽/輸出不顯示代號、規格；週期顯示中文、單價＝每次更換單價
   CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170}]};
