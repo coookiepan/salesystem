@@ -459,6 +459,12 @@ tbody tr:hover{background:var(--surface-hover)}
 .cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:14px}
 .cm-flags label{display:flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
 .cm-flags input[type=checkbox]{width:18px;height:18px}
+/* 合約精靈：付款／發票送達等單選列，避免全域 input{width:100%} 把 radio 撐成方框 */
+.cmw-group-label{font-size:12px;color:var(--text2);margin:10px 0 2px;font-weight:600}
+.cmw-opts{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}
+.cmw-opts label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;min-height:34px;flex-wrap:wrap}
+#cm-wiz input[type=radio]{width:18px;height:18px;flex:0 0 auto;padding:0;margin:0;accent-color:var(--green)}
+.cmw-opts input[type=number]{width:64px;flex:0 0 auto;padding:6px 8px}
 .cm-items{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
 .cm-item{background:var(--bg2);border-radius:var(--radius-sm);padding:10px;display:flex;flex-direction:column;gap:8px}
 .cm-item-head{display:flex;align-items:center;gap:8px}
@@ -898,22 +904,26 @@ tbody tr:hover{background:var(--surface-hover)}
           <label class="cm-field"><span>租賃起始日</span><input id="cmw-start" placeholder="YYYY/MM/DD"></label>
           <label class="cm-field"><span>租賃期間（年）</span><input id="cmw-years" type="number" min="1" step="1"></label>
         </div>
-        <div class="cm-row">
+
+        <div class="cmw-group-label">付款方式（請擇一）</div>
+        <div class="cmw-opts">
+          <label><input type="radio" name="cmw-pay" value="cash"> 現金（送貨當場收款）</label>
+          <label><input type="radio" name="cmw-pay" value="wire"> 匯款，匯款日 <input id="cmw-wireDays" type="number" min="0" step="1"> 天</label>
+          <label><input type="radio" name="cmw-pay" value="check"> 支票，兌現日 <input id="cmw-checkDays" type="number" min="0" step="1"> 天</label>
+        </div>
+
+        <div id="cmw-billing-row" class="cm-row">
           <label class="cm-field"><span>結帳日（每月 __ 日）</span><input id="cmw-billingDay" type="number" min="1" max="31" step="1"></label>
           <label class="cm-field"><span>付款日（次月 __ 日）</span><input id="cmw-paymentDay" type="number" min="1" max="31" step="1"></label>
         </div>
-        <div style="margin:8px 0">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">請款及統一發票送達方式</div>
-          <label style="display:block;margin-bottom:4px"><input type="radio" name="cmw-inv" value="onsite"> 當場開立統一發票並收取現金</label>
-          <label style="display:block"><input type="radio" name="cmw-inv" value="monthly"> 結帳日彙總開立一張發票，於付款日付款</label>
+
+        <div class="cmw-group-label">請款及統一發票送達方式（請擇一）</div>
+        <div class="cmw-opts">
+          <label><input type="radio" name="cmw-inv" value="onsite"> 當場開立統一發票並收取現金</label>
+          <label><input type="radio" name="cmw-inv" value="monthly"> 結帳日彙總開立一張發票，於付款日付款</label>
         </div>
-        <div style="margin:8px 0">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">付款方式</div>
-          <label style="display:block;margin-bottom:4px"><input type="radio" name="cmw-pay" value="cash"> 現金（至指定地點取款）</label>
-          <label style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="cmw-pay" value="wire"> 匯款，匯款日 <input id="cmw-wireDays" type="number" min="0" step="1" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)"> 天</label>
-          <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="cmw-pay" value="check"> 支票，兌現日 <input id="cmw-checkDays" type="number" min="0" step="1" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)"> 天</label>
-        </div>
-        <div class="cm-row">
+
+        <div class="cm-row" style="margin-top:8px">
           <label class="cm-field"><span>發票抬頭</span><input id="cmw-invTitle"></label>
           <label class="cm-field"><span>統一編號</span><input id="cmw-taxId"></label>
         </div>
@@ -1354,7 +1364,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.03-m3';
+const APP_VERSION='v2026.06.09-c2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -5518,7 +5528,20 @@ function cmDetectContractType(items){
   }) ? 'B' : 'A';
 }
 // 公司（乙方／DUSKIN）預設資料 — 供合約精靈預填立契約書人乙方
-const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號' };
+const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號', dept:'台南營業所' };
+// 西元起始日 + 年數 → 民國「起訖日期」契約期間。結束日 = 起日 + years 年 - 1 日（例：115/6/9 起、1 年 → 116/6/8 止）。
+function cmRocPeriod(start, years){
+  const m = String(start || '').trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+  const y = parseInt(years, 10);
+  if(!m || !(y > 0)) return null;
+  const sy = +m[1], smo = +m[2], sd = +m[3];
+  const startD = new Date(sy, smo - 1, sd);
+  if(isNaN(startD.getTime()) || startD.getMonth() !== smo - 1) return null;   // 擋掉不存在的日期（如 2/30）
+  const endD = new Date(sy + y, smo - 1, sd);
+  endD.setDate(endD.getDate() - 1);
+  const roc = d => '中華民國' + (d.getFullYear() - 1911) + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  return { startStr: roc(startD), endStr: roc(endD), full: '自' + roc(startD) + '起至' + roc(endD) + '止' };
+}
 
 // ─── 引擎核心（自 engine.js 改寫，瀏覽器內嵌版） ───
 const CM_engine = (function(catalog){
@@ -5941,7 +5964,12 @@ const CM_builder = (function(){
     const p=d.payment||{}, l=d.lease||{};
     const out=[];
     out.push(para([txt('二、租賃期間及付款方式協議如下：',{bold:true})]));
-    out.push(para([txt('　租賃期間：自 '),txt(l.start||'　　　　　',{bold:true}),txt(' 起，為期 '),txt(String(l.years||'　'),{bold:true,color:'C00000'}),txt(' 年（亦等同契約有效期間）。')]));
+    const period = cmRocPeriod(l.start, l.years);
+    if(period){
+      out.push(para([txt('　租賃期間：'),txt(period.full,{bold:true}),txt('（為期 '),txt(String(l.years),{bold:true}),txt(' 年，亦等同契約有效期間）。')]));
+    } else {
+      out.push(para([txt('　租賃期間：自 '),txt(l.start||'　　　　　',{bold:true}),txt(' 起，為期 '),txt(String(l.years||'　'),{bold:true}),txt(' 年（亦等同契約有效期間）。')]));
+    }
     out.push(para([txt('　結帳日期：每月 '),txt(String(p.billingDay||'　'),{bold:true}),txt(' 日　　付款日期：次月 '),txt(String(p.paymentDay||'　'),{bold:true}),txt(' 日。')]));
     out.push(para([txt('　請款及統一發票送達方式：')]));
     out.push(para([txt('　　'+cmCk(p.invoiceDelivery==='onsite')+' DUSKIN每次送貨時開立統一發票並當場向甲方收取現金。')]));
@@ -6700,7 +6728,7 @@ function cmwInit(c){
                invoiceTitle: c.name || '', taxId: c.regNo || '' },
     parties: {
       partyA: { company: c.name || '', address: c.addr || '', phone: c.phone || '', dept: '', contact: c.contact || '' },
-      partyB: { company: CM_COMPANY.name, address: CM_COMPANY.address, phone: CM_COMPANY.phone, dept: '', contact: CM_COMPANY.contact }
+      partyB: { company: CM_COMPANY.name, address: CM_COMPANY.address, phone: CM_COMPANY.phone, dept: CM_COMPANY.dept || '台南營業所', contact: CM_COMPANY.contact }
     },
     attachedTerms: cmContractAttachedTerms(autoType).slice()
   };
@@ -6826,6 +6854,13 @@ function cmwUpdateTotal(){
   CM_wiz.items.forEach(it => { const n = cmChangesPer4W(it.cycle); t += (Number(it.contractUnit) || 0) * n * (parseInt(it.qty, 10) || 1); });
   el.textContent = '4W 租賃金額合計：' + t.toLocaleString();
 }
+// 結帳日／付款日只在「匯款／支票」時需要（現金當場收款不需結帳）
+function cmwUpdatePaymentUI(){
+  if(!CM_wiz) return;
+  const m = CM_wiz.payment.paymentMethod;
+  const row = document.getElementById('cmw-billing-row');
+  if(row) row.style.display = (m === 'wire' || m === 'check') ? 'grid' : 'none';
+}
 function cmwSyncToUI(){
   const w = CM_wiz, p = w.payment, l = w.lease;
   const set = (id, v) => { const e = document.getElementById(id); if(e) e.value = (v == null ? '' : v); };
@@ -6840,6 +6875,7 @@ function cmwSyncToUI(){
   set('cmw-B-company', B.company); set('cmw-B-address', B.address); set('cmw-B-phone', B.phone); set('cmw-B-dept', B.dept); set('cmw-B-contact', B.contact);
   set('cmw-terms', (w.attachedTerms || []).join('\n'));
   const sel = document.getElementById('cmw-type'); if(sel) sel.value = w.contractType;
+  cmwUpdatePaymentUI();
 }
 function cmwBuildContractData(){
   const w = CM_wiz;
@@ -6864,7 +6900,8 @@ function cmwPreview(){
   lines.push('【DUSKIN商品租賃契約書】');
   lines.push('甲方（承租人）：' + (d.client || ''));
   lines.push('合約類型：' + (d.contractType === 'B' ? 'B · 含特製地墊' : 'A · 無特製地墊'));
-  lines.push('租賃期間：自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年');
+  const period = cmRocPeriod(d.lease.start, d.lease.years);
+  lines.push('租賃期間：' + (period ? period.full + '（為期 ' + d.lease.years + ' 年）' : ('自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年')));
   lines.push('');
   lines.push('商品明細：');
   d.items.forEach(it => {
@@ -6985,7 +7022,7 @@ function cmwMount(){
   onInput('cmw-B-contact', v => CM_wiz.parties.partyB.contact = v);
   onInput('cmw-terms', v => { CM_wiz.attachedTerms = v.split('\n'); CM_wiz.termsManual = true; });
   document.querySelectorAll('input[name=cmw-inv]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked) CM_wiz.payment.invoiceDelivery = r.value; }));
-  document.querySelectorAll('input[name=cmw-pay]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked) CM_wiz.payment.paymentMethod = r.value; }));
+  document.querySelectorAll('input[name=cmw-pay]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked){ CM_wiz.payment.paymentMethod = r.value; cmwUpdatePaymentUI(); } }));
   const typeSel = document.getElementById('cmw-type');
   if(typeSel) typeSel.addEventListener('change', () => {
     if(!CM_wiz) return;
@@ -7023,6 +7060,7 @@ return {
     defaultTerms: cmDefaultContractTermsText,
     changesPer4W: cmChangesPer4W,
     detectContractType: cmDetectContractType,
+    rocPeriod: cmRocPeriod,
     contractAttachedTerms: cmContractAttachedTerms,
     buildConfigFrom(state){ CM_state = state; return cmBuildConfig(); }
   }
@@ -7146,6 +7184,12 @@ if(location.search.includes('test=1')){
   assert('附帶事項 B 含訂做地墊段', CMT.contractAttachedTerms('B').some(l=>l.indexOf('訂做地墊特別協議')>=0), true);
   assert('附帶事項 A 不含訂做地墊段', CMT.contractAttachedTerms('A').some(l=>l.indexOf('訂做地墊特別協議')>=0), false);
   assert('附帶事項 含廉潔條款 email', CMT.contractAttachedTerms('A').some(l=>l.indexOf('compliance@duskin.com.tw')>=0), true);
+  // 契約期間 民國起訖：2026/06/09 起、1 年 → 自中華民國115年6月9日起至中華民國116年6月8日止
+  assert('rocPeriod 1年', CMT.rocPeriod('2026/06/09',1).full, '自中華民國115年6月9日起至中華民國116年6月8日止');
+  assert('rocPeriod 4年', CMT.rocPeriod('2026/06/09',4).full, '自中華民國115年6月9日起至中華民國119年6月8日止');
+  assert('rocPeriod 月底', CMT.rocPeriod('2026/03/01',1).full, '自中華民國115年3月1日起至中華民國116年2月28日止');
+  assert('rocPeriod 無年數→null', CMT.rocPeriod('2026/06/09',0), null);
+  assert('rocPeriod 壞日期→null', CMT.rocPeriod('abc',1), null);
   assert('csvCell null', csvCell(null), '');
   assert('csvCell undefined', csvCell(undefined), '');
 
