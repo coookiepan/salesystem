@@ -1317,7 +1317,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.09-c4';
+const APP_VERSION='v2026.06.09-m1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1355,6 +1355,7 @@ function handleRequest(e){
       case 'getProspects':  result=getProspects();break;
       case 'getSnapshot':   result=getSnapshot();break;
       case 'ping':          result={ok:true};break;
+      case 'geocode':       result=geocodeAddr(body.addr);break;
       default:              result={error:'Unknown action'};
     }
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
@@ -1362,6 +1363,31 @@ function handleRequest(e){
     return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON);
   }finally{
     if(lock)lock.releaseLock();
+  }
+}
+
+// 地址轉座標：用內建 Maps 服務（免 API key / billing；消費型帳號約 1000 次/天）。
+// 唯讀、不可佔 LockService 鎖。查無/錯誤一律回 {ok:false,status}，「絕不」回頂層 error，
+// 讓前端把它當軟失敗 → 退回 Nominatim（前端 api() 一見 error 就 throw）。
+function geocodeAddr(addr){
+  var raw=(addr||'').toString().trim();
+  if(!raw)return{ok:false,status:'EMPTY'};
+  try{
+    var geocoder=Maps.newGeocoder().setLanguage('zh-TW').setRegion('tw');
+    var resp=geocoder.geocode(raw);
+    if(!resp||resp.status!=='OK'||!resp.results||!resp.results.length){
+      return{ok:false,status:(resp&&resp.status)||'NO_RESULT'};
+    }
+    var r=resp.results[0];
+    return{
+      ok:true,status:'OK',
+      lat:r.geometry.location.lat,
+      lng:r.geometry.location.lng,
+      locationType:r.geometry.location_type, // ROOFTOP / RANGE_INTERPOLATED / GEOMETRIC_CENTER / APPROXIMATE
+      formattedAddress:r.formatted_address
+    };
+  }catch(err){
+    return{ok:false,status:'ERROR',message:String(err)};
   }
 }
 
@@ -3336,6 +3362,18 @@ let GEO_DONE=0;
 
 // 產生地址查詢的 fallback 變體：越後面越寬鬆
 // 所有變體都會帶 DEFAULT_CITY 前綴（目前為台南市）
+// 地址正規化（僅供 geocoding 查詢，不改使用者原始顯示）：全形數字→半形、臺→台、
+// 各式破折號與「之」→「-」、全形空白→半形、收斂空白。Google 與 Nominatim 兩條路都受惠。
+function normalizeAddr(s){
+  return (s||'').toString()
+    .replace(/[０-９]/g,d=>String.fromCharCode(d.charCodeAt(0)-0xFEE0)) // 全形數字→半形
+    .replace(/臺/g,'台')
+    .replace(/[‐–—－]/g,'-')
+    .replace(/之/g,'-')          // 12之3 → 12-3（與 addrVariants 的 [之\-] 對齊）
+    .replace(/　/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 // 判斷地址是否已開頭帶縣市名稱（共用邏輯）
 function addrHasCity(addr){
   return /^(臺|台)[北中南東]市|新北市|桃園市|基隆市|新竹[市縣]|苗栗縣|彰化縣|南投縣|雲林縣|嘉義[市縣]|屏東縣|宜蘭縣|花蓮縣|臺東縣|台東縣|澎湖縣|金門縣|連江縣/.test((addr||'').trim());
@@ -3347,7 +3385,7 @@ function ensureCityPrefix(addr){
   return addrHasCity(raw)?raw:DEFAULT_CITY+raw;
 }
 function addrVariants(addr){
-  let raw=(addr||'').trim();
+  let raw=normalizeAddr(addr);
   if(!raw) return [];
   const prefix=addrHasCity(raw)?'':DEFAULT_CITY;
   const variants=[];
@@ -3372,6 +3410,25 @@ function addrVariants(addr){
     if(!variants.includes(q)) variants.push(q);
   }
   return variants;
+}
+
+// location_type → 精度標籤（純函式）
+function geoPrecisionLabel(lt){
+  if(lt==='ROOFTOP') return '門牌';
+  if(lt==='RANGE_INTERPOLATED') return '門牌(推估)';
+  if(lt==='GEOMETRIC_CENTER') return '路段';
+  return '概略'; // APPROXIMATE 或未知
+}
+// 主要 geocoder：透過後端 Apps Script 的 Google geocoder（台灣門牌最準）。
+// 後端未重新部署/離線會 throw（呼叫端 catch）；查無/配額/錯誤回 {ok:false} → 這裡回 null。
+// 兩種失敗都讓呼叫端退回 nominatimGeocode。Google 對模糊地址容錯佳，只送單一正規化字串。
+async function googleGeocode(addr){
+  const q=normalizeAddr(ensureCityPrefix(addr));
+  if(!q) return null;
+  const r=await api({action:'geocode',addr:q}); // 後端未支援 → {error} → api() throw
+  if(!r||!r.ok||typeof r.lat!=='number'||typeof r.lng!=='number') return null; // 軟失敗 → 退回
+  const precise=(r.locationType==='ROOFTOP'||r.locationType==='RANGE_INTERPOLATED');
+  return {lat:r.lat, lng:r.lng, source:precise?'google':'google-approx', locationType:r.locationType||'', precisionLabel:geoPrecisionLabel(r.locationType)};
 }
 
 async function nominatimGeocode(addr){
@@ -3402,6 +3459,28 @@ function enqueueGeocode(client){
   if(!GEO_QUEUE.find(x=>x.id===client.id)) GEO_QUEUE.push(client);
 }
 
+// 單筆定位：Google 優先（透過後端），失敗退回 Nominatim。
+// 回傳 {ok, viaGoogle}；viaGoogle 決定節流（Google 經後端無 OSM 速率限制）。
+async function geocodeOne(client){
+  let coord=null, viaGoogle=false;
+  try{
+    coord=await googleGeocode(client.addr);
+    if(coord) viaGoogle=true;
+  }catch(e){ /* 後端未重新部署 / 離線 / 配額 → 退回 Nominatim */ }
+  if(!coord) coord=await nominatimGeocode(client.addr);
+  if(coord){
+    client.lat=coord.lat; client.lng=coord.lng;
+    client.geocodeSource = coord.source==='google'        ? 'google'
+                         : coord.source==='google-approx' ? 'google-approx'
+                         : 'auto';
+    if(coord.locationType) client.geoLocationType=coord.locationType;
+  }else{
+    client.geocodeSource='failed';
+  }
+  client.geocodedAt=Date.now();
+  return {ok:!!coord, viaGoogle};
+}
+
 async function processGeoQueue(){
   if(GEO_WORKING||!GEO_QUEUE.length) return;
   GEO_WORKING=true;
@@ -3409,21 +3488,14 @@ async function processGeoQueue(){
   renderGeoProgress();
   while(GEO_QUEUE.length){
     const client=GEO_QUEUE.shift();
-    const coord=await nominatimGeocode(client.addr);
-    if(coord){
-      client.lat=coord.lat; client.lng=coord.lng;
-      client.geocodeSource='auto';
-    }else{
-      client.geocodeSource='failed';
-    }
-    client.geocodedAt=Date.now();
+    const {viaGoogle}=await geocodeOne(client);
     saveLocal();
     autoSync('save',{client});
     GEO_DONE++;
     renderGeoProgress();
     if(MAP_STATE.view==='map') renderMapMarkers();
-    // Nominatim ToS: ≤ 1 req/sec
-    if(GEO_QUEUE.length) await new Promise(r=>setTimeout(r,1100));
+    // 節流：Google 經後端無 OSM 速率限制 → 短延遲；用到 Nominatim 才需 ≤1 req/sec
+    if(GEO_QUEUE.length) await new Promise(r=>setTimeout(r, viaGoogle?150:1100));
   }
   GEO_WORKING=false;
   renderGeoProgress();
@@ -7168,6 +7240,20 @@ if(location.search.includes('test=1')){
   assert('parseRegion 永康區',parseRegion('永康區中山路12號'),'永康區');
   assert('parseRegion 空',parseRegion(''),'');
   assert('parseRegion 無區',parseRegion('台南市中山路'),'');
+
+  // --- normalizeAddr / geoPrecisionLabel（geocoding 用）---
+  assert('normalizeAddr 全形數字',normalizeAddr('永康區中山路１２號'),'永康區中山路12號');
+  assert('normalizeAddr 臺→台',normalizeAddr('臺南市'),'台南市');
+  assert('normalizeAddr 之→-',normalizeAddr('12之3號'),'12-3號');
+  assert('normalizeAddr 破折號統一',normalizeAddr('12–3號'),'12-3號');
+  assert('normalizeAddr 全形空白',normalizeAddr('中山路　1號'),'中山路 1號');
+  assert('normalizeAddr 收斂空白與trim',normalizeAddr('  中山路   1號  '),'中山路 1號');
+  assert('normalizeAddr 空值',normalizeAddr(null),'');
+  assert('geoPrecisionLabel ROOFTOP',geoPrecisionLabel('ROOFTOP'),'門牌');
+  assert('geoPrecisionLabel RANGE_INTERPOLATED',geoPrecisionLabel('RANGE_INTERPOLATED'),'門牌(推估)');
+  assert('geoPrecisionLabel GEOMETRIC_CENTER',geoPrecisionLabel('GEOMETRIC_CENTER'),'路段');
+  assert('geoPrecisionLabel APPROXIMATE',geoPrecisionLabel('APPROXIMATE'),'概略');
+  assert('geoPrecisionLabel 未知→概略',geoPrecisionLabel('XYZ'),'概略');
 
   // --- CONTRACTMAKER 整合（報價單分步精靈・新算法：單價×換洗次數×數量＝每4週金額）---
   assert('ContractMaker 模組已載入',typeof ContractMaker==='object'&&typeof ContractMaker.open==='function',true);
