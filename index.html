@@ -680,8 +680,7 @@ tbody tr:hover{background:var(--surface-hover)}
         </div>
         <div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
-          <button class="btn btn-outline btn-sm" id="cd-quickquote-btn" onclick="ContractMaker.quickQuote()" title="一鍵以現有品項產生報價單 Word">⚡ 快速報價</button>
-          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單 Word（可調整明細與條款）">📄 報價單</button>
+          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單 Word（分步精靈）">📄 報價單</button>
           <button class="btn btn-primary btn-sm" id="cd-contract-btn" onclick="ContractMaker.openContract()" title="製作公版 DUSKIN商品租賃契約書（分步精靈）">📑 產生合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
@@ -764,88 +763,42 @@ tbody tr:hover{background:var(--surface-hover)}
       <button class="btn btn-outline btn-sm" id="cm-close-btn">關閉</button>
     </header>
     <div class="cm-body">
+      <div id="cm-steps" style="margin-bottom:10px"></div>
       <div id="cm-msg-box" class="cm-msg"></div>
 
-      <!-- 文件類型：合約改用「📑 產生合約」公版精靈，此視窗專責報價單；保留 radio 結構供模組事件綁定，但隱藏不再使用的合約書選項 -->
-      <div class="cm-section" style="display:none">
-        <h4>文件類型</h4>
-        <div class="cm-doctype">
-          <label><input type="radio" name="cm-doctype" value="quote" checked data-cm-doctype> 📋 報價單</label>
-          <label style="display:none"><input type="radio" name="cm-doctype" value="contract" data-cm-doctype> 📄 合約書</label>
-        </div>
-      </div>
-
-      <div class="cm-section">
-        <h4>客戶資料</h4>
-        <div class="cm-row">
-          <label class="cm-field"><span>客戶名稱 *</span><input id="cm-client" data-cm="client"></label>
-          <label class="cm-field"><span>日期 * (YYYY/MM/DD)</span><input id="cm-date" data-cm="date"></label>
-        </div>
-        <div class="cm-row three">
-          <label class="cm-field"><span>版本（檔名後綴）</span><input id="cm-version" placeholder="例：基礎版" data-cm="version"></label>
-          <label class="cm-field"><span>統一編號</span><input id="cm-taxId" data-cm="customerInfo.taxId"></label>
-          <label class="cm-field"><span>聯絡人</span><input id="cm-contact" data-cm="customerInfo.contact"></label>
-        </div>
-        <div class="cm-row">
-          <label class="cm-field"><span>客戶電話</span><input id="cm-phone" data-cm="customerInfo.phone"></label>
-          <label class="cm-field"><span>客戶地址</span><input id="cm-address" data-cm="customerInfo.address"></label>
-        </div>
-      </div>
-
-      <div class="cm-section" id="cm-contract-section" style="display:none">
-        <h4>合約設定 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（僅合約書使用）</span></h4>
-        <div class="cm-row">
-          <label class="cm-field"><span>合約起始日 (YYYY/MM/DD)</span><input id="cm-contractStart" data-cm="contractStart"></label>
-          <label class="cm-field"><span>合約期間（年）</span><input id="cm-contractYears" type="number" min="1" step="1" placeholder="例：1" data-cm="contractYears"></label>
-        </div>
-        <label class="cm-field"><span>合約條款（一行一條，可自由增刪）</span><textarea id="cm-contractTerms" rows="7" data-cm="contractTerms" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea></label>
-      </div>
-
-      <div class="cm-section">
-        <h4>全域設定</h4>
-        <div class="cm-row">
-          <label class="cm-field"><span>顯示週期</span>
-            <select id="cm-displayCycle" data-cm="displayCycle">
-              <option value="">隨商品（混合）</option>
-              <option value="2W">2W</option>
-              <option value="4W" selected>4W（月單價）</option>
-            </select>
-          </label>
-          <label class="cm-field"><span>整體折扣（0~1，留空=無）</span><input id="cm-discount" type="number" step="0.01" min="0" max="1" placeholder="例：0.8 = 8 折" data-cm="discount"></label>
-        </div>
-        <div class="cm-flags">
-          <label><input type="checkbox" id="cm-roundTotalToHundred" data-cm="roundTotalToHundred"> 總額向上取整百</label>
-          <label><input type="checkbox" id="cm-showLocation" data-cm="showLocation"> 顯示位置欄</label>
-          <label><input type="checkbox" id="cm-showStamp" data-cm="showStamp"> 顯示核章／簽章區</label>
-          <label><input type="checkbox" id="cm-showCustomerNumber" data-cm="showCustomerNumber"> 顯示統編</label>
-        </div>
-      </div>
-
-      <div class="cm-section">
-        <h4>商品明細 <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0">（代號／品名／單價皆可手動編輯；按「臨時新品」可加入商品庫沒有的品項）</span></h4>
+      <!-- 步驟 1：商品明細 -->
+      <section data-cm-step="0" class="cm-section">
+        <h4>步驟 1／3 · 商品明細</h4>
+        <p style="font-size:12px;color:var(--text3);margin:0 0 8px">每列填：品名、更換週期、數量、單價（每次更換）。每4週金額＝單價 × 換洗次數 × 數量，由系統自動算；代號免填。</p>
         <div id="cm-items" class="cm-items"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
           <button class="btn btn-outline btn-sm" id="cm-additem-cat">＋ 從商品庫新增</button>
           <button class="btn btn-outline btn-sm" id="cm-additem-new">🆕 臨時新品</button>
         </div>
-      </div>
+        <div id="cm-grandtotal" style="margin-top:10px;font-weight:700;text-align:right"></div>
+      </section>
 
-      <div class="cm-section">
-        <h4>額外備註（一行一條，可空白）</h4>
-        <textarea id="cm-extraNotes" rows="3" data-cm="extraNotes" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
-      </div>
+      <!-- 步驟 2：客戶名稱與備註 -->
+      <section data-cm-step="1" class="cm-section" style="display:none">
+        <h4>步驟 2／3 · 客戶名稱與備註</h4>
+        <label class="cm-field"><span>客戶名稱 *</span><input id="cm-client" data-cm="client"></label>
+        <label class="cm-field" style="margin-top:10px"><span>額外備註（一行一條，可空白）</span><textarea id="cm-extraNotes" rows="3" data-cm="extraNotes" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea></label>
+      </section>
 
-      <div class="cm-section" id="cm-preview-wrap" style="display:none">
-        <h4>文字預覽</h4>
+      <!-- 步驟 3：預覽並下載 -->
+      <section data-cm-step="2" class="cm-section" style="display:none">
+        <h4>步驟 3／3 · 預覽並下載</h4>
         <div class="cm-preview" id="cm-preview"></div>
-      </div>
+      </section>
+
       <div class="cm-ios-tip" id="cm-ios-tip">
         <b>📱 iPhone / iPad 提示：</b>點「下載 Word」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、Mail、訊息、LINE 任一都可保存或傳出。若沒跳分享面板，會在新分頁開啟下載連結。
       </div>
     </div>
     <div class="cm-actions">
-      <button class="btn btn-outline" id="cm-preview-btn">📋 預覽</button>
-      <button class="btn btn-primary" id="cm-download-btn">📥 下載 Word</button>
+      <button class="btn btn-outline" id="cm-prev-btn" style="display:none">← 上一步</button>
+      <button class="btn btn-primary" id="cm-next-btn">下一步 →</button>
+      <button class="btn btn-primary" id="cm-download-btn" style="display:none">📥 下載 Word</button>
     </div>
   </div>
 </div>
@@ -1364,7 +1317,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.09-c2';
+const APP_VERSION='v2026.06.09-c3';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -5483,12 +5436,12 @@ window.addEventListener('online',()=>{if(SHEET_URL&&OUTBOX.length)flushOutbox();
 // CONTRACTMAKER 模組（報價單／合約 Word 產生器） — 整合自 contractmaker repo
 // 來源: https://github.com/coookiepan/contractmaker
 //
-// 自我封裝模組：對外只暴露 window.ContractMaker = { init, open, quickQuote }。
+// 自我封裝模組：對外只暴露 window.ContractMaker = { init, open, openContract }。
 // 與主程式「以 host adapter 解耦」——模組不直接讀寫主程式全域（DB / S / today …），
 // 一律透過 init() 注入的 adapter 取得資料與動作；UI 事件於 mount() 內部綁定。
 //   ContractMaker.init({ getClients, getCurIdx, getProduct, today, save, sync, onChange, escapeHtml })
-//   ContractMaker.open()        → 客戶卡「📄 報價／合約」：開啟完整視窗
-//   ContractMaker.quickQuote()  → 客戶卡「⚡ 快速報價」：一鍵產生報價單
+//   ContractMaker.open()         → 客戶卡「📄 報價單」：開啟分步精靈
+//   ContractMaker.openContract() → 客戶卡「📑 產生合約」：開啟公版合約精靈
 // docx@8.5.0 UMD 庫於首次開啟時延遲載入（unpkg CDN）
 // ═══════════════════════════════════════════════════════════
 window.ContractMaker = (function(){
@@ -5547,72 +5500,27 @@ function cmRocPeriod(start, years){
 const CM_engine = (function(catalog){
   function expandItem(item, options){
     options = options || {};
-    const { code, qty, loc, priceOverride, nameOverride,
-            displayCycle: itemDisplayCycle, discount: itemDiscount } = item;
-    let product = catalog.products[code];
+    const { code, loc, unit, nameOverride } = item;
+    const qty = parseInt(item.qty, 10) || 1;
+    const product = catalog.products[code];
+    // 更換週期：以使用者選擇為準（1W/2W/4W）→ 商品庫週期 → 4W
+    const cycle = item.cycle || (product && product.cycle) || '4W';
+    const changes = cmChangesPer4W(cycle);   // 1週→4、2週→2、4週→1
+    // 單價＝每次更換單價：優先用 item.unit；否則用商品庫定價（price 本就是每次更換單價，不可預乘次數）
+    const unitPrice = (unit != null && unit !== '') ? Number(unit) : (product ? product.price : null);
+    const name = nameOverride || (product && product.name) || code;
     if(!product){
-      // 臨時自訂品項：商品庫沒有此代號，要求填特殊單價，並用 nameOverride 或代號當品名
-      if(priceOverride == null){
-        throw new Error('代號「'+code+'」不在商品庫，請填特殊單價');
-      }
-      if(!nameOverride){
-        throw new Error('代號「'+code+'」不在商品庫，請填品名');
-      }
-      product = {
-        name: nameOverride,
-        size: item.customSize || '',
-        cycle: item.customCycle || itemDisplayCycle || options.defaultDisplayCycle || '4W',
-        price: null,
-        discountable: false
-      };
+      if(unitPrice == null) throw new Error('代號「'+code+'」不在商品庫，請填單價');
+      if(!nameOverride) throw new Error('代號「'+code+'」不在商品庫，請填品名');
     }
-    const name = nameOverride || product.name;
-    const productCycle = product.cycle;
-    const displayCycle = itemDisplayCycle || options.defaultDisplayCycle || productCycle;
-    const originalPriceBase = product.price;
-    if(originalPriceBase == null && priceOverride == null){
-      throw new Error('商品 '+code+' 沒有原價，請填入特殊單價');
-    }
-    let pricePerChange, appliedDiscountSource = null;
-    if(priceOverride != null){
-      pricePerChange = (productCycle === '2W' && displayCycle === '4W') ? priceOverride/2 : priceOverride;
-      appliedDiscountSource = 'override';
-    } else if(itemDiscount != null){
-      pricePerChange = Math.round(originalPriceBase * itemDiscount);
-      appliedDiscountSource = 'item';
-    } else if(options.areaDiscount != null && product.discountable){
-      pricePerChange = Math.round(originalPriceBase * options.areaDiscount);
-      appliedDiscountSource = 'area';
-    } else if(options.discount != null && options.discount < 1 && product.discountable){
-      pricePerChange = Math.round(originalPriceBase * options.discount);
-      appliedDiscountSource = 'global';
-    } else {
-      pricePerChange = originalPriceBase;
-    }
-    const cycleMultiplier = productCycle === '2W' ? 2 : 1;
-    const monthly = pricePerChange * cycleMultiplier * qty;
-    const monthlyAtOriginal = originalPriceBase != null ? originalPriceBase * cycleMultiplier * qty : null;
-    let displayUnitPrice, displayOriginalPrice;
-    if(productCycle === '2W' && displayCycle === '4W'){
-      displayUnitPrice = pricePerChange * 2;
-      displayOriginalPrice = originalPriceBase != null ? originalPriceBase * 2 : null;
-    } else {
-      displayUnitPrice = pricePerChange;
-      displayOriginalPrice = originalPriceBase;
-    }
-    let actualDiscount = null, isDiscounted = false;
-    if(originalPriceBase != null && pricePerChange !== originalPriceBase){
-      actualDiscount = pricePerChange / originalPriceBase;
-      isDiscounted = pricePerChange < originalPriceBase;
-    }
+    if(unitPrice == null) throw new Error('商品「'+name+'」沒有單價，請填入單價');
+    // 每4週金額＝單價 × 換洗次數 × 數量（換洗次數只在這裡乘一次）
+    const monthly = unitPrice * changes * qty;
     return {
-      code, name, size: product.size, productCycle, displayCycle, cycle: displayCycle, qty,
-      pricePerChange, originalPrice: displayOriginalPrice, unitPrice: displayUnitPrice,
-      monthly, monthlyAtOriginal,
-      discount: actualDiscount,
-      discountPct: actualDiscount != null ? Math.round((1-actualDiscount)*100) : null,
-      discountSource: appliedDiscountSource, isDiscounted,
-      location: loc || '', note: product.note || null, _product: product
+      code, name, size: product ? (product.size || '') : '', cycle, qty,
+      unitPrice, monthly,
+      location: loc || '', note: (product && product.note) || null,
+      _product: product || { name, cycle, price: unitPrice, contractYears: null }
     };
   }
   function expandArea(area, options){
@@ -5627,50 +5535,44 @@ const CM_engine = (function(catalog){
   function buildCMNotes(areas, options, customItems, extraNotes){
     const notes = [];
     notes.push({text:'本報價單商品均含 5% 營業稅。'});
-    const has2W = areas.some(a=>a.items.some(i=>i.cycle==='2W'));
-    const has4W = areas.some(a=>a.items.some(i=>i.cycle==='4W'));
-    if(has2W && has4W){
-      const uniq = [...new Map(areas.flatMap(a=>a.items).filter(i=>i.cycle==='2W').map(i=>[i.code,i])).values()];
-      const codes2W = uniq.map(i=>i.name+'（'+i.code+'）').join('、');
-      notes.push({text:'更換週期：'+codes2W+' 每 2 週更換一次，其餘品項每 4 週更換一次。'});
-    } else if(has2W){
-      notes.push({text:'上述商品每 2 週更換一次。'});
+    const allItems = areas.flatMap(a=>a.items);
+    const cycleWords = c => c==='1W'?'每 1 週':c==='2W'?'每 2 週':'每 4 週';
+    const cyclesUsed = ['1W','2W','4W'].filter(c=>allItems.some(i=>i.cycle===c));
+    if(cyclesUsed.length <= 1){
+      notes.push({text:'上述商品'+cycleWords(cyclesUsed[0]||'4W')+'更換一次。'});
     } else {
-      notes.push({text:'上述商品每 4 週更換一次。'});
+      // 多種更換週期 → 依品名分組列出（不顯示代號）
+      const parts = cyclesUsed.map(c=>{
+        const names = [...new Set(allItems.filter(i=>i.cycle===c).map(i=>i.name))].join('、');
+        return names+' '+cycleWords(c)+'更換一次';
+      });
+      notes.push({text:'更換週期：'+parts.join('；')+'。'});
     }
     if(customItems.length > 0){
       const uniq = [...new Map(customItems.map(c=>[c.code,c])).values()];
-      const list = uniq.map(c=>c.name+'（'+c.code+'）').join('、');
+      const list = uniq.map(c=>c.name).join('、');   // 改用品名，不顯示代號
       const years = uniq[0].years;
       notes.push({text: list+' 為訂製品，合約期間為 ', strong: years+' 年', strongColor:'C00000', tail:'。'});
     }
-    // 不顯示「部分品項享有 X 折優惠」備註 — 客戶端看到的價格就是最終價，不揭露折扣
+    // 不顯示折扣相關備註 — 客戶端看到的價格就是最終價
     for(const en of extraNotes) notes.push(typeof en === 'string' ? {text:en} : en);
     return notes;
   }
   function expandQuote(config){
-    const options = {discount: config.discount || null, roundTotalToHundred: config.roundTotalToHundred || false, defaultDisplayCycle: config.displayCycle || null};
+    const options = {};
     let areas;
     if(config.areas) areas = config.areas.map(a=>expandArea(a, options));
     else if(config.items) areas = [expandArea({name: config.areaName || '商品明細', items: config.items}, options)];
     else throw new Error('config 必須包含 areas 或 items');
-    let grandTotal = areas.reduce((s,a)=>s+a.subtotal, 0);
-    const grandTotalAtOriginal = areas.reduce((s,a)=>s+a.subtotalAtOriginal, 0);
-    if(options.roundTotalToHundred) grandTotal = Math.ceil(grandTotal/100)*100;
-    const overallDiscount = grandTotalAtOriginal > 0 && grandTotal !== grandTotalAtOriginal ? grandTotal/grandTotalAtOriginal : null;
-    const overallSavings = grandTotalAtOriginal - grandTotal;
+    const grandTotal = areas.reduce((s,a)=>s+a.subtotal, 0);
     const customItems = [];
     for(const area of areas) for(const item of area.items)
-      if(item._product.contractYears) customItems.push({code:item.code, name:item.name, years:item._product.contractYears});
-    return {client: config.client, version: config.version, date: config.date,
-      docType: config.docType === 'contract' ? 'contract' : 'quote',
-      contractStart: config.contractStart || config.date,
-      contractYears: config.contractYears || null,
-      contractTerms: config.contractTerms || null,
+      if(item._product && item._product.contractYears) customItems.push({code:item.code, name:item.name, years:item._product.contractYears});
+    return {client: config.client, date: config.date,
+      docType: 'quote',
       customerInfo: config.customerInfo || {}, areas,
-      grandTotal, grandTotalAtOriginal, overallDiscount, overallSavings,
-      discount: options.discount, customItems,
-      show: {location: config.showLocation !== false, stamp: config.showStamp !== false, customerNumber: config.showCustomerNumber !== false},
+      grandTotal, customItems,
+      show: {location: config.showLocation !== false, stamp: config.showStamp === true, customerNumber: config.showCustomerNumber === true},
       notes: buildCMNotes(areas, options, customItems, config.extraNotes || [])};
   }
   function fmtN(n){ return n.toLocaleString(); }
@@ -5704,8 +5606,9 @@ const CM_engine = (function(catalog){
     for(const area of q.areas){
       lines.push('【'+area.name+'】');
       for(const it of area.items){
-        // 預覽僅顯示最終單價，與 Word 輸出一致；不揭露原價／折扣
-        lines.push('  '+it.code+' '+it.name+' × '+it.qty+' '+it.cycle+'  單價 '+fmtN(it.unitPrice)+'  → 月 '+fmtN(it.monthly)+(it.location?'  位置: '+it.location:''));
+        // 預覽與 Word 輸出一致：不顯示代號／規格；週期顯示中文、單價＝每次更換單價
+        const cyc = it.cycle==='1W'?'1週':it.cycle==='2W'?'2週':'4週';
+        lines.push('  '+it.name+' '+cyc+' × '+it.qty+'　單價 '+fmtN(it.unitPrice)+'　→ 每4週 '+fmtN(it.monthly)+(it.location?'  位置: '+it.location:''));
       }
       lines.push('  小計: '+fmtN(area.subtotal));
       lines.push('');
@@ -5764,13 +5667,11 @@ const CM_builder = (function(){
   }
   function buildCustomerHeader(quote){
     const {Table,TableRow,TableCell,WidthType,BorderStyle}=getDocx();
-    const left=[para([txt('客戶名稱：',{bold:true}),txt(quote.client||'')])];
-    if(quote.show.customerNumber) left.push(para([txt('統一編號：',{bold:true}),txt(quote.customerInfo.taxId||'')]));
-    if(quote.customerInfo.contact) left.push(para([txt('聯絡人：',{bold:true}),txt(quote.customerInfo.contact)]));
-    if(quote.customerInfo.phone) left.push(para([txt('電話：',{bold:true}),txt(quote.customerInfo.phone)]));
-    if(quote.customerInfo.address) left.push(para([txt('地址：',{bold:true}),txt(quote.customerInfo.address)]));
+    const left=[
+      para([txt('客戶名稱：',{bold:true}),txt(quote.client||'')]),
+      para([txt('報價日期：',{bold:true}),txt(quote.date||'')])
+    ];
     const right=[
-      para([txt('報價日期：',{bold:true}),txt(quote.date||'')]),
       para([txt('承辦人：',{bold:true}),txt(COMPANY_INFO.contact)]),
       para([txt('手機：',{bold:true}),txt(COMPANY_INFO.mobile)]),
       para([txt('電話：',{bold:true}),txt(COMPANY_INFO.phone)]),
@@ -5789,23 +5690,20 @@ const CM_builder = (function(){
   function buildItemTable(quote){
     const {Table,TableRow,TableCell,WidthType,Paragraph,AlignmentType,VerticalAlign}=getDocx();
     const showLoc = quote.show.location;
-    const headers = ['商品代號','品名','規格','數量','週期','單價(含稅)','4W月金額'];
-    const widths = [10, showLoc?24:30, 10,8,8, showLoc?14:18, 16];
-    if(showLoc){ headers.splice(2,0,'位置'); widths.splice(2,0,14); }
+    const headers = ['品名','數量','更換週期','單價(含稅)','4W月金額'];
+    const widths  = [40,10,14,20,16];
+    if(showLoc){ headers.splice(1,0,'位置'); widths.splice(1,0,14); widths[0]=26; }
     const rows = [];
     rows.push(new TableRow({tableHeader:true, children:headers.map((h,i)=>cell(h,{bold:true,alignment:AlignmentType.CENTER,fill:COLOR_HEADER,width:{size:widths[i],type:WidthType.PERCENTAGE}}))}));
     const multiArea = quote.areas.length > 1;
     for(const area of quote.areas){
       if(multiArea) rows.push(new TableRow({children:[cell(area.name,{bold:true,fill:COLOR_AREA,colSpan:headers.length})]}));
       for(const it of area.items){
-        // Word 輸出統一顯示最終單價，不揭露原價／折扣對照
         const priceText = [txt(fmt(it.unitPrice))];
-        const cells = [cell(it.code,{alignment:AlignmentType.CENTER})];
+        const cells = [cell(it.name)];
         if(showLoc) cells.push(cell(it.location,{alignment:AlignmentType.CENTER}));
-        cells.push(cell(it.name));
-        cells.push(cell(it.size||'',{alignment:AlignmentType.CENTER}));
         cells.push(cell(it.qty,{alignment:AlignmentType.CENTER}));
-        cells.push(cell(it.cycle,{alignment:AlignmentType.CENTER}));
+        cells.push(cell(cmCycleLabel(it.cycle),{alignment:AlignmentType.CENTER}));
         cells.push(new TableCell({verticalAlign:VerticalAlign.CENTER, borders:allBorders(), children:[new Paragraph({alignment:AlignmentType.RIGHT,spacing:{before:0,after:0},children:priceText})]}));
         cells.push(cell(fmt(it.monthly),{alignment:AlignmentType.RIGHT}));
         rows.push(new TableRow({children:cells}));
@@ -5922,7 +5820,6 @@ const CM_builder = (function(){
         buildItemTable(quote),
         ...buildNotes(quote)
       ];
-      if(quote.show.stamp) children.push(...buildStamp());
     }
     return new Document({creator:COMPANY_INFO.name, title: quote.docType==='contract' ? '服務合約書' : '報價單',
       styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
@@ -6110,58 +6007,45 @@ function cmContractAttachedTerms(type){
 // - 優先用 contractedItems（已成約品項），無則用 trialItems
 // - 排除 bundledTo（配件）
 // - 不在合約商品庫的代號 → 自動建為「臨時新品」（從 salesystem 商品庫補品名/單價），記錄到 _meta.autoCustomCodes
-// - quoted = 4W 總額 → priceOverride = quoted / qty（依 4W 顯示週期解讀為 4W 單價）
+// - 單價＝每次更換單價：有議價 quoted（整列每4週總額）→ unit = quoted /（換洗次數 × 數量）；否則用商品庫定價
 function clientToCMConfig(c){
   c = c || {};
   const useContracted = !!(c.contractedItems && c.contractedItems.length);
   const src = useContracted ? c.contractedItems : (c.trialItems || []);
-  // 排除 bundled 配件與空品項；不在合約商品庫的代號改用 salesystem 商品庫資料當「臨時新品」
+  // 排除 bundled 配件與空品項
   const usable = src.filter(it => it && it.product && !it.bundledTo);
-  // 注意：salesystem 中 it.cycle 是換洗週期（catalog cycle 預設），不是顯示週期；
-  //       it.quoted 是「整行 4W 總額」。故品項一律用全域 4W 顯示週期解讀，
-  //       priceOverride = quoted / qty （即每 4W 每單位的客戶議價）。
   const autoCustomCodes = [];
   const items = usable.map(it => {
-    const out = { code: it.product, qty: it.qty || 1 };
-    if(it.quoted && it.quoted > 0 && (it.qty || 1) > 0){
-      out.priceOverride = Math.round(it.quoted / (it.qty || 1));
+    const qty = it.qty || 1;
+    const cat = CM_CATALOG.products[it.product];
+    // 更換週期：客戶卡 cycle → 商品庫 cycle → 2W
+    const cycle = it.cycle || (cat && cat.cycle) || '2W';
+    const changes = cmChangesPer4W(cycle);   // 1週→4、2週→2、4週→1
+    const out = { code: it.product, qty, cycle };
+    // 單價＝每次更換單價：
+    //   有議價 quoted（整列每4週總額）→ 反推每次更換單價 = quoted /（換洗次數 × 數量）
+    //   否則用商品庫定價（price 本就是「每次更換單價」，不可預乘次數）
+    if(it.quoted && it.quoted > 0 && qty > 0 && changes > 0){
+      out.unit = Math.round(it.quoted / (changes * qty));
+    } else if(cat && cat.price != null){
+      out.unit = cat.price;
     }
     if(it.loc) out.loc = it.loc;
-    // 如果代號不在合約商品庫，從主程式商品庫（host adapter）補品名/單價
-    if(!CM_CATALOG.products[it.product]){
+    // 不在合約商品庫的代號 → 從主程式商品庫補品名／單價（單價同為「每次更換單價」，不預乘次數）
+    if(!cat){
       autoCustomCodes.push(it.product);
       const sp = HOST.getProduct(it.product);
-      out.name = (sp && sp.desc) ? sp.desc : it.product;  // 給 UI 顯示用；cmBuildConfig 會轉 nameOverride
-      // 若沒設 priceOverride，且 salesystem 有 price>0，則自動推 4W 單價
-      // （配件等 price=0 的項目不自動帶，讓使用者手動填或刪除）
-      if(out.priceOverride == null && sp && sp.price != null && sp.price > 0){
-        const fw4unit = sp.price * (sp.cycle === '2W' ? 2 : 1);
-        out.priceOverride = fw4unit;
-      }
+      out.name = (sp && sp.desc) ? sp.desc : it.product;
+      if(out.unit == null && sp && sp.price != null && sp.price > 0) out.unit = sp.price;
     }
     return out;
   });
   const dt = (HOST.today() || '').replace(/-/g, '/');
-  // 合約期間預設：若品項含訂製品（catalog 有 contractYears），取最大值，否則 1 年
-  let contractYears = 1;
-  for(const it of items){
-    const p = CM_CATALOG.products[it.code];
-    if(p && p.contractYears && p.contractYears > contractYears) contractYears = p.contractYears;
-  }
   return {
     client: c.name || '',
-    version: '',
     date: dt,
-    docType: 'quote',
-    contractStart: dt,
-    contractYears: contractYears,
-    contractTerms: cmDefaultContractTermsText(),
-    customerInfo: { contact: c.contact || '', address: c.addr || '', phone: '', taxId: '' },
-    displayCycle: '4W',
-    discount: '',
-    roundTotalToHundred: false,
-    showLocation: true, showStamp: true, showCustomerNumber: true,
     extraNotes: '',
+    step: 0,
     items,
     _meta: { autoCustomCodes, srcIsContracted: useContracted }
   };
@@ -6169,6 +6053,7 @@ function clientToCMConfig(c){
 
 // ─── 模態狀態與 UI ───
 let CM_state = null;
+let CM_customSeq = 0;        // 臨時新品的內部代號流水號（代號不顯示於 UI）
 let CM_pickContext = null;
 let CM_wiz = null;          // 合約精靈暫存狀態（不持久化，關閉即清）
 let CM_pickWiz = false;     // 商品選擇器目前是否服務於合約精靈
@@ -6198,15 +6083,50 @@ function openCM(){
   document.getElementById('cm-client-name').textContent = c.name ? '· '+c.name : '';
   cmSyncToUI();
   cmRenderItems();
-  cmShowMessage();
-  document.getElementById('cm-preview-wrap').style.display = 'none';
   // iOS 上顯示「分享儲存」提示
   const tip = document.getElementById('cm-ios-tip');
   if(tip) tip.classList.toggle('on', cmIsIOS());
   document.getElementById('cm-modal').classList.add('on');
   // 鎖住 body 滾動，避免背景 momentum scroll 干擾 modal
   document.body.style.overflow = 'hidden';
+  cmGoStep(0);
+  cmShowMessage();   // 在 cmGoStep（會清空訊息列）之後顯示「已帶入 N 筆」提示
   cmLoadDocx().catch(e => console.warn('[CM] docx preload failed:', e.message));
+}
+// ── 分步精靈：步驟切換 ──
+function cmGoStep(n){
+  if(!CM_state) return;
+  const cur = CM_state.step || 0;
+  // 前進驗證
+  if(n > cur && cur === 0){
+    const valid = (CM_state.items||[]).filter(it => it.code && (Number(it.unit)||0) > 0);
+    if(valid.length === 0){ cmShowError('請至少加入一筆商品並填寫單價。'); return; }
+  }
+  if(n > cur && cur === 1){
+    if(!CM_state.client || !CM_state.client.trim()){ cmShowError('請輸入客戶名稱。'); return; }
+  }
+  const box = document.getElementById('cm-msg-box'); if(box){ box.className='cm-msg'; box.textContent=''; }
+  n = Math.max(0, Math.min(2, n));
+  CM_state.step = n;
+  document.querySelectorAll('#cm-modal [data-cm-step]').forEach(s => {
+    s.style.display = (Number(s.dataset.cmStep) === n) ? 'block' : 'none';
+  });
+  const prev = document.getElementById('cm-prev-btn'),
+        next = document.getElementById('cm-next-btn'),
+        dl   = document.getElementById('cm-download-btn');
+  if(prev) prev.style.display = n === 0 ? 'none' : '';
+  if(next) next.style.display = n === 2 ? 'none' : '';
+  if(dl)   dl.style.display   = n === 2 ? '' : 'none';
+  cmRenderStepPills();
+  if(n === 2) cmPreview();
+  const body = document.querySelector('#cm-modal .cm-body'); if(body) body.scrollTop = 0;
+}
+function cmRenderStepPills(){
+  const labels = ['商品明細', '客戶名稱', '預覽下載'];
+  const el = document.getElementById('cm-steps'); if(!el || !CM_state) return;
+  el.innerHTML = labels.map((t, i) => '<span style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;font-size:11px;'
+    + (i === (CM_state.step||0) ? 'background:var(--brand-d,#1f4e79);color:#fff' : 'background:var(--surface2,#eee);color:var(--text3,#888)')
+    + '">' + (i + 1) + '. ' + t + '</span>').join('');
 }
 function closeCM(){
   document.getElementById('cm-modal').classList.remove('on');
@@ -6214,45 +6134,9 @@ function closeCM(){
   CM_state = null;
 }
 function cmSyncToUI(){
-  const s = CM_state;
-  document.getElementById('cm-client').value = s.client || '';
-  document.getElementById('cm-version').value = s.version || '';
-  document.getElementById('cm-date').value = s.date || '';
-  document.getElementById('cm-taxId').value = (s.customerInfo && s.customerInfo.taxId) || '';
-  document.getElementById('cm-contact').value = (s.customerInfo && s.customerInfo.contact) || '';
-  document.getElementById('cm-phone').value = (s.customerInfo && s.customerInfo.phone) || '';
-  document.getElementById('cm-address').value = (s.customerInfo && s.customerInfo.address) || '';
-  document.getElementById('cm-displayCycle').value = s.displayCycle || '';
-  document.getElementById('cm-discount').value = s.discount || '';
-  document.getElementById('cm-roundTotalToHundred').checked = !!s.roundTotalToHundred;
-  document.getElementById('cm-showLocation').checked = s.showLocation !== false;
-  document.getElementById('cm-showStamp').checked = s.showStamp !== false;
-  document.getElementById('cm-showCustomerNumber').checked = s.showCustomerNumber !== false;
-  document.getElementById('cm-extraNotes').value = s.extraNotes || '';
-  // 文件類型 + 合約欄位
-  const dtv = s.docType === 'contract' ? 'contract' : 'quote';
-  const radio = document.querySelector('input[name=cm-doctype][value="'+dtv+'"]');
-  if(radio) radio.checked = true;
-  document.getElementById('cm-contractStart').value = s.contractStart || '';
-  document.getElementById('cm-contractYears').value = s.contractYears || '';
-  document.getElementById('cm-contractTerms').value = s.contractTerms || '';
-  cmApplyDocTypeUI(dtv);
-}
-// 依文件類型切換 UI（顯示合約設定區、下載按鈕文字、視窗標題）
-function cmApplyDocTypeUI(type){
-  const isContract = type === 'contract';
-  const sec = document.getElementById('cm-contract-section');
-  if(sec) sec.style.display = isContract ? 'block' : 'none';
-  const dl = document.getElementById('cm-download-btn');
-  if(dl) dl.textContent = isContract ? '📥 下載合約' : '📥 下載 Word';
-}
-function cmSetDocType(type){
-  if(!CM_state) return;
-  CM_state.docType = type === 'contract' ? 'contract' : 'quote';
-  cmApplyDocTypeUI(CM_state.docType);
-  // 切換後隱藏舊預覽，避免顯示另一種文件的內容
-  const pw = document.getElementById('cm-preview-wrap');
-  if(pw) pw.style.display = 'none';
+  const s = CM_state || {};
+  const cl = document.getElementById('cm-client'); if(cl) cl.value = s.client || '';
+  const en = document.getElementById('cm-extraNotes'); if(en) en.value = s.extraNotes || '';
 }
 function cmShowMessage(){
   const box = document.getElementById('cm-msg-box');
@@ -6284,93 +6168,104 @@ function cmField(label, type, value, onChange, attrs){
 }
 function cmRenderItems(){
   const cont = document.getElementById('cm-items');
+  if(!cont) return;
   cont.innerHTML = '';
-  CM_state.items.forEach((it, idx) => {
-    const div = document.createElement('div');
-    div.className = 'cm-item';
+  (CM_state.items || []).forEach((it, idx) => {
     const inCatalog = !!(it.code && CM_CATALOG.products[it.code]);
     const catalogName = inCatalog ? CM_CATALOG.products[it.code].name : '';
     const displayName = it.name != null ? it.name : catalogName;
+
+    const div = document.createElement('div');
+    div.className = 'cm-item';
+
+    // 第一列：品名（主欄）＋ 商品庫選擇 ＋ 刪除（代號不顯示）
     const head = document.createElement('div');
-    head.className = 'cm-item-head';
+    head.className = 'cm-row';
+    head.style.cssText = 'gap:6px;align-items:flex-end;margin-bottom:6px';
+    const nameField = cmField('品名 *', 'text', displayName, v => {
+      const cat = CM_CATALOG.products[it.code];
+      if(cat && v === cat.name){ delete it.name; } else { it.name = v; }
+    }, {placeholder:'品名（可點「商品庫」帶入）'});
+    nameField.style.flex = '1 1 auto';
+    head.appendChild(nameField);
     const pick = document.createElement('button');
-    pick.type = 'button';
-    pick.className = 'cm-item-pick' + (it.code ? '' : ' empty');
-    if(it.code){
-      if(inCatalog){
-        const p = CM_CATALOG.products[it.code];
-        pick.innerHTML = '<span class="code">'+HOST.escapeHtml(it.code)+'</span>'+HOST.escapeHtml(catalogName)+'<span class="price">'+HOST.escapeHtml(p.cycle||'')+' / 單價 '+(p.price==null?'—':p.price)+'</span>';
-      } else {
-        pick.innerHTML = '<span class="code" style="color:#A36B00">🆕 '+HOST.escapeHtml(it.code)+'</span><span style="color:var(--text2)">'+HOST.escapeHtml(displayName || '臨時新品')+'</span><span class="price" style="color:#A36B00">(自訂)</span>';
-      }
-    } else {
-      pick.textContent = '👉 點此從商品庫選擇';
-    }
+    pick.type = 'button'; pick.className = 'btn btn-outline btn-sm'; pick.textContent = '🔍 商品庫';
+    pick.title = '從商品庫選擇（自動帶入品名、週期、單價）';
     pick.onclick = () => cmOpenProdPicker(idx);
+    head.appendChild(pick);
     const rm = document.createElement('button');
-    rm.type='button'; rm.className='cm-item-rm'; rm.textContent='✕'; rm.title='刪除品項';
-    rm.setAttribute('aria-label', '刪除此品項');
+    rm.type = 'button'; rm.className = 'btn btn-danger btn-sm'; rm.textContent = '✕';
+    rm.title = '刪除品項'; rm.setAttribute('aria-label', '刪除此品項');
     rm.onclick = () => cmRemoveItem(idx);
-    head.appendChild(pick); head.appendChild(rm);
+    head.appendChild(rm);
     div.appendChild(head);
 
-    // 代號 + 品名 可編輯欄（永遠顯示）
-    const idRow = document.createElement('div');
-    idRow.className = 'cm-row';
-    idRow.style.cssText = 'gap:8px;margin-bottom:0';
-    idRow.appendChild(cmField('代號 *', 'text', it.code || '', v => {
-      it.code = (v||'').trim().toUpperCase();
-      cmRenderItems();
-    }, {placeholder:'例：DECSR 或自訂代號'}));
-    idRow.appendChild(cmField('品名 *', 'text', displayName, v => {
-      const cat = CM_CATALOG.products[it.code];
-      if(cat && v === cat.name){ delete it.name; }
-      else { it.name = v; }
-    }, {placeholder: inCatalog ? '預設商品庫品名，可改' : '臨時新品請填品名'}));
-    div.appendChild(idRow);
-
+    // 第二列：更換週期 / 數量 / 單價（每次更換）
     const fields = document.createElement('div');
     fields.className = 'cm-item-fields';
-    fields.appendChild(cmField('數量','number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; }, {min:1}));
-    fields.appendChild(cmField('位置','text', it.loc || '', v => { it.loc = v; }, {placeholder:'例：大門'}));
-    fields.appendChild(cmField(inCatalog ? '特殊單價' : '單價 *','number', it.priceOverride == null ? '' : it.priceOverride, v => { it.priceOverride = v === '' ? undefined : Number(v); }, {placeholder: inCatalog ? '依顯示週期' : '4W 單價 (必填)', step:'any'}));
     const cw = document.createElement('label'); cw.className = 'cm-field';
-    const cs = document.createElement('span'); cs.textContent = '此項顯示週期'; cw.appendChild(cs);
+    const cs = document.createElement('span'); cs.textContent = '更換週期'; cw.appendChild(cs);
     const sel = document.createElement('select');
-    [['','隨全域'],['2W','2W'],['4W','4W']].forEach(([v,t]) => {
+    [['4W','4週'],['2W','2週'],['1W','1週']].forEach(([v,t]) => {
       const o = document.createElement('option'); o.value = v; o.textContent = t;
-      if((it.displayCycle || '') === v) o.selected = true;
+      if((it.cycle || '2W') === v) o.selected = true;
       sel.appendChild(o);
     });
-    sel.onchange = () => { it.displayCycle = sel.value || undefined; };
+    sel.onchange = () => { it.cycle = sel.value; cmRenderItems(); };
     cw.appendChild(sel); fields.appendChild(cw);
+    fields.appendChild(cmField('數量', 'number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; cmRenderItems(); }, {min:1}));
+    fields.appendChild(cmField('單價(每次更換)', 'number', (it.unit == null || it.unit === '') ? '' : it.unit, v => { it.unit = v === '' ? '' : Number(v); cmRenderItems(); }, {placeholder:'每次更換單價', step:'any', min:0}));
     div.appendChild(fields);
 
-    if(!inCatalog && it.code){
-      const hint = document.createElement('div');
-      hint.style.cssText = 'font-size:11px;color:#A36B00;margin-top:2px';
-      hint.textContent = '🆕 此代號不在商品庫，請確認品名與單價已填寫。';
-      div.appendChild(hint);
+    // 位置：勾選才出現
+    const locWrap = document.createElement('div');
+    locWrap.style.cssText = 'margin-top:6px';
+    const hasLoc = (it.loc != null && it.loc !== '') || !!it._showLoc;
+    const cbLabel = document.createElement('label');
+    cbLabel.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = hasLoc;
+    cb.onchange = () => { it._showLoc = cb.checked; if(!cb.checked) delete it.loc; cmRenderItems(); };
+    cbLabel.appendChild(cb); cbLabel.appendChild(document.createTextNode('＋ 加入位置欄'));
+    locWrap.appendChild(cbLabel);
+    if(hasLoc){
+      const lf = cmField('位置', 'text', it.loc || '', v => { it.loc = v; }, {placeholder:'例：大門'});
+      lf.style.marginTop = '4px';
+      locWrap.appendChild(lf);
     }
+    div.appendChild(locWrap);
+
+    // 每4週金額（即時換算：單價 × 換洗次數 × 數量）
+    const money = document.createElement('div');
+    money.style.cssText = 'margin-top:6px;text-align:right;font-weight:600;color:var(--green-d)';
+    const unitN = Number(it.unit) || 0, qn = parseInt(it.qty, 10) || 1, ch = cmChangesPer4W(it.cycle || '2W');
+    money.textContent = '每4週 $' + (unitN * ch * qn).toLocaleString();
+    div.appendChild(money);
 
     cont.appendChild(div);
   });
+  cmUpdateGrandTotal();
+}
+function cmUpdateGrandTotal(){
+  const el = document.getElementById('cm-grandtotal'); if(!el) return;
+  let t = 0;
+  (CM_state.items || []).forEach(it => { t += (Number(it.unit) || 0) * cmChangesPer4W(it.cycle || '2W') * (parseInt(it.qty, 10) || 1); });
+  el.textContent = '每4週總計：$' + t.toLocaleString();
 }
 function cmAddItem(isCustom){
   const newIdx = CM_state.items.length;
-  CM_state.items.push({code:'', qty:1});
-  cmRenderItems();
-  if(!isCustom){
-    cmOpenProdPicker(newIdx);
-  } else {
+  if(isCustom){
+    // 臨時新品：自動產生內部代號（不顯示於 UI），業務只需填品名 + 單價
+    CM_state.items.push({code:'NEW'+(++CM_customSeq), qty:1, cycle:'2W', unit:'', name:''});
+    cmRenderItems();
     setTimeout(() => {
       const items = document.querySelectorAll('#cm-items .cm-item');
       const itemEl = items[newIdx];
-      if(itemEl){
-        const inputs = itemEl.querySelectorAll('input[type=text]');
-        if(inputs[0]) inputs[0].focus();
-      }
+      if(itemEl){ const inp = itemEl.querySelector('input[type=text]'); if(inp) inp.focus(); }
     }, 50);
+  } else {
+    CM_state.items.push({code:'', qty:1, cycle:'2W', unit:''});
+    cmRenderItems();
+    cmOpenProdPicker(newIdx);
   }
 }
 function cmRemoveItem(idx){
@@ -6421,8 +6316,13 @@ function cmRenderProdList(){
         if(CM_pickContext != null && CM_state.items[CM_pickContext]){
           const it = CM_state.items[CM_pickContext];
           it.code = p.code;
-          // 從商品庫選取 → 清掉之前的自訂品名（讓 it.name 為 undefined，恢復用 catalog 預設）
+          // 從商品庫選取 → 帶入預設品名／週期／單價（單價＝商品庫每次更換單價）
           delete it.name;
+          const cp = CM_CATALOG.products[p.code];
+          if(cp){
+            it.cycle = cp.cycle || it.cycle || '2W';
+            it.unit = (cp.price != null) ? cp.price : '';
+          }
           cmRenderItems();
         }
         cmCloseProdPicker();
@@ -6435,58 +6335,43 @@ function cmRenderProdList(){
 function cmBuildConfig(){
   if(!CM_state) throw new Error('狀態為空');
   if(!CM_state.client || !CM_state.client.trim()) throw new Error('請輸入客戶名稱');
-  if(!CM_state.date || !CM_state.date.trim()) throw new Error('請輸入報價日期');
+  const date = (CM_state.date && CM_state.date.trim()) || (HOST.today() || '').replace(/-/g,'/');
+  let showLocation = false;
   const validItems = CM_state.items.filter(it => it.code).map(it => {
-    const out = {code: it.code, qty: parseInt(it.qty,10) || 1};
-    if(it.loc) out.loc = it.loc;
-    if(it.priceOverride !== '' && it.priceOverride != null && !Number.isNaN(Number(it.priceOverride))) out.priceOverride = Number(it.priceOverride);
-    if(it.displayCycle) out.displayCycle = it.displayCycle;
-    // 品名覆寫：若 it.name 有值，且非空，傳給 engine
+    const out = {code: it.code, qty: parseInt(it.qty,10) || 1, cycle: it.cycle || '2W'};
+    if(it.loc){ out.loc = it.loc; showLocation = true; }
+    // 單價＝每次更換單價
+    if(it.unit !== '' && it.unit != null && !Number.isNaN(Number(it.unit))) out.unit = Number(it.unit);
+    // 品名覆寫：與 catalog 預設品名不同（或自訂品項）→ 傳
     if(it.name != null && String(it.name).trim()){
       const cat = CM_CATALOG.products[it.code];
-      // 與 catalog 預設品名相同 → 不傳；不同（或自訂品項）→ 傳
       if(!cat || it.name !== cat.name) out.nameOverride = String(it.name).trim();
     }
-    // 臨時自訂品項驗證：代號不在商品庫 → 必須有 nameOverride + priceOverride
-    if(!CM_CATALOG.products[it.code]){
-      if(!out.nameOverride) throw new Error('代號「'+it.code+'」不在商品庫，請填品名');
-      if(out.priceOverride == null) throw new Error('代號「'+it.code+'」不在商品庫，請填單價');
+    const cat = CM_CATALOG.products[it.code];
+    if(!cat){
+      // 臨時新品：須有品名 + 單價
+      if(!out.nameOverride) throw new Error('「'+(it.name||'新品')+'」請填品名');
+      if(out.unit == null) throw new Error('「'+(out.nameOverride||'新品')+'」請填單價');
+    } else if(out.unit == null && cat.price == null){
+      // 商品庫無定價（如 M-90）且未手填 → 提示填單價
+      throw new Error('「'+cat.name+'」請填單價');
     }
     return out;
   });
   if(validItems.length === 0) throw new Error('請至少加入一筆有效商品');
   const cfg = {
     client: CM_state.client.trim(),
-    date: CM_state.date.trim(),
-    customerInfo: {
-      taxId: (CM_state.customerInfo && CM_state.customerInfo.taxId) || undefined,
-      contact: (CM_state.customerInfo && CM_state.customerInfo.contact) || undefined,
-      phone: (CM_state.customerInfo && CM_state.customerInfo.phone) || undefined,
-      address: (CM_state.customerInfo && CM_state.customerInfo.address) || undefined
-    },
-    showLocation: CM_state.showLocation !== false,
-    showStamp: CM_state.showStamp !== false,
-    showCustomerNumber: CM_state.showCustomerNumber !== false,
+    date: date,
+    docType: 'quote',
+    customerInfo: {},
+    showLocation: showLocation,
+    showStamp: false,
+    showCustomerNumber: false,
     items: validItems,
     areaName: '商品明細'
   };
-  if(CM_state.version && CM_state.version.trim()) cfg.version = CM_state.version.trim();
-  if(CM_state.displayCycle) cfg.displayCycle = CM_state.displayCycle;
-  if(CM_state.discount !== '' && CM_state.discount != null){
-    const d = Number(CM_state.discount);
-    if(!Number.isNaN(d) && d > 0 && d <= 1) cfg.discount = d;
-  }
-  if(CM_state.roundTotalToHundred) cfg.roundTotalToHundred = true;
   if(CM_state.extraNotes && CM_state.extraNotes.trim()){
     cfg.extraNotes = CM_state.extraNotes.split('\n').map(s => s.trim()).filter(Boolean);
-  }
-  // 文件類型與合約設定
-  cfg.docType = CM_state.docType === 'contract' ? 'contract' : 'quote';
-  if(cfg.docType === 'contract'){
-    cfg.contractStart = (CM_state.contractStart || CM_state.date || '').trim();
-    const yrs = parseInt(CM_state.contractYears, 10);
-    if(!Number.isNaN(yrs) && yrs > 0) cfg.contractYears = yrs;
-    if(CM_state.contractTerms != null) cfg.contractTerms = CM_state.contractTerms;
   }
   return cfg;
 }
@@ -6495,12 +6380,12 @@ function cmShowError(msg){
   box.className = 'cm-msg error'; box.textContent = msg;
 }
 function cmPreview(){
+  const el = document.getElementById('cm-preview');
   try{
     const cfg = cmBuildConfig();
-    document.getElementById('cm-preview').textContent = CM_engine.previewText(cfg);
-    document.getElementById('cm-preview-wrap').style.display = 'block';
-    document.getElementById('cm-preview-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+    if(el) el.textContent = CM_engine.previewText(cfg);
   } catch(e){
+    if(el) el.textContent = '';
     cmShowError(e.message || String(e));
   }
 }
@@ -6552,57 +6437,6 @@ async function cmTriggerSave(blob, filename){
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
   return 'downloaded';
-}
-// ⚡ 快速報價：用客戶現有品項一鍵產生報價單 Word 並下載，免開視窗。
-// 若品項不全（無品項，或臨時新品缺品名／單價）→ 退回開啟完整視窗讓使用者補。
-async function cmQuickQuote(){
-  const c = cmCurClient();
-  if(!c){ alert('請先開啟客戶詳情'); return; }
-  const cfg = clientToCMConfig(c);   // 預設 docType:'quote'
-  if(!cfg.items.some(it => it.code)){
-    // 完全沒有可帶入的品項 → 開視窗手動新增
-    openCM();
-    const box = document.getElementById('cm-msg-box');
-    if(box){ box.className = 'cm-msg warn'; box.textContent = '此客戶尚無可帶入的品項，請手動新增商品後再產生報價單。'; }
-    return;
-  }
-  const btn = document.getElementById('cd-quickquote-btn');
-  const orig = btn ? btn.textContent : '';
-  if(btn){ btn.disabled = true; btn.textContent = '產生中…'; }
-  try{
-    CM_state = cfg;
-    let buildCfg;
-    try{
-      buildCfg = cmBuildConfig();
-    } catch(e){
-      // 資料不全（如臨時新品缺品名／單價）→ 開完整視窗讓使用者補
-      openCM();
-      const box = document.getElementById('cm-msg-box');
-      if(box){ box.className = 'cm-msg warn'; box.textContent = '需補充資料才能產生報價單：'+(e.message || String(e)); }
-      return;
-    }
-    await cmLoadDocx();
-    const blob = await CM_builder.buildBlob(buildCfg);
-    const fname = '報價單_'+cmSafeFilename(buildCfg.client)+'.docx';
-    const result = await cmTriggerSave(blob, fname);
-    CM_state = null;
-    if(result !== 'cancelled'){
-      c.visits = c.visits || [];
-      c.visits.unshift({ date: HOST.today(), note: '已產生報價單（快速）：'+fname, statusChange:'', insight:'', mood:0 });
-      c.updatedAt = Date.now();
-      HOST.save();
-      HOST.sync('save', { client: c });
-      HOST.onChange();
-      alert(result === 'shared' ? '✅ 已透過系統分享 '+fname
-          : result === 'newtab' ? '✅ 已在新分頁開啟 '+fname+'，請於該頁點「分享」→「儲存到檔案」'
-          : '✅ 已產生報價單並寫入拜訪紀錄：'+fname);
-    }
-  } catch(e){
-    CM_state = null;
-    alert('快速報價產生失敗：'+(e.message || String(e)));
-  } finally {
-    if(btn){ btn.disabled = false; btn.textContent = orig; }
-  }
 }
 async function cmDownload(){
   const btn = document.getElementById('cm-download-btn');
@@ -6656,14 +6490,11 @@ function cmMount(){
     const ev = (el.tagName === 'SELECT' || isCheck) ? 'change' : 'input';
     el.addEventListener(ev, () => cmSet(path, isCheck ? el.checked : el.value));
   });
-  // 文件類型切換
-  modal.querySelectorAll('[data-cm-doctype]').forEach(el => {
-    el.addEventListener('change', () => { if(el.checked) cmSetDocType(el.value); });
-  });
   // 按鈕
   const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
   bind('cm-close-btn', closeCM);
-  bind('cm-preview-btn', cmPreview);
+  bind('cm-prev-btn', () => { if(CM_state) cmGoStep((CM_state.step||0) - 1); });
+  bind('cm-next-btn', () => { if(CM_state) cmGoStep((CM_state.step||0) + 1); });
   bind('cm-download-btn', cmDownload);
   bind('cm-additem-cat', () => cmAddItem(false));
   bind('cm-additem-new', () => cmAddItem(true));
@@ -7050,8 +6881,6 @@ return {
   open(){ cmMount(); openCM(); },
   // 客戶卡「📑 產生合約」：開啟公版合約精靈
   openContract(){ cmwMount(); cmwOpen(); },
-  // 客戶卡「⚡ 快速報價」：一鍵產生報價單
-  quickQuote(){ cmMount(); cmQuickQuote(); },
   // 測試用內部 handle（正式 UI 不使用；供 ?test=1 驗證純函式）
   _test: {
     CATALOG: CM_CATALOG,
@@ -7324,35 +7153,33 @@ if(location.search.includes('test=1')){
   assert('parseRegion 空',parseRegion(''),'');
   assert('parseRegion 無區',parseRegion('台南市中山路'),'');
 
-  // --- CONTRACTMAKER 整合 ---
-  // 模組封裝後，透過 ContractMaker._test handle 取得內部純函式（正式 UI 不使用此 handle）
+  // --- CONTRACTMAKER 整合（報價單分步精靈・新算法：單價×換洗次數×數量＝每4週金額）---
   assert('ContractMaker 模組已載入',typeof ContractMaker==='object'&&typeof ContractMaker.open==='function',true);
-  assert('ContractMaker 暴露 quickQuote',typeof ContractMaker.quickQuote==='function',true);
+  assert('ContractMaker 暴露 openContract',typeof ContractMaker.openContract==='function',true);
+  assert('ContractMaker 不再暴露 quickQuote',typeof ContractMaker.quickQuote,'undefined');
   const CMt=ContractMaker._test;
   const CM_CATALOG=CMt.CATALOG;
   const CM_engine=CMt.engine;
   const clientToCMConfig=CMt.clientToConfig;
-  const cmDefaultContractTermsText=CMt.defaultTerms;
   let CM_state=null;
   const cmBuildConfig=()=>CMt.buildConfigFrom(CM_state);
-  // CM_CATALOG 已載入
   assert('CM_CATALOG 有 products',!!CM_CATALOG&&!!CM_CATALOG.products,true);
   assert('CM_CATALOG 包含 DECSR',!!CM_CATALOG.products.DECSR,true);
-  // clientToCMConfig: 基本欄位帶入
+
+  // clientToCMConfig: 新模型只留 client/date/items（無 customerInfo/displayCycle 等）
   const cmC1=clientToCMConfig({name:'某某店',contact:'王老闆',addr:'永康區中山路1號',contractedItems:[],trialItems:[]});
   assert('clientToCMConfig client 名稱',cmC1.client,'某某店');
-  assert('clientToCMConfig contact',cmC1.customerInfo.contact,'王老闆');
-  assert('clientToCMConfig address',cmC1.customerInfo.address,'永康區中山路1號');
-  assert('clientToCMConfig 預設 4W',cmC1.displayCycle,'4W');
   assert('clientToCMConfig 預設無品項長度',cmC1.items.length,0);
   assert('clientToCMConfig date 為 / 格式',/^\d{4}\/\d{2}\/\d{2}$/.test(cmC1.date),true);
-  // 成約品項優先（DECSR 在合約商品庫內）
-  const cmC2=clientToCMConfig({name:'A店',contact:'',addr:'',
+  // 成約品項優先；帶入週期；無議價→unit=商品庫定價（DECSR price=170＝每次更換單價）
+  const cmC2=clientToCMConfig({name:'A店',
     contractedItems:[{product:'DECSR',qty:2,quoted:0,cycle:'2W'}],
     trialItems:[{product:'DECSR',qty:9,quoted:0}]});
   assert('clientToCMConfig 優先用成約品項',cmC2.items.length,1);
   assert('clientToCMConfig 成約 qty 帶入',cmC2.items[0].qty,2);
   assert('clientToCMConfig srcIsContracted',cmC2._meta.srcIsContracted,true);
+  assert('clientToCMConfig 帶入週期',cmC2.items[0].cycle,'2W');
+  assert('clientToCMConfig 無議價→unit=商品庫定價',cmC2.items[0].unit,170);
   // 沒成約 → 用試用
   const cmC3=clientToCMConfig({name:'B店',trialItems:[{product:'DECSR',qty:1,cycle:'2W'}]});
   assert('clientToCMConfig 退回試用',cmC3.items.length,1);
@@ -7360,19 +7187,11 @@ if(location.search.includes('test=1')){
   // 過濾 bundledTo (配件)
   const cmC4=clientToCMConfig({name:'C店',contractedItems:[
     {product:'DECSR',qty:1},
-    {product:'BT3',qty:4,bundledTo:'AFDW'}  // bundled 應排除
+    {product:'BT3',qty:4,bundledTo:'AFDW'}
   ]});
   assert('clientToCMConfig 排除 bundledTo',cmC4.items.length,1);
   assert('clientToCMConfig 排除後留 DECSR',cmC4.items[0].code,'DECSR');
-  // 不在合約商品庫的代號 → 自動建為臨時新品（從 salesystem 商品庫補品名/單價）
-  const cmC5=clientToCMConfig({name:'D店',contractedItems:[
-    {product:'DECSR',qty:1},
-    {product:'S-20',qty:1}  // S-20 在 CM_CATALOG 但 price=null；在 salesystem DB 有 price=100, cycle=2W
-  ]});
-  assert('clientToCMConfig 全部品項保留',cmC5.items.length,2);
-  // S-20 在 CM_CATALOG 但 price=null → 不算 autoCustom（catalog 有，只是沒原價）
-  assert('clientToCMConfig S-20 在 catalog 不算 autoCustom',cmC5._meta.autoCustomCodes.length,0);
-  // 完全不在 CM_CATALOG 的代號
+  // 完全不在 CM_CATALOG 的代號 → autoCustomCodes
   const cmC5b=clientToCMConfig({name:'D2店',contractedItems:[
     {product:'DECSR',qty:1},
     {product:'NONEXISTENT-CODE',qty:1}
@@ -7380,112 +7199,88 @@ if(location.search.includes('test=1')){
   assert('clientToCMConfig 非合約代號記入 autoCustomCodes',cmC5b._meta.autoCustomCodes.length,1);
   assert('clientToCMConfig autoCustomCodes 內容',cmC5b._meta.autoCustomCodes[0],'NONEXISTENT-CODE');
   assert('clientToCMConfig 非合約代號仍保留品項',cmC5b.items.length,2);
-  // quoted → priceOverride（4W 總額 / qty）
+  // 議價 quoted（整列每4週總額）→ 反推每次更換單價 = quoted /（換洗次數 × 數量）
+  // DECSR 2週→次數2；quoted=600, qty=2 → unit = 600/(2×2) = 150
   const cmC6=clientToCMConfig({name:'E店',contractedItems:[{product:'DECSR',qty:2,quoted:600,cycle:'2W'}]});
-  assert('clientToCMConfig priceOverride=quoted/qty',cmC6.items[0].priceOverride,300);
-  // quoted=0 → 不設 priceOverride
+  assert('clientToCMConfig unit=quoted/(次數×數量)',cmC6.items[0].unit,150);
+  // quoted=0 → 用商品庫定價（DECSR=170）
   const cmC7=clientToCMConfig({name:'F店',contractedItems:[{product:'DECSR',qty:1,quoted:0}]});
-  assert('clientToCMConfig quoted=0 不設 override',cmC7.items[0].priceOverride,undefined);
-  // 完整流程：cmBuildConfig + CM_engine.expandQuote 算出合理金額
+  assert('clientToCMConfig quoted=0→商品庫定價',cmC7.items[0].unit,170);
+
+  // 完整流程：DECSR 單價170(每次更換)、2週→次數2、qty1 → monthly = 170×2×1 = 340
   CM_state=clientToCMConfig({name:'測試店',contractedItems:[{product:'DECSR',qty:1,cycle:'2W',quoted:0}]});
-  const cmCfg=cmBuildConfig();
-  const cmQ=CM_engine.expandQuote(cmCfg);
-  // DECSR price=170, cycle=2W, displayCycle=4W → unitPrice=340, monthly=340
-  assert('CM_engine grandTotal DECSR 4W',cmQ.grandTotal,340);
-  assert('CM_engine items 1 筆',cmQ.areas[0].items.length,1);
-  // Word 輸出 / 預覽不揭露原價／折扣（特殊單價是內部操作用）
-  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',discount:'0.8',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,items:[{code:'DECSR',qty:1}]};
-  const cmDiscPreview=CM_engine.previewText(cmBuildConfig());
-  assert('previewText 不含「原價」',cmDiscPreview.includes('原價'),false);
-  assert('previewText 不含「已優惠」',cmDiscPreview.includes('已優惠'),false);
-  assert('previewText 不含「★有折扣」',cmDiscPreview.includes('★'),false);
-  assert('previewText 不含「省 」%',cmDiscPreview.includes('省 '),false);
-  assert('previewText 不含「部分品項享有」',cmDiscPreview.includes('部分品項享有'),false);
-  assert('previewText 仍含最終單價',cmDiscPreview.includes('單價 272'),true);
+  const cmQ=CM_engine.expandQuote(cmBuildConfig());
+  assert('expandQuote DECSR 2週 monthly',cmQ.grandTotal,340);
+  assert('expandQuote items 1 筆',cmQ.areas[0].items.length,1);
+  assert('expandQuote docType 一律 quote',cmQ.docType,'quote');
+
+  // 使用者範例：單價200(每次更換)、2週、數量3 → 每4週 = 200×2×3 = 1200
+  CM_state={client:'M',date:'2026/05/07',items:[{code:'M-90',qty:3,cycle:'2W',unit:200}]};
+  const cmExQ=CM_engine.expandQuote(cmBuildConfig());
+  assert('範例 M-90 2週×3×200 = 1200',cmExQ.grandTotal,1200);
+  assert('範例 單價顯示每次更換單價',cmExQ.areas[0].items[0].unitPrice,200);
+  // 1週：單價150、數量2 → 次數4 → 150×4×2 = 1200
+  CM_state={client:'M',date:'2026/05/07',items:[{code:'NSAC',qty:2,cycle:'1W',unit:150}]};
+  assert('1週 單價150×4×2 = 1200',CM_engine.expandQuote(cmBuildConfig()).grandTotal,1200);
+  // 4週：DECSR 改 4週 → 次數1 → 170×1×1 = 170
+  CM_state={client:'M',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'4W',unit:170}]};
+  assert('4週 DECSR 170×1×1 = 170',CM_engine.expandQuote(cmBuildConfig()).grandTotal,170);
+  // changesPer4W 確認
+  assert('expandItem 換洗次數 1週=4',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'1W',unit:10}).monthly,40);
+  assert('expandItem 換洗次數 2週=2',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'2W',unit:10}).monthly,20);
+  assert('expandItem 換洗次數 4週=1',CM_engine.expandItem({code:'DECSR',qty:1,cycle:'4W',unit:10}).monthly,10);
+
+  // 預覽/輸出不顯示代號、規格；週期顯示中文、單價＝每次更換單價
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170}]};
+  const cmPv=CM_engine.previewText(cmBuildConfig());
+  assert('previewText 不含代號 DECSR',cmPv.includes('DECSR'),false);
+  assert('previewText 週期顯示中文 2週',cmPv.includes('2週'),true);
+  assert('previewText 含品名',cmPv.includes('歡迎光臨地墊S紅'),true);
+  assert('previewText 含每次更換單價 170',cmPv.includes('單價 170'),true);
   CM_state=null;
 
-  // --- 臨時新品（不在 CM_CATALOG）---
-  // 純自訂代號 + 品名 + 單價，engine 應接受
-  const cmCustomCfg={client:'Y',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'CUSTOM-1',qty:2,nameOverride:'我的特製品',priceOverride:500}]};
-  const cmCustomQ=CM_engine.expandQuote(cmCustomCfg);
-  // 虛擬產品 cycle='4W'，cycleMultiplier=1，monthly = 500 × 1 × 2 = 1000
-  assert('臨時新品 4W 總額',cmCustomQ.grandTotal,1000);
+  // 臨時新品（不在 CM_CATALOG）：須品名 + 單價，4週→次數1 → 500×1×2 = 1000
+  const cmCustomQ=CM_engine.expandQuote({client:'Y',date:'2026/05/07',items:[{code:'NEW1',qty:2,cycle:'4W',nameOverride:'我的特製品',unit:500}]});
+  assert('臨時新品 4週 500×1×2 = 1000',cmCustomQ.grandTotal,1000);
   assert('臨時新品 品名',cmCustomQ.areas[0].items[0].name,'我的特製品');
-  // 臨時新品缺單價 → 丟錯
   let threw=false;
-  try{ CM_engine.expandQuote({client:'Y',date:'2026/05/07',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'CUSTOM-X',qty:1,nameOverride:'X'}]}); }catch(e){ threw=true; }
+  try{ CM_engine.expandQuote({client:'Y',date:'2026/05/07',items:[{code:'NEW2',qty:1,cycle:'4W',nameOverride:'X'}]}); }catch(e){ threw=true; }
   assert('臨時新品無單價 → 丟錯',threw,true);
-  // 臨時新品缺品名 → 丟錯
   threw=false;
-  try{ CM_engine.expandQuote({client:'Y',date:'2026/05/07',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'CUSTOM-Y',qty:1,priceOverride:300}]}); }catch(e){ threw=true; }
+  try{ CM_engine.expandQuote({client:'Y',date:'2026/05/07',items:[{code:'NEW3',qty:1,cycle:'4W',unit:300}]}); }catch(e){ threw=true; }
   assert('臨時新品無品名 → 丟錯',threw,true);
 
-  // --- 品名覆寫（既有商品改名）---
-  // 既有 DECSR + nameOverride 應使用覆寫名而非 catalog 預設
-  const cmRenameQ=CM_engine.expandQuote({client:'Y',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'DECSR',qty:1,nameOverride:'歡迎光臨地墊（特製版）'}]});
+  // 既有商品 nameOverride 生效、不影響金額（DECSR 2週 170×2 = 340）
+  const cmRenameQ=CM_engine.expandQuote({client:'Y',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,nameOverride:'歡迎光臨地墊（特製版）'}]});
   assert('既有商品 nameOverride 生效',cmRenameQ.areas[0].items[0].name,'歡迎光臨地墊（特製版）');
-  assert('既有商品 nameOverride 不影響原價計算',cmRenameQ.grandTotal,340);
+  assert('既有商品 nameOverride 不影響金額',cmRenameQ.grandTotal,340);
 
-  // --- cmBuildConfig 對 it.name 的轉換 ---
-  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'DECSR',qty:1,name:'歡迎光臨地墊S紅'}]};  // 與 catalog 同名
-  const cmBC1=cmBuildConfig();
-  assert('cmBuildConfig 同 catalog 名 → 不傳 nameOverride',cmBC1.items[0].nameOverride,undefined);
-  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'DECSR',qty:1,name:'我的客製名稱'}]};
-  const cmBC2=cmBuildConfig();
-  assert('cmBuildConfig 不同名 → 傳 nameOverride',cmBC2.items[0].nameOverride,'我的客製名稱');
-  // 完全自訂 + name + priceOverride
-  CM_state={client:'X',date:'2026/05/07',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'NEWITEM-1',qty:1,name:'臨時新品 A',priceOverride:280}]};
-  const cmBC3=cmBuildConfig();
-  assert('cmBuildConfig 自訂代號保留 nameOverride',cmBC3.items[0].nameOverride,'臨時新品 A');
-  assert('cmBuildConfig 自訂代號保留 priceOverride',cmBC3.items[0].priceOverride,280);
+  // cmBuildConfig 對 it.name 的轉換、cycle/unit 帶出、位置與驗證
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,name:'歡迎光臨地墊S紅'}]};  // 與 catalog 同名
+  assert('cmBuildConfig 同 catalog 名 → 不傳 nameOverride',cmBuildConfig().items[0].nameOverride,undefined);
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,name:'我的客製名稱'}]};
+  assert('cmBuildConfig 不同名 → 傳 nameOverride',cmBuildConfig().items[0].nameOverride,'我的客製名稱');
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:2,cycle:'1W',unit:170}]};
+  const cmBC4=cmBuildConfig();
+  assert('cmBuildConfig 帶出 cycle',cmBC4.items[0].cycle,'1W');
+  assert('cmBuildConfig 帶出 unit',cmBC4.items[0].unit,170);
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170}]};
+  assert('cmBuildConfig 無位置→showLocation=false',cmBuildConfig().showLocation,false);
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,loc:'大門'}]};
+  assert('cmBuildConfig 有位置→showLocation=true',cmBuildConfig().showLocation,true);
+  threw=false; CM_state={client:'',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170}]};
+  try{ cmBuildConfig(); }catch(e){ threw=true; }
+  assert('cmBuildConfig 缺客戶名稱 → 丟錯',threw,true);
+  threw=false; CM_state={client:'X',date:'2026/05/07',items:[{code:'M-90',qty:1,cycle:'2W'}]};
+  try{ cmBuildConfig(); }catch(e){ threw=true; }
+  assert('cmBuildConfig 商品庫無定價(M-90)未填單價 → 丟錯',threw,true);
   CM_state=null;
 
-  // --- 合約書（docType=contract）---
-  // clientToCMConfig 預設文件類型與合約欄位
-  const cmDT=clientToCMConfig({name:'合約店',contractedItems:[{product:'DECSR',qty:1,cycle:'2W'}]});
-  assert('clientToCMConfig 預設 docType=quote',cmDT.docType,'quote');
-  assert('clientToCMConfig 預設 contractStart=date',cmDT.contractStart,cmDT.date);
-  assert('clientToCMConfig 預設 contractYears=1',cmDT.contractYears,1);
-  assert('clientToCMConfig 預設帶入合約條款',cmDT.contractTerms.length>0,true);
-  // 訂製品（HPL contractYears=4）→ 合約期間預設取 4
-  const cmDTc=clientToCMConfig({name:'訂製店',contractedItems:[{product:'HPL',qty:1}]});
-  assert('clientToCMConfig 訂製品 contractYears=4',cmDTc.contractYears,4);
-  // cmDefaultContractTermsText 為多行非空字串
-  assert('cmDefaultContractTermsText 多行',cmDefaultContractTermsText().split('\n').length>=5,true);
-  assert('cmDefaultContractTermsText 含營業稅條款',cmDefaultContractTermsText().includes('營業稅'),true);
-  // cmBuildConfig 帶出合約欄位
-  CM_state={client:'合約A',date:'2026/05/07',docType:'contract',contractStart:'2026/06/01',contractYears:'2',
-    contractTerms:'條款一\n條款二',displayCycle:'4W',customerInfo:{},showLocation:true,showStamp:true,showCustomerNumber:true,
-    items:[{code:'DECSR',qty:1}]};
-  const cmCt=cmBuildConfig();
-  assert('cmBuildConfig docType=contract',cmCt.docType,'contract');
-  assert('cmBuildConfig contractStart 帶出',cmCt.contractStart,'2026/06/01');
-  assert('cmBuildConfig contractYears 轉數字',cmCt.contractYears,2);
-  assert('cmBuildConfig contractTerms 帶出',cmCt.contractTerms,'條款一\n條款二');
-  // expandQuote 透傳 docType / 合約欄位
-  const cmCtQ=CM_engine.expandQuote(cmCt);
-  assert('expandQuote docType 透傳',cmCtQ.docType,'contract');
-  assert('expandQuote contractYears 透傳',cmCtQ.contractYears,2);
-  // contractTermLines：使用者條款 + 訂製品自動補條款
+  // contractTermLines（合約條款工具仍可用）：使用者條款 + 訂製品自動補條款
   const cmTermsCustom=CM_engine.contractTermLines({contractTerms:'A\nB',customItems:[{code:'HPL',name:'訂做地墊2色L',years:4}]});
   assert('contractTermLines 使用者條款數',cmTermsCustom.length,3);
   assert('contractTermLines 訂製品條款附加',cmTermsCustom[2].includes('訂製品'),true);
   assert('contractTermLines 訂製品年限',cmTermsCustom[2].includes('4 年'),true);
-  // 預設 docType=quote 不帶合約欄位
-  const cmQuoteCfg=CM_engine.expandQuote({client:'Q',date:'2026/05/07',displayCycle:'4W',customerInfo:{},items:[{code:'DECSR',qty:1}]});
-  assert('expandQuote 預設 docType=quote',cmQuoteCfg.docType,'quote');
-  // 合約預覽含合約專屬字樣
-  const cmCtPreview=CM_engine.previewText(cmCt);
-  assert('contract previewText 含服務合約書',cmCtPreview.includes('服務合約書'),true);
-  assert('contract previewText 含甲方',cmCtPreview.includes('甲方'),true);
-  assert('contract previewText 含合約條款',cmCtPreview.includes('合約條款'),true);
   CM_state=null;
 
   // --- 結果顯示 ---
