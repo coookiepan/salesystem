@@ -459,6 +459,12 @@ tbody tr:hover{background:var(--surface-hover)}
 .cm-flags{display:flex;flex-wrap:wrap;gap:12px;font-size:14px}
 .cm-flags label{display:flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
 .cm-flags input[type=checkbox]{width:18px;height:18px}
+/* 合約精靈：付款／發票送達等單選列，避免全域 input{width:100%} 把 radio 撐成方框 */
+.cmw-group-label{font-size:12px;color:var(--text2);margin:10px 0 2px;font-weight:600}
+.cmw-opts{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}
+.cmw-opts label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;min-height:34px;flex-wrap:wrap}
+#cm-wiz input[type=radio]{width:18px;height:18px;flex:0 0 auto;padding:0;margin:0;accent-color:var(--green)}
+.cmw-opts input[type=number]{width:64px;flex:0 0 auto;padding:6px 8px}
 .cm-items{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
 .cm-item{background:var(--bg2);border-radius:var(--radius-sm);padding:10px;display:flex;flex-direction:column;gap:8px}
 .cm-item-head{display:flex;align-items:center;gap:8px}
@@ -898,22 +904,26 @@ tbody tr:hover{background:var(--surface-hover)}
           <label class="cm-field"><span>租賃起始日</span><input id="cmw-start" placeholder="YYYY/MM/DD"></label>
           <label class="cm-field"><span>租賃期間（年）</span><input id="cmw-years" type="number" min="1" step="1"></label>
         </div>
-        <div class="cm-row">
+
+        <div class="cmw-group-label">付款方式（請擇一）</div>
+        <div class="cmw-opts">
+          <label><input type="radio" name="cmw-pay" value="cash"> 現金（送貨當場收款）</label>
+          <label><input type="radio" name="cmw-pay" value="wire"> 匯款，匯款日 <input id="cmw-wireDays" type="number" min="0" step="1"> 天</label>
+          <label><input type="radio" name="cmw-pay" value="check"> 支票，兌現日 <input id="cmw-checkDays" type="number" min="0" step="1"> 天</label>
+        </div>
+
+        <div id="cmw-billing-row" class="cm-row">
           <label class="cm-field"><span>結帳日（每月 __ 日）</span><input id="cmw-billingDay" type="number" min="1" max="31" step="1"></label>
           <label class="cm-field"><span>付款日（次月 __ 日）</span><input id="cmw-paymentDay" type="number" min="1" max="31" step="1"></label>
         </div>
-        <div style="margin:8px 0">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">請款及統一發票送達方式</div>
-          <label style="display:block;margin-bottom:4px"><input type="radio" name="cmw-inv" value="onsite"> 當場開立統一發票並收取現金</label>
-          <label style="display:block"><input type="radio" name="cmw-inv" value="monthly"> 結帳日彙總開立一張發票，於付款日付款</label>
+
+        <div class="cmw-group-label">請款及統一發票送達方式（請擇一）</div>
+        <div class="cmw-opts">
+          <label><input type="radio" name="cmw-inv" value="onsite"> 當場開立統一發票並收取現金</label>
+          <label><input type="radio" name="cmw-inv" value="monthly"> 結帳日彙總開立一張發票，於付款日付款</label>
         </div>
-        <div style="margin:8px 0">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">付款方式</div>
-          <label style="display:block;margin-bottom:4px"><input type="radio" name="cmw-pay" value="cash"> 現金（至指定地點取款）</label>
-          <label style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><input type="radio" name="cmw-pay" value="wire"> 匯款，匯款日 <input id="cmw-wireDays" type="number" min="0" step="1" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)"> 天</label>
-          <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="cmw-pay" value="check"> 支票，兌現日 <input id="cmw-checkDays" type="number" min="0" step="1" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text)"> 天</label>
-        </div>
-        <div class="cm-row">
+
+        <div class="cm-row" style="margin-top:8px">
           <label class="cm-field"><span>發票抬頭</span><input id="cmw-invTitle"></label>
           <label class="cm-field"><span>統一編號</span><input id="cmw-taxId"></label>
         </div>
@@ -6826,6 +6836,13 @@ function cmwUpdateTotal(){
   CM_wiz.items.forEach(it => { const n = cmChangesPer4W(it.cycle); t += (Number(it.contractUnit) || 0) * n * (parseInt(it.qty, 10) || 1); });
   el.textContent = '4W 租賃金額合計：' + t.toLocaleString();
 }
+// 結帳日／付款日只在「匯款／支票」時需要（現金當場收款不需結帳）
+function cmwUpdatePaymentUI(){
+  if(!CM_wiz) return;
+  const m = CM_wiz.payment.paymentMethod;
+  const row = document.getElementById('cmw-billing-row');
+  if(row) row.style.display = (m === 'wire' || m === 'check') ? 'grid' : 'none';
+}
 function cmwSyncToUI(){
   const w = CM_wiz, p = w.payment, l = w.lease;
   const set = (id, v) => { const e = document.getElementById(id); if(e) e.value = (v == null ? '' : v); };
@@ -6840,6 +6857,7 @@ function cmwSyncToUI(){
   set('cmw-B-company', B.company); set('cmw-B-address', B.address); set('cmw-B-phone', B.phone); set('cmw-B-dept', B.dept); set('cmw-B-contact', B.contact);
   set('cmw-terms', (w.attachedTerms || []).join('\n'));
   const sel = document.getElementById('cmw-type'); if(sel) sel.value = w.contractType;
+  cmwUpdatePaymentUI();
 }
 function cmwBuildContractData(){
   const w = CM_wiz;
@@ -6985,7 +7003,7 @@ function cmwMount(){
   onInput('cmw-B-contact', v => CM_wiz.parties.partyB.contact = v);
   onInput('cmw-terms', v => { CM_wiz.attachedTerms = v.split('\n'); CM_wiz.termsManual = true; });
   document.querySelectorAll('input[name=cmw-inv]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked) CM_wiz.payment.invoiceDelivery = r.value; }));
-  document.querySelectorAll('input[name=cmw-pay]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked) CM_wiz.payment.paymentMethod = r.value; }));
+  document.querySelectorAll('input[name=cmw-pay]').forEach(r => r.addEventListener('change', () => { if(CM_wiz && r.checked){ CM_wiz.payment.paymentMethod = r.value; cmwUpdatePaymentUI(); } }));
   const typeSel = document.getElementById('cmw-type');
   if(typeSel) typeSel.addEventListener('change', () => {
     if(!CM_wiz) return;
