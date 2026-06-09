@@ -371,9 +371,10 @@ tbody tr:hover{background:var(--surface-hover)}
 .cv-sw svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #leaflet-map{width:100%;height:calc(100vh - 280px);min-height:420px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);z-index:1}
 .leaflet-container{font-family:inherit!important;font-size:13px}
-.leaflet-popup-content-wrapper{border-radius:var(--r-sm)!important;box-shadow:var(--shadow-md)!important;padding:0}
+.leaflet-popup-content-wrapper{border-radius:var(--r-sm)!important;box-shadow:var(--shadow-md)!important;padding:0;background:var(--bg);color:var(--text)}
 .leaflet-popup-content{margin:14px 16px!important;line-height:1.5}
-.leaflet-popup-tip{box-shadow:none}
+.leaflet-popup-tip{box-shadow:none;background:var(--bg)}
+.leaflet-popup-close-button{color:var(--text3)!important}
 .map-popup{min-width:200px}
 .map-popup .mp-name{font-weight:600;font-size:14.5px;color:var(--text);margin-bottom:3px;letter-spacing:-.008em;line-height:1.3}
 .map-popup .mp-sub{font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
@@ -1317,7 +1318,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.09-m1';
+const APP_VERSION='v2026.06.09-m2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
