@@ -56,7 +56,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
     if (b.action === 'getProducts') return resp({ products: null });
     return resp({ ok: true });
   };
-  w.confirm = () => true;
+  w.appConfirm = async () => true; // App 已改用自製對話框
   const ok = await w.syncFromSheet(true);
   const names = JSON.parse(w.eval('JSON.stringify(DB.clients.map(c=>c.name).sort())'));
   const getAllReq = captured.find(b => b.action === 'getAll');
@@ -81,7 +81,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
     if (b.action === 'getProducts') return resp({ products: null });
     return resp({ ok: true });
   };
-  w.confirm = () => true;
+  w.appConfirm = async () => true;
   await w.syncFromSheet(true);
   const req2 = cap2.find(b => b.action === 'getAll');
   const names2 = JSON.parse(w.eval('JSON.stringify(DB.clients.map(c=>c.name))'));
@@ -110,7 +110,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
 
   console.log('M3 — 衝突：選「用我的覆蓋」→ force 重送');
   let w2 = bootWithClient(); await wait(400);
-  let cap = []; w2.fetch = conflictFetch(cap); w2.confirm = () => true;
+  let cap = []; w2.fetch = conflictFetch(cap); w2.appConfirm = async () => true;
   await w2.eval('autoSync("save",{client:DB.clients.find(c=>c.id==="a")})');
   await wait(50);
   const saves = cap.filter(b => b.action === 'save');
@@ -120,7 +120,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
 
   console.log('M3 — 衝突：選「保留雲端」→ 採雲端版本、放棄本次');
   let w3 = bootWithClient(); await wait(400);
-  let cap3 = []; w3.fetch = conflictFetch(cap3); w3.confirm = () => false;
+  let cap3 = []; w3.fetch = conflictFetch(cap3); w3.appConfirm = async () => false;
   await w3.eval('autoSync("save",{client:DB.clients.find(c=>c.id==="a")})');
   await wait(50);
   assert('只送一次 save（放棄、未 force 重送）', cap3.filter(b => b.action === 'save').length === 1);
