@@ -35,6 +35,16 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
   --blue:#2A6BB0;--blue-l:#E6F0FA;--blue-d:#0C447C;
   --purple-l:#EEEDFE;--purple-d:#3C3489;
   --yellow:#BA7517;--yellow-b:#EF9F27;
+  /* Alert borders */
+  --amber-b:#FAC775;--red-b:#F7C1C1;--blue-b:#B5D4F4;
+  /* Status badge palette（深色模式於下方覆寫） */
+  --ss-gray-bg:#F1EFE8;--ss-gray-fg:#444441;
+  --ss-blue-bg:#E6F1FB;--ss-blue-fg:#0C447C;
+  --ss-amber-bg:#FAEEDA;--ss-amber-fg:#633806;
+  --ss-purple-bg:#EEEDFE;--ss-purple-fg:#3C3489;
+  --ss-green-bg:#E1F5EE;--ss-green-fg:#085041;
+  --ss-green2-bg:#D4EDDA;--ss-green2-fg:#155724;
+  --ss-red-bg:#FCEBEB;--ss-red-fg:#A32D2D;
   /* Neutrals (warm) */
   --bg:#ffffff;--bg2:#F8F8F5;--bg3:#EFEEE9;
   --text:#14140F;--text2:#56564F;--text3:#8F8F87;
@@ -81,6 +91,14 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
     --shadow-md:0 4px 14px rgba(0,0,0,.5);
     --shadow-lg:0 12px 32px rgba(0,0,0,.6);
     --ring:0 0 0 3px rgba(26,177,128,.3);
+    --amber-b:#54431F;--red-b:#553030;--blue-b:#2A3F58;
+    --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
+    --ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
+    --ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
+    --ss-purple-bg:#24223D;--ss-purple-fg:#C5C0FA;
+    --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;
+    --ss-green2-bg:#17361F;--ss-green2-fg:#8FD9A8;
+    --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;
   }
   body{background:var(--bg2)!important}
 }
@@ -90,6 +108,12 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
    ═══════════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{max-width:100%;overflow-x:hidden}
+body{overscroll-behavior-y:contain}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.003em}
 .snum,.prod-price,.prod-code,#cf-total,#cd-fw4,#ds-v,#ds-t,#ds-a,.vb-ver{font-variant-numeric:tabular-nums}
 
@@ -133,7 +157,7 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .cc{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .12s var(--ease),background .12s var(--ease);position:relative}
 .cc:hover{border-color:var(--border2);background:var(--surface-hover)}
 .cc:active{background:var(--bg2)}
-.cc-map-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;padding:0;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease)}
+.cc-map-btn{position:absolute;top:8px;right:8px;width:36px;height:36px;touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;padding:0;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease)}
 .cc-map-btn:hover{background:var(--bg);border-color:var(--border2);color:var(--text)}
 .cc-map-btn:active{background:var(--bg3)}
 .cc-name{font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px;color:var(--text);line-height:1.35}
@@ -213,7 +237,7 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
    MOOD
    ═══════════════════════════════════════════════════════════ */
 .mood-row{display:flex;gap:8px}
-.mood-btn{font-size:20px;padding:6px 10px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;transition:border-color .12s var(--ease),background .12s var(--ease)}
+.mood-btn{font-size:20px;padding:9px 14px;min-width:44px;min-height:44px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg);cursor:pointer;transition:border-color .12s var(--ease),background .12s var(--ease);touch-action:manipulation}
 .mood-btn:hover{border-color:var(--border2)}
 .mood-btn.on{border-color:var(--green);background:var(--green-l)}
 
@@ -251,9 +275,12 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
    ═══════════════════════════════════════════════════════════ */
 .alert{padding:10px 14px;border-radius:var(--r-sm);font-size:13px;margin-bottom:10px;border:1px solid transparent;line-height:1.5}
 .alert-ok{background:var(--green-l);color:var(--green-d);border-color:var(--green-b)}
-.alert-warn{background:var(--amber-l);color:var(--amber-d);border-color:#FAC775}
-.alert-err{background:var(--red-l);color:var(--red);border-color:#F7C1C1}
-.alert-info{background:var(--blue-l);color:var(--blue-d);border-color:#B5D4F4}
+.alert-warn{background:var(--amber-l);color:var(--amber-d);border-color:var(--amber-b)}
+.alert-err{background:var(--red-l);color:var(--red);border-color:var(--red-b)}
+.alert-info{background:var(--blue-l);color:var(--blue-d);border-color:var(--blue-b)}
+/* 搜尋關鍵字標亮（深淺色模式皆可讀） */
+.hl-kw{background:#FFF3A0;padding:0 2px;border-radius:2px;font-weight:600}
+@media(prefers-color-scheme:dark){.hl-kw{background:#5C4F14;color:#FFE99A}}
 
 /* ═══════════════════════════════════════════════════════════
    TABLE
@@ -295,6 +322,16 @@ tbody tr:hover{background:var(--surface-hover)}
 @keyframes modalIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .modal-title{font-size:16px;font-weight:700;letter-spacing:-.01em;margin-bottom:14px;color:var(--text)}
 .modal-actions{display:flex;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* ═══════════════════════════════════════════════════════════
+   APP TOAST / DIALOG（取代原生 alert/confirm）
+   ═══════════════════════════════════════════════════════════ */
+.app-toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:var(--r);box-shadow:var(--shadow-md);z-index:2100;font-size:13.5px;line-height:1.5;max-width:min(92%,420px);opacity:0;pointer-events:none;transition:opacity .18s var(--ease),transform .18s var(--ease);white-space:pre-line;text-align:center;word-break:break-word}
+.app-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#app-dialog{z-index:2000} /* 高於合約精靈 cm-overlay(1010)，任何情境都在最上層 */
+#app-dialog .modal{max-width:380px}
+.app-dialog-msg{font-size:14px;line-height:1.65;color:var(--text2);white-space:pre-line;word-break:break-word}
+#app-dialog .modal-actions .btn{flex:1;min-height:42px}
 
 /* ═══════════════════════════════════════════════════════════
    NAVIGATION — simple, no glow
@@ -487,10 +524,10 @@ tbody tr:hover{background:var(--surface-hover)}
 .cm-prod-row .meta{color:var(--text3);font-size:12px;margin-top:2px}
 .cm-prod-row .price{color:var(--green-d);font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0}
 .cm-msg{padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;display:none;line-height:1.4}
-.cm-msg.warn{display:block;background:#FAEEDA;color:#633806;border:1px solid #E5C68A}
-.cm-msg.error{display:block;background:#FCEBEB;color:#A32D2D;border:1px solid #F0B5B5}
+.cm-msg.warn{display:block;background:var(--ss-amber-bg);color:var(--ss-amber-fg);border:1px solid var(--amber-b)}
+.cm-msg.error{display:block;background:var(--ss-red-bg);color:var(--ss-red-fg);border:1px solid var(--red-b)}
 .cm-msg.info{display:block;background:#E6F1FB;color:#0C447C;border:1px solid #B4D2EE}
-.cm-msg.success{display:block;background:#E1F5EE;color:#085041;border:1px solid #9CD8C0}
+.cm-msg.success{display:block;background:var(--ss-green-bg);color:var(--ss-green-fg);border:1px solid var(--green-b)}
 .cm-ios-tip{font-size:12px;color:var(--text2);background:var(--bg2);padding:8px 10px;border-radius:var(--radius-sm);margin-top:8px;display:none;line-height:1.5}
 .cm-ios-tip.on{display:block}
 .cm-ios-tip b{color:var(--text)}
@@ -1324,7 +1361,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.10-c6';
+const APP_VERSION='v2026.06.10-m3';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1795,15 +1832,17 @@ const STATUS={
 };
 const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
 const MOODS=['','😞','😐','😊','😄'];
-const SS_STYLE={'未拜訪':['#F1EFE8','#444441'],'初訪':['#E6F1FB','#0C447C'],'複訪':['#FAEEDA','#633806'],'試用中':['#E6F1FB','#0C447C'],'報價':['#FAEEDA','#633806'],'將成約':['#EEEDFE','#3C3489'],'已成約':['#E1F5EE','#085041'],'已轉交':['#D4EDDA','#155724'],'已結案':['#FCEBEB','#A32D2D'],'拒絕':['#FCEBEB','#A32D2D']};
+// 狀態徽章配色：用 CSS 變數（深淺色模式自動切換，變數定義在 <style> :root）
+const _SS=k=>['var(--ss-'+k+'-bg)','var(--ss-'+k+'-fg)'];
+const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber'),'試用中':_SS('blue'),'報價':_SS('amber'),'將成約':_SS('purple'),'已成約':_SS('green'),'已轉交':_SS('green2'),'已結案':_SS('red'),'拒絕':_SS('red')};
 // 舊狀態顯示文字對應（新舊並存）
 // 安全轉換：已結案→拒絕（migration v3 後不應再有，但保留防禦）
 function displayStatus(s){return s===STATUS.CLOSED?STATUS.REFUSE:(s||STATUS.UNVISITED);}
 function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)===n(b);}
-const CB_STYLE={'拖把':['#EEEDFE','#3C3489'],'地墊':['#E6F1FB','#0C447C'],'芳香':['#E1F5EE','#085041']};
-function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
+const CB_STYLE={'拖把':_SS('purple'),'地墊':_SS('blue'),'芳香':_SS('green')};
+function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||_SS('gray');return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 // 新設計：客戶列表卡片專用 — 狀態圓角膠囊（含圓點），放在卡片右上角
-function statusPill(t){const[bg,fg]=SS_STYLE[t]||['#F1EFE8','#666'];return`<span class="cc-status" style="background:${bg};color:${fg}"><span class="sdot"></span>${t}</span>`;}
+function statusPill(t){const[bg,fg]=SS_STYLE[t]||_SS('gray');return`<span class="cc-status" style="background:${bg};color:${fg}"><span class="sdot"></span>${t}</span>`;}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){logErr('loadLocal',e);}return null;}
 let _quotaWarned=false;
@@ -1817,7 +1856,7 @@ function saveLocal(){
     logErr('saveLocal'+(quota?'(quota)':''),e);
     if(quota&&!_quotaWarned){
       _quotaWarned=true;
-      try{alert('⚠ 本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。');}catch(_){}
+      try{appAlert('本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。','⚠ 儲存空間不足');}catch(_){}
     }
   }
 }
@@ -1846,7 +1885,7 @@ if(typeof window!=='undefined'){
   window.addEventListener('unhandledrejection',ev=>logErr('unhandledRejection',(ev&&ev.reason)||'unknown'));
 }
 function showErrorLog(){
-  if(!ERR_LOG.length){alert('診斷紀錄：目前沒有任何錯誤 🎉');return;}
+  if(!ERR_LOG.length){showToast('診斷紀錄：目前沒有任何錯誤 🎉');return;}
   const txt='DUSKIN '+APP_VERSION+' 診斷紀錄（最近 '+ERR_LOG.length+' 筆）\n'+
     ERR_LOG.slice().reverse().map(e=>{
       let ts;try{ts=new Date(e.t).toLocaleString('zh-Hant');}catch(_){ts=e.t;}
@@ -1854,12 +1893,12 @@ function showErrorLog(){
     }).join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(
-      ()=>alert('已複製最近 '+ERR_LOG.length+' 筆診斷紀錄到剪貼簿，可貼給維護人員。'),
-      ()=>{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){alert(txt);}}
+      ()=>showToast('✅ 已複製最近 '+ERR_LOG.length+' 筆診斷紀錄，可貼給維護人員'),
+      ()=>{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){appAlert(txt,'診斷紀錄');}}
     );
-  }else{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){alert(txt);}}
+  }else{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){appAlert(txt,'診斷紀錄');}}
 }
-function clearErrorLog(){ERR_LOG=[];try{localStorage.removeItem('duskin_errlog');}catch(_){}alert('已清除診斷紀錄。');}
+function clearErrorLog(){ERR_LOG=[];try{localStorage.removeItem('duskin_errlog');}catch(_){}showToast('已清除診斷紀錄');}
 
 // ─── C2: 持久化待推送佇列（outbox）──────────────────────────
 // 每筆修改先入列再送出，成功才出列；失敗保留、重開 App 仍在，恢復網路自動補送。
@@ -1891,7 +1930,7 @@ function enqueueOp(action,payload){
 async function handleSaveConflict(op,server){
   const name=(op.payload.client&&op.payload.client.name)||'此客戶';
   let useMine;
-  try{useMine=confirm('客戶「'+name+'」雲端已被其他人更新。\n\n按「確定」＝用你的版本覆蓋雲端\n按「取消」＝保留雲端版本、放棄你這次的修改');}
+  try{useMine=await appConfirm('客戶「'+name+'」雲端已被其他人更新。\n\n「用我的版本」＝以你的修改覆蓋雲端\n「保留雲端」＝放棄你這次的修改',{title:'同步衝突',okText:'用我的版本',cancelText:'保留雲端'});}
   catch(e){useMine=false;}
   if(useMine){
     op.payload.force=true;                               // 下一輪強制覆寫
@@ -2116,19 +2155,19 @@ function autoSync(action,payload){
 }
 async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
-  if(!url){alert('請先填入 URL');return;}
+  if(!url){showToast('請先填入 URL');return;}
   SHEET_URL=url;saveLocal();setSyncBar('sync');
-  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);alert('✅ 連線成功！');}
-  catch(e){setSyncBar('err');alert('❌ 連線失敗：'+e.message);}
+  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');}
+  catch(e){setSyncBar('err');appAlert('連線失敗：'+e.message,'❌ 無法連線');}
 }
 async function syncFromSheet(silent){
-  if(!SHEET_URL){if(!silent)alert('請先設定 URL');return false;}
-  if(!silent&&!confirm('從雲端拉取資料？這會覆蓋本機的客戶、商品資料。'))return false;
+  if(!SHEET_URL){if(!silent)showToast('請先設定 URL');return false;}
+  if(!silent&&!await appConfirm('從雲端拉取資料？這會覆蓋本機的客戶、商品資料。',{title:'從雲端拉取',okText:'拉取'}))return false;
   // C2: 拉取前先把待推送的本機修改送上雲，否則會被雲端覆蓋而遺失
   if(OUTBOX.length){
     const ok=await flushOutbox();
     if(!ok||OUTBOX.length){
-      if(!silent)alert('⚠ 還有 '+OUTBOX.length+' 筆本機修改尚未上傳，已暫停拉取以免覆蓋你的修改。\n請確認網路後再試一次。');
+      if(!silent)appAlert('還有 '+OUTBOX.length+' 筆本機修改尚未上傳，已暫停拉取以免覆蓋你的修改。\n請確認網路後再試一次。','⚠ 尚未上傳完成');
       return false;
     }
   }
@@ -2158,18 +2197,21 @@ async function syncFromSheet(silent){
     saveLocal();renderClients();renderProducts();setSyncBar('ok');
     renderVerBadge();
     dismissPullBanner();
-    if(!silent)alert('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料'+(skipped?'\n\n⚠ 有 '+skipped.length+' 列資料異常已跳過（試算表列號：'+skipped.join('、')+'），請檢查雲端該列 JSON。':''));
+    if(!silent){
+      if(skipped)appAlert('已從雲端拉取 '+DB.clients.length+' 筆資料。\n\n⚠ 有 '+skipped.length+' 列資料異常已跳過（試算表列號：'+skipped.join('、')+'），請檢查雲端該列 JSON。','拉取完成');
+      else showToast('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料');
+    }
     return true;
   }catch(e){
     SYNC.state='err';setSyncBar('err');renderVerBadge();
     logErr('syncFromSheet',e);
-    if(!silent)alert('❌ 拉取失敗：'+e.message);
+    if(!silent)appAlert('拉取失敗：'+e.message,'❌ 同步錯誤');
     return false;
   }
 }
 async function pushAllToSheet(){
-  if(!SHEET_URL){alert('請先設定 URL');return;}
-  if(!confirm('將所有資料推送到 Google Sheets？'))return;
+  if(!SHEET_URL){showToast('請先設定 URL');return;}
+  if(!await appConfirm('將所有資料推送到 Google Sheets？',{title:'推送到雲端',okText:'推送'}))return;
   SYNC.state='syncing';setSyncBar('sync');renderVerBadge();
   try{
     for(const c of DB.clients){if(!c.id)c.id=genId();await api({action:'save',client:c});}
@@ -2181,10 +2223,10 @@ async function pushAllToSheet(){
     SYNC.pending=0;
     SYNC.state='ok';
     saveLocal();setSyncBar('ok');renderVerBadge();
-    alert('✅ 已推送 '+DB.clients.length+' 筆資料');
+    showToast('✅ 已推送 '+DB.clients.length+' 筆資料');
   }catch(e){
     SYNC.state='err';setSyncBar('err');renderVerBadge();
-    alert('❌ 推送失敗：'+e.message);
+    appAlert('推送失敗：'+e.message,'❌ 同步錯誤');
   }
 }
 function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();}
@@ -2200,20 +2242,20 @@ function exportJSON(){
 function importJSON(input){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{
+  reader.onload=async e=>{
     try{
       const data=JSON.parse(e.target.result);
-      if(!data.clients)throw new Error('格式不正確');
-      if(!confirm('匯入 '+data.clients.length+' 筆資料？'))return;
+      if(!Array.isArray(data.clients))throw new Error('格式不正確（缺少 clients 陣列）');
+      if(!await appConfirm('匯入 '+data.clients.length+' 筆資料？\n\n這會覆蓋目前本機的所有資料。',{title:'匯入備份',okText:'匯入',danger:true}))return;
       DB.clients=data.clients;
       if(data.inventory)DB.inventory=data.inventory;
       if(data.products)DB.products=data.products;
-      saveLocal();renderClients();renderProducts();alert('✅ 匯入成功');
-    }catch(err){alert('❌ 匯入失敗：'+err.message);}
+      saveLocal();renderClients();renderProducts();showToast('✅ 匯入成功');
+    }catch(err){appAlert('匯入失敗：'+err.message,'❌ 無法匯入');}
   };reader.readAsText(file);input.value='';
 }
 function copyScript(){
-  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(()=>alert('✅ 已複製 Apps Script 程式碼'));
+  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(()=>showToast('✅ 已複製 Apps Script 程式碼'),()=>appAlert('複製失敗，請改用手動選取複製。'));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2321,7 +2363,7 @@ function renderInventory(){
       html+=`<div style="font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin:18px 0 8px 0;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>${g}</span><span style="font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums">${items.length}</span></div>`;
       items.forEach(x=>{
         const pct=x.std>0?x.stock/x.std:1;
-        const color=x.stock===0?'var(--red)':pct<1?'#d97706':'#085041';
+        const color=x.stock===0?'var(--red)':pct<1?'var(--amber)':'var(--ss-green-fg)';
         const esc=escHtml(x.name).replace(/'/g,"&#39;");
         html+=`<div class="inv-item">
           <div class="inv-item-head">
@@ -2626,6 +2668,56 @@ function showUndoToast(msg,undoFn){
   _undoTimer=setTimeout(()=>{t.style.opacity='0';t.style.pointerEvents='none';},4000);
 }
 
+// ═══════════════════════════════════════════════════════════
+// 全域 UI：Toast / 對話框 — 取代原生 alert/confirm，
+// 視覺與 App 一致、支援深色模式、Esc／背景點擊可關閉。
+// ═══════════════════════════════════════════════════════════
+let _appToastTimer=null;
+function showToast(msg){ // 非阻斷式通知（成功／簡短訊息）
+  let t=document.getElementById('app-toast');
+  if(!t){t=document.createElement('div');t.id='app-toast';t.className='app-toast';t.setAttribute('role','status');document.body.appendChild(t);}
+  t.textContent=msg;
+  requestAnimationFrame(()=>t.classList.add('show'));
+  clearTimeout(_appToastTimer);
+  _appToastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+function appDialog(opts){ // {msg,title,confirm,danger,okText,cancelText} → Promise<boolean>
+  return new Promise(resolve=>{
+    const old=document.getElementById('app-dialog');if(old)old.remove();
+    const bg=document.createElement('div');bg.id='app-dialog';bg.className='modal-bg on';
+    const box=document.createElement('div');box.className='modal';box.setAttribute('role',opts.confirm?'alertdialog':'dialog');
+    if(opts.title){const h=document.createElement('div');h.className='modal-title';h.textContent=opts.title;box.appendChild(h);}
+    const p=document.createElement('div');p.className='app-dialog-msg';p.textContent=opts.msg||'';box.appendChild(p);
+    const acts=document.createElement('div');acts.className='modal-actions';
+    const done=val=>{document.removeEventListener('keydown',onKey,true);bg.remove();resolve(val);};
+    if(opts.confirm){
+      const cancel=document.createElement('button');cancel.className='btn btn-outline';cancel.textContent=opts.cancelText||'取消';
+      cancel.onclick=()=>done(false);acts.appendChild(cancel);
+    }
+    const ok=document.createElement('button');ok.className='btn '+(opts.danger?'btn-danger':'btn-primary');ok.textContent=opts.okText||'確定';
+    ok.onclick=()=>done(true);acts.appendChild(ok);
+    box.appendChild(acts);bg.appendChild(box);
+    bg.addEventListener('click',e=>{if(e.target===bg)done(opts.confirm?false:true);});
+    const onKey=e=>{
+      if(e.key==='Escape'){e.stopPropagation();e.preventDefault();done(opts.confirm?false:true);}
+      else if(e.key==='Enter'&&!opts.danger){e.stopPropagation();e.preventDefault();done(true);}
+    };
+    document.addEventListener('keydown',onKey,true);
+    document.body.appendChild(bg);
+    setTimeout(()=>{try{ok.focus();}catch(_){}},30);
+  });
+}
+function appAlert(msg,title){return appDialog({msg,title});}
+function appConfirm(msg,opts){return appDialog(Object.assign({msg,confirm:true},opts||{}));}
+// 全域 Esc：關閉最上層開啟中的 modal（重用各 modal 的背景點擊關閉邏輯）
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if(document.getElementById('app-dialog'))return; // 對話框自行處理
+  const open=Array.from(document.querySelectorAll('.modal-bg.on'))
+    .filter(m=>m.id!=='cm-modal'&&m.id!=='cm-prod-modal'&&m.id!=='cm-wiz'); // 精靈有自己的 Esc 流程
+  if(open.length)open[open.length-1].click();
+});
+
 function invAct(name,action){
   try{
     const it=(DB.inventory||[]).find(x=>x&&x.name===name);
@@ -2653,7 +2745,7 @@ function invAct(name,action){
       renderInventory();
     });
   }catch(e){
-    alert('庫存操作失敗：'+(e.message||e));
+    appAlert('庫存操作失敗：'+(e.message||e));
   }
 }
 // 比對新舊 trialItems，回傳新增的品項差量 [{code, qty}, ...]
@@ -2690,7 +2782,7 @@ function openInvModal(name){
   const del=document.getElementById('im-del-btn');
   if(isEdit){
     const it=(DB.inventory||[]).find(x=>x&&x.name===INV_EDIT_NAME);
-    if(!it){alert('找不到品項：'+INV_EDIT_NAME);return;}
+    if(!it){appAlert('找不到品項：'+INV_EDIT_NAME);return;}
     document.getElementById('im-name').value=it.name||'';
     document.getElementById('im-name').disabled=true;
     document.getElementById('im-stock').value=Number(it.stock)||0;
@@ -2711,27 +2803,27 @@ function saveInv(){
     const name=(document.getElementById('im-name').value||'').trim();
     const stock=Math.max(0,parseInt(document.getElementById('im-stock').value)||0);
     const std=Math.max(0,parseInt(document.getElementById('im-std').value)||0);
-    if(!name){alert('請輸入品項代號');return;}
+    if(!name){showToast('請輸入品項代號');return;}
     if(!DB.inventory)DB.inventory=[];
     if(INV_EDIT_NAME){
       const it=DB.inventory.find(x=>x&&x.name===INV_EDIT_NAME);
-      if(!it){alert('找不到品項');return;}
+      if(!it){appAlert('找不到品項');return;}
       it.stock=stock;
       it.std=std;
     }else{
       // 檢查代號是否重複
-      if(DB.inventory.find(x=>x&&x.name===name)){alert('代號「'+name+'」已存在');return;}
+      if(DB.inventory.find(x=>x&&x.name===name)){appAlert('代號「'+name+'」已存在');return;}
       const prod=(DB.products||[]).find(p=>p.code===name);
       DB.inventory.push({name,stock,std,cat:prod?prod.cat:'其他'});
     }
     saveLocal();
     autoSync('saveInventory',{inventory:DB.inventory});
     closeInvModal();renderInventory();
-  }catch(e){alert('儲存失敗：'+(e.message||e));}
+  }catch(e){appAlert('儲存失敗：'+(e.message||e));}
 }
-function deleteInv(){
+async function deleteInv(){
   if(!INV_EDIT_NAME)return;
-  if(!confirm('確定刪除庫存品項「'+INV_EDIT_NAME+'」？'))return;
+  if(!await appConfirm('確定刪除庫存品項「'+INV_EDIT_NAME+'」？',{title:'刪除品項',okText:'刪除',danger:true}))return;
   DB.inventory=(DB.inventory||[]).filter(x=>x&&x.name!==INV_EDIT_NAME);
   saveLocal();
   autoSync('saveInventory',{inventory:DB.inventory});
@@ -2792,9 +2884,9 @@ function closeProdModal(){document.getElementById('prod-modal').classList.remove
 
 function saveProd(){
   const code=document.getElementById('pm-code').value.trim().toUpperCase();
-  if(!code){alert('請填入代號');return;}
+  if(!code){showToast('請填入代號');return;}
   // 新增時檢查重複
-  if(prodEditIdx<0&&DB.products.find(p=>p.code===code)){alert('代號「'+code+'」已存在');return;}
+  if(prodEditIdx<0&&DB.products.find(p=>p.code===code)){appAlert('代號「'+code+'」已存在');return;}
   const prod={
     code,
     cat:document.getElementById('pm-cat').value,
@@ -2810,10 +2902,10 @@ function saveProd(){
   autoSync('saveProducts',{products:DB.products});
   closeProdModal();renderProducts();
 }
-function deleteProd(){
+async function deleteProd(){
   if(prodEditIdx<0)return;
   const code=DB.products[prodEditIdx].code;
-  if(!confirm(`確認刪除商品「${code}」？已新增到試用品項的不受影響。`))return;
+  if(!await appConfirm(`確認刪除商品「${code}」？已新增到試用品項的不受影響。`,{title:'刪除商品',okText:'刪除',danger:true}))return;
   DB.products.splice(prodEditIdx,1);
   saveLocal();autoSync('saveProducts',{products:DB.products});
   closeProdModal();renderProducts();
@@ -2857,7 +2949,7 @@ function shopHighlight(text,keywords){
   keywords.forEach(kw=>{
     if(!kw)return;
     const esc=kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    safe=safe.replace(new RegExp(esc,'gi'),m=>'<span style="background:#fff3a0;padding:0 2px;border-radius:2px;font-weight:600">'+m+'</span>');
+    safe=safe.replace(new RegExp(esc,'gi'),m=>'<span class="hl-kw">'+m+'</span>');
   });
   return safe;
 }
@@ -3002,7 +3094,7 @@ function openProspectClient(regNo){
 function createClientFromProspect(regNo){
   const k=String(regNo||'').trim();
   const p=PROSPECTS.find(x=>String(x.regNo||'').trim()===k);
-  if(!p){alert('找不到此工廠資料');return;}
+  if(!p){appAlert('找不到此工廠資料');return;}
   // 冪等：已建檔 → 直接開啟，不重建
   const exist=clientIdxByRegNo(k);
   if(exist>=0){openProspectClient(k);return;}
@@ -3267,8 +3359,8 @@ function toggleStatusFilter(status,on){
   statusFilter[status]=on;
   saveStatusFilter();
 }
-function resetStatusFilter(){
-  if(!confirm('重設為預設（只隱藏「拒絕」）？'))return;
+async function resetStatusFilter(){
+  if(!await appConfirm('重設為預設（只隱藏「拒絕」）？',{okText:'重設'}))return;
   statusFilter=defaultStatusFilter();
   saveStatusFilter();
   openStatusFilterModal();
@@ -3557,11 +3649,13 @@ function initMap(){
 }
 
 function goToMyLocation(){
-  if(!navigator.geolocation){alert('此瀏覽器不支援定位');return;}
+  if(!navigator.geolocation){showToast('此瀏覽器不支援定位');return;}
+  showToast('📍 定位中…');
   navigator.geolocation.getCurrentPosition(pos=>{
     const {latitude,longitude}=pos.coords;
     if(MAP_STATE.map) MAP_STATE.map.setView([latitude,longitude],15);
-  },err=>alert('無法取得位置：'+err.message));
+  },err=>appAlert('無法取得位置：'+err.message+'\n請確認已允許定位權限。'),
+  {enableHighAccuracy:true,timeout:10000,maximumAge:30000});
 }
 
 // ── Render markers ────────────────────────────────────────
@@ -3615,8 +3709,8 @@ function buildMapPopup(c,idx){
     if(navAddr) navUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(navAddr);
   }
   const badges=bdg(displayStatus(c.status||STATUS.UNVISITED))
-    +(fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:'')
-    +(todos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${todos}待辦</span>`:'');
+    +(fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:'')
+    +(todos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${todos}待辦</span>`:'');
   return `<div class="map-popup">
     <div class="mp-name">${escHtml(c.name||'-')}</div>
     <div class="mp-sub">${escHtml([c.contact,c.type].filter(Boolean).join(' · ')||c.addr||'')}</div>
@@ -3832,7 +3926,7 @@ function renderClients(){
     const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
     const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
     const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
-    const _extraBadges=`${fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${pTodos}待辦</span>`:''}`;
+    const _extraBadges=`${fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${pTodos}待辦</span>`:''}`;
     return`<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
@@ -3963,10 +4057,10 @@ function renderItems(){
       </div>
       <div class="ti-bot">
         <span class="ti-label">4W原價</span>
-        <span style="font-size:13px;font-weight:600;color:#085041">${f>0?'$'+f.toLocaleString():'-'}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--ss-green-fg)">${f>0?'$'+f.toLocaleString():'-'}</span>
         <span class="ti-label" style="margin-left:8px">報價</span>
-        <input type="number" class="price-inp${isLow?' low':''}" value="${it.quoted||''}" placeholder="${r>0?r:''}"
-          oninput="S.cfItems[${i}].quoted=+this.value||0" onblur="renderItems()">
+        <input type="number" min="0" class="price-inp${isLow?' low':''}" value="${it.quoted||''}" placeholder="${r>0?r:''}"
+          oninput="S.cfItems[${i}].quoted=Math.max(0,+this.value||0)" onblur="renderItems()">
         ${discount!==null
           ?`<span style="font-size:11px;color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`
           :r>0?`<span style="font-size:11px;color:var(--text3)">9折 $${r}</span>`:''}
@@ -3994,7 +4088,7 @@ function promoteToContract(i){
     else if(S.cdmActive)S.cdmStatusOverride=STATUS.DEAL;
     renderItems();renderContracted();updProd();
   }catch(e){
-    alert('成約操作失敗：'+(e.message||e));
+    appAlert('成約操作失敗：'+(e.message||e));
   }
 }
 // 從成約區搬回試用區（改回試用）
@@ -4016,7 +4110,7 @@ function removeContracted(i){
     else if(S.cdmActive)S.cdmStatusOverride=STATUS.TRIAL;
     renderItems();renderContracted();updProd();
   }catch(e){
-    alert('操作失敗：'+(e.message||e));
+    appAlert('操作失敗：'+(e.message||e));
   }
 }
 function renderContracted(){
@@ -4031,7 +4125,7 @@ function renderContracted(){
     return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
       <span style="flex:1;font-size:13px">${escHtml(it.product)} ${p?'· '+escHtml(p.desc):''} ×${it.qty||1}</span>
-      <span style="font-size:13px;color:#085041;font-weight:600">${amt}</span>
+      <span style="font-size:13px;color:var(--ss-green-fg);font-weight:600">${amt}</span>
       ${!isAcc?`<button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
     </div></div>`;
   }).join('');
@@ -4154,7 +4248,7 @@ async function saveClient(){
     // L2 輸入檢查：彙整成一則提示，非阻擋（允許快速建檔），讓使用者自行決定
     const warns=validateClient(c);
     if(warns.length){
-      const ok=confirm('資料檢查：\n\n• '+warns.join('\n• ')+'\n\n仍要儲存嗎？');
+      const ok=await appConfirm('• '+warns.join('\n• '),{title:'資料檢查',okText:'仍要儲存',cancelText:'回去修改'});
       if(!ok){btn.disabled=false;btn.textContent='儲存客戶';return;}
     }
     const isEdit=S.editIdx>=0;
@@ -4164,7 +4258,7 @@ async function saveClient(){
       if(k){
         const dup=(DB.clients||[]).find(x=>x&&normalizeName(x.name)===k);
         if(dup){
-          const ok=confirm(`⚠ 已存在同名店家「${dup.name}」。\n\n仍要新增一筆新的嗎？\n（若是同一家店請按取消，改用編輯既有資料；若確實是不同分店請按確定）`);
+          const ok=await appConfirm(`已存在同名店家「${dup.name}」。\n\n若是同一家店請按「取消」改用編輯既有資料；\n若確實是不同分店再新增。`,{title:'⚠ 同名店家',okText:'仍要新增'});
           if(!ok){btn.disabled=false;btn.textContent='儲存客戶';return;}
         }
       }
@@ -4201,17 +4295,17 @@ async function saveClient(){
     const oldTrialItems=isEdit?(S._prevTrialItems||[]):[];
     const pendingDiffs=getInventoryDiffs(oldTrialItems,c.trialItems);
     if(pendingDiffs.length){
-      const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n')+'\n\n是否從庫存扣減？';
+      const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n');
       // 用 setTimeout 避免阻塞 saveClient 流程
-      setTimeout(()=>{
-        if(confirm(msg)){
+      setTimeout(async()=>{
+        if(await appConfirm(msg,{title:'是否從庫存扣減？',okText:'扣庫存',cancelText:'不扣'})){
           applyInventoryDeduct(pendingDiffs);
         }
       },100);
     }
     S.editIdx=-1;closeForm();renderClients();
   }catch(e){
-    alert('儲存失敗：'+(e.message||e));
+    appAlert('儲存失敗：'+(e.message||e));
   }finally{
     btn.disabled=false;btn.textContent='儲存客戶';
   }
@@ -4233,8 +4327,8 @@ function openCD(i){
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
     bdg(c.status||STATUS.UNVISITED)+
-    (fw>0?`<span class="badge" style="background:#E1F5EE;color:#085041">4W $${fw.toLocaleString()}</span>`:'')+
-    ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:#FAEEDA;color:#633806">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
+    (fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:'')+
+    ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
   document.getElementById('cd-fw4').textContent=fw>0?'$'+fw.toLocaleString():'-';
   document.getElementById('cd-fw4-src').textContent=fw>0?fwSrc:'';
@@ -4335,20 +4429,22 @@ function saveCDItems(){
     closeCDItems();
     renderClients();openCD(S.curIdx);
     if(pendingDiffs.length){
-      setTimeout(()=>{
-        const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n')+'\n\n是否從庫存扣減？';
-        if(confirm(msg))applyInventoryDeduct(pendingDiffs);
+      setTimeout(async()=>{
+        const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n');
+        if(await appConfirm(msg,{title:'是否從庫存扣減？',okText:'扣庫存',cancelText:'不扣'}))applyInventoryDeduct(pendingDiffs);
       },100);
     }
   }catch(e){
-    alert('儲存失敗：'+(e.message||e));
+    appAlert('儲存失敗：'+(e.message||e));
   }
 }
 async function delCur(){
-  if(S.curIdx<0)return;
-  if(!confirm(`確認刪除「${DB.clients[S.curIdx].name}」？`))return;
-  const idx=S.curIdx;const delId=DB.clients[idx]?.id;DB.clients.splice(idx,1);saveLocal();autoSync('delete',{id:delId});
+  const c=DB.clients[S.curIdx];
+  if(S.curIdx<0||!c)return;
+  if(!await appConfirm('確認刪除「'+c.name+'」？\n刪除後會同步從雲端移除，無法復原。',{title:'刪除客戶',okText:'刪除',danger:true}))return;
+  const idx=S.curIdx;const delId=c.id;DB.clients.splice(idx,1);saveLocal();autoSync('delete',{id:delId});
   S.curIdx=-1;closeDetail();renderClients();
+  showToast('已刪除「'+c.name+'」');
 }
 
 // TODOS
@@ -4376,7 +4472,7 @@ function addDetTodo(){
 function closeTodoModal(){document.getElementById('todo-modal').classList.remove('on');}
 function saveTodoModal(){
   const text=(document.getElementById('tm-text').value||'').trim();
-  if(!text){alert('請輸入待辦內容');return;}
+  if(!text){showToast('請輸入待辦內容');return;}
   const due=document.getElementById('tm-due').value||'';
   DB.clients[S.curIdx].todos.push({text,dueDate:due,done:false});
   DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});
@@ -4418,11 +4514,11 @@ function updMoodUI(){for(let i=1;i<=4;i++)document.getElementById('vm'+i).classL
 function saveVL(){
   try{
     const selDate=document.getElementById('vl-date').value;
-    if(!selDate){alert('請選擇日期');return;}
+    if(!selDate){showToast('請選擇日期');return;}
     const c=DB.clients[S.curIdx];
     const isEdit=S.editVisitIdx>=0;
     if(isEdit&&selDate>today()){
-      alert('編輯拜訪紀錄時，日期不能改成未來。\n若要排下次拜訪日，請用「+ 記錄拜訪 / 排下次」按鈕新增。');
+      appAlert('編輯拜訪紀錄時，日期不能改成未來。\n若要排下次拜訪日，請用「+ 記錄拜訪 / 排下次」按鈕新增。');
       return;
     }
     if(!isEdit&&selDate>today()){
@@ -4467,7 +4563,7 @@ function saveVL(){
     renderVisits();renderClients();openCD(S.curIdx);
     if(isEdit)showVerToast('✓ 拜訪紀錄已更新');
   }catch(e){
-    alert('儲存拜訪紀錄失敗：'+(e.message||e));
+    appAlert('儲存拜訪紀錄失敗：'+(e.message||e));
   }
 }
 function renderVisits(){
@@ -4602,7 +4698,7 @@ function rptVipHint(list){
 function genReport(){
   const from=document.getElementById('rpt-from').value;
   const to=document.getElementById('rpt-to').value;
-  if(!from||!to||from>to){alert('請選擇正確的日期區間');return;}
+  if(!from||!to||from>to){showToast('請選擇正確的日期區間');return;}
   const startMonth=parseInt(document.getElementById('rpt-start-month').value,10)||((new Date()).getMonth()+1);
 
   // ═════════════════════════════════════════════
@@ -4898,8 +4994,8 @@ function closeVerMenu(){document.getElementById('ver-menu-modal').classList.remo
 // ═══════════════════════════════════════════════════════════
 // _dedupState: { groups: [...], resolutions: {groupKey: {field: value}}, conflicts: {groupKey: [fields]} }
 let _dedupState=null;
-function openDedupModal(){
-  if(!confirm('即將掃描重複店家（依店名正規化後比對）。建議先從雲端拉最新資料，避免清理到過時的副本。\n\n是否繼續？'))return;
+async function openDedupModal(){
+  if(!await appConfirm('即將掃描重複店家（依店名正規化後比對）。建議先從雲端拉最新資料，避免清理到過時的副本。\n\n是否繼續？',{title:'清理重複店家',okText:'開始掃描'}))return;
   const groups=findDuplicateGroups();
   _dedupState={groups,resolutions:{},conflicts:{}};
   groups.forEach(g=>{
@@ -5028,9 +5124,9 @@ async function mergeDedupGroup(key){
   if(conflicts.length){
     const res=s.resolutions[key]||{};
     const missing=conflicts.filter(c=>!Object.prototype.hasOwnProperty.call(res,c.field));
-    if(missing.length){alert('尚有 '+missing.length+' 個衝突欄位未選擇：'+missing.map(c=>c.field).join(', '));return;}
+    if(missing.length){appAlert('尚有 '+missing.length+' 個衝突欄位未選擇：'+missing.map(c=>c.field).join(', '));return;}
   }
-  if(!confirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n此操作會：\n1. 本地合併並保留最新那筆\n2. 雲端刪除所有同名的其他列\n3. 把合併結果推回雲端\n\n無法復原，建議先做一次 Google Sheets 備份。`))return;
+  if(!await appConfirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n此操作會：\n1. 本地合併並保留最新那筆\n2. 雲端刪除所有同名的其他列\n3. 把合併結果推回雲端\n\n無法復原，建議先做一次 Google Sheets 備份。`,{title:'合併重複店家',okText:'合併',danger:true}))return;
   const btn=document.querySelector('#dedup-list button');if(btn){btn.disabled=true;}
   const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,s.resolutions[key]);
   const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
@@ -5045,8 +5141,8 @@ async function mergeDedupGroup(key){
 async function dedupAutoMerge(){
   const s=_dedupState;if(!s)return;
   const targets=s.groups.filter(g=>s.conflicts[g.key].length===0);
-  if(!targets.length){alert('沒有可自動合併的組（都有衝突）');return;}
-  if(!confirm(`將自動合併 ${targets.length} 組無衝突的重複店家並同步到雲端。\n\n無法復原，強烈建議先：\n1. 到 Google Sheets 手動複製 clients 分頁備份\n2. 或本機「匯出 JSON」存檔\n\n是否繼續？`))return;
+  if(!targets.length){showToast('沒有可自動合併的組（都有衝突）');return;}
+  if(!await appConfirm(`將自動合併 ${targets.length} 組無衝突的重複店家並同步到雲端。\n\n無法復原，強烈建議先：\n1. 到 Google Sheets 手動複製 clients 分頁備份\n2. 或本機「匯出 JSON」存檔\n\n是否繼續？`,{title:'自動合併',okText:'合併',danger:true}))return;
   const fullLog=[];
   // 先全部本地合併
   const mergedList=[];
@@ -5134,7 +5230,7 @@ async function fetchAdminAction(url,action){
 async function loadAdminSnapshot(){
   saveAdminUrls();
   const urls=getAdminUrls();
-  if(!urls.length){alert('請先貼入至少一個 URL');return;}
+  if(!urls.length){showToast('請先貼入至少一個 URL');return;}
   setAdminStatus('載入中（0/'+urls.length+'）...');
   document.getElementById('admin-dashboard').innerHTML='';
   const results=[];
@@ -6166,7 +6262,7 @@ function cmIsIOS(){
 }
 function openCM(){
   const c = cmCurClient();
-  if(!c){ alert('請先開啟客戶詳情'); return; }
+  if(!c){ appAlert('請先開啟客戶詳情'); return; }
   CM_state = clientToCMConfig(c);
   document.getElementById('cm-client-name').textContent = c.name ? '· '+c.name : '';
   cmSyncToUI();
@@ -7078,7 +7174,7 @@ function cmwGoTo(n){
 }
 function cmwOpen(){
   const c = cmCurClient();
-  if(!c){ alert('請先開啟客戶詳情'); return; }
+  if(!c){ appAlert('請先開啟客戶詳情'); return; }
   cmwInit(c);
   const nm = document.getElementById('cmw-client-name'); if(nm) nm.textContent = c.name ? '· ' + c.name : '';
   cmwSyncToUI();

@@ -67,7 +67,8 @@ function assert(name, cond) { console.log((cond ? '  ✓ ' : '  ✗ ') + name); 
   w = boot(); await wait(400);
   w.document.getElementById('sheet-url').value = 'https://script.google.com/macros/s/X/exec'; w.saveSheetUrl();
   await w.autoSync('save', { client: { id: 'Z', name: 'Z' } });
-  w.confirm = () => true; let alerted = ''; w.alert = m => { alerted = m; };
+  // App 已改用自製對話框（appConfirm/appAlert）取代原生 confirm/alert
+  w.appConfirm = async () => true; let alerted = ''; w.appAlert = m => { alerted = m; };
   const pulled = await w.syncFromSheet(false);
   assert('待推送時 pull 被擋下（回 false）', pulled === false);
   assert('提示使用者尚未上傳', /尚未上傳/.test(alerted));
