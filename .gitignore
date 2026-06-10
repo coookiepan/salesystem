@@ -1,0 +1,11 @@
+# 依賴（CI 與本機都由 npm install 還原；package-lock.json 保留入庫鎖版本）
+node_modules/
+
+# 作業系統雜物
+.DS_Store
+Thumbs.db
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
