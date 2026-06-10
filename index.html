@@ -789,17 +789,23 @@ tbody tr:hover{background:var(--surface-hover)}
       <!-- 步驟 3：預覽並下載 -->
       <section data-cm-step="2" class="cm-section" style="display:none">
         <h4>步驟 3／3 · 預覽並下載</h4>
-        <div class="cm-preview" id="cm-preview"></div>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 8px">下方是 <b>圖片預覽</b>（手機看版型最穩，不會跑版）。可直接「下載圖片」傳給客戶，或改「下載 Word」。</p>
+        <div id="cm-img-preview" style="overflow:auto;text-align:center;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px"></div>
+        <details style="margin-top:4px">
+          <summary style="cursor:pointer;font-size:13px;color:var(--text2)">文字摘要（純文字版）</summary>
+          <div class="cm-preview" id="cm-preview" style="margin-top:6px"></div>
+        </details>
       </section>
 
       <div class="cm-ios-tip" id="cm-ios-tip">
-        <b>📱 iPhone / iPad 提示：</b>點「下載 Word」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、Mail、訊息、LINE 任一都可保存或傳出。若沒跳分享面板，會在新分頁開啟下載連結。
+        <b>📱 iPhone / iPad 提示：</b>點「下載圖片」或「下載 Word」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、儲存到「照片」、Mail、訊息、LINE 任一都可保存或傳出。若沒跳分享面板，會在新分頁開啟。
       </div>
     </div>
     <div class="cm-actions">
       <button class="btn btn-outline" id="cm-prev-btn" style="display:none">← 上一步</button>
       <button class="btn btn-primary" id="cm-next-btn">下一步 →</button>
-      <button class="btn btn-primary" id="cm-download-btn" style="display:none">📥 下載 Word</button>
+      <button class="btn btn-primary" id="cm-download-img-btn" style="display:none">🖼️ 下載圖片</button>
+      <button class="btn btn-outline" id="cm-download-btn" style="display:none">📄 下載 Word</button>
     </div>
   </div>
 </div>
@@ -1318,7 +1324,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.09-m2';
+const APP_VERSION='v2026.06.10-c5';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -6008,7 +6014,7 @@ const CM_builder = (function(){
     const quote = CM_engine.expandQuote(config);
     return await Packer.toBlob(buildDocument(quote));
   }
-  return {buildBlob, buildContractDocument};
+  return {buildBlob, buildContractDocument, companyInfo: COMPANY_INFO};
 })();
 
 // ─── docx UMD 延遲載入 ───
@@ -6195,12 +6201,14 @@ function cmGoStep(n){
   });
   const prev = document.getElementById('cm-prev-btn'),
         next = document.getElementById('cm-next-btn'),
-        dl   = document.getElementById('cm-download-btn');
+        dl   = document.getElementById('cm-download-btn'),
+        dlImg= document.getElementById('cm-download-img-btn');
   if(prev) prev.style.display = n === 0 ? 'none' : '';
   if(next) next.style.display = n === 2 ? 'none' : '';
   if(dl)   dl.style.display   = n === 2 ? '' : 'none';
+  if(dlImg)dlImg.style.display= n === 2 ? '' : 'none';
   cmRenderStepPills();
-  if(n === 2) cmPreview();
+  if(n === 2){ cmPreview(); cmRenderImagePreview(); }
   const body = document.querySelector('#cm-modal .cm-body'); if(body) body.scrollTop = 0;
 }
 function cmRenderStepPills(){
@@ -6565,6 +6573,204 @@ async function cmDownload(){
     btn.disabled = false; btn.textContent = orig;
   }
 }
+// ─── 報價單「圖片」輸出：用 Canvas 自行排版（固定欄寬，手機檢視器不會跑版，Word 的窄欄折字問題不再發生）───
+function cmRenderQuoteCanvas(quote){
+  const FONT = '"Microsoft JhengHei","PingFang TC","Heiti TC","Noto Sans CJK TC","WenQuanYi Micro Hei",sans-serif';
+  const W = 960, M = 40, innerW = W - M*2;
+  const scale = Math.min(3, Math.max(2, Math.ceil(window.devicePixelRatio || 1)));
+  const meas = document.createElement('canvas').getContext('2d');
+  const setF = (ctx, px, bold) => { ctx.font = (bold ? '700 ' : '400 ') + px + 'px ' + FONT; };
+  const fmt = n => n==null ? '' : Number(n).toLocaleString();
+  const cyc = c => c==='1W' ? '1週' : c==='2W' ? '2週' : '4週';
+  const pad = 9, lh = 27;
+  const bodyPx = 17, titlePx = 30, infoPx = 16, noteTitlePx = 18, infoLh = infoPx + 9, noteLh = 24;
+
+  function wrap(text, px, bold, maxW){
+    setF(meas, px, bold);
+    text = String(text==null ? '' : text);
+    const out = [];
+    for(const seg of text.split('\n')){
+      if(seg === ''){ out.push(''); continue; }
+      let cur = '';
+      for(const ch of Array.from(seg)){
+        const t = cur + ch;
+        if(cur && meas.measureText(t).width > maxW){ out.push(cur); cur = ch; }
+        else cur = t;
+      }
+      out.push(cur);
+    }
+    return out.length ? out : [''];
+  }
+
+  const showLoc = !!(quote.show && quote.show.location);
+  const cols = showLoc ? [
+    {k:'name', label:'品名', frac:0.30, align:'left'},
+    {k:'loc',  label:'位置', frac:0.13, align:'center'},
+    {k:'qty',  label:'數量', frac:0.09, align:'center'},
+    {k:'cyc',  label:'更換週期', frac:0.14, align:'center'},
+    {k:'unit', label:'單價(含稅)', frac:0.18, align:'right'},
+    {k:'amt',  label:'4W月金額', frac:0.16, align:'right'},
+  ] : [
+    {k:'name', label:'品名', frac:0.40, align:'left'},
+    {k:'qty',  label:'數量', frac:0.10, align:'center'},
+    {k:'cyc',  label:'更換週期', frac:0.16, align:'center'},
+    {k:'unit', label:'單價(含稅)', frac:0.18, align:'right'},
+    {k:'amt',  label:'4W月金額', frac:0.16, align:'right'},
+  ];
+  cols.forEach(c => { c.w = Math.round(innerW * c.frac); });
+  cols[cols.length-1].w += innerW - cols.reduce((a,c)=>a+c.w,0);
+  let cxAcc = M; cols.forEach(c => { c.x = cxAcc; cxAcc += c.w; });
+
+  const cellVal = (c, it) => {
+    switch(c.k){
+      case 'name': return it.name;
+      case 'loc':  return it.location || '';
+      case 'qty':  return it.qty;
+      case 'cyc':  return cyc(it.cycle);
+      case 'unit': return fmt(it.unitPrice);
+      case 'amt':  return fmt(it.monthly);
+    }
+    return '';
+  };
+
+  // 列模型（先量測折行，算出各列高度）
+  const rows = [];
+  const headerCells = cols.map(c => ({ lines: wrap(c.label, bodyPx, true, c.w - pad*2), align:'center' }));
+  rows.push({ type:'cells', fill:'#D9E1F2', bold:true, cells:headerCells,
+              height: Math.max(1, ...headerCells.map(c=>c.lines.length))*lh + pad });
+  const multiArea = quote.areas.length > 1;
+  for(const area of quote.areas){
+    if(multiArea){
+      const lines = wrap(area.name, bodyPx, true, innerW - pad*2);
+      rows.push({ type:'full', fill:'#BDD7EE', lines, height: lines.length*lh + pad });
+    }
+    for(const it of area.items){
+      const cells = cols.map(c => ({ lines: wrap(cellVal(c, it), bodyPx, false, c.w - pad*2), align:c.align }));
+      rows.push({ type:'cells', cells, height: Math.max(1, ...cells.map(c=>c.lines.length))*lh + pad });
+    }
+    if(multiArea){
+      rows.push({ type:'span', fill:'#F2F2F2', label:'小計', value:fmt(area.subtotal), height: lh + pad });
+    }
+  }
+  rows.push({ type:'span', fill:'#FFE699', label:'月金額總合計 (每 4 週)', value:fmt(quote.grandTotal), height: lh + pad });
+
+  // 客戶表頭 + 說明
+  const ci = CM_builder.companyInfo || {};
+  const leftLines  = ['客戶名稱：'+(quote.client||''), '報價日期：'+(quote.date||'')];
+  const rightLines = ['承辦人：'+(ci.contact||''), '手機：'+(ci.mobile||''), '電話：'+(ci.phone||''), '地址：'+(ci.address||'')];
+  const custH = Math.max(leftLines.length, rightLines.length) * infoLh + 6;
+  const notes = quote.notes || [];
+  const noteModels = notes.map((n,i) => {
+    let s = (i+1)+'. '+(n.text||'');
+    if(n.strong) s += n.strong;
+    if(n.tail) s += n.tail;
+    return wrap(s, infoPx, false, innerW - pad*2);
+  });
+  const notesH = notes.length ? (30 + noteModels.reduce((a,ls)=>a+ls.length*noteLh,0) + 8) : 0;
+
+  const titleH = 52, gap = 14;
+  const tableH = rows.reduce((a,r)=>a+r.height, 0);
+  const totalH = M + titleH + custH + gap + tableH + (notesH ? gap + notesH : 0) + M;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(W * scale);
+  canvas.height = Math.round(totalH * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, totalH);
+  ctx.textBaseline = 'middle';
+
+  const drawLines = (lines, x, y, w, align, px, bold, color) => {
+    setF(ctx, px, bold); ctx.fillStyle = color || '#222';
+    lines.forEach((ln, i) => {
+      const ty = y + lh*i + lh/2;
+      if(align==='center'){ ctx.textAlign='center'; ctx.fillText(ln, x + w/2, ty); }
+      else if(align==='right'){ ctx.textAlign='right'; ctx.fillText(ln, x + w - pad, ty); }
+      else { ctx.textAlign='left'; ctx.fillText(ln, x + pad, ty); }
+    });
+  };
+  const stroke = (x, y, w, h) => { ctx.strokeStyle='#888'; ctx.lineWidth=1; ctx.strokeRect(x+0.5, y+0.5, w, h); };
+
+  let y = M;
+  // 標題
+  setF(ctx, titlePx, true); ctx.fillStyle='#1f2937'; ctx.textAlign='center';
+  ctx.fillText('報　價　單', W/2, y + titleH/2);
+  y += titleH;
+  // 客戶表頭
+  setF(ctx, infoPx, false); ctx.fillStyle='#333'; ctx.textAlign='left';
+  leftLines.forEach((ln, i) => ctx.fillText(ln, M, y + infoLh*i + infoLh/2));
+  const rx = M + innerW*0.56;
+  rightLines.forEach((ln, i) => ctx.fillText(ln, rx, y + infoLh*i + infoLh/2));
+  y += custH + gap;
+  // 表格
+  for(const r of rows){
+    if(r.fill){ ctx.fillStyle = r.fill; ctx.fillRect(M, y, innerW, r.height); }
+    if(r.type === 'cells'){
+      cols.forEach(c => stroke(c.x, y, c.w, r.height));
+      r.cells.forEach((cell, i) => drawLines(cell.lines, cols[i].x, y, cols[i].w, cell.align, bodyPx, !!r.bold, '#222'));
+    } else if(r.type === 'full'){
+      stroke(M, y, innerW, r.height);
+      drawLines(r.lines, M, y, innerW, 'left', bodyPx, true, '#1f2937');
+    } else if(r.type === 'span'){
+      const lastW = cols[cols.length-1].w, labelW = innerW - lastW;
+      stroke(M, y, labelW, r.height); stroke(M + labelW, y, lastW, r.height);
+      drawLines([r.label], M, y, labelW, 'right', bodyPx, true, '#222');
+      drawLines([r.value], M + labelW, y, lastW, 'right', bodyPx, true, '#222');
+    }
+    y += r.height;
+  }
+  // 說明
+  if(notesH){
+    y += gap;
+    setF(ctx, noteTitlePx, true); ctx.fillStyle='#1f2937'; ctx.textAlign='left';
+    ctx.fillText('說明：', M, y + 14); y += 30;
+    setF(ctx, infoPx, false); ctx.fillStyle='#333'; ctx.textAlign='left';
+    noteModels.forEach(ls => ls.forEach(ln => { ctx.fillText(ln, M, y + noteLh/2); y += noteLh; }));
+  }
+  return canvas;
+}
+function cmRenderImagePreview(){
+  const host = document.getElementById('cm-img-preview');
+  if(!host) return;
+  host.innerHTML = '';
+  try{
+    const quote = CM_engine.expandQuote(cmBuildConfig());
+    const canvas = cmRenderQuoteCanvas(quote);
+    canvas.style.width = '100%'; canvas.style.height = 'auto'; canvas.style.display = 'block';
+    canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', '報價單預覽圖片');
+    host.appendChild(canvas);
+  }catch(e){
+    host.textContent = '無法產生預覽：' + (e.message || String(e));
+  }
+}
+async function cmDownloadImage(){
+  const btn = document.getElementById('cm-download-img-btn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '產生中...';
+  try{
+    const cfg = cmBuildConfig();
+    const quote = CM_engine.expandQuote(cfg);
+    const canvas = cmRenderQuoteCanvas(quote);
+    const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('無法產生圖片')), 'image/png'));
+    const fname = '報價單_' + cmSafeFilename(cfg.client) + (cfg.version ? '_'+cmSafeFilename(cfg.version) : '') + '.png';
+    const result = await cmTriggerSave(blob, fname);
+    const c = result !== 'cancelled' ? cmCurClient() : null;
+    if(c){
+      c.visits = c.visits || [];
+      c.visits.unshift({ date: HOST.today(), note: '已產生報價單圖片：'+fname, statusChange:'', insight:'', mood:0 });
+      c.updatedAt = Date.now(); HOST.save(); HOST.sync('save', { client: c }); HOST.onChange();
+    }
+    const box = document.getElementById('cm-msg-box');
+    if(result === 'cancelled'){ box.className='cm-msg warn'; box.textContent='已取消分享。'; }
+    else if(result === 'shared'){ box.className='cm-msg success'; box.textContent='✅ 已透過系統分享 '+fname; }
+    else if(result === 'newtab'){ box.className='cm-msg success'; box.textContent='✅ 已在新分頁開啟 '+fname+'，請長按圖片儲存或點「分享」。'; }
+    else { box.className='cm-msg success'; box.textContent='✅ 已下載 '+fname+'，並寫入拜訪紀錄。'; }
+  }catch(e){
+    cmShowError('產生圖片失敗：'+(e.message || String(e)));
+  }finally{
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
 // ── 事件綁定：取代原本 HTML 內的 inline on* 處理器（模組私有，不暴露全域） ──
 let CM_mounted = false;
 function cmMount(){
@@ -6585,6 +6791,7 @@ function cmMount(){
   bind('cm-prev-btn', () => { if(CM_state) cmGoStep((CM_state.step||0) - 1); });
   bind('cm-next-btn', () => { if(CM_state) cmGoStep((CM_state.step||0) + 1); });
   bind('cm-download-btn', cmDownload);
+  bind('cm-download-img-btn', cmDownloadImage);
   bind('cm-additem-cat', () => cmAddItem(false));
   bind('cm-additem-new', () => cmAddItem(true));
   bind('cm-prod-close-btn', cmCloseProdPicker);
