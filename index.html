@@ -361,6 +361,13 @@ tbody tr:hover{background:var(--surface-hover)}
 .pflag.p1{background:var(--ss-red-bg);color:var(--ss-red-fg)}
 .pflag.p2{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
 .pflag.p3{background:var(--ss-blue-bg,var(--blue-l));color:var(--ss-blue-fg)}
+/* 試用逾期回收 X 分級（公司規則：>7天X、>14天XX、>21天XXX、>28天XXXX 業助提醒） */
+.xbadge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;padding:1.5px 7px;border-radius:4px;margin-left:6px;vertical-align:1px;font-variant-numeric:tabular-nums}
+.xbadge.x2{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
+.xbadge.x3{background:var(--ss-red-bg);color:var(--ss-red-fg)}
+.xbadge.x4{background:var(--red);color:#fff;animation:pulse 1.6s ease-in-out infinite}
+.gt-trial-row{cursor:pointer}
+.gt-trial-row:hover{background:var(--surface-hover)}
 
 /* ═══════════════════════════════════════════════════════════
    NAVIGATION — simple, no glow
@@ -1326,7 +1333,7 @@ tbody tr:hover{background:var(--surface-hover)}
 
 <div class="modal-bg" id="todo-modal" onclick="if(event.target===this)closeTodoModal()">
   <div class="modal">
-    <div class="modal-title">新增待辦</div>
+    <div class="modal-title" id="tm-title">新增待辦</div>
     <div class="f">
       <label class="lbl">待辦內容 *</label>
       <input id="tm-text" placeholder="例如：明天回收試用品 p1" oninput="tmOnInput()">
@@ -1343,8 +1350,9 @@ tbody tr:hover{background:var(--surface-hover)}
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="saveTodoModal()">新增</button>
+      <button class="btn btn-primary" id="tm-save-btn" onclick="saveTodoModal()">新增</button>
       <button class="btn btn-outline" onclick="closeTodoModal()">取消</button>
+      <button class="btn btn-danger" id="tm-del-btn" onclick="tmDelete()" style="margin-left:auto;display:none">刪除</button>
     </div>
   </div>
 </div>
@@ -1409,7 +1417,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.10-m4';
+const APP_VERSION='v2026.06.10-m5';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -3326,6 +3334,26 @@ function trialStartDate(c){
   if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
   return '';
 }
+// 公司逾期回收分級：試用天數 ≥7=X、≥14=XX、≥21=XXX、≥28=XXXX（會被業助提醒，極力避免）。
+// 試用預設 14 天，UI 從超過 14 天（XX 起）才標示，與公司計法一致（業務看到的＝業助看到的）。
+const TRIAL_DEFAULT_DAYS=14;
+function trialXInfo(c,base){
+  if(!c||c.status!==STATUS.TRIAL)return null;
+  const ts=trialStartDate(c);
+  if(!ts||typeof ts!=='string'||ts.length<10)return null;
+  const d=new Date(ts+'T00:00:00');
+  if(isNaN(d.getTime()))return null;
+  const days=Math.floor((new Date((base||today())+'T00:00:00')-d)/86400000);
+  if(days<0)return null;
+  const marks=days>=28?'XXXX':days>=21?'XXX':days>=14?'XX':days>=7?'X':'';
+  return {days,marks,level:marks.length};
+}
+// 客戶卡/詳情用的 X 徽章 HTML：未超過預設試用期（14 天）不標
+function trialXBadge(c){
+  const info=trialXInfo(c);
+  if(!info||info.level<2)return '';
+  return `<span class="xbadge x${info.level}" title="試用第 ${info.days} 天，公司逾期等級 ${info.marks}">${info.marks}</span>`;
+}
 // 自動產生回收待辦：試用中客戶，試用起始日 +7 天後自動新增「回收試用品」todo
 // 防禦式：整段包 try/catch，任何單筆客戶出錯不影響其他客戶、也不影響 app 啟動
 function autoAddRecycleTodos(){
@@ -3976,7 +4004,7 @@ function renderClients(){
     const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
     const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
     const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
-    const _extraBadges=`${fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${pTodos}待辦</span>`:''}`;
+    const _extraBadges=`${trialXBadge(c)}${fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${pTodos}待辦</span>`:''}`;
     return`<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
@@ -4383,6 +4411,7 @@ function openCD(i){
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
     bdg(c.status||STATUS.UNVISITED)+
+    trialXBadge(c)+
     (fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:'')+
     ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
@@ -4510,24 +4539,45 @@ function renderCDTodos(){
   document.getElementById('cd-todos').innerHTML=todos.length?todos.map((t,i)=>`
     <div class="todo-row">
       <input type="checkbox" ${t.done?'checked':''} onchange="togCDTodo(${i})">
-      <div style="flex:1">
+      <div style="flex:1;cursor:pointer" onclick="gtEdit('c',${S.curIdx},${i})" title="點擊編輯">
         <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}</div>
         ${t.dueDate?`<div style="font-size:11px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'⚠ ':''}${dueLabel(t.dueDate)}</div>`:''}
       </div>
-      <button onclick="delCDTodo(${i})" aria-label="刪除待辦" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">×</button>
-    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦</div>';
+    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦（點「+ 新增待辦」或直接點待辦文字可編輯）</div>';
 }
 function togCDTodo(i){DB.clients[S.curIdx].todos[i].done=!DB.clients[S.curIdx].todos[i].done;DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});renderCDTodos();renderClients();}
-function delCDTodo(i){DB.clients[S.curIdx].todos.splice(i,1);DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});renderCDTodos();renderClients();}
 let TM_PRI=0;
-function addDetTodo(){
-  document.getElementById('tm-text').value='';
-  document.getElementById('tm-due').value='';
-  tmSetPri(0);tmOnInput();
+let TM_EDIT=null; // null=新增（掛在 S.curIdx 客戶）；{src:'c'|'g',ci,ti}=編輯既有待辦
+function _tmSetup(mode){ // mode: 'add'|'edit'
+  document.getElementById('tm-title').textContent=mode==='edit'?'編輯待辦':'新增待辦';
+  document.getElementById('tm-save-btn').textContent=mode==='edit'?'儲存':'新增';
+  document.getElementById('tm-del-btn').style.display=mode==='edit'?'':'none';
   document.getElementById('todo-modal').classList.add('on');
   setTimeout(()=>document.getElementById('tm-text').focus(),100);
 }
-function closeTodoModal(){document.getElementById('todo-modal').classList.remove('on');}
+function addDetTodo(){
+  TM_EDIT=null;
+  document.getElementById('tm-text').value='';
+  document.getElementById('tm-due').value='';
+  tmSetPri(0);tmOnInput();
+  _tmSetup('add');
+}
+// 從待辦頁或客戶詳情點待辦文字 → 開編輯視窗
+function gtEdit(src,ci,ti){
+  const t=_gtArr(src,ci)[ti];if(!t)return;
+  TM_EDIT={src,ci,ti};
+  document.getElementById('tm-text').value=t.text||'';
+  document.getElementById('tm-due').value=t.dueDate||'';
+  tmSetPri(t.priority||0);tmOnInput();
+  _tmSetup('edit');
+}
+function tmDelete(){
+  if(!TM_EDIT)return;
+  const {src,ci,ti}=TM_EDIT;
+  closeTodoModal();
+  delGT(src,ci,ti); // 含 4 秒復原 toast
+}
+function closeTodoModal(){document.getElementById('todo-modal').classList.remove('on');TM_EDIT=null;}
 function tmSetPri(n){
   TM_PRI=n;
   document.querySelectorAll('#tm-pri-row .pill').forEach(b=>b.classList.toggle('on',+b.dataset.pri===n));
@@ -4551,6 +4601,17 @@ function saveTodoModal(){
   // 手動填的日期/優先級優先；沒填才用解析結果
   const due=document.getElementById('tm-due').value||p.dueDate||'';
   const pri=TM_PRI||p.priority||0;
+  if(TM_EDIT){
+    // 編輯：就地更新，保留 done 與 source（如自動回收標記）等欄位
+    const {src,ci,ti}=TM_EDIT;
+    const t=_gtArr(src,ci)[ti];
+    if(!t){closeTodoModal();return;}
+    t.text=text;t.dueDate=due;
+    if(pri)t.priority=pri;else delete t.priority;
+    _gtSync(src,ci);
+    closeTodoModal();_gtRefresh();
+    return;
+  }
   const todo={text,dueDate:due,done:false};
   if(pri)todo.priority=pri;
   DB.clients[S.curIdx].todos.push(todo);
@@ -5113,20 +5174,39 @@ function gtSort(a,b){
   if(a.dueDate!==b.dueDate)return (a.dueDate||'9999')<(b.dueDate||'9999')?-1:1;
   return 0;
 }
+// 待辦列：左勾選完成、點文字開編輯視窗（編輯/刪除都在裡面，列上不再放紅叉）
 function gtRow(t){
   const od=isOD(t);
   const cnHtml=t.src==='c'
     ?`<span style="font-size:11px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
-        onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>`
+        onclick="event.stopPropagation();navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>`
     :`<span style="font-size:11px;color:var(--text3);margin-left:5px">一般</span>`;
   return`<div class="todo-row">
     <input type="checkbox" ${t.done?'checked':''} onchange="togGT('${t.src}',${t.ci},${t.ti})">
-    <div style="flex:1">
+    <div style="flex:1;cursor:pointer" onclick="gtEdit('${t.src}',${t.ci},${t.ti})" title="點擊編輯">
       <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}${cnHtml}</div>
       ${t.dueDate?`<div style="font-size:11px;color:${od?'var(--red)':'var(--text3)'};">${od?'⚠ ':''}${dueLabel(t.dueDate)}</div>`:''}
     </div>
-    <button onclick="delGT('${t.src}',${t.ci},${t.ti})" aria-label="刪除待辦" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">×</button>
   </div>`;
+}
+// 試用回收分區：超過預設試用期（14 天）尚未回收的試用中客戶，依公司 X 分級排序
+function gtTrialSection(){
+  const list=(DB.clients||[]).map((c,ci)=>({c,ci,info:trialXInfo(c)}))
+    .filter(x=>x.info&&x.info.level>=2)
+    .sort((a,b)=>b.info.days-a.info.days);
+  if(!list.length)return '';
+  const rows=list.map(({c,ci,info})=>{
+    const items=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    return`<div class="todo-row gt-trial-row" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
+      <div style="flex:1">
+        <div>${escHtml(c.name)}<span class="xbadge x${info.level}">${info.marks}</span></div>
+        <div style="font-size:11px;color:${info.level>=3?'var(--red)':'var(--text3)'}">試用第 ${info.days} 天${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・⚠ 已達業助提醒等級':''}</div>
+      </div>
+      <span style="color:var(--text3);font-size:16px;flex-shrink:0">›</span>
+    </div>`;
+  }).join('');
+  return`<div class="gt-sec overdue">🔄 試用回收（超過 ${TRIAL_DEFAULT_DAYS} 天） <span class="gt-count">${list.length}</span></div>`+
+    '<div class="card" style="padding:0 14px">'+rows+'</div>';
 }
 function renderGT(){
   const q=(document.getElementById('ts').value||'').toLowerCase();
@@ -5148,7 +5228,7 @@ function renderGT(){
     {key:'nodate',title:'未排日期',cls:'',items:pending.filter(t=>!t.dueDate)},
   ];
   const el=document.getElementById('gt-list');
-  let html='';
+  let html=q?'':gtTrialSection(); // 試用回收置頂（搜尋時不顯示，避免干擾）
   secs.forEach(s=>{
     if(!s.items.length)return;
     s.items.sort(gtSort);
@@ -5168,18 +5248,26 @@ function _gtSync(src,ci){
   saveLocal();
   if(src==='c'&&DB.clients[ci]){DB.clients[ci].updatedAt=Date.now();autoSync('save',{client:DB.clients[ci]});}
 }
+// 待辦變動後刷新所有顯示處：待辦頁、客戶列表徽章、（開著的）客戶詳情
+function _gtRefresh(){
+  renderGT();renderClients();
+  try{
+    const det=document.getElementById('view-detail');
+    if(det&&det.style.display!=='none'&&S.curIdx>=0&&DB.clients[S.curIdx])renderCDTodos();
+  }catch(_){}
+}
 function togGT(src,ci,ti){
   const arr=_gtArr(src,ci);if(!arr[ti])return;
   arr[ti].done=!arr[ti].done;
-  _gtSync(src,ci);renderGT();
+  _gtSync(src,ci);_gtRefresh();
 }
 function delGT(src,ci,ti){
   const arr=_gtArr(src,ci);const t=arr[ti];if(!t)return;
   arr.splice(ti,1);
-  _gtSync(src,ci);renderGT();renderClients();
+  _gtSync(src,ci);_gtRefresh();
   showUndoToast('已刪除待辦「'+t.text.slice(0,12)+(t.text.length>12?'…':'')+'」',()=>{
     const a=_gtArr(src,ci);a.splice(Math.min(ti,a.length),0,t);
-    _gtSync(src,ci);renderGT();renderClients();
+    _gtSync(src,ci);_gtRefresh();
   });
 }
 
