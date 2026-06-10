@@ -363,8 +363,9 @@ tbody tr:hover{background:var(--surface-hover)}
 .pflag.p3{background:var(--ss-blue-bg,var(--blue-l));color:var(--ss-blue-fg)}
 /* 試用逾期回收 X 分級（公司規則：>7天X、>14天XX、>21天XXX、>28天XXXX 業助提醒） */
 .xbadge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;padding:1.5px 7px;border-radius:4px;margin-left:6px;vertical-align:1px;font-variant-numeric:tabular-nums}
-.xbadge.x2{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
-.xbadge.x3{background:var(--ss-red-bg);color:var(--ss-red-fg)}
+.xbadge.x1{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
+.xbadge.x2{background:var(--ss-red-bg);color:var(--ss-red-fg)}
+.xbadge.x3{background:var(--red);color:#fff}
 .xbadge.x4{background:var(--red);color:#fff;animation:pulse 1.6s ease-in-out infinite}
 .gt-trial-row{cursor:pointer}
 .gt-trial-row:hover{background:var(--surface-hover)}
@@ -1417,7 +1418,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.10-m5';
+const APP_VERSION='v2026.06.10-m6';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -3334,8 +3335,9 @@ function trialStartDate(c){
   if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
   return '';
 }
-// 公司逾期回收分級：試用天數 ≥7=X、≥14=XX、≥21=XXX、≥28=XXXX（會被業助提醒，極力避免）。
-// 試用預設 14 天，UI 從超過 14 天（XX 起）才標示，與公司計法一致（業務看到的＝業助看到的）。
+// 公司逾期回收分級：試用預設 14 天，超過試用期後每 7 天記一個 X——
+// 第 14 天=X、第 21 天=XX、第 28 天=XXX、第 35 天=XXXX（會被業助提醒，極力避免）。
+// 例：6/1 開始試用 → 6/15 記 X、6/22 記 XX，依此類推。
 const TRIAL_DEFAULT_DAYS=14;
 function trialXInfo(c,base){
   if(!c||c.status!==STATUS.TRIAL)return null;
@@ -3345,13 +3347,14 @@ function trialXInfo(c,base){
   if(isNaN(d.getTime()))return null;
   const days=Math.floor((new Date((base||today())+'T00:00:00')-d)/86400000);
   if(days<0)return null;
-  const marks=days>=28?'XXXX':days>=21?'XXX':days>=14?'XX':days>=7?'X':'';
-  return {days,marks,level:marks.length};
+  const level=days>=TRIAL_DEFAULT_DAYS?Math.min(4,Math.floor((days-TRIAL_DEFAULT_DAYS)/7)+1):0;
+  const marks='X'.repeat(level);
+  return {days,marks,level};
 }
 // 客戶卡/詳情用的 X 徽章 HTML：未超過預設試用期（14 天）不標
 function trialXBadge(c){
   const info=trialXInfo(c);
-  if(!info||info.level<2)return '';
+  if(!info||info.level<1)return '';
   return `<span class="xbadge x${info.level}" title="試用第 ${info.days} 天，公司逾期等級 ${info.marks}">${info.marks}</span>`;
 }
 // 自動產生回收待辦：試用中客戶，試用起始日 +7 天後自動新增「回收試用品」todo
@@ -5192,7 +5195,7 @@ function gtRow(t){
 // 試用回收分區：超過預設試用期（14 天）尚未回收的試用中客戶，依公司 X 分級排序
 function gtTrialSection(){
   const list=(DB.clients||[]).map((c,ci)=>({c,ci,info:trialXInfo(c)}))
-    .filter(x=>x.info&&x.info.level>=2)
+    .filter(x=>x.info&&x.info.level>=1)
     .sort((a,b)=>b.info.days-a.info.days);
   if(!list.length)return '';
   const rows=list.map(({c,ci,info})=>{
