@@ -1324,7 +1324,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.10-c5';
+const APP_VERSION='v2026.06.10-c6';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -6293,6 +6293,14 @@ function cmRenderItems(){
     // 第二列：更換週期 / 數量 / 單價（每次更換）
     const fields = document.createElement('div');
     fields.className = 'cm-item-fields';
+    // 每4週金額（即時換算）先建立，供「數量／單價」輸入時就地更新；避免每按一鍵就重繪整列導致游標跳出
+    const money = document.createElement('div');
+    money.style.cssText = 'margin-top:6px;text-align:right;font-weight:600;color:var(--green-d)';
+    const cmRecalcRow = () => {
+      const unitN = Number(it.unit) || 0, qn = parseInt(it.qty, 10) || 1, ch = cmChangesPer4W(it.cycle || '2W');
+      money.textContent = '每4週 $' + (unitN * ch * qn).toLocaleString();
+      cmUpdateGrandTotal();
+    };
     const cw = document.createElement('label'); cw.className = 'cm-field';
     const cs = document.createElement('span'); cs.textContent = '更換週期'; cw.appendChild(cs);
     const sel = document.createElement('select');
@@ -6308,8 +6316,9 @@ function cmRenderItems(){
       cmRenderItems();
     };
     cw.appendChild(sel); fields.appendChild(cw);
-    fields.appendChild(cmField('數量', 'number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; cmRenderItems(); }, {min:1}));
-    fields.appendChild(cmField('單價(每次更換)', 'number', (it.unit == null || it.unit === '') ? '' : it.unit, v => { it.unit = v === '' ? '' : Number(v); it._unitAuto = false; cmRenderItems(); }, {placeholder:'每次更換單價', step:'any', min:0}));
+    // 數量／單價：只就地更新金額與總計，不重繪整列（否則每按一鍵 input 被重建、游標跳出，要重新點擊才能繼續輸入）
+    fields.appendChild(cmField('數量', 'number', it.qty || 1, v => { it.qty = parseInt(v,10) || 1; cmRecalcRow(); }, {min:1}));
+    fields.appendChild(cmField('單價(每次更換)', 'number', (it.unit == null || it.unit === '') ? '' : it.unit, v => { it.unit = v === '' ? '' : Number(v); it._unitAuto = false; cmRecalcRow(); }, {placeholder:'每次更換單價', step:'any', min:0}));
     div.appendChild(fields);
 
     // 位置：勾選才出現
@@ -6329,11 +6338,8 @@ function cmRenderItems(){
     }
     div.appendChild(locWrap);
 
-    // 每4週金額（即時換算：單價 × 換洗次數 × 數量）
-    const money = document.createElement('div');
-    money.style.cssText = 'margin-top:6px;text-align:right;font-weight:600;color:var(--green-d)';
-    const unitN = Number(it.unit) || 0, qn = parseInt(it.qty, 10) || 1, ch = cmChangesPer4W(it.cycle || '2W');
-    money.textContent = '每4週 $' + (unitN * ch * qn).toLocaleString();
+    // 每4週金額初始顯示（元素已於上方建立）
+    cmRecalcRow();
     div.appendChild(money);
 
     cont.appendChild(div);
