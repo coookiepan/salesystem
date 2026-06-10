@@ -79,6 +79,18 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   const g = JSON.parse(w.eval('JSON.stringify(DB.gtodos)'));
   assert('無 # → 進一般待辦', g.length === 1 && g[0].text === '買咖啡濾紙');
 
+  // 試用逾期 X 分級（公司規則：≥7天X、≥14天XX、≥21天XXX、≥28天XXXX）
+  console.log('T1 — 試用逾期 X 分級');
+  const xc = { status: '試用中', trialDate: '2026-06-01' };
+  const xi = (base) => w.trialXInfo(xc, base);
+  assert('第 4 天 → 無標記', xi('2026-06-05').marks === '');
+  assert('第 7 天 → X', xi('2026-06-08').marks === 'X');
+  assert('第 14 天 → XX（超過預設試用期，UI 開始標示）', xi('2026-06-15').marks === 'XX' && xi('2026-06-15').level === 2);
+  assert('第 21 天 → XXX', xi('2026-06-22').marks === 'XXX');
+  assert('第 28 天 → XXXX（業助提醒等級）', xi('2026-06-29').marks === 'XXXX');
+  assert('非試用中狀態 → null', w.trialXInfo({ status: '已成約', trialDate: '2026-06-01' }, '2026-06-29') === null);
+  assert('無試用日 → null', w.trialXInfo({ status: '試用中' }, '2026-06-29') === null);
+
   console.log(failed ? `T1 FAILED (${failed})` : 'T1 PASSED ✅');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('THROWN', e); process.exit(1); });
