@@ -108,7 +108,9 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
    ═══════════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{max-width:100%;overflow-x:hidden}
-body{overscroll-behavior-y:contain}
+/* 防手機下拉誤觸發重新整理。只限觸控裝置：桌面上與 html 的 overflow-x:hidden
+   組合會讓滾輪無法捲動頁面（Chromium 已知行為），故不可套在桌面。 */
+@media(pointer:coarse){body{overscroll-behavior-y:contain}}
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 @media(prefers-reduced-motion:reduce){
@@ -1418,7 +1420,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.10-m6';
+const APP_VERSION='v2026.06.10-m7';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
