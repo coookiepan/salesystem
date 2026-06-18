@@ -940,6 +940,10 @@ tbody tr:hover{background:var(--surface-hover)}
           <label class="cm-field"><span>租賃起始日</span><input id="cmw-start" placeholder="YYYY/MM/DD"></label>
           <label class="cm-field"><span>租賃期間（年）</span><input id="cmw-years" type="number" min="1" step="1"></label>
         </div>
+        <div class="cm-row">
+          <label class="cm-field"><span>自訂結束日（選填）</span><input id="cmw-end" placeholder="留空則依年數自動算（YYYY/MM/DD）"></label>
+          <div class="cm-field"><span>契約期間</span><div id="cmw-period" style="font-size:12px;color:var(--text3);padding:6px 0;line-height:1.5"></div></div>
+        </div>
 
         <div class="cmw-group-label">付款方式（請擇一）</div>
         <div class="cmw-opts">
@@ -1420,7 +1424,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.10-m7';
+const APP_VERSION='v2026.06.18-c1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -6043,18 +6047,42 @@ function cmDetectContractType(items){
 }
 // 公司（乙方／DUSKIN）預設資料 — 供合約精靈預填立契約書人乙方
 const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號', dept:'台南營業所' };
-// 西元起始日 + 年數 → 民國「起訖日期」契約期間。結束日 = 起日 + years 年 - 1 日（例：115/6/9 起、1 年 → 116/6/8 止）。
-function cmRocPeriod(start, years){
-  const m = String(start || '').trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
-  const y = parseInt(years, 10);
-  if(!m || !(y > 0)) return null;
-  const sy = +m[1], smo = +m[2], sd = +m[3];
-  const startD = new Date(sy, smo - 1, sd);
-  if(isNaN(startD.getTime()) || startD.getMonth() !== smo - 1) return null;   // 擋掉不存在的日期（如 2/30）
-  const endD = new Date(sy + y, smo - 1, sd);
-  endD.setDate(endD.getDate() - 1);
+// 解析 YYYY/MM/DD（或 - .）成本地 Date；不存在的日期（如 2/30）回 null。
+function cmParseYmd(s){
+  const m = String(s || '').trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+  if(!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  if(isNaN(dt.getTime()) || dt.getMonth() !== mo - 1) return null;   // 擋掉不存在的日期（如 2/30）
+  return dt;
+}
+// 西元起始日 + 年數（或自訂結束日）→ 民國「起訖日期」契約期間，並算出期間長度（幾週又幾天，含頭尾兩日）。
+// 預設結束日 = 起日 + years 年 - 1 日（例：115/6/9 起、1 年 → 116/6/8 止）；
+// 若給 endOverride（YYYY/MM/DD）則以其為準（custom=true），年數可留空。
+function cmRocPeriod(start, years, endOverride){
+  const startD = cmParseYmd(start);
+  if(!startD) return null;
+  const hasEnd = endOverride != null && String(endOverride).trim() !== '';
+  let endD;
+  if(hasEnd){
+    endD = cmParseYmd(endOverride);
+    if(!endD) return null;
+  } else {
+    const y = parseInt(years, 10);
+    if(!(y > 0)) return null;
+    endD = new Date(startD.getFullYear() + y, startD.getMonth(), startD.getDate());
+    endD.setDate(endD.getDate() - 1);
+  }
+  if(endD.getTime() < startD.getTime()) return null;   // 結束日不可早於起始日
   const roc = d => '中華民國' + (d.getFullYear() - 1911) + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
-  return { startStr: roc(startD), endStr: roc(endD), full: '自' + roc(startD) + '起至' + roc(endD) + '止' };
+  const totalDays = Math.round((endD - startD) / 86400000) + 1;   // 含頭尾兩日（自起日至迄日「止」）
+  const weeks = Math.floor(totalDays / 7), days = totalDays % 7;
+  return {
+    startStr: roc(startD), endStr: roc(endD),
+    full: '自' + roc(startD) + '起至' + roc(endD) + '止',
+    custom: hasEnd, totalDays, weeks, days,
+    durationStr: weeks + ' 週' + (days ? ' 又 ' + days + ' 天' : '')
+  };
 }
 
 // ─── 引擎核心（自 engine.js 改寫，瀏覽器內嵌版） ───
@@ -6424,9 +6452,12 @@ const CM_builder = (function(){
     const p=d.payment||{}, l=d.lease||{};
     const out=[];
     out.push(para([txt('二、租賃期間及付款方式協議如下：',{bold:true})]));
-    const period = cmRocPeriod(l.start, l.years);
+    const period = cmRocPeriod(l.start, l.years, l.end);
     if(period){
-      out.push(para([txt('　租賃期間：'),txt(period.full,{bold:true}),txt('（為期 '),txt(String(l.years),{bold:true}),txt(' 年，亦等同契約有效期間）。')]));
+      const dur = period.custom
+        ? [txt('（為期 '),txt(period.durationStr,{bold:true}),txt('，亦等同契約有效期間）。')]
+        : [txt('（為期 '),txt(String(l.years),{bold:true}),txt(' 年，亦等同契約有效期間）。')];
+      out.push(para([txt('　租賃期間：'),txt(period.full,{bold:true}),...dur]));
     } else {
       out.push(para([txt('　租賃期間：自 '),txt(l.start||'　　　　　',{bold:true}),txt(' 起，為期 '),txt(String(l.years||'　'),{bold:true}),txt(' 年（亦等同契約有效期間）。')]));
     }
@@ -7337,7 +7368,7 @@ function cmwInit(c){
     step: 0, client: c.name || '', date: dt,
     autoType, contractType: autoType, typeManual: false, termsManual: false,
     items,
-    lease: { start: dt, years: autoType === 'B' ? 4 : 1 },
+    lease: { start: dt, years: autoType === 'B' ? 4 : 1, end: '' },
     payment: { billingDay: '', paymentDay: '', invoiceDelivery: 'monthly',
                paymentMethod: 'cash', wireDays: '', checkDays: '',
                invoiceTitle: c.name || '', taxId: c.regNo || '' },
@@ -7479,7 +7510,7 @@ function cmwUpdatePaymentUI(){
 function cmwSyncToUI(){
   const w = CM_wiz, p = w.payment, l = w.lease;
   const set = (id, v) => { const e = document.getElementById(id); if(e) e.value = (v == null ? '' : v); };
-  set('cmw-start', l.start); set('cmw-years', l.years);
+  set('cmw-start', l.start); set('cmw-years', l.years); set('cmw-end', l.end);
   set('cmw-billingDay', p.billingDay); set('cmw-paymentDay', p.paymentDay);
   set('cmw-wireDays', p.wireDays); set('cmw-checkDays', p.checkDays);
   set('cmw-invTitle', p.invoiceTitle); set('cmw-taxId', p.taxId);
@@ -7491,6 +7522,21 @@ function cmwSyncToUI(){
   set('cmw-terms', (w.attachedTerms || []).join('\n'));
   const sel = document.getElementById('cmw-type'); if(sel) sel.value = w.contractType;
   cmwUpdatePaymentUI();
+  cmwUpdatePeriod();
+}
+// 即時顯示契約起訖（民國）與期間長度（幾週又幾天）。自訂結束日優先於年數。
+function cmwUpdatePeriod(){
+  const el = document.getElementById('cmw-period'); if(!el || !CM_wiz) return;
+  const l = CM_wiz.lease;
+  const period = cmRocPeriod(l.start, l.years, l.end);
+  if(!period){
+    el.style.color = 'var(--text3)';
+    el.textContent = !l.start ? '請先填寫租賃起始日'
+      : (l.end ? '結束日格式有誤或早於起始日' : '請填寫租賃期間（年）或自訂結束日');
+    return;
+  }
+  el.style.color = 'var(--text2)';
+  el.innerHTML = HOST.escapeHtml(period.full) + '<br>共 <b>' + period.durationStr + '</b>（' + period.totalDays + ' 天）';
 }
 function cmwBuildContractData(){
   const w = CM_wiz;
@@ -7515,8 +7561,10 @@ function cmwPreview(){
   lines.push('【DUSKIN商品租賃契約書】');
   lines.push('甲方（承租人）：' + (d.client || ''));
   lines.push('合約類型：' + (d.contractType === 'B' ? 'B · 含特製地墊' : 'A · 無特製地墊'));
-  const period = cmRocPeriod(d.lease.start, d.lease.years);
-  lines.push('租賃期間：' + (period ? period.full + '（為期 ' + d.lease.years + ' 年）' : ('自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年')));
+  const period = cmRocPeriod(d.lease.start, d.lease.years, d.lease.end);
+  lines.push('租賃期間：' + (period
+    ? period.full + '（為期 ' + (period.custom ? period.durationStr : (d.lease.years + ' 年')) + '）'
+    : ('自 ' + (d.lease.start || '') + ' 起，為期 ' + (d.lease.years || '') + ' 年')));
   lines.push('');
   lines.push('商品明細：');
   d.items.forEach(it => {
@@ -7555,6 +7603,7 @@ function cmwGoTo(n){
   cmwRenderSteps();
   if(n === 0){ const ta = document.getElementById('cmw-inquiry'); if(ta) ta.value = cmwBuildInquiry(); }
   if(n === 1){ cmwAutoType(); cmwRenderItems(); }
+  if(n === 2) cmwUpdatePeriod();
   if(n === 5) cmwPreview();
   const body = document.querySelector('#cm-wiz .cm-body'); if(body) body.scrollTop = 0;
 }
@@ -7617,8 +7666,9 @@ function cmwMount(){
   bind('cmw-copy-btn', cmwCopyInquiry);
   bind('cmw-additem', () => { if(CM_wiz) cmwAddItem(); });
   const onInput = (id, fn) => { const e = document.getElementById(id); if(e) e.addEventListener('input', () => { if(CM_wiz) fn(e.value); }); };
-  onInput('cmw-start', v => CM_wiz.lease.start = v);
-  onInput('cmw-years', v => CM_wiz.lease.years = v === '' ? '' : Number(v));
+  onInput('cmw-start', v => { CM_wiz.lease.start = v; cmwUpdatePeriod(); });
+  onInput('cmw-years', v => { CM_wiz.lease.years = v === '' ? '' : Number(v); cmwUpdatePeriod(); });
+  onInput('cmw-end', v => { CM_wiz.lease.end = v.trim(); cmwUpdatePeriod(); });
   onInput('cmw-billingDay', v => CM_wiz.payment.billingDay = v);
   onInput('cmw-paymentDay', v => CM_wiz.payment.paymentDay = v);
   onInput('cmw-wireDays', v => CM_wiz.payment.wireDays = v);
@@ -7803,6 +7853,21 @@ if(location.search.includes('test=1')){
   assert('rocPeriod 月底', CMT.rocPeriod('2026/03/01',1).full, '自中華民國115年3月1日起至中華民國116年2月28日止');
   assert('rocPeriod 無年數→null', CMT.rocPeriod('2026/06/09',0), null);
   assert('rocPeriod 壞日期→null', CMT.rocPeriod('abc',1), null);
+  // 期間長度（含頭尾兩日）：1 年 = 365 天 = 52 週又 1 天
+  assert('rocPeriod 1年 共幾天', CMT.rocPeriod('2026/06/09',1).totalDays, 365);
+  assert('rocPeriod 1年 週數', CMT.rocPeriod('2026/06/09',1).weeks, 52);
+  assert('rocPeriod 1年 餘天數', CMT.rocPeriod('2026/06/09',1).days, 1);
+  assert('rocPeriod 1年 期間字串', CMT.rocPeriod('2026/06/09',1).durationStr, '52 週 又 1 天');
+  assert('rocPeriod 年數版 custom=false', CMT.rocPeriod('2026/06/09',1).custom, false);
+  // 自訂結束日：2026/06/09 起至 2026/06/22 止 → 14 天 = 2 週整（含頭尾）
+  assert('rocPeriod 自訂結束日 起訖', CMT.rocPeriod('2026/06/09','',  '2026/06/22').full, '自中華民國115年6月9日起至中華民國115年6月22日止');
+  assert('rocPeriod 自訂結束日 共14天', CMT.rocPeriod('2026/06/09','','2026/06/22').totalDays, 14);
+  assert('rocPeriod 自訂結束日 = 2 週整', CMT.rocPeriod('2026/06/09','','2026/06/22').durationStr, '2 週');
+  assert('rocPeriod 自訂結束日 custom=true', CMT.rocPeriod('2026/06/09','','2026/06/22').custom, true);
+  assert('rocPeriod 自訂結束日優先於年數', CMT.rocPeriod('2026/06/09',5,'2026/06/22').totalDays, 14);
+  assert('rocPeriod 同日起訖 → 1 天', CMT.rocPeriod('2026/06/09','','2026/06/09').totalDays, 1);
+  assert('rocPeriod 結束日早於起始日 → null', CMT.rocPeriod('2026/06/09','','2026/06/08'), null);
+  assert('rocPeriod 自訂結束日壞日期 → null', CMT.rocPeriod('2026/06/09','','abc'), null);
   assert('csvCell null', csvCell(null), '');
   assert('csvCell undefined', csvCell(undefined), '');
 
