@@ -107,9 +107,12 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
    BASE
    ═══════════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{max-width:100%;overflow-x:hidden}
-/* 防手機下拉誤觸發重新整理。只限觸控裝置：桌面上與 html 的 overflow-x:hidden
-   組合會讓滾輪無法捲動頁面（Chromium 已知行為），故不可套在桌面。 */
+/* overflow-x 用 clip 而非 hidden：hidden 會讓 <html> 變成捲動容器，
+   在 Android（含 S23+）觸控捲動會被鎖死、桌面滾輪也曾被阻斷（見 v2026.06.10-m7）。
+   clip 一樣擋水平溢出但不建立捲動容器，根除根元素捲動鏈衝突。 */
+html,body{max-width:100%;overflow-x:clip}
+/* 防手機下拉誤觸發重新整理（pull-to-refresh）。改用 clip 後根元素不再是捲動容器，
+   此設定可安全保留於觸控裝置。 */
 @media(pointer:coarse){body{overscroll-behavior-y:contain}}
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
@@ -390,6 +393,14 @@ tbody tr:hover{background:var(--surface-hover)}
   .nav-btn svg{width:17px;height:17px}
   #content{max-width:880px;margin:0 auto;padding:36px 24px 40px}
   body{background:var(--bg3)}
+}
+
+/* 觸控裝置（手機）關閉固定浮層的毛玻璃模糊：backdrop-filter 疊在捲動內容之上，
+   每幀都要重算背後模糊，在高像素密度螢幕（如 S23+）會造成捲動掉幀。
+   改用不透明背景，視覺幾乎一致但無逐幀重算成本。桌面（滑鼠）保留毛玻璃。 */
+@media(pointer:coarse){
+  #app-nav{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+  #ver-badge{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1424,7 +1435,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.18-c1';
+const APP_VERSION='v2026.06.23-m8';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
