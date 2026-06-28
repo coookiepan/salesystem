@@ -768,8 +768,8 @@ tbody tr:hover{background:var(--surface-hover)}
         </div>
         <div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
-          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="ContractMaker.open()" title="產生報價單 Word（分步精靈）">📄 報價單</button>
-          <button class="btn btn-primary btn-sm" id="cd-contract-btn" onclick="ContractMaker.openContract()" title="製作公版 DUSKIN商品租賃契約書（分步精靈）">📑 產生合約</button>
+          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="startQuoteDoc()" title="產生報價單 Word（分步精靈）">📄 報價單</button>
+          <button class="btn btn-primary btn-sm" id="cd-contract-btn" onclick="startContractDoc()" title="製作公版 DUSKIN商品租賃契約書（分步精靈）">📑 產生合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -1178,6 +1178,13 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="panel" id="panel-settings">
   <div class="page-title">設定</div>
 
+  <!-- 上手檢查清單（多業務導入引導） -->
+  <div class="card">
+    <div class="form-section">上手檢查清單</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:6px">第一次使用請完成以下三步，報價單／合約與主管彙總才會正確帶入你的身份。</div>
+    <div id="onboard-checklist"></div>
+  </div>
+
   <!-- 商品資料庫（可收合） -->
   <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
     <div onclick="toggleProdSection()" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none">
@@ -1212,6 +1219,40 @@ tbody tr:hover{background:var(--surface-hover)}
     </div>
     <div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
       💡 每天打開時確認此版本號是否為最新。若顯示舊版，按「強制重新載入」清除快取。
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-section">業務個人資料（我的名片）</div>
+    <div class="alert-info alert" style="font-size:12px;margin-bottom:12px;line-height:1.7">
+      📇 這裡填的資料會自動帶入<b>報價單</b>與<b>合約書</b>的「承辦人（乙方）」欄位，不必每次重打。僅儲存在本機。
+    </div>
+    <div class="f"><label class="lbl">承辦人姓名</label>
+      <input id="pf-contact" placeholder="例：王小明" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">手機</label>
+      <input id="pf-mobile" placeholder="0900-000-000" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">電話</label>
+      <input id="pf-phone" placeholder="06-000-0000" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">傳真</label>
+      <input id="pf-fax" placeholder="06-000-0000" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">Email</label>
+      <input id="pf-email" type="email" placeholder="name@example.com" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">營業所名稱（乙方名稱）</label>
+      <input id="pf-office" placeholder="樂清服務股份有限公司 ○○營業所" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">營業所</label>
+      <input id="pf-dept" placeholder="○○營業所" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">地址</label>
+      <input id="pf-address" placeholder="營業所地址" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">業務編號（選填）</label>
+      <input id="pf-salesId" placeholder="例：A123" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">職稱（選填）</label>
+      <input id="pf-title" placeholder="例：業務專員" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">電子簽名／印章圖檔（選填，會印在合約乙方欄）</label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="pf-seal-preview"></div>
+        <label class="btn btn-outline btn-sm" style="margin:0">選擇圖片
+          <input id="pf-seal" type="file" accept="image/*" onchange="onSealPick(this)" style="display:none"></label>
+        <button id="pf-seal-remove" class="btn btn-outline btn-sm" style="display:none" onclick="clearSeal()">移除</button>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -1435,7 +1476,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.23-m8';
+const APP_VERSION='v2026.06.28-c2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1922,7 +1963,7 @@ function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return J
 let _quotaWarned=false;
 function saveLocal(){
   try{
-    localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
+    localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],profile:DB.profile,profileAcked:DB.profileAcked,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
     _quotaWarned=false;
   }catch(e){
     // M5：本機空間滿屬靜默失敗最危險（使用者以為存了）。明確提示一次，引導先推雲端。
@@ -1935,9 +1976,33 @@ function saveLocal(){
   }
 }
 
-let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[],gtodos:[]};
+let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[],gtodos:[],profile:null,profileAcked:false};
 let SHEET_URL='';
 let PROSPECTS_URL='';
+// ─── 業務個人資料（我的名片）──────────────────────────────
+// 報價單／合約上的「承辦人（乙方）」資訊。各業務各自獨立部署，故只存本機，不上雲。
+// 未填寫時沿用以下預設值（潘秉均／台南營業所），潘本人升級後無需重填。
+const DEFAULT_PROFILE={
+  office:'樂清服務股份有限公司 台南營業所',  // 乙方名稱（公司＋營業所）
+  dept:'台南營業所',                         // 營業所（合約乙方 dept 欄）
+  contact:'潘秉均',                          // 承辦人
+  mobile:'0928-374-141',
+  phone:'06-253-1522',
+  fax:'06-253-1533',
+  email:'',
+  address:'台南市永康區中正路 337 巷 106 號',
+  salesId:'',                                // 業務編號（選填，印在合約乙方欄）
+  title:'',                                  // 職稱（選填）
+  seal:''                                    // 電子簽名／印章圖檔（data URL，選填，印在合約乙方欄）
+};
+// 取得目前業務資料：以 DB.profile 為主，缺漏欄位回退預設值（永遠回傳完整物件）。
+function getProfile(){return Object.assign({},DEFAULT_PROFILE,DB.profile||{});}
+// 是否仍為「未設定」狀態（承辦人＋手機都還是預設潘秉均，且使用者尚未確認沿用）。
+function profileNeedsSetup(){
+  if(DB.profileAcked)return false;
+  const p=getProfile();
+  return p.contact===DEFAULT_PROFILE.contact && p.mobile===DEFAULT_PROFILE.mobile;
+}
 const SYNC={state:'offline',lastSyncAt:0,lastPullAt:0,pending:0};
 
 // ─── L1: 診斷紀錄 ──────────────────────────────────────────
@@ -2066,6 +2131,8 @@ if(local){
   SHEET_URL=local.sheetUrl||'';
   PROSPECTS_URL=local.prospectsUrl||'';
   DB.gtodos=local.gtodos||[];   // 一般待辦（未掛客戶，僅存本機）
+  DB.profile=local.profile||null;            // 業務個人資料（僅本機；null＝沿用預設）
+  DB.profileAcked=!!local.profileAcked;      // 已確認承辦人（不再每次提醒）
   SYNC.lastSyncAt=local.lastSyncAt||0;
   SYNC.lastPullAt=local.lastPullAt||0;
   SYNC.pending=OUTBOX.length;   // 真實待推送筆數（持久化佇列長度）
@@ -2232,7 +2299,7 @@ async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
   if(!url){showToast('請先填入 URL');return;}
   SHEET_URL=url;saveLocal();setSyncBar('sync');
-  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');}
+  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');refreshSheetIdentity();}
   catch(e){setSyncBar('err');appAlert('連線失敗：'+e.message,'❌ 無法連線');}
 }
 async function syncFromSheet(silent){
@@ -2304,14 +2371,90 @@ async function pushAllToSheet(){
     appAlert('推送失敗：'+e.message,'❌ 同步錯誤');
   }
 }
-function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();}
+function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();renderOnboardChecklist();}
+// 業務個人資料：把表單欄位寫回 DB.profile（即時保存，仿 saveSheetUrl）。
+// 一旦使用者動過設定，視為已確認承辦人，不再每次跳提醒。
+function saveProfile(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  DB.profile={
+    office:g('pf-office'), dept:g('pf-dept'), contact:g('pf-contact'),
+    mobile:g('pf-mobile'), phone:g('pf-phone'), fax:g('pf-fax'),
+    email:g('pf-email'), address:g('pf-address'),
+    salesId:g('pf-salesId'), title:g('pf-title'),
+    seal:(DB.profile&&DB.profile.seal)||''   // 圖檔不在文字欄位，沿用現有值
+  };
+  DB.profileAcked=true;
+  saveLocal();
+  renderOnboardChecklist();
+}
+// 電子簽名／印章圖檔：選圖→存成 data URL（先 saveProfile 保住文字欄，再寫入 seal）。
+function onSealPick(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  if(!/^image\//.test(f.type)){ appAlert('請選擇圖片檔（PNG／JPG）'); input.value=''; return; }
+  const rd=new FileReader();
+  rd.onload=e=>{ saveProfile(); DB.profile.seal=e.target.result; saveLocal(); renderSealPreview(); showToast('✅ 已更新印章圖檔'); };
+  rd.readAsDataURL(f); input.value='';
+}
+function clearSeal(){ saveProfile(); DB.profile.seal=''; saveLocal(); renderSealPreview(); }
+function renderSealPreview(){
+  const box=document.getElementById('pf-seal-preview'); if(!box) return;
+  const s=getProfile().seal;
+  box.innerHTML = s
+    ? '<img src="'+s+'" alt="印章圖檔預覽" style="max-width:90px;max-height:90px;border:1px solid var(--border);border-radius:6px">'
+    : '<span style="font-size:12px;color:var(--text3)">尚未上傳</span>';
+  const rm=document.getElementById('pf-seal-remove'); if(rm) rm.style.display = s ? 'inline-block' : 'none';
+}
+// 上手檢查清單：個人資料、雲端連線、試算表命名（主管彙總識別用）三步狀態。
+let _lastSheetName=null;   // 最近一次從雲端讀到的試算表檔名
+function renderOnboardChecklist(){
+  const box=document.getElementById('onboard-checklist'); if(!box) return;
+  const p=getProfile();
+  const row=(st,title,sub)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)">
+     <span style="font-size:15px;line-height:1.4">${st==='ok'?'✅':st==='warn'?'⚠️':'⬜'}</span>
+     <div style="flex:1"><div style="font-size:13px;color:var(--text)">${title}</div>${sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>
+   </div>`;
+  const c1=profileNeedsSetup()?'todo':'ok';
+  const c2=SHEET_URL?'ok':'todo';
+  let c3='todo', c3sub='連接雲端後會自動檢查';
+  if(SHEET_URL){
+    if(_lastSheetName==null){ c3sub='檢查中…（或按下方「測試連線」）'; }
+    else if(_lastSheetName===p.contact){ c3='ok'; c3sub='試算表名稱：'+escHtml(_lastSheetName); }
+    else { c3='warn'; c3sub='試算表名稱「'+escHtml(_lastSheetName)+'」與你的姓名「'+escHtml(p.contact)+'」不同；主管彙總會顯示前者，建議到 Google Sheets 把整份檔名改成你的姓名。'; }
+  }
+  box.innerHTML =
+    row(c1,'填寫業務個人資料', c1==='ok'?'承辦人：'+escHtml(p.contact):'到下方「業務個人資料」填入你的姓名與聯絡方式')
+    + row(c2,'連接 Google Sheets 雲端同步', c2==='ok'?'已設定':'到下方「Google Sheets 同步」貼上你的 Apps Script URL')
+    + row(c3,'試算表以你的姓名命名', c3sub);
+}
+// 連線後讀回試算表檔名，供檢查清單比對（不阻斷、失敗安靜略過）。
+function refreshSheetIdentity(){
+  if(!SHEET_URL) return;
+  fetchAdminAction(SHEET_URL,'getSnapshot')
+    .then(s=>{ if(s&&s.sheetName){ _lastSheetName=s.sheetName; renderOnboardChecklist(); } })
+    .catch(()=>{});
+}
+// 報價單／合約進入點：承辦人若仍是預設潘秉均（且未確認），先提醒一次去填個人資料，
+// 避免新業務不知情就以潘的名義輸出文件。使用者選「就用預設」即記住，不再每次詢問。
+async function ensureDocAuthor(){
+  if(!profileNeedsSetup()) return true;
+  const p=getProfile();
+  const go=await appConfirm(
+    '報價單／合約上的「承辦人」目前是預設的「'+p.contact+'」。\n如果這不是你，請先到「設定 → 業務個人資料」填寫自己的資料，日後就會自動帶入。',
+    {title:'確認承辦人',okText:'前往設定填寫',cancelText:'就用預設繼續'}
+  );
+  if(go){ navTo('settings',document.getElementById('nav-settings')); return false; }
+  DB.profileAcked=true; saveLocal();   // 確認沿用預設 → 不再每次提醒
+  return true;
+}
+async function startQuoteDoc(){ if(await ensureDocAuthor()) ContractMaker.open(); }
+async function startContractDoc(){ if(await ensureDocAuthor()) ContractMaker.openContract(); }
 function updateSheetStatus(ok){
   const box=document.getElementById('sheet-status-box');
   if(ok||SHEET_URL){box.className='alert alert-ok';box.textContent='✓ 已設定 Google Sheets 同步，每次修改自動儲存到雲端。';}
 }
 function exportJSON(){
   const a=document.createElement('a');
-  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],exportedAt:new Date().toISOString()},null,2));
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],profile:DB.profile,profileAcked:DB.profileAcked,exportedAt:new Date().toISOString()},null,2));
   a.download='duskin_backup_'+today()+'.json';a.click();
 }
 function importJSON(input){
@@ -2326,7 +2469,8 @@ function importJSON(input){
       if(data.inventory)DB.inventory=data.inventory;
       if(data.products)DB.products=data.products;
       if(Array.isArray(data.gtodos))DB.gtodos=data.gtodos;
-      saveLocal();renderClients();renderProducts();showToast('✅ 匯入成功');
+      if(data.profile&&typeof data.profile==='object'){DB.profile=data.profile;DB.profileAcked=!!data.profileAcked;}
+      saveLocal();renderClients();renderProducts();initSettings();showToast('✅ 匯入成功');
     }catch(err){appAlert('匯入失敗：'+err.message,'❌ 無法匯入');}
   };reader.readAsText(file);input.value='';
 }
@@ -2362,6 +2506,14 @@ function fmtDate(d){
 function today(){return fmtDate();
 }
 function initSettings(){
+  const p=getProfile();
+  const setv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  setv('pf-office',p.office);setv('pf-dept',p.dept);setv('pf-contact',p.contact);
+  setv('pf-mobile',p.mobile);setv('pf-phone',p.phone);setv('pf-fax',p.fax);
+  setv('pf-email',p.email);setv('pf-address',p.address);
+  setv('pf-salesId',p.salesId);setv('pf-title',p.title);
+  renderSealPreview();renderOnboardChecklist();
+  if(SHEET_URL)refreshSheetIdentity();
   document.getElementById('sheet-url').value=SHEET_URL;
   const pu=document.getElementById('prospects-url');if(pu)pu.value=PROSPECTS_URL;
   if(SHEET_URL)updateSheetStatus(true);
@@ -6032,8 +6184,11 @@ const HOST = {
   save: () => {},
   sync: () => {},
   onChange: () => {},                                       // 拜訪紀錄更新後重繪（= renderVisits）
-  escapeHtml: (s) => String(s==null?'':s)
+  escapeHtml: (s) => String(s==null?'':s),
+  getProfile: () => CM_DEFAULT_PROFILE                      // 業務個人資料（由主程式注入；未注入時用模組預設）
 };
+// 模組內預設業務資料（＝主程式 DEFAULT_PROFILE 的鏡像，供 ?test=1 或未注入時 docx 仍可產生）
+const CM_DEFAULT_PROFILE={ office:'樂清服務股份有限公司 台南營業所', dept:'台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', email:'', address:'台南市永康區中正路 337 巷 106 號', salesId:'', title:'', seal:'' };
 function cmCurClient(){
   const list = HOST.getClients() || [];
   const idx = HOST.getCurIdx();
@@ -6056,8 +6211,11 @@ function cmDetectContractType(items){
     return !!(p && (p.category==='mat_custom' || p.contractYears));
   }) ? 'B' : 'A';
 }
-// 公司（乙方／DUSKIN）預設資料 — 供合約精靈預填立契約書人乙方
-const CM_COMPANY = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', phone:'06-253-1522', mobile:'0928-374-141', address:'台南市永康區中正路 337 巷 106 號', dept:'台南營業所' };
+// 公司（乙方／DUSKIN）資料 — 供合約精靈預填立契約書人乙方；取自業務個人資料（HOST.getProfile）。
+function cmCompany(){
+  const p = HOST.getProfile() || CM_DEFAULT_PROFILE;
+  return { name:p.office, contact:p.contact, phone:p.phone, mobile:p.mobile, fax:p.fax, email:p.email, address:p.address, dept:p.dept };
+}
 // 解析 YYYY/MM/DD（或 - .）成本地 Date；不存在的日期（如 2/30）回 null。
 function cmParseYmd(s){
   const m = String(s || '').trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
@@ -6198,7 +6356,7 @@ const CM_engine = (function(catalog){
     if(isContract){
       lines.push('【服務合約書】');
       lines.push('甲方（客戶）：'+q.client+(q.version?' （'+q.version+'）':''));
-      lines.push('乙方（服務商）：樂清服務股份有限公司 台南營業所');
+      lines.push('乙方（服務商）：'+((HOST.getProfile()||CM_DEFAULT_PROFILE).office));
       lines.push('合約期間：自 '+(q.contractStart||q.date)+' 起'+(q.contractYears?'，為期 '+q.contractYears+' 年':'')+'。');
     } else {
       lines.push('客戶名稱：'+q.client+(q.version?' （'+q.version+'）':''));
@@ -6236,7 +6394,16 @@ const CM_engine = (function(catalog){
 
 // ─── Word builder（自 builders/quote.js 改寫；需 docx UMD） ───
 const CM_builder = (function(){
-  const COMPANY_INFO = { name:'樂清服務股份有限公司 台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', address:'台南市永康區中正路 337 巷 106 號' };
+  // 乙方（承辦人）資訊：每次產生文件時即時取自業務個人資料（HOST.getProfile）。
+  function companyInfo(){ const p = HOST.getProfile() || CM_DEFAULT_PROFILE; return { name:p.office, contact:p.contact, mobile:p.mobile, phone:p.phone, fax:p.fax, email:p.email, address:p.address, salesId:p.salesId||'', title:p.title||'', seal:p.seal||'' }; }
+  // data URL（base64 圖檔）→ Uint8Array，供 docx ImageRun 內嵌印章圖檔。
+  function cmDataUrlToBytes(dataUrl){
+    const b64 = String(dataUrl||'').split(',')[1] || '';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
   const COLOR_HEADER='D9E1F2', COLOR_SUBTOTAL='F2F2F2', COLOR_TOTAL='FFE699', COLOR_AREA='BDD7EE';
   function fmt(n){ return n==null?'':Number(n).toLocaleString(); }
   function getDocx(){
@@ -6269,6 +6436,7 @@ const CM_builder = (function(){
   }
   function buildCustomerHeader(quote){
     const {Table,TableRow,TableCell,WidthType,BorderStyle}=getDocx();
+    const COMPANY_INFO=companyInfo();
     const left=[
       para([txt('客戶名稱：',{bold:true}),txt(quote.client||'')]),
       para([txt('報價日期：',{bold:true}),txt(quote.date||'')])
@@ -6276,9 +6444,10 @@ const CM_builder = (function(){
     const right=[
       para([txt('承辦人：',{bold:true}),txt(COMPANY_INFO.contact)]),
       para([txt('手機：',{bold:true}),txt(COMPANY_INFO.mobile)]),
-      para([txt('電話：',{bold:true}),txt(COMPANY_INFO.phone)]),
-      para([txt('地址：',{bold:true}),txt(COMPANY_INFO.address)])
+      para([txt('電話：',{bold:true}),txt(COMPANY_INFO.phone)])
     ];
+    if(COMPANY_INFO.email) right.push(para([txt('Email：',{bold:true}),txt(COMPANY_INFO.email)]));
+    right.push(para([txt('地址：',{bold:true}),txt(COMPANY_INFO.address)]));
     const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'};
     return new Table({
       width:{size:100,type:WidthType.PERCENTAGE},
@@ -6361,6 +6530,7 @@ const CM_builder = (function(){
     if(quote.customerInfo.contact) left.push(para([txt('聯絡人：',{bold:true}),txt(quote.customerInfo.contact)]));
     if(quote.customerInfo.phone) left.push(para([txt('電話：',{bold:true}),txt(quote.customerInfo.phone)]));
     if(quote.customerInfo.address) left.push(para([txt('地址：',{bold:true}),txt(quote.customerInfo.address)]));
+    const COMPANY_INFO=companyInfo();
     const right=[para([txt('乙方（服務商）',{bold:true})])];
     right.push(para([txt('名稱：',{bold:true}),txt(COMPANY_INFO.name)]));
     right.push(para([txt('承辦人：',{bold:true}),txt(COMPANY_INFO.contact)]));
@@ -6423,7 +6593,7 @@ const CM_builder = (function(){
         ...buildNotes(quote)
       ];
     }
-    return new Document({creator:COMPANY_INFO.name, title: quote.docType==='contract' ? '服務合約書' : '報價單',
+    return new Document({creator:companyInfo().name, title: quote.docType==='contract' ? '服務合約書' : '報價單',
       styles:{default:{document:{run:{font:'微軟正黑體',size:20}}}},
       sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
   }
@@ -6491,17 +6661,25 @@ const CM_builder = (function(){
     ];
   }
   function ctSigners(d){
-    const {Table,TableRow,TableCell,WidthType,VerticalAlign,Paragraph,AlignmentType}=getDocx();
+    const {Table,TableRow,TableCell,WidthType,VerticalAlign,Paragraph,AlignmentType,ImageRun}=getDocx();
     const A=(d.parties&&d.parties.partyA)||{}, B=(d.parties&&d.parties.partyB)||{};
+    const ci=companyInfo();   // 業務編號／職稱／印章圖檔為業務固定身份，直接取自個人資料
     const side=(title,o)=>[ para([txt(title,{bold:true})]),
       para([txt('公司名稱：'),txt(o.company||'')]),
       para([txt('聯絡地址：'),txt(o.address||'')]),
       para([txt('聯絡電話：'),txt(o.phone||'')]),
       para([txt('經辦單位：'),txt(o.dept||'')]),
       para([txt('經 辦 人：'),txt(o.contact||'')]) ];
+    const bSide=side('DUSKIN（出租人）',B);
+    if(ci.title)   bSide.push(para([txt('職　　稱：'),txt(ci.title)]));
+    if(ci.salesId) bSide.push(para([txt('業務編號：'),txt(ci.salesId)]));
+    if(ci.seal){   // 印章／簽名圖檔（壞圖忽略，絕不擋住合約產生）
+      try{ bSide.push(new Paragraph({spacing:{before:60},children:[new ImageRun({data:cmDataUrlToBytes(ci.seal),transformation:{width:90,height:90}})]})); }
+      catch(e){ /* 無效圖檔：跳過 */ }
+    }
     const tbl=new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({children:[
       new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:side('甲方（承租人）',A)}),
-      new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:side('DUSKIN（出租人）',B)})
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:bSide})
     ]})]});
     return [
       new Paragraph({spacing:{before:220,after:80},children:[txt('立契約書人',{bold:true})]}),
@@ -6538,7 +6716,7 @@ const CM_builder = (function(){
     const quote = CM_engine.expandQuote(config);
     return await Packer.toBlob(buildDocument(quote));
   }
-  return {buildBlob, buildContractDocument, companyInfo: COMPANY_INFO};
+  return {buildBlob, buildContractDocument, get companyInfo(){ return companyInfo(); }};
 })();
 
 // ─── docx UMD 延遲載入 ───
@@ -7187,7 +7365,9 @@ function cmRenderQuoteCanvas(quote){
   // 客戶表頭 + 說明
   const ci = CM_builder.companyInfo || {};
   const leftLines  = ['客戶名稱：'+(quote.client||''), '報價日期：'+(quote.date||'')];
-  const rightLines = ['承辦人：'+(ci.contact||''), '手機：'+(ci.mobile||''), '電話：'+(ci.phone||''), '地址：'+(ci.address||'')];
+  const rightLines = ['承辦人：'+(ci.contact||''), '手機：'+(ci.mobile||''), '電話：'+(ci.phone||'')];
+  if(ci.email) rightLines.push('Email：'+ci.email);
+  rightLines.push('地址：'+(ci.address||''));
   const custH = Math.max(leftLines.length, rightLines.length) * infoLh + 6;
   const notes = quote.notes || [];
   const noteModels = notes.map((n,i) => {
@@ -7385,7 +7565,7 @@ function cmwInit(c){
                invoiceTitle: c.name || '', taxId: c.regNo || '' },
     parties: {
       partyA: { company: c.name || '', address: c.addr || '', phone: c.phone || '', dept: '', contact: c.contact || '' },
-      partyB: { company: CM_COMPANY.name, address: CM_COMPANY.address, phone: CM_COMPANY.phone, dept: CM_COMPANY.dept || '台南營業所', contact: CM_COMPANY.contact }
+      partyB: (cc => ({ company: cc.name, address: cc.address, phone: cc.phone, dept: cc.dept || '台南營業所', contact: cc.contact }))(cmCompany())
     },
     attachedTerms: cmContractAttachedTerms(autoType).slice()
   };
@@ -7750,7 +7930,8 @@ ContractMaker.init({
   save: () => { if(typeof saveLocal === 'function') saveLocal(); },
   sync: (action, payload) => { if(typeof autoSync === 'function') autoSync(action, payload); },
   onChange: () => { if(typeof renderVisits === 'function') renderVisits(); },
-  escapeHtml: (s) => (typeof escHtml === 'function' ? escHtml(s) : String(s==null?'':s))
+  escapeHtml: (s) => (typeof escHtml === 'function' ? escHtml(s) : String(s==null?'':s)),
+  getProfile: () => (typeof getProfile === 'function' ? getProfile() : null)
 });
 
 // ═══════════════════════════════════════════════════════════
