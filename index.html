@@ -1178,6 +1178,13 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="panel" id="panel-settings">
   <div class="page-title">設定</div>
 
+  <!-- 上手檢查清單（多業務導入引導） -->
+  <div class="card">
+    <div class="form-section">上手檢查清單</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:6px">第一次使用請完成以下三步，報價單／合約與主管彙總才會正確帶入你的身份。</div>
+    <div id="onboard-checklist"></div>
+  </div>
+
   <!-- 商品資料庫（可收合） -->
   <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
     <div onclick="toggleProdSection()" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none">
@@ -1235,6 +1242,18 @@ tbody tr:hover{background:var(--surface-hover)}
       <input id="pf-dept" placeholder="○○營業所" oninput="saveProfile()"></div>
     <div class="f"><label class="lbl">地址</label>
       <input id="pf-address" placeholder="營業所地址" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">業務編號（選填）</label>
+      <input id="pf-salesId" placeholder="例：A123" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">職稱（選填）</label>
+      <input id="pf-title" placeholder="例：業務專員" oninput="saveProfile()"></div>
+    <div class="f"><label class="lbl">電子簽名／印章圖檔（選填，會印在合約乙方欄）</label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="pf-seal-preview"></div>
+        <label class="btn btn-outline btn-sm" style="margin:0">選擇圖片
+          <input id="pf-seal" type="file" accept="image/*" onchange="onSealPick(this)" style="display:none"></label>
+        <button id="pf-seal-remove" class="btn btn-outline btn-sm" style="display:none" onclick="clearSeal()">移除</button>
+      </div>
+    </div>
   </div>
   <div class="card">
     <div class="form-section">Google Sheets 同步</div>
@@ -1457,7 +1476,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.28-c1';
+const APP_VERSION='v2026.06.28-c2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1971,7 +1990,10 @@ const DEFAULT_PROFILE={
   phone:'06-253-1522',
   fax:'06-253-1533',
   email:'',
-  address:'台南市永康區中正路 337 巷 106 號'
+  address:'台南市永康區中正路 337 巷 106 號',
+  salesId:'',                                // 業務編號（選填，印在合約乙方欄）
+  title:'',                                  // 職稱（選填）
+  seal:''                                    // 電子簽名／印章圖檔（data URL，選填，印在合約乙方欄）
 };
 // 取得目前業務資料：以 DB.profile 為主，缺漏欄位回退預設值（永遠回傳完整物件）。
 function getProfile(){return Object.assign({},DEFAULT_PROFILE,DB.profile||{});}
@@ -2277,7 +2299,7 @@ async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
   if(!url){showToast('請先填入 URL');return;}
   SHEET_URL=url;saveLocal();setSyncBar('sync');
-  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');}
+  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');refreshSheetIdentity();}
   catch(e){setSyncBar('err');appAlert('連線失敗：'+e.message,'❌ 無法連線');}
 }
 async function syncFromSheet(silent){
@@ -2349,7 +2371,7 @@ async function pushAllToSheet(){
     appAlert('推送失敗：'+e.message,'❌ 同步錯誤');
   }
 }
-function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();}
+function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();renderOnboardChecklist();}
 // 業務個人資料：把表單欄位寫回 DB.profile（即時保存，仿 saveSheetUrl）。
 // 一旦使用者動過設定，視為已確認承辦人，不再每次跳提醒。
 function saveProfile(){
@@ -2357,10 +2379,59 @@ function saveProfile(){
   DB.profile={
     office:g('pf-office'), dept:g('pf-dept'), contact:g('pf-contact'),
     mobile:g('pf-mobile'), phone:g('pf-phone'), fax:g('pf-fax'),
-    email:g('pf-email'), address:g('pf-address')
+    email:g('pf-email'), address:g('pf-address'),
+    salesId:g('pf-salesId'), title:g('pf-title'),
+    seal:(DB.profile&&DB.profile.seal)||''   // 圖檔不在文字欄位，沿用現有值
   };
   DB.profileAcked=true;
   saveLocal();
+  renderOnboardChecklist();
+}
+// 電子簽名／印章圖檔：選圖→存成 data URL（先 saveProfile 保住文字欄，再寫入 seal）。
+function onSealPick(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  if(!/^image\//.test(f.type)){ appAlert('請選擇圖片檔（PNG／JPG）'); input.value=''; return; }
+  const rd=new FileReader();
+  rd.onload=e=>{ saveProfile(); DB.profile.seal=e.target.result; saveLocal(); renderSealPreview(); showToast('✅ 已更新印章圖檔'); };
+  rd.readAsDataURL(f); input.value='';
+}
+function clearSeal(){ saveProfile(); DB.profile.seal=''; saveLocal(); renderSealPreview(); }
+function renderSealPreview(){
+  const box=document.getElementById('pf-seal-preview'); if(!box) return;
+  const s=getProfile().seal;
+  box.innerHTML = s
+    ? '<img src="'+s+'" alt="印章圖檔預覽" style="max-width:90px;max-height:90px;border:1px solid var(--border);border-radius:6px">'
+    : '<span style="font-size:12px;color:var(--text3)">尚未上傳</span>';
+  const rm=document.getElementById('pf-seal-remove'); if(rm) rm.style.display = s ? 'inline-block' : 'none';
+}
+// 上手檢查清單：個人資料、雲端連線、試算表命名（主管彙總識別用）三步狀態。
+let _lastSheetName=null;   // 最近一次從雲端讀到的試算表檔名
+function renderOnboardChecklist(){
+  const box=document.getElementById('onboard-checklist'); if(!box) return;
+  const p=getProfile();
+  const row=(st,title,sub)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)">
+     <span style="font-size:15px;line-height:1.4">${st==='ok'?'✅':st==='warn'?'⚠️':'⬜'}</span>
+     <div style="flex:1"><div style="font-size:13px;color:var(--text)">${title}</div>${sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>
+   </div>`;
+  const c1=profileNeedsSetup()?'todo':'ok';
+  const c2=SHEET_URL?'ok':'todo';
+  let c3='todo', c3sub='連接雲端後會自動檢查';
+  if(SHEET_URL){
+    if(_lastSheetName==null){ c3sub='檢查中…（或按下方「測試連線」）'; }
+    else if(_lastSheetName===p.contact){ c3='ok'; c3sub='試算表名稱：'+escHtml(_lastSheetName); }
+    else { c3='warn'; c3sub='試算表名稱「'+escHtml(_lastSheetName)+'」與你的姓名「'+escHtml(p.contact)+'」不同；主管彙總會顯示前者，建議到 Google Sheets 把整份檔名改成你的姓名。'; }
+  }
+  box.innerHTML =
+    row(c1,'填寫業務個人資料', c1==='ok'?'承辦人：'+escHtml(p.contact):'到下方「業務個人資料」填入你的姓名與聯絡方式')
+    + row(c2,'連接 Google Sheets 雲端同步', c2==='ok'?'已設定':'到下方「Google Sheets 同步」貼上你的 Apps Script URL')
+    + row(c3,'試算表以你的姓名命名', c3sub);
+}
+// 連線後讀回試算表檔名，供檢查清單比對（不阻斷、失敗安靜略過）。
+function refreshSheetIdentity(){
+  if(!SHEET_URL) return;
+  fetchAdminAction(SHEET_URL,'getSnapshot')
+    .then(s=>{ if(s&&s.sheetName){ _lastSheetName=s.sheetName; renderOnboardChecklist(); } })
+    .catch(()=>{});
 }
 // 報價單／合約進入點：承辦人若仍是預設潘秉均（且未確認），先提醒一次去填個人資料，
 // 避免新業務不知情就以潘的名義輸出文件。使用者選「就用預設」即記住，不再每次詢問。
@@ -2440,6 +2511,9 @@ function initSettings(){
   setv('pf-office',p.office);setv('pf-dept',p.dept);setv('pf-contact',p.contact);
   setv('pf-mobile',p.mobile);setv('pf-phone',p.phone);setv('pf-fax',p.fax);
   setv('pf-email',p.email);setv('pf-address',p.address);
+  setv('pf-salesId',p.salesId);setv('pf-title',p.title);
+  renderSealPreview();renderOnboardChecklist();
+  if(SHEET_URL)refreshSheetIdentity();
   document.getElementById('sheet-url').value=SHEET_URL;
   const pu=document.getElementById('prospects-url');if(pu)pu.value=PROSPECTS_URL;
   if(SHEET_URL)updateSheetStatus(true);
@@ -6114,7 +6188,7 @@ const HOST = {
   getProfile: () => CM_DEFAULT_PROFILE                      // 業務個人資料（由主程式注入；未注入時用模組預設）
 };
 // 模組內預設業務資料（＝主程式 DEFAULT_PROFILE 的鏡像，供 ?test=1 或未注入時 docx 仍可產生）
-const CM_DEFAULT_PROFILE={ office:'樂清服務股份有限公司 台南營業所', dept:'台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', email:'', address:'台南市永康區中正路 337 巷 106 號' };
+const CM_DEFAULT_PROFILE={ office:'樂清服務股份有限公司 台南營業所', dept:'台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', email:'', address:'台南市永康區中正路 337 巷 106 號', salesId:'', title:'', seal:'' };
 function cmCurClient(){
   const list = HOST.getClients() || [];
   const idx = HOST.getCurIdx();
@@ -6321,7 +6395,15 @@ const CM_engine = (function(catalog){
 // ─── Word builder（自 builders/quote.js 改寫；需 docx UMD） ───
 const CM_builder = (function(){
   // 乙方（承辦人）資訊：每次產生文件時即時取自業務個人資料（HOST.getProfile）。
-  function companyInfo(){ const p = HOST.getProfile() || CM_DEFAULT_PROFILE; return { name:p.office, contact:p.contact, mobile:p.mobile, phone:p.phone, fax:p.fax, email:p.email, address:p.address }; }
+  function companyInfo(){ const p = HOST.getProfile() || CM_DEFAULT_PROFILE; return { name:p.office, contact:p.contact, mobile:p.mobile, phone:p.phone, fax:p.fax, email:p.email, address:p.address, salesId:p.salesId||'', title:p.title||'', seal:p.seal||'' }; }
+  // data URL（base64 圖檔）→ Uint8Array，供 docx ImageRun 內嵌印章圖檔。
+  function cmDataUrlToBytes(dataUrl){
+    const b64 = String(dataUrl||'').split(',')[1] || '';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
   const COLOR_HEADER='D9E1F2', COLOR_SUBTOTAL='F2F2F2', COLOR_TOTAL='FFE699', COLOR_AREA='BDD7EE';
   function fmt(n){ return n==null?'':Number(n).toLocaleString(); }
   function getDocx(){
@@ -6579,17 +6661,25 @@ const CM_builder = (function(){
     ];
   }
   function ctSigners(d){
-    const {Table,TableRow,TableCell,WidthType,VerticalAlign,Paragraph,AlignmentType}=getDocx();
+    const {Table,TableRow,TableCell,WidthType,VerticalAlign,Paragraph,AlignmentType,ImageRun}=getDocx();
     const A=(d.parties&&d.parties.partyA)||{}, B=(d.parties&&d.parties.partyB)||{};
+    const ci=companyInfo();   // 業務編號／職稱／印章圖檔為業務固定身份，直接取自個人資料
     const side=(title,o)=>[ para([txt(title,{bold:true})]),
       para([txt('公司名稱：'),txt(o.company||'')]),
       para([txt('聯絡地址：'),txt(o.address||'')]),
       para([txt('聯絡電話：'),txt(o.phone||'')]),
       para([txt('經辦單位：'),txt(o.dept||'')]),
       para([txt('經 辦 人：'),txt(o.contact||'')]) ];
+    const bSide=side('DUSKIN（出租人）',B);
+    if(ci.title)   bSide.push(para([txt('職　　稱：'),txt(ci.title)]));
+    if(ci.salesId) bSide.push(para([txt('業務編號：'),txt(ci.salesId)]));
+    if(ci.seal){   // 印章／簽名圖檔（壞圖忽略，絕不擋住合約產生）
+      try{ bSide.push(new Paragraph({spacing:{before:60},children:[new ImageRun({data:cmDataUrlToBytes(ci.seal),transformation:{width:90,height:90}})]})); }
+      catch(e){ /* 無效圖檔：跳過 */ }
+    }
     const tbl=new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[new TableRow({children:[
       new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:side('甲方（承租人）',A)}),
-      new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:side('DUSKIN（出租人）',B)})
+      new TableCell({width:{size:50,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.TOP,borders:allBorders(),children:bSide})
     ]})]});
     return [
       new Paragraph({spacing:{before:220,after:80},children:[txt('立契約書人',{bold:true})]}),
