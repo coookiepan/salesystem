@@ -112,9 +112,26 @@ index.html
 ```js
 {
   clients: [Client], inventory: [Item], products: [Product], gtodos: [Todo],
+  profile, profileAcked,            // 業務個人資料（僅本機）
   sheetUrl, prospectsUrl, lastSyncAt, lastPullAt, pending
 }
 ```
+
+### Profile（業務個人資料，僅本機・不上雲）
+
+```js
+profile: { office, dept, contact, mobile, phone, fax, email, address }
+//         乙方名稱 營業所 承辦人  手機    電話   傳真  email  地址
+```
+
+報價單／合約上「承辦人（乙方）」的唯一資料來源。各業務各自獨立部署（自己的 Sheet＋localStorage），
+故 profile 只存本機、不參與雲端同步，但含於 JSON 匯出／匯入。`profile=null` 時 `getProfile()`
+回退 `DEFAULT_PROFILE`（潘秉均／台南營業所），潘本人升級無需重填。
+
+- **單一出入口**：`getProfile()` 合併 `DB.profile` 與 `DEFAULT_PROFILE`；ContractMaker 模組透過注入的
+  `HOST.getProfile()` 取用（`CM_builder.companyInfo` 與 `cmCompany()` 皆即時讀取，不再寫死）。
+- **首次引導**：`profileNeedsSetup()`（承辦人＋手機仍為預設且 `profileAcked=false`）為真時，
+  進入報價單／合約前 `ensureDocAuthor()` 跳一次確認，引導去設定頁填寫；填寫或選「就用預設」後設 `profileAcked`，不再每次提醒。
 
 ### Client（客戶，同步雲端 clients 分頁）
 
