@@ -33,5 +33,22 @@ else { console.log('  ✗ 找不到 APPS_SCRIPT_CODE'); failed++; }
 // 3) Service Worker
 check('sw.js', fs.readFileSync(path.join(root, 'sw.js'), 'utf8'));
 
+// 4) 工業區CRM（izcrm.html）inline script 與其內嵌後端 IZ_GAS_CODE
+const iz = fs.readFileSync(path.join(root, 'izcrm.html'), 'utf8');
+let j = 0; re.lastIndex = 0;
+while ((m = re.exec(iz)) !== null) {
+  const body = m[1].trim();
+  if (body) check('izcrm inline <script> #' + (++j), body);
+}
+if (j === 0) { console.log('  ✗ izcrm.html 找不到 inline script'); failed++; }
+const izgas = iz.match(/const IZ_GAS_CODE=\[([\s\S]*?)\]\.join/);
+if (izgas) {
+  try {
+    const IZ_VERSION = 'test';
+    const lines = new Function('IZ_VERSION', 'return [' + izgas[1] + '];')(IZ_VERSION);
+    check('IZ_GAS_CODE 後端程式', lines.join('\n'));
+  } catch (e) { console.log('  ✗ IZ_GAS_CODE 組裝失敗 — ' + e.message); failed++; }
+} else { console.log('  ✗ 找不到 IZ_GAS_CODE'); failed++; }
+
 console.log(failed ? `語法檢查 FAILED (${failed})` : '語法檢查 PASSED ✅');
 process.exit(failed ? 1 : 0);

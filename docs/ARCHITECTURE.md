@@ -91,7 +91,7 @@ index.html
     MIGRATION             啟動時資料不變式檢查與自動修正
     DEDUP                 重複店家掃描／合併（含雲端清理）
     全域 UI               showToast / appAlert / appConfirm / 全域 Esc 關 modal
-    SHOPS / PROSPECTS     查詢頁（既有客戶＋工業區名單，一鍵建檔）
+    SHOPS SEARCH          查詢頁（公司既有客戶，含四週營業額）
     CLIENT LIST / MAP     列表（分頁渲染）與 Leaflet 地圖（geocode 佇列）
     CLIENT FORM / DETAIL  建檔表單精靈、詳情頁（拜訪/品項/待辦）
     DAILY / REPORT        日報與 4W 推進表產生器
@@ -113,7 +113,7 @@ index.html
 {
   clients: [Client], inventory: [Item], products: [Product], gtodos: [Todo],
   profile, profileAcked,            // 業務個人資料（僅本機）
-  sheetUrl, prospectsUrl, lastSyncAt, lastPullAt, pending
+  sheetUrl, lastSyncAt, lastPullAt, pending
 }
 ```
 
@@ -294,3 +294,35 @@ sequenceDiagram
    - `CHANGELOG.md`：最上方新增白話說明（使用者視角）
 3. PR → CI 全綠 → merge → GitHub Pages 自動部署
 4. 若動到 `APPS_SCRIPT_CODE`：CHANGELOG 標註「需重新部署後端」並附操作連結
+
+---
+
+## 工業區CRM 子系統（izcrm.html）
+
+獨立單檔子系統，與主系統**僅三個柔性接點**（拆卸＝刪 izcrm.html、izdata.json、查詢頁入口按鈕與 sw.js 兩行快取）：
+
+1. 查詢頁／設定頁的入口按鈕（`<a href="izcrm.html">`）。
+2. **商品庫唯讀共享**：報價試算直接讀 `localStorage.duskin_v2.products`（只讀不寫；不存在時顯示提示）。
+3. `sw.js` 預快取 `izcrm.html` 與 `izdata.json`（離線可用）。
+
+### 資料兩層
+
+| 層 | 檔案/位置 | 內容 | 同步 |
+|----|----------|------|------|
+| 主檔（唯讀） | `izdata.json`（repo，1.3MB） | 5,673 家工廠：id/編號/行政區/里/路/園區/業種/電話/地址 | 隨 App 發版；App 端快取於 `localStorage.izcrm_master` |
+| 紀錄層（個人） | `localStorage.izcrm_v1` | 狀態/窗口/話題/check points/標籤/拜訪/報價/待訪/聚落規則 | 獨立 Apps Script（LWW 合併） |
+
+- **id**＝`sha1(工廠名稱|地址)` 前 10 碼——名單改版重轉時紀錄不會對不上（見 `tools/build_izdata.py`）。
+- **業務敏感資料不進 repo**：成交狀態、對應客戶等由 seed 檔（`iz-seed.json`，不 commit）一次性匯入使用者自己的雲端。
+
+### 同步協定（與主系統不同，刻意較簡單）
+
+單一 `sync` action：client 送 dirty 紀錄＋`since`，server 逐筆 **LWW upsert**（incoming.updatedAt 較新才寫），回傳 `updatedAt > since` 的紀錄；client 同樣以較新者為準合併。單人多裝置場景下不需要主系統的 outbox/衝突對話框。後端表：`records`／`meta` 兩張（key/json/updatedAt）。
+
+### 聚落規則
+
+官方園區以主檔 `park` 欄為準；`(非園區)` 的 3,611 家用「里→聚落」規則表分類（存 meta、可在 App 內編輯、跟雲端同步）。種子規則含鹽行、大灣等在地慣稱，`updatedAt=1` 確保使用者的任何修改都蓋過種子。密度 ≥10 家的未涵蓋里會列為候選聚落。
+
+### 名單更新流程
+
+`python3 tools/build_izdata.py 新名單.xlsx` → 產出新 `izdata.json`（＋seed 檔如有需要）→ bump `sw.js` CACHE（讓快取更新）→ 發版。

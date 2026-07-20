@@ -13,7 +13,7 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 
 | 檔案 | 代號 | 驗什麼 |
 |------|------|--------|
-| `syntax-check.js` | — | 解析 inline `<script>`、內嵌 `APPS_SCRIPT_CODE` 後端、`sw.js`，擋語法錯誤（最快的守門，放第一個） |
+| `syntax-check.js` | — | 解析 inline `<script>`、內嵌 `APPS_SCRIPT_CODE`／`IZ_GAS_CODE` 後端、`sw.js`、`izcrm.html`，擋語法錯誤（最快的守門，放第一個） |
 | `xss-guard.test.js` | M1/M5 | 掃描未經 `escHtml` 直出 HTML 的使用者欄位（`${c.name}` 這類腳印）；localStorage 配額滿的提示 |
 | `gas-getall.test.js` | C4/H1 | 後端逐列容錯：clients 分頁某列 JSON 壞掉要跳過該列並回報列號，不能整批失敗 |
 | `outbox.test.js` | C2 | 待推送佇列：斷網入列→持久化→重開 App 自動補送→佇列清空；待推送時拉取要被擋下 |
@@ -23,6 +23,7 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 | `todo-parse.test.js` | T1 | 待辦自然語言解析 29 案例：日期規則（含跨年／跨月進位、同曜日）、p1–p3 邊界、token 剝除、#客戶比對、一般待辦落點 |
 | `a11y.test.js` | L4 | 無障礙底線：`lang`、viewport、img alt、icon-only 按鈕要有標籤、裝飾 SVG aria-hidden |
 | `pwa.test.js` | H2 | Service Worker 行為：預快取、離線退回外殼、HTML 網路優先、POST 不攔、Leaflet CDN 快取優先 |
+| `izcrm.test.js` | Z1 | 工業區CRM：主檔載入與渲染（XSS）、聚落規則 zoneOf、報價 fw4、LWW 同步合併、CSV 跳脫、seed 匯入冪等 |
 
 ## 寫新測試的慣例
 

@@ -1120,10 +1120,9 @@ tbody tr:hover{background:var(--surface-hover)}
 
 <!-- ═══ SHOPS SEARCH ═══ -->
 <div class="panel" id="panel-shops">
-  <div class="page-title">查詢</div>
-  <div style="display:flex;gap:6px;margin-bottom:8px">
-    <button class="pill on" id="qmode-shops" onclick="setQueryMode('shops',this)">公司客戶</button>
-    <button class="pill" id="qmode-prospects" onclick="setQueryMode('prospects',this)">🏭 工業區名單</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <div class="page-title" style="margin:0;flex:1">查詢</div>
+    <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 工業區CRM</a>
   </div>
 
   <div id="q-shops">
@@ -1138,18 +1137,6 @@ tbody tr:hover{background:var(--surface-hover)}
     <div id="shops-list"></div>
   </div>
 
-  <div id="q-prospects" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="page-subtitle" id="prospects-status" style="flex:1;margin:0">工業區開發名單（從雲端載入）</div>
-      <button class="btn btn-outline btn-xs" onclick="loadProspects()">🔄 重新載入</button>
-    </div>
-    <div id="prospect-regions" class="toolbar-left" style="gap:6px;flex-wrap:wrap;margin:8px 0"></div>
-    <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
-      <input id="prospect-search" placeholder="搜尋廠名、地址、電話、負責人、行業…" oninput="renderProspects(this.value)" autocomplete="off">
-    </div>
-    <div id="prospects-stats" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
-    <div id="prospects-list"></div>
-  </div>
 </div>
 
 <!-- ═══ INVENTORY ═══ -->
@@ -1276,15 +1263,12 @@ tbody tr:hover{background:var(--surface-hover)}
     </div>
   </div>
   <div class="card">
-    <div class="form-section">工業區開發名單</div>
+    <div class="form-section">工業區CRM</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
-      全公司共用一份「工廠名錄」試算表（分頁命名為 <b>prospects</b>，第一列沿用名錄原始欄名）。
-      貼上該試算表的 Apps Script 部署 URL，即可在「查詢 → 工業區名單」搜尋、規劃路線並一鍵建檔為未拜訪客戶。
+      工業區開發已獨立為「工業區CRM」子系統（查詢頁右上角進入）：內建 5,000+ 家工廠名單、
+      拜訪 check points、標籤回訪、待訪路線與獨立雲端同步，設定方式在該頁的「⚙️ 設定」。
     </div>
-    <div class="f"><label class="lbl">名單 Apps Script URL</label>
-      <input id="prospects-url" placeholder="https://script.google.com/macros/s/...../exec" oninput="saveProspectsUrl()">
-    </div>
-    <button class="btn btn-outline btn-sm" onclick="loadProspects()" style="margin-top:4px">🔄 載入名單</button>
+    <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 開啟工業區CRM</a>
   </div>
   <div class="card">
     <div class="form-section">設定步驟</div>
@@ -1476,7 +1460,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.20-c3';
+const APP_VERSION='v2026.07.20-z1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1963,7 +1947,7 @@ function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return J
 let _quotaWarned=false;
 function saveLocal(){
   try{
-    localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],profile:DB.profile,profileAcked:DB.profileAcked,sheetUrl:SHEET_URL,prospectsUrl:PROSPECTS_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
+    localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],profile:DB.profile,profileAcked:DB.profileAcked,sheetUrl:SHEET_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
     _quotaWarned=false;
   }catch(e){
     // M5：本機空間滿屬靜默失敗最危險（使用者以為存了）。明確提示一次，引導先推雲端。
@@ -1978,7 +1962,6 @@ function saveLocal(){
 
 let DB={clients:[],inventory:JSON.parse(JSON.stringify(INV_INIT)),products:[],gtodos:[],profile:null,profileAcked:false};
 let SHEET_URL='';
-let PROSPECTS_URL='';
 // ─── 業務個人資料（我的名片）──────────────────────────────
 // 報價單／合約上的「承辦人（乙方）」資訊。各業務各自獨立部署，故只存本機，不上雲。
 // 未填寫時沿用以下預設值（潘秉均／台南營業所），潘本人升級後無需重填。
@@ -2129,7 +2112,6 @@ if(local){
   DB.inventory=local.inventory||JSON.parse(JSON.stringify(INV_INIT));
   DB.products=local.products&&local.products.length?local.products:JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
   SHEET_URL=local.sheetUrl||'';
-  PROSPECTS_URL=local.prospectsUrl||'';
   DB.gtodos=local.gtodos||[];   // 一般待辦（未掛客戶，僅存本機）
   DB.profile=local.profile||null;            // 業務個人資料（僅本機；null＝沿用預設）
   DB.profileAcked=!!local.profileAcked;      // 已確認承辦人（不再每次提醒）
@@ -2515,7 +2497,6 @@ function initSettings(){
   renderSealPreview();renderOnboardChecklist();
   if(SHEET_URL)refreshSheetIdentity();
   document.getElementById('sheet-url').value=SHEET_URL;
-  const pu=document.getElementById('prospects-url');if(pu)pu.value=PROSPECTS_URL;
   if(SHEET_URL)updateSheetStatus(true);
   const cnt=document.getElementById('prod-toggle-count');
   const sec=document.getElementById('prod-section');
@@ -3211,149 +3192,6 @@ function renderShops(query){
       '<div style="font-size:15px;font-weight:600;margin-bottom:4px">'+name+'</div>'+
       phone+addr+owner+revenue+'</div>';
   }).join('')+(list.length>MAX?'<div class="empty">只顯示前 '+MAX+' 筆，請輸入更精確的關鍵字</div>':'');
-}
-
-// ═══════════════════════════════════════════════════════════
-// PROSPECTS — 工業區開發名單（唯讀層 + 一鍵建檔）
-// ═══════════════════════════════════════════════════════════
-let PROSPECTS=[];
-let prospectRegion='';      // 行政區篩選（空 = 全部）
-try{const pc=localStorage.getItem('duskin_prospects');if(pc)PROSPECTS=JSON.parse(pc)||[];}catch(e){}
-function saveProspectsUrl(){PROSPECTS_URL=document.getElementById('prospects-url').value.trim();saveLocal();}
-function setQueryMode(mode,el){
-  document.querySelectorAll('#qmode-shops,#qmode-prospects').forEach(b=>b.classList.remove('on'));
-  if(el)el.classList.add('on');
-  document.getElementById('q-shops').style.display=mode==='shops'?'block':'none';
-  document.getElementById('q-prospects').style.display=mode==='prospects'?'block':'none';
-  if(mode==='shops'){renderShops(document.getElementById('shop-search')?.value||'');}
-  else{
-    // 首次進入且尚無快取 → 自動載入
-    if(!PROSPECTS.length&&prospectsUrl())loadProspects();
-    else{renderProspectRegions();renderProspects(document.getElementById('prospect-search')?.value||'');}
-  }
-}
-// 名單 URL：未另外設定時，沿用主同步 URL（名錄放在自己 CRM 試算表的 prospects 分頁即可，免再部署一組）
-function prospectsUrl(){return PROSPECTS_URL||SHEET_URL;}
-async function loadProspects(){
-  const statusEl=document.getElementById('prospects-status');
-  const url=prospectsUrl();
-  if(!url){if(statusEl)statusEl.textContent='尚未設定名單 URL，請到設定頁填入（或先設定 Google Sheets 同步）';return;}
-  if(statusEl)statusEl.textContent='載入中…';
-  try{
-    const res=await fetch(url,{method:'POST',body:JSON.stringify({action:'getProspects'})});
-    const text=await res.text();let json;
-    try{json=JSON.parse(text);}catch(e){throw new Error('回應非 JSON（請確認部署權限為「任何人」且網址正確）');}
-    if(!Array.isArray(json.prospects)){if(json.error)throw new Error(json.error);throw new Error('回應格式不正確');}
-    PROSPECTS=json.prospects;
-    try{localStorage.setItem('duskin_prospects',JSON.stringify(PROSPECTS));}catch(e){}
-    if(statusEl)statusEl.textContent='工業區名單（'+PROSPECTS.length+' 筆）· 上次更新 '+new Date().toLocaleTimeString();
-    renderProspectRegions();renderProspects(document.getElementById('prospect-search')?.value||'');
-  }catch(e){
-    const msg='載入失敗：'+(e.message||e);
-    console.error('[loadProspects]',e);
-    if(statusEl){statusEl.textContent=msg+(PROSPECTS.length?'（顯示離線快取 '+PROSPECTS.length+' 筆）':'');statusEl.title=msg;}
-  }
-}
-function prospectRegionOf(p){return (p.region||'').trim()||parseRegion(p.addr);}
-function renderProspectRegions(){
-  const bar=document.getElementById('prospect-regions');if(!bar)return;
-  const counts=new Map();
-  PROSPECTS.forEach(p=>{const r=prospectRegionOf(p);if(r)counts.set(r,(counts.get(r)||0)+1);});
-  const regions=[...counts.keys()].sort();
-  if(!regions.length){bar.innerHTML='';return;}
-  const pill=(label,val,extra)=>`<button class="pill pill-sm ${prospectRegion===val?'on':''}" onclick="setProspectRegion('${val.replace(/'/g,"\\'")}')">${label}${extra||''}</button>`;
-  bar.innerHTML=pill('全部','')+regions.map(r=>pill(escHtml(r),r,' <span style="opacity:.6">'+counts.get(r)+'</span>')).join('');
-}
-function setProspectRegion(r){
-  prospectRegion=r;
-  renderProspectRegions();
-  renderProspects(document.getElementById('prospect-search')?.value||'');
-}
-function clientIdxByRegNo(regNo){
-  const k=String(regNo||'').trim();if(!k)return -1;
-  return (DB.clients||[]).findIndex(c=>c&&c.regNo&&String(c.regNo).trim()===k);
-}
-function renderProspects(query){
-  const q=(query||'').trim().toLowerCase();
-  const keywords=q.split(/\s+/).filter(Boolean);
-  const statsEl=document.getElementById('prospects-stats');
-  const el=document.getElementById('prospects-list');
-  if(!el)return;
-  if(!PROSPECTS.length){
-    el.innerHTML='<div class="empty">尚無名單資料<br><button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="loadProspects()">從雲端載入</button></div>';
-    if(statsEl)statsEl.textContent='';return;
-  }
-  let list=PROSPECTS;
-  if(prospectRegion)list=list.filter(p=>prospectRegionOf(p)===prospectRegion);
-  if(keywords.length){
-    list=list.filter(p=>{
-      const blob=(p.name+' '+p.addr+' '+p.phone+' '+p.owner+' '+(p.industry||'')+' '+(p.products||'')+' '+(p.road||'')).toLowerCase();
-      return keywords.every(kw=>blob.includes(kw));
-    });
-  }
-  if(statsEl)statsEl.textContent='符合 '+list.length+' 筆（共 '+PROSPECTS.length+' 筆）'+(prospectRegion?' · '+prospectRegion:'');
-  if(!list.length){el.innerHTML='<div class="empty">沒有符合的資料</div>';return;}
-  const MAX=200;
-  const shown=list.slice(0,MAX);
-  el.innerHTML=shown.map(p=>{
-    const done=clientIdxByRegNo(p.regNo)>=0;
-    const phone=p.phone?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">電話</span><a href="tel:'+escHtml(String(p.phone).replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+shopHighlight(p.phone,keywords)+'</a></div>':'';
-    const addr=p.addr?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">地址</span><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.addr)+'" target="_blank" rel="noopener" style="color:var(--green)">'+shopHighlight(p.addr,keywords)+'</a></div>':'';
-    const owner=p.owner?'<span style="color:var(--text3);margin-right:4px">負責人</span>'+shopHighlight(p.owner,keywords):'';
-    const meta=[p.industry,p.products,p.employees?(p.employees+' 人'):''].filter(Boolean).map(escHtml).join('・');
-    const metaHtml=meta?'<div style="font-size:12px;color:var(--text3);margin:2px 0">'+meta+'</div>':'';
-    const regEsc=escHtml(String(p.regNo||'')).replace(/'/g,"&#39;");
-    const btn=done
-      ? '<button class="btn btn-outline btn-sm" onclick="openProspectClient(\''+regEsc+'\')" style="white-space:nowrap">✓ 已建檔</button>'
-      : '<button class="btn btn-primary btn-sm" onclick="createClientFromProspect(\''+regEsc+'\')" style="white-space:nowrap">＋ 建檔</button>';
-    return '<div class="card" style="border-left:3px solid '+(done?'var(--green)':'#8DB4D9')+'">'+
-      '<div style="display:flex;gap:8px;align-items:flex-start">'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:15px;font-weight:600;margin-bottom:4px">'+shopHighlight(p.name||'(無名稱)',keywords)+'</div>'+
-          metaHtml+phone+addr+(owner?'<div style="font-size:13px;color:var(--text2);margin:2px 0">'+owner+'</div>':'')+
-        '</div>'+btn+
-      '</div></div>';
-  }).join('')+(list.length>MAX?'<div class="empty">只顯示前 '+MAX+' 筆，請用關鍵字或行政區縮小範圍</div>':'');
-}
-function openProspectClient(regNo){
-  const i=clientIdxByRegNo(regNo);if(i<0){createClientFromProspect(regNo);return;}
-  navTo('clients',document.getElementById('nav-clients'));
-  setTimeout(()=>openCD(i),60);
-}
-function createClientFromProspect(regNo){
-  const k=String(regNo||'').trim();
-  const p=PROSPECTS.find(x=>String(x.regNo||'').trim()===k);
-  if(!p){appAlert('找不到此工廠資料');return;}
-  // 冪等：已建檔 → 直接開啟，不重建
-  const exist=clientIdxByRegNo(k);
-  if(exist>=0){openProspectClient(k);return;}
-  const noteParts=[];
-  if(p.industry)noteParts.push('行業：'+p.industry);
-  if(p.products)noteParts.push('主要產品：'+p.products);
-  if(p.employees)noteParts.push('員工數：'+p.employees);
-  if(p.approved)noteParts.push('核准：'+p.approved);
-  if(p.website)noteParts.push('網址：'+p.website);
-  if(p.regNo)noteParts.push('登記編號：'+p.regNo);
-  const c={
-    id:genId(),
-    name:p.name||'(未命名)',
-    contact:p.owner||'',
-    phone:p.phone||'',
-    addr:p.addr||'',
-    type:'工廠',
-    status:STATUS.UNVISITED,
-    regNo:k,
-    nextdate:'',env:'',
-    note:noteParts.join('　'),
-    trialItems:[],contractedItems:[],todos:[],visits:[],
-    updatedAt:Date.now()
-  };
-  DB.clients.push(c);
-  saveLocal();autoSync('save',{client:c});
-  if(c.addr&&!c.lat){try{enqueueGeocode(c);processGeoQueue();}catch(e){}}
-  renderProspects(document.getElementById('prospect-search')?.value||'');
-  navTo('clients',document.getElementById('nav-clients'));
-  setTimeout(()=>openCD(DB.clients.length-1),60);
 }
 
 // ═══════════════════════════════════════════════════════════

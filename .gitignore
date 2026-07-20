@@ -9,3 +9,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# 工業區CRM：個人紀錄 seed 檔（含成交客戶對應，屬業務敏感資料，勿入公開 repo）
+iz-seed.json
