@@ -499,7 +499,20 @@ function groupStats(keyFn){
 }
 function pct(a,b){return b?(100*a/b).toFixed(1)+'%':'—';}
 
-/* ═══ 儀表板 ═══ */
+/* ═══ 儀表板 ═══
+   加新分析＝兩步、不動其他地方（詳見 docs/ARCHITECTURE.md「儀表板擴充」）：
+     1) 在 #panel-dash 加一個容器：
+        <div class="section-t">標題</div>
+        <div class="tbl-wrap"><table class="tbl" id="dash-xxx"></table></div>
+     2) 在 renderDash() 末尾用共用引擎填資料：
+        const g=groupStats(f=>f.ind||'未分類');   // 分類鍵回 null 該筆略過
+        document.getElementById('dash-xxx').innerHTML=head+Object.entries(g)
+          .sort((a,b)=>b[1].deal/b[1].total-a[1].deal/a[1].total)   // 例：成交率排序
+          .map(([k,s])=>`<tr><td>${esc(k)}</td>...<td>${pct(s.deal,s.total)}</td></tr>`).join('');
+   規矩：文字一律經 esc()（XSS，izcrm.test.js 會抓）；顏色用 CSS 變數勿寫死 hex（深色模式）；
+   金額一律走 fw4()；要匯出仿 expZoneCsv() 加按鈕。可用資料：主檔欄位 f.*（dist/li/road/park/ind/phone）
+   ＋個人紀錄 rec(f.id)（status/reaction/tags/cps/visits[].date/quotes[]/visitPlan/contacts）。
+   時間趨勢用 quarterOf(dateStr) 分桶。改完 izcrm.html＝實質改動→同步 bump IZ_VERSION 與 sw.js CACHE。 */
 function renderDash(){
   const total=IZ.length;let deal=0,rej=0,touch=0;
   IZ.forEach(f=>{const st=statOf(f);if(st!=='未接觸')touch++;if(st==='已成交')deal++;if(st==='已拒絕')rej++;});
