@@ -1101,6 +1101,12 @@ tbody tr:hover{background:var(--surface-hover)}
 <!-- ═══ TODOS ═══ -->
 <div class="panel" id="panel-todos">
   <div class="page-title">待辦事項</div>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <button class="pill on" id="tmode-list" onclick="setTodosMode('list',this)">待辦清單</button>
+    <button class="pill" id="tmode-trip" onclick="setTodosMode('trip',this)">🗓 今日行程</button>
+  </div>
+
+  <div id="todos-mode-list">
   <div class="page-subtitle">快速輸入：「明天回收試用品 #王記餐廳 p1」會自動解析日期、客戶、優先級</div>
   <div class="qa-wrap">
     <div class="qa-input-row">
@@ -1116,6 +1122,12 @@ tbody tr:hover{background:var(--surface-hover)}
     <button id="gt-done-toggle" class="pill" onclick="GT_SHOW_DONE=!GT_SHOW_DONE;renderGT()">已完成</button>
   </div>
   <div id="gt-list"></div>
+  </div>
+
+  <div id="todos-mode-trip" style="display:none">
+    <div class="page-subtitle">行程＝「下次拜訪日為今天」的客戶（三台裝置自動同步）。逾期不會蓋住今天，收在下方一鍵處理。</div>
+    <div id="trip-out"></div>
+  </div>
 </div>
 
 <!-- ═══ SHOPS SEARCH ═══ -->
@@ -1460,7 +1472,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.20-z1';
+const APP_VERSION='v2026.07.20-z2';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -2469,7 +2481,7 @@ function navTo(id,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('panel-'+id).classList.add('on');
   if(id==='daily'){const d=document.getElementById('daily-date');if(!d.value)d.value=today();renderDaily();}
-  if(id==='todos')renderGT();
+  if(id==='todos'){renderGT();if(TODOS_MODE==='trip')renderTrip();}
   if(id==='shops')renderShops(document.getElementById('shop-search')?.value||'');
   if(id==='inventory')renderInventory();
   if(id==='settings'){initSettings();renderProducts();}
@@ -3228,7 +3240,9 @@ function toggleCat(s,el){
 // 從地址字串抽出「XX區」
 function parseRegion(addr){
   if(!addr)return '';
-  const m=addr.match(/([\u4e00-\u9fa5]{1,3}區)/);
+  // 先剝縣市前綴：「臺南市善化區…」直接比對會抓到「市善化區」
+  // （工業區CRM 建檔的地址都帶完整前綴，不剝會害分區/順路失效）
+  const m=String(addr).replace(/^[臺台]南市/,'').match(/([\u4e00-\u9fa5]{1,3}區)/);
   return m?m[1]:'';
 }
 // 蒐集「未拜訪」分類客戶的區域清單
@@ -5951,6 +5965,203 @@ function forceReload(){
 }
 
 // ═══════════════════════════════════════════════════════════
+// TRIP PLANNER — 行程規劃（待辦頁「🗓 今日行程」模式）
+// 設計要點：
+//   - 行程「不新增資料結構」：行程＝ nextdate 為今天的客戶。nextdate 是 client 欄位、
+//     本來就跟雲端同步 → 三台裝置零後端改動即共享行程。拉進行程＝設 nextdate=今天。
+//   - 逾期是常態不是錯：主畫面永遠只放「今天」，逾期收進預設收合區，
+//     提供「移到今天／改期／清除／全部移到今天」快速清理，不會蓋住今天的行程。
+//   - 順路＝走廊模型：台南地理是市區放射狀走廊，每條走廊＝一串有序行政區。
+//     行程含官田時 → 走廊上官田之前的區是「往官田途中」、下一站是「再過去一站」。
+//     純查表可離線算、看得懂也改得動；走廊內容按在地經驗直接改 CORRIDORS 即可。
+// ═══════════════════════════════════════════════════════════
+// 走廊定義：從營業所（永康/市區）出發的主要路線，行政區依序排列。
+// 初版按台1縱貫（鐵路廊帶）/台20山線/182關廟線起草——順序或成員不對就直接改這裡。
+const CORRIDORS=[
+  {name:'縱貫線',dists:['永康區','新市區','善化區','官田區','六甲區','下營區','柳營區','新營區','後壁區','白河區']},
+  {name:'山線',dists:['永康區','新化區','山上區','左鎮區','玉井區','楠西區','南化區']},
+  {name:'關廟線',dists:['仁德區','歸仁區','關廟區','龍崎區']},
+  {name:'海線',dists:['安定區','西港區','佳里區','學甲區','北門區']}
+];
+let TODOS_MODE='list';
+function setTodosMode(m,el){
+  TODOS_MODE=m;
+  document.querySelectorAll('#tmode-list,#tmode-trip').forEach(b=>b.classList.remove('on'));
+  (el||document.getElementById('tmode-'+m)).classList.add('on');
+  document.getElementById('todos-mode-list').style.display=m==='list'?'block':'none';
+  document.getElementById('todos-mode-trip').style.display=m==='trip'?'block':'none';
+  if(m==='trip')renderTrip();else renderGT();
+}
+// 順路查表：行程已含的區 → Map(建議區 → 順路理由)
+function tripOnTheWay(tripDists){
+  const out=new Map();
+  CORRIDORS.forEach(cr=>{
+    let maxIdx=-1,dest='';
+    cr.dists.forEach((d,i)=>{if(tripDists.has(d)&&i>maxIdx){maxIdx=i;dest=d;}});
+    if(maxIdx<0)return;
+    cr.dists.forEach((d,i)=>{
+      if(tripDists.has(d)||out.has(d))return;
+      if(i<maxIdx)out.set(d,'往'+dest+'途中');
+      else if(i===maxIdx+1)out.set(d,dest+'再過去一站');
+    });
+  });
+  return out;
+}
+function tripSetDate(idx,date){
+  const c=DB.clients[idx];if(!c)return;
+  c.nextdate=date||'';c.updatedAt=Date.now();
+  saveLocal();autoSync('save',{client:c});
+  renderTrip();renderClients();
+}
+function tripMoveAllToday(){
+  const td=today();let n=0;
+  DB.clients.forEach(c=>{
+    if(!c||!c.nextdate||c.nextdate>=td)return;
+    c.nextdate=td;c.updatedAt=Date.now();autoSync('save',{client:c});n++;
+  });
+  if(n){saveLocal();showToast('已把 '+n+' 家移到今天');renderTrip();renderClients();}
+}
+function tripUndoneTodos(c){return (c.todos||[]).filter(t=>!t.done);}
+function tripCard(it,actions){
+  const c=it.c;const undone=tripUndoneTodos(c);
+  const region=parseRegion(c.addr)||'（無區）';
+  const tel=c.phone?`<a class="btn btn-outline btn-xs" href="tel:${escHtml(String(c.phone).replace(/[^\d+#]/g,''))}" onclick="event.stopPropagation()">☎</a>`:'';
+  const map=c.addr?`<a class="btn btn-outline btn-xs" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.addr)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🗺</a>`:'';
+  return `<div class="card" style="margin-bottom:6px">
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openCD(${it.i})">
+        <div style="font-size:14.5px;font-weight:600">${escHtml(c.name)} ${bdg(displayStatus(c.status||STATUS.UNVISITED))}</div>
+        <div style="font-size:12.5px;color:var(--text2);margin-top:2px">${escHtml(region)}・${escHtml(c.addr||'')}</div>
+        ${undone.length?`<div style="font-size:12px;color:var(--amber-d);margin-top:2px">📌 ${escHtml(undone[0].text)}${undone.length>1?'（＋'+(undone.length-1)+' 項）':''}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${tel}${map}</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">${actions}</div>
+  </div>`;
+}
+function renderTrip(){
+  const el=document.getElementById('trip-out');if(!el)return;
+  const td=today();
+  const groups={today:[],overdue:[],future:[]};
+  const in7=fmtDate(new Date(Date.now()+7*86400000));
+  DB.clients.forEach((c,i)=>{
+    if(!c||!c.nextdate)return;
+    if(c.nextdate===td)groups.today.push({c,i});
+    else if(c.nextdate<td)groups.overdue.push({c,i});
+    else if(c.nextdate<=in7)groups.future.push({c,i});
+  });
+  const byRegion=(a,b)=>((parseRegion(a.c.addr)||'')+(a.c.addr||'')).localeCompare((parseRegion(b.c.addr)||'')+(b.c.addr||''),'zh-Hant');
+  groups.today.sort(byRegion);groups.future.sort((a,b)=>a.c.nextdate<b.c.nextdate?-1:1);
+  groups.overdue.sort((a,b)=>a.c.nextdate<b.c.nextdate?-1:1);
+  let html='';
+  // ── 今天（依區分組）──
+  html+=`<div class="form-section" style="margin-top:0">📅 今天（${groups.today.length} 家）</div>`;
+  if(!groups.today.length)html+='<div class="empty" style="padding:14px">今天還沒排行程。<br>從下方「順路建議」或客戶卡的「下次拜訪日」加入。</div>';
+  else{
+    let lastR='';
+    groups.today.forEach(it=>{
+      const r=parseRegion(it.c.addr)||'（無區）';
+      if(r!==lastR){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">📍 ${escHtml(r)}</div>`;lastR=r;}
+      html+=tripCard(it,
+        `<button class="btn btn-outline btn-xs" onclick="tripSetDate(${it.i},'')">移出行程</button>
+         <label style="font-size:11.5px;color:var(--text3);margin-left:auto">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>`);
+    });
+  }
+  // ── 順路建議 ──
+  const tripDists=new Set(groups.today.map(it=>parseRegion(it.c.addr)).filter(Boolean));
+  const sug=tripSuggestions(tripDists);
+  if(sug.length){
+    html+=`<div class="form-section">💡 順路建議（${sug.length} 家）</div>`;
+    let lastKey='';
+    sug.forEach(s=>{
+      const key=s.region+'｜'+s.where;
+      if(key!==lastKey){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">📍 ${escHtml(s.region)} <span style="color:var(--blue)">${escHtml(s.where)}</span></div>`;lastKey=key;}
+      html+=tripCard(s,
+        `<span style="font-size:12px;color:var(--text2)">${s.whyIcon} ${escHtml(s.why)}</span>
+         <button class="btn btn-primary btn-xs" style="margin-left:auto" onclick="tripSetDate(${s.i},'${td}')">＋拉進今天</button>`);
+    });
+  }else if(groups.today.length){
+    html+=`<div class="form-section">💡 順路建議</div><div class="empty" style="padding:10px">今天行程的路線上沒有其他可順訪的店家</div>`;
+  }
+  // ── 逾期（收合）──
+  if(groups.overdue.length){
+    html+=`<details style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">⏰ 逾期（${groups.overdue.length} 家）— 點開處理</summary>
+      <div style="margin:6px 0"><button class="btn btn-outline btn-sm" onclick="tripMoveAllToday()">全部移到今天</button></div>`;
+    groups.overdue.forEach(it=>{
+      html+=tripCard(it,
+        `<span style="font-size:12px;color:var(--red)">原訂 ${escHtml(it.c.nextdate)}</span>
+         <button class="btn btn-primary btn-xs" onclick="tripSetDate(${it.i},'${td}')">今天</button>
+         <label style="font-size:11.5px;color:var(--text3)">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>
+         <button class="btn btn-danger btn-xs" onclick="tripSetDate(${it.i},'')">清除</button>`);
+    });
+    html+='</details>';
+  }
+  // ── 未來 7 天（收合預覽）──
+  if(groups.future.length){
+    html+=`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">🔜 未來 7 天（${groups.future.length} 家）</summary>`;
+    groups.future.forEach(it=>{
+      html+=tripCard(it,
+        `<span style="font-size:12px;color:var(--text2)">📅 ${escHtml(it.c.nextdate)}</span>
+         <button class="btn btn-outline btn-xs" onclick="tripSetDate(${it.i},'${td}')">提前到今天</button>`);
+    });
+    html+='</details>';
+  }
+  el.innerHTML=html;
+}
+// 候選：未排行程(無 nextdate)且在「同區」或「順路走廊」上的
+//   ①有未完成待辦 ②未拜訪 ③成交客戶(有租賃品項，可能有配送/關懷需求)
+function tripSuggestions(tripDists){
+  if(!tripDists.size)return [];
+  const onway=tripOnTheWay(tripDists);
+  const out=[];
+  DB.clients.forEach((c,i)=>{
+    if(!c||c.nextdate)return;
+    const region=parseRegion(c.addr);if(!region)return;
+    let where=null;
+    if(tripDists.has(region))where='同區';
+    else if(onway.has(region))where=onway.get(region);
+    else return;
+    const undone=tripUndoneTodos(c);
+    let why,whyIcon,pri;
+    if(undone.length){why='有待辦';whyIcon='📌';pri=0;}
+    else if(!c.status||c.status===STATUS.UNVISITED){why='未拜訪';whyIcon='⚪';pri=1;}
+    else if(statusEq(c.status,STATUS.DEAL)&&(c.contractedItems||[]).length){why='成交客戶';whyIcon='🤝';pri=2;}
+    else return;
+    out.push({c,i,region,where,why,whyIcon,pri});
+  });
+  out.sort((a,b)=>(a.region+a.where).localeCompare(b.region+b.where,'zh-Hant')||a.pri-b.pri);
+  return out.slice(0,60);
+}
+// ═══════════════════════════════════════════════════════════
+// IZ HANDOFF — 工業區CRM 建檔交接信箱（單向：izcrm → 主系統）
+// izcrm 按「建檔到主系統」時把工廠基本資料（含預產的 client id）寫進
+// localStorage.duskin_iz_handoff；主系統啟動時在此消化：走正規建檔流程
+// （saveLocal + autoSync 上雲），確保 izcrm 永不直接碰 DB/outbox。
+// 冪等：同 id 已存在則跳過（多裝置各自消化也不會重複，靠雲端 upsert 收斂）。
+// ═══════════════════════════════════════════════════════════
+function consumeIzHandoff(){
+  let inbox=[];
+  try{inbox=JSON.parse(localStorage.getItem('duskin_iz_handoff')||'[]');}catch(e){}
+  if(!Array.isArray(inbox)||!inbox.length)return;
+  let n=0;
+  inbox.forEach(h=>{
+    if(!h||!h.id||!h.name)return;
+    if(DB.clients.some(c=>c&&c.id===h.id))return;
+    const c={id:h.id,name:String(h.name),contact:String(h.contact||''),phone:String(h.phone||''),
+      addr:String(h.addr||''),type:'工廠',status:STATUS.UNVISITED,regNo:'',nextdate:'',env:'',
+      note:String(h.note||''),trialItems:[],contractedItems:[],todos:[],visits:[],
+      lat:null,lng:null,geocodeSource:null,updatedAt:Date.now()};
+    DB.clients.push(c);n++;
+    autoSync('save',{client:c});
+    if(c.addr){try{enqueueGeocode(c);processGeoQueue();}catch(e){}}
+  });
+  localStorage.removeItem('duskin_iz_handoff');
+  if(n){saveLocal();renderClients();showToast('已從工業區CRM 帶入 '+n+' 家新客戶');}
+}
+// izcrm 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
+window.addEventListener('storage',e=>{if(e.key==='duskin_iz_handoff'&&e.newValue)consumeIzHandoff();});
+
+// ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
 loadStatusFilter();initVersion();initPills();initProdCats();
@@ -5993,7 +6204,7 @@ const MIGRATIONS=[
     }
   }
 })();
-autoAddRecycleTodos();validateClients();renderClients();
+autoAddRecycleTodos();validateClients();consumeIzHandoff();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL){updateSheetStatus(true);loadShops();if(OUTBOX.length)flushOutbox();}
 // C2: 恢復網路時自動補送待推送佇列
@@ -8030,6 +8241,7 @@ if(location.search.includes('test=1')){
 
   // --- parseRegion ---
   assert('parseRegion 永康區',parseRegion('永康區中山路12號'),'永康區');
+  assert('parseRegion 剝臺南市前綴',parseRegion('臺南市善化區成功路1號'),'善化區');
   assert('parseRegion 空',parseRegion(''),'');
   assert('parseRegion 無區',parseRegion('台南市中山路'),'');
 

@@ -96,6 +96,7 @@ index.html
     CLIENT FORM / DETAIL  建檔表單精靈、詳情頁（拜訪/品項/待辦）
     DAILY / REPORT        日報與 4W 推進表產生器
     GLOBAL TODOS          Todoist 式：parseQuickTodo 解析器＋分區清單
+    TRIP PLANNER          行程規劃（nextdate 機制＋走廊順路）＋IZ HANDOFF 消化
     EXPORT / VERSION      JSON 備份、版本檢查（輪詢線上 APP_VERSION）
     ADMIN DASHBOARD       ?admin=1 長官唯讀彙總
     INIT                  啟動序：載資料→migration→render→自動同步
@@ -304,6 +305,11 @@ sequenceDiagram
 1. 查詢頁／設定頁的入口按鈕（`<a href="izcrm.html">`）。
 2. **商品庫唯讀共享**：報價試算直接讀 `localStorage.duskin_v2.products`（只讀不寫；不存在時顯示提示）。
 3. `sw.js` 預快取 `izcrm.html` 與 `izdata.json`（離線可用）。
+4. **建檔交接信箱**（單向）：izcrm「📇 建檔到主系統」把工廠基本資料＋預產 client id 寫進
+   `localStorage.duskin_iz_handoff`；主系統啟動（或 storage 事件）時以自己的正規流程
+   `consumeIzHandoff()` 建檔並上主系統雲端。izcrm 永不直接碰 DB/outbox。冪等（同 id 跳過）。
+   連結記在 izcrm 紀錄 `r.main={clientId}`（隨 izcrm 雲端同步），詳情頁據此**現場唯讀讀取**
+   `duskin_v2.clients` 顯示主系統狀態（鏡射，不複製資料——與商品庫同一模式）。
 
 ### 資料兩層
 
@@ -366,3 +372,20 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 ### 名單更新流程
 
 `python3 tools/build_izdata.py 新名單.xlsx` → 產出新 `izdata.json`（＋seed 檔如有需要）→ bump `sw.js` CACHE（讓快取更新）→ 發版。
+
+---
+
+## 行程規劃（主系統，待辦頁「🗓 今日行程」）
+
+三個核心設計決定（程式在 index.html「TRIP PLANNER」區段）：
+
+1. **行程不新增資料結構**：行程＝`nextdate` 為今天的客戶。`nextdate` 本來就隨 client 同步雲端
+   → 多裝置共享行程零後端改動。「拉進行程」＝設 `nextdate=今天`；移出＝清空。
+2. **逾期是常態**：主畫面永遠只放「今天」；逾期收進預設收合區（今天/改期/清除/全部移到今天），
+   不會蓋住今天的行程。未來 7 天另有收合預覽。
+3. **順路＝走廊模型**（`CORRIDORS` 常數）：每條主要路線＝一串有序行政區（縱貫線/山線/關廟線/海線）。
+   `tripOnTheWay()`：行程最遠點之前的區＝「往Ｘ途中」、下一站＝「Ｘ再過去一站」。
+   純查表、離線可算、可讀可改——調整順路判斷直接改 `CORRIDORS` 內容即可。
+   候選（`tripSuggestions()`）限三類：📌 有未完成待辦、⚪ 未拜訪、🤝 成交且有租賃品項。
+
+注意：`parseRegion()` 會先剝「臺南市/台南市」前綴再抓行政區（izcrm 建檔的地址帶完整前綴）。

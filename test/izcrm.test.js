@@ -93,6 +93,24 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('本機較新者被保留', w.eval('S.records.bbb2.status') === '考慮中');
   assert('lastPullAt 更新', w.eval('S.lastPullAt') === 5000);
 
+  console.log('Z1 — 建檔到主系統（handoff 寫入＋鏡射）');
+  w = boot(); await wait(300);
+  w.appConfirm = async () => true;
+  w.openDetail('aaa1');
+  w.eval('recW(CUR).contacts=[{name:"王一",title:"廠長",phone:"0911111111",line:""},{name:"李二",title:"",phone:"0922222222",line:"lee2"}]');
+  await w.linkToMain();
+  const inbox = JSON.parse(w._store.duskin_iz_handoff || '[]');
+  assert('交接信箱寫入一筆', inbox.length === 1 && inbox[0].name.includes('甲工廠'));
+  assert('第一位窗口進 contact/phone', inbox[0].contact === '王一' && inbox[0].phone === '0911111111');
+  assert('第二位窗口寫入備註', /窗口2：李二/.test(inbox[0].note) && /0922222222/.test(inbox[0].note));
+  assert('r.main 記下 clientId（隨 izcrm 雲端同步）', w.eval('S.records.aaa1.main.clientId') === inbox[0].id);
+  assert('再按一次不重複寫入', (await w.linkToMain(), JSON.parse(w._store.duskin_iz_handoff).length === 1));
+  // 鏡射：主系統同步到該客戶後，詳情頁唯讀顯示
+  w._store.duskin_v2 = JSON.stringify({ clients: [{ id: inbox[0].id, name: '甲工廠', status: '試用中', contact: '王一', phone: '0911111111', todos: [], visits: [{ date: '2026-07-01', mood: 3, note: '' }] }], products: [] });
+  w.renderDetail();
+  const dt = w.document.getElementById('dt-body').innerHTML;
+  assert('鏡射卡顯示主系統狀態', /主系統客戶（唯讀鏡射）/.test(dt) && /試用中/.test(dt) && /2026-07-01/.test(dt));
+
   console.log('Z1 — seed 匯入（只帶入本機沒有的紀錄）');
   w = boot(); await wait(300);
   w.eval('S.records.aaa1={status:"拜訪中",updatedAt:123}');
