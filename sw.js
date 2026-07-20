@@ -6,8 +6,8 @@
 //   - Leaflet CDN（版本固定、immutable，且帶 CORS 標頭可安全重播）：快取優先，
 //     讓離線也能載入地圖程式庫與樣式（M4）。地圖磚 tile 本質需連線，不快取。
 //   - 對 Apps Script 的寫入(POST)與其他跨網域請求：完全不攔。
-const CACHE = 'duskin-shell-v22';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './logo-mark.svg'];
+const CACHE = 'duskin-shell-v23';
+const SHELL = ['./', './index.html', './izcrm.html', './izdata.json', './manifest.webmanifest', './icon.svg', './logo-mark.svg'];
 const CDN = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
@@ -54,15 +54,16 @@ self.addEventListener('fetch', e => {
 
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (isHTML) {
-    // 網路優先：上線時永遠拿到最新 index.html，順手更新快取；離線才退回快取
+    // 網路優先：上線時永遠拿到最新 HTML，順手更新快取；離線才退回快取
+    // 注意：快取 key 必須用實際請求（index.html 與 izcrm.html 各自獨立），不可寫死
     e.respondWith((async () => {
       try {
         const fresh = await fetch(req);
         const c = await caches.open(CACHE);
-        c.put('./index.html', fresh.clone());
+        c.put(req, fresh.clone());
         return fresh;
       } catch (err) {
-        return (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
+        return (await caches.match(req)) || (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
       }
     })());
     return;
