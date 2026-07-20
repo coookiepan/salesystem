@@ -43,7 +43,9 @@ function cardOrder(w) { // 依渲染順序取出卡片名稱（去掉型別小�
     // 排序測試用：無狀態、無試用日 vs 有試用日、舊「已結案」狀態
     { id: 'n1', name: '無狀態客', addr: '臺南市新市區中華路7號', status: '', todos: [], visits: [], updatedAt: 9 },
     { id: 'n2', name: '有試用日客', addr: '臺南市新市區中華路8號', status: '複訪', trialDate: '2026-07-18', todos: [], visits: V, updatedAt: 2 },
-    { id: 'n3', name: '已結案客', addr: '臺南市新市區中華路9號', status: '已結案', todos: [], visits: V, updatedAt: 3 }
+    { id: 'n3', name: '已結案客', addr: '臺南市新市區中華路9號', status: '已結案', todos: [], visits: V, updatedAt: 3 },
+    // 已拜訪定義修正：純成約、沒有拜訪紀錄的客戶也算已拜訪（有互動）
+    { id: 'n4', name: '純成約沒拜訪', addr: '臺南市新市區中華路10號', status: '已轉交', contractedItems: [{ product: 'DOME', qty: 1, cycle: '4W', contractDate: '2026-06-20' }], todos: [], visits: [], updatedAt: 4 }
   ];
   let w = boot({ duskin_v2: JSON.stringify({ clients, products: [], inventory: null }) });
   await wait(400);
@@ -87,10 +89,17 @@ function cardOrder(w) { // 依渲染順序取出卡片名稱（去掉型別小�
   assert('狀態排序：無狀態視為未拜訪排在複訪前', names.indexOf('無狀態客') < names.indexOf('有試用日客'), names.join(','));
   // 卡片標籤誠實化：從沒試用過的客戶顯示「首次」而非「試用日」
   w.document.getElementById('csort').value = 'default';
-  w.toggleCat('銷售紀錄');
+  w.toggleCat('已拜訪');
   out = w.document.getElementById('clients-list').innerHTML;
   assert('真試用日標「試用日」', /試用日：2026-07-18/.test(out));
   assert('成約客戶只有首訪紀錄 → 標「首次」不標試用日', /首次：2026-01-01/.test(out));
+
+  console.log('Z3 — 已拜訪定義與藥丸數量');
+  names = cardOrder(w);
+  assert('純成約沒拜訪也算已拜訪', names.includes('純成約沒拜訪'), names.join(','));
+  const pills = w.document.getElementById('status-pills').textContent.replace(/\s+/g, '');
+  assert('藥丸顯示數量：試用回收 3', /試用回收3/.test(pills), pills);
+  assert('藥丸顯示數量：成約待轉交 2', /成約待轉交2/.test(pills), pills);
 
   console.log(failed ? `Z3 FAILED (${failed})` : 'Z3 PASSED ✅');
   process.exit(failed ? 1 : 0);

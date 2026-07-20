@@ -3216,8 +3216,8 @@ function renderShops(query){
 // STATUS PILLS
 // ═══════════════════════════════════════════════════════════
 // 分類定義（新系統）
-const CATEGORIES=['銷售紀錄','未拜訪','試用回收','成約待轉交','全部'];
-let activeCat='銷售紀錄';
+const CATEGORIES=['已拜訪','未拜訪','試用回收','成約待轉交','全部'];
+let activeCat='已拜訪';
 let activeRegion=''; // 「未拜訪」分類時的區域篩選
 let activeStatusSub=''; // 「全部」分類時的狀態子篩選
 // M2 效能：客戶清單分頁渲染。初次只畫前 N 筆，按「載入更多」再加一頁，
@@ -3227,21 +3227,15 @@ let _clientShowN=INITIAL_CLIENT_N, _clientFilterSig=null;
 function loadMoreClients(){_clientShowN+=CLIENT_PAGE;renderClients();}
 function initPills(){
   document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
-    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}',this)">${s}</button>`
+    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}')">${s} <span style="opacity:.55;font-size:11px" class="snum">${categoryCount(s)}</span></button>`
   ).join('');
 }
-function toggleCat(s,el){
+function toggleCat(s){
   activeCat=s;
   activeRegion=''; // 切換分類時清空區域/狀態子篩選
   activeStatusSub='';
-  document.querySelectorAll('#status-pills .pill').forEach(p=>p.classList.remove('on'));
-  if(el)el.classList.add('on');
-  else{
-    const btn=[...document.querySelectorAll('#status-pills .pill')].find(p=>p.textContent===s);
-    if(btn)btn.classList.add('on');
-  }
   renderRegionBar();
-  renderClients();
+  renderClients();   // renderClients 開頭會重建藥丸（含數量與選中狀態）
 }
 // 從地址字串抽出「XX區」
 function parseRegion(addr){
@@ -3485,33 +3479,42 @@ async function resetStatusFilter(){
   openStatusFilterModal();
 }
 
-// 分類篩選判定
-function matchCategory(c){
+// 分類篩選判定：純分類歸屬（不含 activeRegion/activeStatusSub 子篩選），
+// 供列表過濾與藥丸數量共用
+function matchCategoryFor(c,cat){
   const visitsN=(c.visits||[]).length;
   const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
-  const hasUnquoted=mains.length>0&&mains.some(it=>!it.quoted||it.quoted==0);
+  const contractedN=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;
   const isRefused=statusEq(c.status,STATUS.REFUSE);
-  const isDeal=c.status===STATUS.DEAL||c.status===STATUS.TRANSFER;
-  switch(activeCat){
-    case '銷售紀錄': return visitsN>0||mains.length>0;
+  switch(cat){
+    // 已拜訪＝有任何互動（拜訪過／有試用品項／有成約品項）——
+    // 含品項是為了不漏掉「直接成約、沒補拜訪紀錄」的客戶
+    case '已拜訪': return visitsN>0||mains.length>0||contractedN>0;
     case '未拜訪': {
       if(visitsN>0)return false;
       if(mains.length>0)return false;
       if(isRefused)return false;
-      if(activeRegion){
-        return parseRegion(c.addr)===activeRegion;
-      }
       return true;
     }
     case '試用回收': return c.status===STATUS.TRIAL;
     case '成約待轉交': return c.status===STATUS.DEAL;   // 已成約但尚未「已轉交」
-    case '全部': {
-      if(!activeStatusSub)return true;
-      if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
-      return (c.status||STATUS.UNVISITED)===activeStatusSub;
-    }
+    case '全部': return true;
   }
   return true;
+}
+function matchCategory(c){
+  if(!matchCategoryFor(c,activeCat))return false;
+  if(activeCat==='未拜訪'&&activeRegion)return parseRegion(c.addr)===activeRegion;
+  if(activeCat==='全部'&&activeStatusSub){
+    if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
+    return (c.status||STATUS.UNVISITED)===activeStatusSub;
+  }
+  return true;
+}
+// 藥丸數量：與該分類實際會顯示的一致（單一狀態分類不受 ⚙️ 狀態篩選影響）
+function categoryCount(cat){
+  const skip=(cat==='試用回收'||cat==='成約待轉交');
+  return DB.clients.filter(c=>c&&matchCategoryFor(c,cat)&&(skip||statusVisible(c.status))).length;
 }
 // ═══════════════════════════════════════════════════════════
 // MAP VIEW — Leaflet + OpenStreetMap (Tainan-focused)
@@ -3975,6 +3978,7 @@ function setClientView(v){
 }
 
 function renderClients(){
+  initPills();   // 藥丸數量隨資料即時更新
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
   let list=DB.clients.map((c,i)=>({c,i}));
@@ -4000,7 +4004,7 @@ function renderClients(){
   const useDefault=(sort==='default');
   list.sort((a,b)=>{
     if(useDefault){
-      if(activeCat==='銷售紀錄'){
+      if(activeCat==='已拜訪'){
         // 最後動態在最上（有新拜訪/修改的客戶浮上來）
         return(b.c.updatedAt||0)-(a.c.updatedAt||0);
       }
@@ -6032,6 +6036,12 @@ const CORRIDORS=[
   {name:'海線',dists:['安定區','西港區','佳里區','學甲區','北門區']}
 ];
 let TODOS_MODE='list';
+// 手動選的「今天要跑的區」：沒有行程時也能先選區看順路建議（存本機，重開 App 保留）
+let TRIP_PICK='';
+try{TRIP_PICK=localStorage.getItem('duskin_trip_pick')||'';}catch(e){}
+// 逾期/未來收合區的展開狀態：重新渲染（改期/刪除後）必須保留，
+// 否則每按一次按鈕清單就整個收起來，得重新滑到底下展開（UX 災難）
+const TRIP_OPEN={overdue:false,future:false};
 function setTodosMode(m,el){
   TODOS_MODE=m;
   document.querySelectorAll('#tmode-list,#tmode-trip').forEach(b=>b.classList.remove('on'));
@@ -6115,11 +6125,18 @@ function renderTrip(){
          <label style="font-size:11.5px;color:var(--text3);margin-left:auto">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>`);
     });
   }
-  // ── 順路建議 ──
+  // ── 選區＋順路建議 ──
+  // 行程有客戶 → 用行程的區；沒行程（或想多跑一區）→ 可手動選區，一樣給建議
   const tripDists=new Set(groups.today.map(it=>parseRegion(it.c.addr)).filter(Boolean));
+  if(TRIP_PICK)tripDists.add(TRIP_PICK);
+  const allRegions=[...new Set(DB.clients.map(c=>c&&parseRegion(c.addr)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  html+=`<div class="form-section">💡 順路建議</div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:4px">今天想跑哪一區？（點選看該區＋順路的建議）</div>
+    <div class="toolbar-left" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;margin-bottom:8px;padding-bottom:2px">`+
+    allRegions.map(r=>`<button class="pill pill-sm${TRIP_PICK===r?' on':''}" onclick="tripPickDist('${escHtml(r)}')">${escHtml(r)}</button>`).join('')+
+    `</div>`;
   const sug=tripSuggestions(tripDists);
   if(sug.length){
-    html+=`<div class="form-section">💡 順路建議（${sug.length} 家）</div>`;
     let lastKey='';
     sug.forEach(s=>{
       const key=s.region+'｜'+s.where;
@@ -6128,12 +6145,12 @@ function renderTrip(){
         `<span style="font-size:12px;color:var(--text2)">${s.whyIcon} ${escHtml(s.why)}</span>
          <button class="btn btn-primary btn-xs" style="margin-left:auto" onclick="tripSetDate(${s.i},'${td}')">＋拉進今天</button>`);
     });
-  }else if(groups.today.length){
-    html+=`<div class="form-section">💡 順路建議</div><div class="empty" style="padding:10px">今天行程的路線上沒有其他可順訪的店家</div>`;
+  }else{
+    html+=`<div class="empty" style="padding:10px">${tripDists.size?'這些區（含順路）沒有可建議的店家':'點上方選一區，或從客戶卡設「下次拜訪日」開始排行程'}</div>`;
   }
-  // ── 逾期（收合）──
+  // ── 逾期（收合；展開狀態跨渲染保留）──
   if(groups.overdue.length){
-    html+=`<details style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">⏰ 逾期（${groups.overdue.length} 家）— 點開處理</summary>
+    html+=`<details${TRIP_OPEN.overdue?' open':''} ontoggle="TRIP_OPEN.overdue=this.open" style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">⏰ 逾期（${groups.overdue.length} 家）— 點開處理</summary>
       <div style="margin:6px 0"><button class="btn btn-outline btn-sm" onclick="tripMoveAllToday()">全部移到今天</button></div>`;
     groups.overdue.forEach(it=>{
       html+=tripCard(it,
@@ -6144,9 +6161,9 @@ function renderTrip(){
     });
     html+='</details>';
   }
-  // ── 未來 7 天（收合預覽）──
+  // ── 未來 7 天（收合預覽；展開狀態跨渲染保留）──
   if(groups.future.length){
-    html+=`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">🔜 未來 7 天（${groups.future.length} 家）</summary>`;
+    html+=`<details${TRIP_OPEN.future?' open':''} ontoggle="TRIP_OPEN.future=this.open" style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">🔜 未來 7 天（${groups.future.length} 家）</summary>`;
     groups.future.forEach(it=>{
       html+=tripCard(it,
         `<span style="font-size:12px;color:var(--text2)">📅 ${escHtml(it.c.nextdate)}</span>
@@ -6155,6 +6172,11 @@ function renderTrip(){
     html+='</details>';
   }
   el.innerHTML=html;
+}
+function tripPickDist(r){
+  TRIP_PICK=(TRIP_PICK===r)?'':r;   // 再點一次取消
+  try{localStorage.setItem('duskin_trip_pick',TRIP_PICK);}catch(e){}
+  renderTrip();
 }
 // 候選：未排行程(無 nextdate)且在「同區」或「順路走廊」上的
 //   ①有未完成待辦 ②未拜訪 ③成交客戶(有租賃品項，可能有配送/關懷需求)

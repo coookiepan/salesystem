@@ -73,6 +73,27 @@ const D = (off) => { const d = new Date(Date.now() + off * 86400000); return d.g
   w.tripSetDate(0, '');
   assert('移出行程：A 的 nextdate 清空', w.eval('DB.clients.find(c=>c.id==="a").nextdate') === '');
 
+  console.log('Z2 — 沒行程也能選區＋收合狀態保留');
+  w = boot({ duskin_v2: JSON.stringify({ clients: [
+    { id: 'p1', name: '官田未拜訪', addr: '臺南市官田區工業路1號', status: '', nextdate: '', todos: [], visits: [], updatedAt: 1 },
+    { id: 'p2', name: '善化未拜訪', addr: '臺南市善化區成功路2號', status: '', nextdate: '', todos: [], visits: [], updatedAt: 1 },
+    { id: 'p3', name: '逾期一', addr: '臺南市永康區中正路3號', status: '複訪', nextdate: D(-3), todos: [], visits: [{ date: '2026-01-01', mood: 3, note: '' }], updatedAt: 1 },
+    { id: 'p4', name: '逾期二', addr: '臺南市永康區中正路4號', status: '複訪', nextdate: D(-2), todos: [], visits: [{ date: '2026-01-01', mood: 3, note: '' }], updatedAt: 1 }
+  ], products: [], inventory: null }) });
+  await wait(400);
+  w.renderTrip();
+  let t = w.document.getElementById('trip-out').innerHTML;
+  assert('沒行程也顯示選區列', /今天想跑哪一區/.test(t) && /官田區/.test(t));
+  assert('未選區時顯示提示', /點上方選一區/.test(t));
+  w.tripPickDist('官田區');
+  t = w.document.getElementById('trip-out').innerHTML;
+  assert('選區後同區建議出現', /官田未拜訪/.test(t));
+  assert('走廊建議一併出現（往官田途中的善化）', /善化未拜訪/.test(t) && /往官田區途中/.test(t));
+  w.eval('TRIP_OPEN.overdue=true');
+  w.tripSetDate(2, '');   // 清除「逾期一」→ 觸發整頁重渲染
+  t = w.document.getElementById('trip-out').innerHTML;
+  assert('清除一筆後逾期區仍保持展開', /<details open/.test(t) && /逾期二/.test(t));
+
   console.log('Z2 — 工業區CRM 交接信箱（handoff 消化）');
   w = boot({
     duskin_v2: JSON.stringify({ clients: [{ id: 'exist1', name: '既有客戶', addr: '', status: '複訪', todos: [], visits: [{date:'2026-01-01',mood:3,note:''}], updatedAt: 1 }], products: [], inventory: null, sheetUrl: 'https://script.google.com/x/exec' }),
