@@ -323,6 +323,46 @@ sequenceDiagram
 
 官方園區以主檔 `park` 欄為準；`(非園區)` 的 3,611 家用「里→聚落」規則表分類（存 meta、可在 App 內編輯、跟雲端同步）。種子規則含鹽行、大灣等在地慣稱，`updatedAt=1` 確保使用者的任何修改都蓋過種子。密度 ≥10 家的未涵蓋里會列為候選聚落。
 
+### 儀表板擴充（加新分析）
+
+首頁（`#panel-dash` / `renderDash()`）刻意設計成「加分析很便宜」。核心是共用統計引擎：
+
+```js
+groupStats(f => 分類鍵)   // 依分類鍵把 IZ（5,673 家）分組，
+                          // 每組回 {total, touch, deal, rej}（自動用 statOf 判定狀態）
+pct(a, b)                 // 百分比字串；b=0 回 '—'
+```
+
+現有三張表都只是餵不同分類鍵給同一引擎：`zoneLabel(f)`（園區/聚落）、`f.dist`（行政區）、`f.ind`（業種）。
+
+**新增一個分析＝兩步、不動其他地方：**
+
+1. 在 `#panel-dash` 加容器：
+   ```html
+   <div class="section-t">標題</div>
+   <div class="tbl-wrap"><table class="tbl" id="dash-xxx"></table></div>
+   ```
+2. 在 `renderDash()` 末尾填資料：
+   ```js
+   const g = groupStats(f => f.ind || '未分類');
+   document.getElementById('dash-xxx').innerHTML = head + Object.entries(g)
+     .filter(([,s]) => s.total >= 5)                                   // 過濾樣本太少
+     .sort((a,b) => b[1].deal/b[1].total - a[1].deal/a[1].total)       // 依成交率排序
+     .map(([k,s]) => `<tr><td>${esc(k)}</td><td>${s.total}</td><td>${s.deal}</td><td>${pct(s.deal,s.total)}</td></tr>`).join('');
+   ```
+
+**分析型態與成本**：
+
+| 型態 | 作法 | 成本 |
+|------|------|------|
+| 換分組（業種成交率、有無電話接觸率、各聚落未接觸家數…） | 換 `groupStats` 的分類鍵 | 一行 |
+| 標籤/待訪概況 | 掃 `S.records` 的 `tags`／`visitPlan` | 小迴圈 |
+| 拜訪漏斗（找到窗口→試用→成交） | 累計各 checkpoint 的 `r.cps` | 小迴圈 |
+| 時間趨勢（每月/季拜訪、每季新成交） | 掃 `r.visits[].date`，用 `quarterOf()` 分桶 | 中等 |
+| 報價彙總（家數/4W 金額合計） | 掃 `r.quotes[]`，`fw4()` 已是唯一金額入口 | 小迴圈 |
+
+**規矩**：分類鍵回 `null` 該筆會被略過（`groupStats` 內建）；表格文字一律經 `esc()`（XSS 守門，`izcrm.test.js` 會抓）；顏色用 CSS 變數不寫死 hex（深色模式）；要匯出就仿 `expZoneCsv()` 加一顆按鈕。改完 `izcrm.html` 屬實質改動 → **同步 bump `IZ_VERSION` 與 `sw.js` CACHE**，否則手機拿不到新版。
+
 ### 名單更新流程
 
 `python3 tools/build_izdata.py 新名單.xlsx` → 產出新 `izdata.json`（＋seed 檔如有需要）→ bump `sw.js` CACHE（讓快取更新）→ 發版。
