@@ -1476,7 +1476,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.06.28-c2';
+const APP_VERSION='v2026.07.20-c3';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1691,14 +1691,14 @@ function saveProducts(products){getProdSheet().getRange(2,1).setValue(JSON.strin
 function getShopsSheet(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();
   let sheet=ss.getSheetByName('shops');
-  if(!sheet){sheet=ss.insertSheet('shops');sheet.getRange(1,1,1,4).setValues([['顧客名','電話號碼','地址','負責人']]);}
+  if(!sheet){sheet=ss.insertSheet('shops');sheet.getRange(1,1,1,5).setValues([['顧客名','電話號碼','地址','負責人名','四週營業額']]);}
   return sheet;
 }
 function getShops(){
   const sheet=getShopsSheet();const lastRow=sheet.getLastRow();
   if(lastRow<2)return{shops:[]};
-  const data=sheet.getRange(2,1,lastRow-1,4).getValues();
-  return{shops:data.filter(r=>String(r[0]||'').trim()!=='').map(r=>({name:String(r[0]||'').trim(),phone:String(r[1]||'').trim(),addr:String(r[2]||'').trim(),owner:String(r[3]||'').trim()}))};
+  const data=sheet.getRange(2,1,lastRow-1,sheet.getLastColumn()).getValues();
+  return{shops:data.filter(r=>String(r[0]||'').trim()!=='').map(r=>({name:String(r[0]||'').trim(),phone:String(r[1]||'').trim(),addr:String(r[2]||'').trim(),owner:String(r[3]||'').trim(),revenue:String(r[4]||'').trim()}))};
 }
 // 工業區開發名單（唯讀）：放在名為 prospects 的分頁，第一列為標題。
 // 標題沿用政府工廠名錄原始欄名即可（工廠名稱／工廠地址／工廠電話／工廠負責人／
@@ -3187,7 +3187,7 @@ function renderShops(query){
   let list=SHOPS;
   if(keywords.length){
     list=SHOPS.filter(s=>{
-      const all=(s.name+' '+s.phone+' '+s.addr+' '+s.owner).toLowerCase();
+      const all=(s.name+' '+s.phone+' '+s.addr+' '+s.owner+' '+(s.revenue||'')).toLowerCase();
       return keywords.every(kw=>all.includes(kw.toLowerCase()));
     });
   }
@@ -3206,9 +3206,10 @@ function renderShops(query){
     const phone=s.phone?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">電話</span><a href="tel:'+escHtml(s.phone.replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+shopHighlight(s.phone,keywords)+'</a></div>':'';
     const addr=s.addr?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">地址</span><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.addr)+'" target="_blank" rel="noopener" style="color:var(--green)">'+shopHighlight(s.addr,keywords)+'</a></div>':'';
     const owner=s.owner?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">負責人</span>'+shopHighlight(s.owner,keywords)+'</div>':'';
+    const revenue=s.revenue?'<div style="font-size:13px;color:var(--text2);margin:2px 0"><span style="color:var(--text3);margin-right:4px">四週營業額</span><span style="color:var(--green);font-weight:600">'+shopHighlight(s.revenue,keywords)+'</span></div>':'';
     return '<div class="card" style="border-left:3px solid var(--green-b)">'+
       '<div style="font-size:15px;font-weight:600;margin-bottom:4px">'+name+'</div>'+
-      phone+addr+owner+'</div>';
+      phone+addr+owner+revenue+'</div>';
   }).join('')+(list.length>MAX?'<div class="empty">只顯示前 '+MAX+' 筆，請輸入更精確的關鍵字</div>':'');
 }
 
