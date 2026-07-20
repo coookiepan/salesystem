@@ -638,23 +638,29 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="panel on" id="panel-clients">
   <div id="view-list">
     <div id="pull-banner" style="display:none"><span>🌥</span><div class="pb-txt">今天還沒從雲端拉最新資料，可能不是最新版本</div><button class="btn btn-primary btn-xs" onclick="pullAndDismiss()">拉最新</button><button class="pb-close" onclick="dismissPullBanner()" aria-label="關閉提示">×</button></div>
-    <div class="cv-switch">
-      <button class="cv-sw on" onclick="setClientView('list')"><svg aria-hidden="true" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>清單</button>
-      <button class="cv-sw" onclick="setClientView('map')"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>地圖</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <div class="cv-switch" style="margin-bottom:0">
+        <button class="cv-sw on" onclick="setClientView('list')"><svg aria-hidden="true" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>清單</button>
+        <button class="cv-sw" onclick="setClientView('map')"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>地圖</button>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-outline btn-sm" onclick="openStatusFilterModal()" title="狀態篩選" aria-label="狀態篩選">⚙️</button>
+        <button class="btn btn-primary btn-sm" onclick="openCF(-1)">+ 新增</button>
+      </div>
     </div>
-    <div class="toolbar">
-      <div class="toolbar-left" id="status-pills"></div>
-      <button class="btn btn-outline btn-sm" onclick="openStatusFilterModal()" title="狀態篩選">⚙️</button>
-      <button class="btn btn-primary btn-sm" onclick="openCF(-1)">+ 新增</button>
+    <!-- 分類列：單行橫向捲動，不換行（「全部」不再孤伶伶掉到第二行） -->
+    <div class="toolbar" style="flex-wrap:nowrap">
+      <div class="toolbar-left" id="status-pills" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
     </div>
     <div class="toolbar-left" id="region-bar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
     <div class="search-bar">
       <input id="csearch" placeholder="搜尋客戶..." oninput="renderClients()">
       <select id="csort" onchange="renderClients()" style="width:auto">
-        <option value="trial">試用日</option>
+        <option value="default">推薦排序</option>
+        <option value="trial">試用 新→舊</option>
         <option value="nextdate">下次拜訪</option>
-        <option value="status">狀態</option>
         <option value="updated">最後更新</option>
+        <option value="status">狀態</option>
         <option value="name">名稱</option>
       </select>
     </div>
@@ -1472,7 +1478,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.20-z2';
+const APP_VERSION='v2026.07.20-z3';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -3210,8 +3216,8 @@ function renderShops(query){
 // STATUS PILLS
 // ═══════════════════════════════════════════════════════════
 // 分類定義（新系統）
-const CATEGORIES=['銷售紀錄','未拜訪','試用回收','全部'];
-let activeCat='銷售紀錄';
+const CATEGORIES=['已拜訪','未拜訪','試用回收','成約待轉交','全部'];
+let activeCat='已拜訪';
 let activeRegion=''; // 「未拜訪」分類時的區域篩選
 let activeStatusSub=''; // 「全部」分類時的狀態子篩選
 // M2 效能：客戶清單分頁渲染。初次只畫前 N 筆，按「載入更多」再加一頁，
@@ -3221,21 +3227,15 @@ let _clientShowN=INITIAL_CLIENT_N, _clientFilterSig=null;
 function loadMoreClients(){_clientShowN+=CLIENT_PAGE;renderClients();}
 function initPills(){
   document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
-    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}',this)">${s}</button>`
+    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}')">${s} <span style="opacity:.55;font-size:11px" class="snum">${categoryCount(s)}</span></button>`
   ).join('');
 }
-function toggleCat(s,el){
+function toggleCat(s){
   activeCat=s;
   activeRegion=''; // 切換分類時清空區域/狀態子篩選
   activeStatusSub='';
-  document.querySelectorAll('#status-pills .pill').forEach(p=>p.classList.remove('on'));
-  if(el)el.classList.add('on');
-  else{
-    const btn=[...document.querySelectorAll('#status-pills .pill')].find(p=>p.textContent===s);
-    if(btn)btn.classList.add('on');
-  }
   renderRegionBar();
-  renderClients();
+  renderClients();   // renderClients 開頭會重建藥丸（含數量與選中狀態）
 }
 // 從地址字串抽出「XX區」
 function parseRegion(addr){
@@ -3347,15 +3347,25 @@ function rptAmountMonth(c,from,to){
 }
 // 試用→成約：把第 i 筆主項（含其 bundled 配件）從 cfItems 搬到 cfContracted
 // 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
-function trialStartDate(c){
-  if(c.trialDate)return c.trialDate;
+// 試用日來源與可信度：trialDate／狀態變更為試用的拜訪／SERVE 註記＝真試用日（real:true）；
+// 退回「第一次拜訪日」只是近似值（real:false）——卡片上會標成「首次」而非「試用日」，
+// 避免複訪/未成交客戶被標成有試用日（誤導）。優先序與舊版 trialStartDate 一致。
+function trialDateInfo(c){
+  if(c.trialDate)return{date:c.trialDate,real:true};
   const vs=(c.visits||[]).filter(v=>v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
   const trial=vs.find(v=>v.statusChange===STATUS.TRIAL);
-  if(trial)return trial.date;
-  if(vs.length)return vs[0].date;
+  if(trial)return{date:trial.date,real:true};
+  if(vs.length)return{date:vs[0].date,real:false};
   const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-  if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
-  return '';
+  if(m)return{date:m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0'),real:true};
+  return{date:'',real:false};
+}
+function trialStartDate(c){return trialDateInfo(c).date;}
+// 成約日：合約品項中最新的 contractDate（供「成約待轉交」排序：等最久的排最上面）
+function dealDate(c){
+  let d='';
+  (c.contractedItems||[]).forEach(it=>{if(it&&it.contractDate&&it.contractDate>d)d=it.contractDate;});
+  return d;
 }
 // 公司逾期回收分級：試用預設 14 天，超過試用期後每 7 天記一個 X——
 // 第 14 天=X、第 21 天=XX、第 28 天=XXX、第 35 天=XXXX（會被業助提醒，極力避免）。
@@ -3469,32 +3479,42 @@ async function resetStatusFilter(){
   openStatusFilterModal();
 }
 
-// 分類篩選判定
-function matchCategory(c){
+// 分類篩選判定：純分類歸屬（不含 activeRegion/activeStatusSub 子篩選），
+// 供列表過濾與藥丸數量共用
+function matchCategoryFor(c,cat){
   const visitsN=(c.visits||[]).length;
   const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
-  const hasUnquoted=mains.length>0&&mains.some(it=>!it.quoted||it.quoted==0);
+  const contractedN=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;
   const isRefused=statusEq(c.status,STATUS.REFUSE);
-  const isDeal=c.status===STATUS.DEAL||c.status===STATUS.TRANSFER;
-  switch(activeCat){
-    case '銷售紀錄': return visitsN>0||mains.length>0;
+  switch(cat){
+    // 已拜訪＝有任何互動（拜訪過／有試用品項／有成約品項）——
+    // 含品項是為了不漏掉「直接成約、沒補拜訪紀錄」的客戶
+    case '已拜訪': return visitsN>0||mains.length>0||contractedN>0;
     case '未拜訪': {
       if(visitsN>0)return false;
       if(mains.length>0)return false;
       if(isRefused)return false;
-      if(activeRegion){
-        return parseRegion(c.addr)===activeRegion;
-      }
       return true;
     }
     case '試用回收': return c.status===STATUS.TRIAL;
-    case '全部': {
-      if(!activeStatusSub)return true;
-      if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
-      return (c.status||STATUS.UNVISITED)===activeStatusSub;
-    }
+    case '成約待轉交': return c.status===STATUS.DEAL;   // 已成約但尚未「已轉交」
+    case '全部': return true;
   }
   return true;
+}
+function matchCategory(c){
+  if(!matchCategoryFor(c,activeCat))return false;
+  if(activeCat==='未拜訪'&&activeRegion)return parseRegion(c.addr)===activeRegion;
+  if(activeCat==='全部'&&activeStatusSub){
+    if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
+    return (c.status||STATUS.UNVISITED)===activeStatusSub;
+  }
+  return true;
+}
+// 藥丸數量：與該分類實際會顯示的一致（單一狀態分類不受 ⚙️ 狀態篩選影響）
+function categoryCount(cat){
+  const skip=(cat==='試用回收'||cat==='成約待轉交');
+  return DB.clients.filter(c=>c&&matchCategoryFor(c,cat)&&(skip||statusVisible(c.status))).length;
 }
 // ═══════════════════════════════════════════════════════════
 // MAP VIEW — Leaflet + OpenStreetMap (Tainan-focused)
@@ -3958,79 +3978,109 @@ function setClientView(v){
 }
 
 function renderClients(){
+  initPills();   // 藥丸數量隨資料即時更新
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
   let list=DB.clients.map((c,i)=>({c,i}));
   list=list.filter(({c})=>matchCategory(c));
-  // 狀態開關過濾（所有分類都生效；但「全部」分類已選定特定狀態子篩選時跳過，
-  // 否則使用者選了被 statusFilter 隱藏的狀態會看不到任何東西）
-  const skipStatusFilter=(activeCat==='全部'&&activeStatusSub);
+  // 狀態開關過濾（所有分類都生效；但已明確鎖定單一狀態的視角要跳過，
+  // 否則使用者在 ⚙️ 隱藏了該狀態時，這些分類會整頁空白、令人困惑）：
+  //   - 「全部」已選特定狀態子篩選
+  //   - 「試用回收」（固定＝試用中）、「成約待轉交」（固定＝已成約）
+  const skipStatusFilter=(activeCat==='全部'&&activeStatusSub)||activeCat==='試用回收'||activeCat==='成約待轉交';
   if(!skipStatusFilter){
     list=list.filter(({c})=>statusVisible(c.status));
   }
   if(q)list=list.filter(({c})=>(c.name+(c.addr||'')+(c.type||'')+(c.contact||'')).toLowerCase().includes(q));
-  // 分類預設排序（覆蓋 sort 下拉，除非使用者明確選其他）
-  const useDefault=(sort==='trial'); // trial 是預設值，若使用者沒換過，就用分類預設
+  // 「試用 新→舊」共用比較器：最新的在最上面、沒有日期的沉到最底（絕不排最前）
+  const cmpTrialDesc=(a,b)=>{
+    const da=trialStartDate(a.c),db=trialStartDate(b.c);
+    if(!da&&!db)return a.c.name.localeCompare(b.c.name,'zh-Hant');
+    if(!da)return 1;
+    if(!db)return -1;
+    return da<db?1:da>db?-1:0;
+  };
+  // 排序：下拉「推薦排序」＝各分類的專屬預設；其餘選項所見即所得（不再被分類偷換）
+  const useDefault=(sort==='default');
   list.sort((a,b)=>{
     if(useDefault){
-      if(activeCat==='銷售紀錄'){
-        // 最後更新時間降序
+      if(activeCat==='已拜訪'){
+        // 最後動態在最上（有新拜訪/修改的客戶浮上來）
         return(b.c.updatedAt||0)-(a.c.updatedAt||0);
       }
-      if(activeCat===STATUS.UNVISITED){
-        // 區域 → 名稱
+      if(activeCat==='未拜訪'){
+        // 區域 → 名稱（掃區用）
         const ra=parseRegion(a.c.addr),rb=parseRegion(b.c.addr);
-        if(ra!==rb)return ra.localeCompare(rb,'zh-Hant');
+        if(ra!==rb){
+          if(!ra)return 1;if(!rb)return -1;           // 無地址區沉底
+          return ra.localeCompare(rb,'zh-Hant');
+        }
         return a.c.name.localeCompare(b.c.name,'zh-Hant');
       }
       if(activeCat==='試用回收'){
-        // 試用日離現在最遠（=越早）放最前面；空值排到最後
-        const da=trialStartDate(a.c);
-        const db=trialStartDate(b.c);
-        if(!da&&!db)return(b.c.updatedAt||0)-(a.c.updatedAt||0);
-        if(!da)return 1;
-        if(!db)return -1;
-        return da<db?-1:da>db?1:0;
+        // 回收動線：同區放一起（區內逾期最久的最上面）→ 名稱
+        const ra=parseRegion(a.c.addr),rb=parseRegion(b.c.addr);
+        if(ra!==rb){
+          if(!ra)return 1;if(!rb)return -1;
+          return ra.localeCompare(rb,'zh-Hant');
+        }
+        const da=trialStartDate(a.c)||'9999',db=trialStartDate(b.c)||'9999';
+        if(da!==db)return da<db?-1:1;                 // 試用日越早＝逾期越久 → 越上面
+        return a.c.name.localeCompare(b.c.name,'zh-Hant');
       }
-      // 全部 → 試用日降序（空值在上）→ 名稱
-      const da=trialStartDate(a.c);
-      const db=trialStartDate(b.c);
-      if(!da&&!db)return a.c.name.localeCompare(b.c.name,'zh-Hant');
-      if(!da)return -1;
-      if(!db)return 1;
-      return da<db?1:da>db?-1:0;
+      if(activeCat==='成約待轉交'){
+        // 成約日越早＝等轉交越久 → 越上面；無成約日沉底
+        const da=dealDate(a.c)||'9999',db=dealDate(b.c)||'9999';
+        if(da!==db)return da<db?-1:1;
+        return(a.c.updatedAt||0)-(b.c.updatedAt||0);
+      }
+      // 全部 → 試用 新→舊（沒有日期的沉底）
+      return cmpTrialDesc(a,b);
     }
-    // 使用者手動選的排序
-    if(sort==='trial'){
-      const da=trialStartDate(a.c),db=trialStartDate(b.c);
-      if(!da&&!db)return a.c.name.localeCompare(b.c.name,'zh-Hant');
-      if(!da)return -1;
-      if(!db)return 1;
-      return da<db?1:da>db?-1:0;
+    // 使用者手動選的排序（所見即所得）
+    if(sort==='trial')return cmpTrialDesc(a,b);
+    if(sort==='nextdate'){
+      const na=a.c.nextdate||'9999',nb=b.c.nextdate||'9999';
+      return na<nb?-1:na>nb?1:0;
     }
-    if(sort==='nextdate')return(a.c.nextdate||'9999')>(b.c.nextdate||'9999')?1:-1;
-    if(sort==='status')return SO.indexOf(a.c.status)-SO.indexOf(b.c.status);
+    if(sort==='status'){
+      // 未設狀態視為未拜訪、已結案併入拒絕，不在 SO 裡的沉底（舊版 indexOf=-1 會反而排最前）
+      const ia=SO.indexOf(displayStatus(a.c.status)),ib=SO.indexOf(displayStatus(b.c.status));
+      return(ia<0?SO.length:ia)-(ib<0?SO.length:ib);
+    }
     if(sort==='updated')return(b.c.updatedAt||0)-(a.c.updatedAt||0);
     return a.c.name.localeCompare(b.c.name,'zh-Hant');
   });
   const el=document.getElementById('clients-list');
   if(!list.length){el.innerHTML='<div class="empty">尚無符合的客戶</div>';return;}
   // 篩選條件變了就把分頁歸零，避免停留在上一個清單的「載入更多」進度
-  const sig=q+'|'+sort+'|'+activeCat+'|'+activeStatusSub;
+  // （activeRegion 也要進簽章：未拜訪分類切換區域時同樣該歸零）
+  const sig=q+'|'+sort+'|'+activeCat+'|'+activeStatusSub+'|'+activeRegion;
   if(sig!==_clientFilterSig){_clientFilterSig=sig;_clientShowN=INITIAL_CLIENT_N;}
   const total=list.length;
   const shown=list.slice(0,_clientShowN);
+  // 試用回收（推薦排序）＝依區分組，插入區域標頭方便同區串路線
+  const groupByRegion=(activeCat==='試用回收'&&sort==='default');
+  let _lastRegion=null;
   el.innerHTML=shown.map(({c,i})=>{
+    let regionHead='';
+    if(groupByRegion){
+      const r=parseRegion(c.addr)||'（無地址區）';
+      if(r!==_lastRegion){_lastRegion=r;regionHead=`<div style="font-size:11.5px;color:var(--text3);margin:10px 0 4px">📍 ${escHtml(r)}</div>`;}
+    }
     const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
     const prod=autoProd(c.trialItems)||'';
-    const td=trialStartDate(c);
+    const tdInfo=trialDateInfo(c);
+    const td=tdInfo.date;
+    const xinfo=activeCat==='試用回收'?trialXInfo(c):null;
+    const dd=activeCat==='成約待轉交'?dealDate(c):'';
     const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
     const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
     const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
     const _extraBadges=`${trialXBadge(c)}${fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${pTodos}待辦</span>`:''}`;
-    return`<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
+    return`${regionHead}<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
         <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
@@ -4039,7 +4089,9 @@ function renderClients(){
       <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
       ${_extraBadges?`<div class="cc-badges">${_extraBadges}</div>`:''}
       <div class="cc-meta">
-        ${td?`<span>試用日：${td}</span>`:''}
+        ${xinfo?`<span style="color:${xinfo.level>=2?'var(--red)':xinfo.level>=1?'var(--amber)':'var(--text3)'}">試用第 ${xinfo.days} 天</span>`:''}
+        ${dd?`<span>成約日：${dd}</span>`:''}
+        ${td?`<span>${tdInfo.real?'試用日':'首次'}：${td}</span>`:''}
         ${(() => {const t=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo).length;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'試用 '+t:''}</span>`:'';})()}
         ${prod?`<span>提案：${escHtml(prod)}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
@@ -5984,6 +6036,12 @@ const CORRIDORS=[
   {name:'海線',dists:['安定區','西港區','佳里區','學甲區','北門區']}
 ];
 let TODOS_MODE='list';
+// 手動選的「今天要跑的區」：沒有行程時也能先選區看順路建議（存本機，重開 App 保留）
+let TRIP_PICK='';
+try{TRIP_PICK=localStorage.getItem('duskin_trip_pick')||'';}catch(e){}
+// 逾期/未來收合區的展開狀態：重新渲染（改期/刪除後）必須保留，
+// 否則每按一次按鈕清單就整個收起來，得重新滑到底下展開（UX 災難）
+const TRIP_OPEN={overdue:false,future:false};
 function setTodosMode(m,el){
   TODOS_MODE=m;
   document.querySelectorAll('#tmode-list,#tmode-trip').forEach(b=>b.classList.remove('on'));
@@ -6067,11 +6125,18 @@ function renderTrip(){
          <label style="font-size:11.5px;color:var(--text3);margin-left:auto">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>`);
     });
   }
-  // ── 順路建議 ──
+  // ── 選區＋順路建議 ──
+  // 行程有客戶 → 用行程的區；沒行程（或想多跑一區）→ 可手動選區，一樣給建議
   const tripDists=new Set(groups.today.map(it=>parseRegion(it.c.addr)).filter(Boolean));
+  if(TRIP_PICK)tripDists.add(TRIP_PICK);
+  const allRegions=[...new Set(DB.clients.map(c=>c&&parseRegion(c.addr)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  html+=`<div class="form-section">💡 順路建議</div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:4px">今天想跑哪一區？（點選看該區＋順路的建議）</div>
+    <div class="toolbar-left" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;margin-bottom:8px;padding-bottom:2px">`+
+    allRegions.map(r=>`<button class="pill pill-sm${TRIP_PICK===r?' on':''}" onclick="tripPickDist('${escHtml(r)}')">${escHtml(r)}</button>`).join('')+
+    `</div>`;
   const sug=tripSuggestions(tripDists);
   if(sug.length){
-    html+=`<div class="form-section">💡 順路建議（${sug.length} 家）</div>`;
     let lastKey='';
     sug.forEach(s=>{
       const key=s.region+'｜'+s.where;
@@ -6080,12 +6145,12 @@ function renderTrip(){
         `<span style="font-size:12px;color:var(--text2)">${s.whyIcon} ${escHtml(s.why)}</span>
          <button class="btn btn-primary btn-xs" style="margin-left:auto" onclick="tripSetDate(${s.i},'${td}')">＋拉進今天</button>`);
     });
-  }else if(groups.today.length){
-    html+=`<div class="form-section">💡 順路建議</div><div class="empty" style="padding:10px">今天行程的路線上沒有其他可順訪的店家</div>`;
+  }else{
+    html+=`<div class="empty" style="padding:10px">${tripDists.size?'這些區（含順路）沒有可建議的店家':'點上方選一區，或從客戶卡設「下次拜訪日」開始排行程'}</div>`;
   }
-  // ── 逾期（收合）──
+  // ── 逾期（收合；展開狀態跨渲染保留）──
   if(groups.overdue.length){
-    html+=`<details style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">⏰ 逾期（${groups.overdue.length} 家）— 點開處理</summary>
+    html+=`<details${TRIP_OPEN.overdue?' open':''} ontoggle="TRIP_OPEN.overdue=this.open" style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">⏰ 逾期（${groups.overdue.length} 家）— 點開處理</summary>
       <div style="margin:6px 0"><button class="btn btn-outline btn-sm" onclick="tripMoveAllToday()">全部移到今天</button></div>`;
     groups.overdue.forEach(it=>{
       html+=tripCard(it,
@@ -6096,9 +6161,9 @@ function renderTrip(){
     });
     html+='</details>';
   }
-  // ── 未來 7 天（收合預覽）──
+  // ── 未來 7 天（收合預覽；展開狀態跨渲染保留）──
   if(groups.future.length){
-    html+=`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">🔜 未來 7 天（${groups.future.length} 家）</summary>`;
+    html+=`<details${TRIP_OPEN.future?' open':''} ontoggle="TRIP_OPEN.future=this.open" style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">🔜 未來 7 天（${groups.future.length} 家）</summary>`;
     groups.future.forEach(it=>{
       html+=tripCard(it,
         `<span style="font-size:12px;color:var(--text2)">📅 ${escHtml(it.c.nextdate)}</span>
@@ -6107,6 +6172,11 @@ function renderTrip(){
     html+='</details>';
   }
   el.innerHTML=html;
+}
+function tripPickDist(r){
+  TRIP_PICK=(TRIP_PICK===r)?'':r;   // 再點一次取消
+  try{localStorage.setItem('duskin_trip_pick',TRIP_PICK);}catch(e){}
+  renderTrip();
 }
 // 候選：未排行程(無 nextdate)且在「同區」或「順路走廊」上的
 //   ①有未完成待辦 ②未拜訪 ③成交客戶(有租賃品項，可能有配送/關懷需求)
