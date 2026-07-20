@@ -292,7 +292,7 @@ details.sec>.bd{padding:0 14px 14px}
    資料兩層：主檔 izdata.json（唯讀）＋ 個人紀錄層 izcrm_v1（同步雲端）
    與主系統僅三個柔性接點：入口按鈕、商品庫唯讀、sw.js 快取
    ═══════════════════════════════════════════════════════════ */
-const IZ_VERSION='v2026.07.20-z1';
+const IZ_VERSION='v2026.07.20-z2';
 
 /* ═══ 內嵌 Apps Script 後端（獨立部署，勿與主系統共用試算表） ═══ */
 const IZ_GAS_CODE=[
@@ -603,7 +603,8 @@ function factoryCard(f,kws){
   const r=rec(f.id);const st=statOf(f);
   const zone=zoneLabel(f);
   return '<div class="card" style="cursor:pointer" onclick="openDetail(\''+f.id+'\')">'+
-    '<div class="rowline"><div class="grow iz-name">'+hl(f.name,kws)+'</div>'+stBadge(st)+'</div>'+
+    '<div class="rowline"><div class="grow iz-name">'+hl(f.name,kws)+'</div>'+
+    (r&&r.main&&r.main.clientId?'<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">📇</span>':'')+stBadge(st)+'</div>'+
     '<div class="meta-line">'+esc(f.dist)+(zone!=='散戶'?' · '+esc(zone):'')+' · '+esc(f.ind||'')+'</div>'+
     '<div class="meta-line">'+hl(f.addr,kws)+(f.phone?' · <a href="tel:'+esc(f.phone.replace(/[^\d+#]/g,''))+'" onclick="event.stopPropagation()">'+hl(f.phone,kws)+'</a>':'')+'</div>'+
     (r&&r.customer?'<div class="meta-line">🤝 '+esc(r.customer)+'</div>':'')+
@@ -657,7 +658,8 @@ function renderDetail(){
     '<div><label class="lbl">對應客戶（成交後）</label><input value="'+esc(r.customer||'')+'" onchange="izFld(\'customer\',this)" placeholder="客戶名稱"></div>'+
   '</div>'+
   '<div style="margin-top:8px">'+izPlanBtn(r)+'</div></div>'+
-  /* 待訪安排在卡上 */
+  /* 主系統連結（單向建檔＋唯讀鏡射） */
+  mainLinkHtml(f,r)+
   /* 窗口 */
   '<details class="sec" open><summary>👤 窗口（'+((r.contacts||[]).length)+'）</summary><div class="bd">'+
     ((r.contacts||[]).map((c,i)=>'<div class="rowline" style="margin-bottom:6px"><div class="grow" style="font-size:13.5px">'+
@@ -768,6 +770,67 @@ window.addVisit=async()=>{
 window.delVisit=async i=>{
   if(!await appConfirm('刪除這筆拜訪紀錄？',{danger:true,okText:'刪除'}))return;
   const r=recW(CUR);r.visits.splice(i,1);touch(CUR);renderDetail();
+};
+
+/* ═══ 主系統連結 — 單向建檔＋唯讀鏡射 ═══
+   建檔：把工廠基本資料（含預產 client id）寫進交接信箱 duskin_iz_handoff，
+   主系統啟動時用它自己的正規流程建客戶並上主系統雲端——izcrm 永不直接碰 DB/outbox。
+   連結記在 r.main={clientId,at}（跟 izcrm 雲端同步 → 三裝置都知道已建檔）。
+   鏡射：詳情頁現場讀 duskin_v2.clients 顯示主系統狀態（唯讀、不複製資料）。 */
+function mainClientOf(id){
+  try{const db=JSON.parse(localStorage.getItem('duskin_v2')||'{}');
+    return (db.clients||[]).find(c=>c&&c.id===id)||null;}catch(e){return null;}
+}
+function mainLinkHtml(f,r){
+  if(!(r&&r.main&&r.main.clientId)){
+    return '<div class="card"><div class="rowline">'+
+      '<div class="grow" style="font-size:12.5px;color:var(--text2)">聯繫上了？建檔後改在主系統經營（拜訪/試用/合約），這裡保留開發紀錄並即時看到進度。</div>'+
+      '<button class="btn btn-sm btn-outline" onclick="linkToMain()">📇 建檔到主系統</button></div></div>';
+  }
+  const c=mainClientOf(r.main.clientId);
+  if(!c){
+    return '<div class="card"><div style="font-size:12.5px;color:var(--text2)">📇 已建檔到主系統'+
+      '<span style="color:var(--text3)">（此裝置的主系統尚未同步到這筆客戶——開一次主系統讓它從雲端拉取即可）</span></div></div>';
+  }
+  const lastV=(c.visits||[])[0];
+  const undone=(c.todos||[]).filter(t=>!t.done).length;
+  return '<div class="card" style="border-left:3px solid var(--green-b)">'+
+    '<div class="rowline"><div class="grow" style="font-weight:600;font-size:13.5px">📇 主系統客戶（唯讀鏡射）</div>'+
+    '<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">'+esc(c.status||'未拜訪')+'</span></div>'+
+    '<div class="meta-line">'+
+      (c.contact?'窗口 '+esc(c.contact)+'　':'')+(c.phone?'☎ '+esc(c.phone)+'　':'')+
+      (lastV?'最近拜訪 '+esc(lastV.date):'尚未拜訪')+(undone?'　📌 待辦 '+undone+' 項':'')+
+    '</div>'+
+    '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">基本資料請在主系統維護，此處即時唯讀顯示。</div></div>';
+}
+window.linkToMain=async()=>{
+  const f=FID[CUR];if(!f)return;
+  const r=recW(CUR);
+  if(r.main&&r.main.clientId)return;
+  const ok=await appConfirm('把「'+f.name+'」建檔到主系統？\n會帶入：名稱、地址、電話、窗口（前兩位）與開發摘要。\n下次開啟主系統時自動完成建檔並上主系統雲端。',{okText:'建檔'});
+  if(!ok)return;
+  const cid=(crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const cts=r.contacts||[];const c1=cts[0]||{},c2=cts[1]||null;
+  const parts=['（由工業區CRM 建檔）'];
+  if(f.ind)parts.push('業種：'+f.ind);
+  const zone=zoneOf(f);if(zone)parts.push('園區/聚落：'+zone);
+  if(c1.title||c1.line)parts.push('窗口1：'+(c1.name||'')+(c1.title?'('+c1.title+')':'')+(c1.line?' LINE:'+c1.line:''));
+  if(c2)parts.push('窗口2：'+(c2.name||'')+(c2.title?'('+c2.title+')':'')+(c2.phone?' '+c2.phone:'')+(c2.line?' LINE:'+c2.line:''));
+  if(r.reaction)parts.push('客戶反應：'+r.reaction);
+  const doneCps=Object.keys(r.cps||{}).filter(k=>r.cps[k]);
+  if(doneCps.length)parts.push('已達成：'+doneCps.join('、'));
+  if(r.topics)parts.push('話題：'+r.topics);
+  if(r.note)parts.push('備註：'+r.note);
+  const h={id:cid,izId:f.id,name:f.name,addr:f.addr,
+    phone:c1.phone||f.phone||'',contact:c1.name||'',note:parts.join('　'),at:Date.now()};
+  let inbox=[];
+  try{inbox=JSON.parse(localStorage.getItem('duskin_iz_handoff')||'[]');}catch(e){}
+  if(!Array.isArray(inbox))inbox=[];
+  inbox.push(h);
+  try{localStorage.setItem('duskin_iz_handoff',JSON.stringify(inbox));}
+  catch(e){await appAlert('寫入交接信箱失敗：'+e.message);return;}
+  r.main={clientId:cid,at:Date.now()};touch(CUR);
+  renderDetail();showToast('已排入建檔，開主系統即自動完成');
 };
 
 /* ═══ 報價試算（商品庫唯讀連結：主系統 duskin_v2.products） ═══ */

@@ -23,7 +23,8 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 | `todo-parse.test.js` | T1 | 待辦自然語言解析 29 案例：日期規則（含跨年／跨月進位、同曜日）、p1–p3 邊界、token 剝除、#客戶比對、一般待辦落點 |
 | `a11y.test.js` | L4 | 無障礙底線：`lang`、viewport、img alt、icon-only 按鈕要有標籤、裝飾 SVG aria-hidden |
 | `pwa.test.js` | H2 | Service Worker 行為：預快取、離線退回外殼、HTML 網路優先、POST 不攔、Leaflet CDN 快取優先 |
-| `izcrm.test.js` | Z1 | 工業區CRM：主檔載入與渲染（XSS）、聚落規則 zoneOf、報價 fw4、LWW 同步合併、CSV 跳脫、seed 匯入冪等 |
+| `izcrm.test.js` | Z1 | 工業區CRM：主檔載入與渲染（XSS）、聚落規則 zoneOf、報價 fw4、LWW 同步合併、CSV 跳脫、seed 匯入冪等、建檔 handoff 寫入＋鏡射 |
+| `trip-handoff.test.js` | Z2 | 行程規劃：走廊順路、今天/逾期/未來分組、批次移到今天；主系統消化 handoff 建檔（冪等、進 outbox） |
 
 ## 寫新測試的慣例
 
