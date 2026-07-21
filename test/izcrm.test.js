@@ -111,18 +111,22 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   const dt = w.document.getElementById('dt-body').innerHTML;
   assert('鏡射卡顯示主系統狀態', /主系統客戶（唯讀鏡射）/.test(dt) && /試用中/.test(dt) && /2026-07-01/.test(dt));
 
-  console.log('Z1 — seed 匯入（只帶入本機沒有的紀錄）');
+  console.log('Z1 — seed 匯入（新工廠建檔＋既有工廠併入標籤）');
   w = boot(); await wait(300);
-  w.eval('S.records.aaa1={status:"拜訪中",updatedAt:123}');
-  w.eval(`(function(){
-    var j={izcrmSeed:1,records:{aaa1:{status:"已成交",updatedAt:0},ccc3:{status:"已成交",customer:"某客戶",updatedAt:0}}};
-    var now=Date.now(),n=0;
-    for(var id in j.records){ if(S.records[id])continue; var r=Object.assign({},j.records[id]); r.updatedAt=now; S.records[id]=r; S.dirty[id]=1; n++; }
-    window._seedN=n; saveS();
-  })()`);
-  assert('已存在的略過', w.eval('S.records.aaa1.status') === '拜訪中');
-  assert('新紀錄帶入並標記待同步', w.eval('S.records.ccc3.customer') === '某客戶' && w.eval('S.dirty.ccc3') === 1);
-  assert('帶入筆數正確', w.eval('window._seedN') === 1);
+  w.eval('S.records.aaa1={status:"拜訪中",tags:["每季回訪"],updatedAt:123}');
+  w.eval(`window._r=applySeedRecords({
+    aaa1:{status:"已成交",tags:["上市"],updatedAt:0},
+    ccc3:{status:"未接觸",tags:["外商"],customer:"某客戶",updatedAt:0}
+  })`);
+  assert('既有紀錄其他欄位不被覆蓋', w.eval('S.records.aaa1.status') === '拜訪中');
+  assert('既有紀錄標籤聯集併入', w.eval('JSON.stringify(S.records.aaa1.tags)') === JSON.stringify(['每季回訪','上市']));
+  assert('既有紀錄併入後標記待同步', w.eval('S.dirty.aaa1') === 1);
+  assert('新紀錄整筆帶入並標記待同步', w.eval('S.records.ccc3.customer') === '某客戶' && w.eval('S.dirty.ccc3') === 1);
+  assert('新增/併入筆數正確', w.eval('window._r.add') === 1 && w.eval('window._r.mrg') === 1);
+  // 冪等：同一 seed 再套用一次，標籤不重複、無新增
+  w.eval('window._r2=applySeedRecords({aaa1:{tags:["上市"]},ccc3:{tags:["外商"]}})');
+  assert('重複匯入冪等（標籤不重複）', w.eval('JSON.stringify(S.records.aaa1.tags)') === JSON.stringify(['每季回訪','上市']));
+  assert('重複匯入無新增/併入', w.eval('window._r2.add') === 0 && w.eval('window._r2.mrg') === 0);
 
   console.log(failed ? `Z1 FAILED (${failed})` : 'Z1 PASSED ✅');
   process.exit(failed ? 1 : 0);

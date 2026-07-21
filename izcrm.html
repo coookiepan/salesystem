@@ -292,7 +292,7 @@ details.sec>.bd{padding:0 14px 14px}
    資料兩層：主檔 izdata.json（唯讀）＋ 個人紀錄層 izcrm_v1（同步雲端）
    與主系統僅三個柔性接點：入口按鈕、商品庫唯讀、sw.js 快取
    ═══════════════════════════════════════════════════════════ */
-const IZ_VERSION='v2026.07.20-z2';
+const IZ_VERSION='v2026.07.21-z1';
 
 /* ═══ 內嵌 Apps Script 後端（獨立部署，勿與主系統共用試算表） ═══ */
 const IZ_GAS_CODE=[
@@ -1022,6 +1022,24 @@ window.cluDel=async i=>{
   rules.splice(i,1);metaSet('clusters',rules);renderClusters();
 };
 /* 備份／seed 匯入 */
+// seed 套用：本機沒有的工廠整筆帶入；已有紀錄的只把 seed 標籤聯集進去（其餘欄位一律不動，
+// 保住使用者現場填的狀態/拜訪/報價）。回 {add 新增筆數, mrg 併入標籤筆數}。抽成函式供測試。
+function applySeedRecords(records){
+  let add=0,mrg=0;const now=Date.now();
+  for(const id in records){
+    const seed=records[id];
+    if(S.records[id]){
+      const st=seed.tags||[];if(!st.length)continue;
+      const r=S.records[id];const cur=r.tags||[];const before=cur.length;
+      st.forEach(t=>{if(!cur.includes(t))cur.push(t);});
+      if(cur.length>before){r.tags=cur;r.updatedAt=now;S.dirty[id]=1;mrg++;}
+    }else{
+      const r=Object.assign({},seed);r.updatedAt=now;S.records[id]=r;S.dirty[id]=1;add++;
+    }
+  }
+  saveS();scheduleSync();
+  return {add,mrg};
+}
 window.expBackup=()=>{
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify({izcrmBackup:1,exportedAt:new Date().toISOString(),S},null,1)],{type:'application/json'}));
@@ -1034,14 +1052,10 @@ window.impBackup=input=>{
   reader.onload=async()=>{
     try{
       const j=JSON.parse(reader.result);
-      if(j.izcrmSeed&&j.records){ // Excel seed：只帶入「本機沒有紀錄」的工廠
-        let n=0;const now=Date.now();
-        for(const id in j.records){
-          if(S.records[id])continue;
-          const r=Object.assign({},j.records[id]);r.updatedAt=now;S.records[id]=r;S.dirty[id]=1;n++;
-        }
-        saveS();scheduleSync();renderCur();
-        await appAlert('已帶入 '+n+' 筆舊紀錄（已存在的 '+(Object.keys(j.records).length-n)+' 筆略過），將自動同步上雲。','匯入 seed');
+      if(j.izcrmSeed&&j.records){ // seed：新工廠整筆建檔；既有工廠只併入標籤（保留原有資料）
+        const {add,mrg}=applySeedRecords(j.records);
+        renderCur();
+        await appAlert('已新增 '+add+' 筆紀錄、'+mrg+' 筆既有工廠併入標籤，將自動同步上雲。','匯入 seed');
       }else if(j.izcrmBackup&&j.S){
         if(!await appConfirm('用備份覆蓋本機資料？（較新的雲端資料會在下次同步時拉回）',{danger:true,okText:'覆蓋'}))return;
         S=Object.assign({records:{},meta:{},gasUrl:'',lastPullAt:0,dirty:{},metaDirty:{}},j.S);
