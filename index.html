@@ -3853,6 +3853,9 @@ function renderMapMarkers(){
     MAP_STATE.map.setView(TAINAN_CENTER,TAINAN_ZOOM);
     MAP_STATE._boundsFitted=true;
   }
+  // 修正位置模式中被重繪（背景 geocode 完成等）→ 圖釘是新建的，重掛拖曳讓模式不中斷。
+  // 不會遞迴：拖曳存檔的 commit 先 cancelPinDrop 才重繪，屆時 pinDropFor 已清空。
+  if(MAP_STATE.pinDropFor!=null) startPinDrop(MAP_STATE.pinDropFor);
   renderFailedGeocode();
 }
 
@@ -3977,7 +3980,10 @@ function retryGeocode(idx){
 
 // ── 手動定位（點地圖放 marker）──────────────────────────
 function startPinDrop(idx){
-  const c=DB.clients[idx];if(!c||!MAP_STATE.map)return;
+  if(!MAP_STATE.map)return;
+  const c=DB.clients[idx];
+  if(!c){cancelPinDrop();return;}
+  cancelPinDrop(); // 先解除上一輪（換修別家時不殘留舊圖釘的拖曳與 dragend）
   MAP_STATE.pinDropFor=idx;
   MAP_STATE.map.closePopup();
   const hasPin=!!(c.id&&MAP_STATE.markersById[c.id]);
@@ -3998,7 +4004,6 @@ function startPinDrop(idx){
     renderMapMarkers();
     showToast('📌 已更新「'+(c.name||'')+'」的位置');
   };
-  if(MAP_STATE.pinDropHandler) MAP_STATE.map.off('click',MAP_STATE.pinDropHandler);
   MAP_STATE.pinDropHandler=e=>commit(e.latlng.lat,e.latlng.lng);
   MAP_STATE.map.on('click',MAP_STATE.pinDropHandler);
   // 已有圖釘 → 同時開放拖曳，拖到正確位置放開即存（微調誤差時比點擊更直覺）
