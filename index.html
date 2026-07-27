@@ -497,6 +497,7 @@ tbody tr:hover{background:var(--surface-hover)}
 /* leaflet marker override for cleaner look */
 .duskin-marker{border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);width:16px!important;height:16px!important;display:flex;align-items:center;justify-content:center}
 .duskin-marker.has-todo::after{content:'';position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
+.duskin-marker.geo-approx{border-style:dashed;opacity:.85} /* 模糊定位（路段/概略）→ 虛線框提示可修正 */
 
 /* ═══════════════════════════════════════════════════════════
    INVENTORY ITEM
@@ -1478,7 +1479,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.27-z4';
+const APP_VERSION='v2026.07.27-z5';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -3526,7 +3527,15 @@ const TAINAN_VIEWBOX='120.05,23.45,120.55,22.85';
 // 預設地圖中心（台南市中心，zoom 11 可看到全市）
 const TAINAN_CENTER=[23.00,120.20];
 const TAINAN_ZOOM=11;
-let MAP_STATE={view:'list', map:null, markers:[], pinDropFor:null, pinDropHandler:null, filter:'all', markersById:{}};
+// 底圖三層切換：內政部國土測繪中心 WMTS（免金鑰免申請，台灣巷弄與門牌註記遠比 OSM 詳細，
+// maxZoom 20 可放大到看清門牌，手動修正位置時特別有用）＋航照圖＋原本的 OSM。
+// 注意：NLSC 的路徑是 {z}/{y}/{x}（WMTS 慣例），與 OSM 的 {z}/{x}/{y} 順序不同。
+const BASEMAPS=[
+  {key:'emap',  name:'電子地圖（國土測繪）', url:'https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}',   maxZoom:20, attr:'&copy; 內政部國土測繪中心'},
+  {key:'photo', name:'航照圖',              url:'https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', maxZoom:20, attr:'&copy; 內政部國土測繪中心'},
+  {key:'osm',   name:'OSM 街道圖',          url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom:19, attr:'&copy; OpenStreetMap'}
+];
+let MAP_STATE={view:'list', map:null, markers:[], pinDropFor:null, pinDropHandler:null, filter:'all', markersById:{}, basemap:null, baseLayer:null, dragMarker:null};
 
 // 地圖篩選邏輯
 function mapMatchesFilter(c){
@@ -3749,13 +3758,42 @@ function renderGeoProgress(){
 }
 
 // ── Map init ─────────────────────────────────────────────
+function applyBasemap(key){
+  const bm=BASEMAPS.find(b=>b.key===key)||BASEMAPS[0];
+  if(MAP_STATE.baseLayer) MAP_STATE.map.removeLayer(MAP_STATE.baseLayer);
+  MAP_STATE.baseLayer=L.tileLayer(bm.url,{maxZoom:bm.maxZoom,attribution:bm.attr}).addTo(MAP_STATE.map);
+  if(MAP_STATE.map.getZoom()>bm.maxZoom) MAP_STATE.map.setZoom(bm.maxZoom);
+  MAP_STATE.basemap=bm.key;
+  try{localStorage.setItem('duskin_basemap',bm.key);}catch(e){}
+  return bm;
+}
+
+function cycleBasemap(){
+  if(!MAP_STATE.map) return;
+  const i=BASEMAPS.findIndex(b=>b.key===MAP_STATE.basemap);
+  const bm=applyBasemap(BASEMAPS[(i+1)%BASEMAPS.length].key);
+  showToast('🗺 底圖：'+bm.name);
+}
+
 function initMap(){
   if(MAP_STATE.map||typeof L==='undefined') return;
   MAP_STATE.map=L.map('leaflet-map',{zoomControl:true,attributionControl:true}).setView(TAINAN_CENTER,TAINAN_ZOOM);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:19,
-    attribution:'&copy; OpenStreetMap'
-  }).addTo(MAP_STATE.map);
+  let savedBm=null;
+  try{savedBm=localStorage.getItem('duskin_basemap');}catch(e){}
+  applyBasemap(savedBm||'emap');
+  // 底圖切換按鈕（電子地圖 → 航照 → OSM 循環）
+  const BasemapCtrl=L.Control.extend({
+    onAdd:function(){
+      const btn=L.DomUtil.create('button','leaflet-bar');
+      btn.innerHTML='<span style="font-size:16px">🗺️</span>';
+      btn.style.cssText='background:#fff;width:34px;height:34px;border:none;cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0';
+      btn.title='切換底圖（電子地圖／航照／OSM）';
+      btn.onclick=(e)=>{e.stopPropagation();cycleBasemap();};
+      L.DomEvent.disableClickPropagation(btn);
+      return btn;
+    }
+  });
+  new BasemapCtrl({position:'topright'}).addTo(MAP_STATE.map);
   // 加上「我的位置」按鈕
   const LocateCtrl=L.Control.extend({
     onAdd:function(){
@@ -3796,7 +3834,7 @@ function renderMapMarkers(){
     const hasTodo=(c.todos||[]).some(t=>!t.done);
     const icon=L.divIcon({
       className:'duskin-marker-wrap',
-      html:`<div class="duskin-marker${hasTodo?' has-todo':''}" style="background:${color};position:relative"></div>`,
+      html:`<div class="duskin-marker${hasTodo?' has-todo':''}${geoIsApprox(c)?' geo-approx':''}" style="background:${color};position:relative"></div>`,
       iconSize:[16,16],
       iconAnchor:[8,8]
     });
@@ -3816,6 +3854,20 @@ function renderMapMarkers(){
     MAP_STATE._boundsFitted=true;
   }
   renderFailedGeocode();
+}
+
+// 定位來源 → 使用者可讀標籤（讓「圖釘為什麼不準」有跡可循）
+function geoSourceLabel(c){
+  if(!c.lat||!c.lng) return '';
+  if(c.geocodeSource==='manual') return '📌 手動定位';
+  if(c.geocodeSource==='google'||c.geocodeSource==='google-approx')
+    return '定位精度：'+geoPrecisionLabel(c.geoLocationType||(c.geocodeSource==='google'?'ROOFTOP':''));
+  if(c.geocodeSource==='auto') return '定位精度：概略';
+  return '';
+}
+// 模糊定位（路段中心/概略）→ 圖釘改虛線框提示，popup 可一鍵修正
+function geoIsApprox(c){
+  return !!(c.lat&&c.lng)&&(c.geocodeSource==='google-approx'||c.geocodeSource==='auto');
 }
 
 function buildMapPopup(c,idx){
@@ -3840,11 +3892,13 @@ function buildMapPopup(c,idx){
     <div class="mp-badges">${badges}</div>
     <div class="mp-meta">
       ${c.nextdate?`📅 下次：${c.nextdate}<br>`:''}
-      ${c.addr?`📍 ${escHtml(c.addr)}`:''}
+      ${c.addr?`📍 ${escHtml(c.addr)}<br>`:''}
+      ${geoSourceLabel(c)?`${geoSourceLabel(c)}${geoIsApprox(c)?'（可能有誤差）':''}`:''}
     </div>
     <div class="mp-actions">
       <button class="btn btn-primary btn-xs" onclick="openCDFromMap(${idx})">看詳情</button>
       ${navUrl?`<a class="btn btn-outline btn-xs" href="${navUrl}" target="_blank" rel="noopener">🧭 導航</a>`:''}
+      <button class="btn btn-outline btn-xs" onclick="startPinDrop(${idx})">📍 修正位置</button>
     </div>
   </div>`;
 }
@@ -3925,24 +3979,37 @@ function retryGeocode(idx){
 function startPinDrop(idx){
   const c=DB.clients[idx];if(!c||!MAP_STATE.map)return;
   MAP_STATE.pinDropFor=idx;
+  MAP_STATE.map.closePopup();
+  const hasPin=!!(c.id&&MAP_STATE.markersById[c.id]);
   // 顯示提示
   let hint=document.getElementById('pin-drop-hint');
   if(!hint){
     hint=document.createElement('div');hint.id='pin-drop-hint';hint.className='pin-drop-hint';
     document.getElementById('view-map').appendChild(hint);
   }
-  hint.innerHTML=`點地圖位置為「${escHtml(c.name)}」定位 <button id="pin-cancel">取消</button>`;
+  hint.innerHTML=`${hasPin?'拖曳圖釘或點地圖':'點地圖位置'}為「${escHtml(c.name)}」定位 <button id="pin-cancel">取消</button>`;
   document.getElementById('pin-cancel').onclick=cancelPinDrop;
   MAP_STATE.map.getContainer().style.cursor='crosshair';
-  if(MAP_STATE.pinDropHandler) MAP_STATE.map.off('click',MAP_STATE.pinDropHandler);
-  MAP_STATE.pinDropHandler=e=>{
-    c.lat=e.latlng.lat; c.lng=e.latlng.lng;
+  const commit=(lat,lng)=>{
+    c.lat=lat; c.lng=lng;
     c.geocodeSource='manual'; c.geocodedAt=Date.now();
     saveLocal(); autoSync('save',{client:c});
     cancelPinDrop();
     renderMapMarkers();
+    showToast('📌 已更新「'+(c.name||'')+'」的位置');
   };
+  if(MAP_STATE.pinDropHandler) MAP_STATE.map.off('click',MAP_STATE.pinDropHandler);
+  MAP_STATE.pinDropHandler=e=>commit(e.latlng.lat,e.latlng.lng);
   MAP_STATE.map.on('click',MAP_STATE.pinDropHandler);
+  // 已有圖釘 → 同時開放拖曳，拖到正確位置放開即存（微調誤差時比點擊更直覺）
+  if(hasPin){
+    const m=MAP_STATE.markersById[c.id];
+    if(m&&m.dragging){
+      MAP_STATE.dragMarker=m;
+      m.dragging.enable();
+      m.once('dragend',()=>{const p=m.getLatLng();commit(p.lat,p.lng);});
+    }
+  }
 }
 
 function cancelPinDrop(){
@@ -3950,6 +4017,10 @@ function cancelPinDrop(){
   if(MAP_STATE.map){
     MAP_STATE.map.getContainer().style.cursor='';
     if(MAP_STATE.pinDropHandler){MAP_STATE.map.off('click',MAP_STATE.pinDropHandler);MAP_STATE.pinDropHandler=null;}
+  }
+  if(MAP_STATE.dragMarker){
+    try{MAP_STATE.dragMarker.dragging.disable();MAP_STATE.dragMarker.off('dragend');}catch(e){}
+    MAP_STATE.dragMarker=null;
   }
   const hint=document.getElementById('pin-drop-hint');
   if(hint) hint.remove();
