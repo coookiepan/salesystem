@@ -110,6 +110,23 @@ const D = (off) => { const d = new Date(Date.now() + off * 86400000); return d.g
   assert('信箱消化後清空', w._store.duskin_iz_handoff === undefined);
   assert('建檔進入待推送佇列（斷網不丟）', w.eval('OUTBOX.some(op=>op.payload&&op.payload.client&&op.payload.client.id==="iz-new-1")'));
 
+  console.log('Z2 — 回到前景時補消化（手機未重載，INIT 與 storage 事件都收不到）');
+  w = boot({ duskin_v2: JSON.stringify({ clients: [], products: [], inventory: null }) });
+  await wait(400);
+  // 模擬：App 已載入後（INIT 消化過、信箱是空的），izcrm 在另一情境寫入信箱，
+  // 但本分頁被凍結沒收到 storage 事件，也沒有重新載入 → 只靠切回前景補收。
+  w._store.duskin_iz_handoff = JSON.stringify([
+    { id: 'iz-late-1', izId: 'facL', name: '晚到工廠', addr: '臺南市善化區成功路8號', phone: '06-7777777', contact: '林窗口', note: '（由工業區CRM 建檔）', at: 1 }
+  ]);
+  w.dispatchEvent(new w.Event('focus'));
+  await wait(50);
+  assert('focus 回前景補消化：晚到工廠已帶入', w.eval('DB.clients.some(c=>c.id==="iz-late-1"&&c.name==="晚到工廠")'));
+  assert('補消化後信箱清空', w._store.duskin_iz_handoff === undefined);
+  // 再次觸發（重複回前景）不應建出重複客戶
+  w.dispatchEvent(new w.Event('pageshow'));
+  await wait(20);
+  assert('重複回前景不重複建檔', w.eval('DB.clients.filter(c=>c.id==="iz-late-1").length') === 1);
+
   console.log(failed ? `Z2 FAILED (${failed})` : 'Z2 PASSED ✅');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

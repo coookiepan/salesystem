@@ -1478,7 +1478,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.20-z3';
+const APP_VERSION='v2026.07.27-z4';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -6230,6 +6230,13 @@ function consumeIzHandoff(){
 }
 // izcrm 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
 window.addEventListener('storage',e=>{if(e.key==='duskin_iz_handoff'&&e.newValue)consumeIzHandoff();});
+// 手機常見情境：主系統分頁沒有重新載入就被切回（bfcache 還原／背景喚醒），
+// 此時 INIT 消化不會再跑，而寫入 handoff 當下若本分頁正被凍結／已丟棄，storage 事件也收不到，
+// 交接信箱就會卡住 → 這是「常常無法正確帶入」的主因。改成每次回到前景都再消化一次。
+// consumeIzHandoff 具冪等性（依 client id 去重、消化完立即清空信箱），重複呼叫安全。
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')consumeIzHandoff();});
+window.addEventListener('pageshow',consumeIzHandoff);   // bfcache 還原也會觸發
+window.addEventListener('focus',consumeIzHandoff);
 
 // ═══════════════════════════════════════════════════════════
 // INIT
