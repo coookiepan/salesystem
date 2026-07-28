@@ -375,6 +375,23 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 
 ---
 
+## 首頁樞紐（home.html）
+
+四系統的入口與每日儀表板。**唯讀鏡射**：直接讀 `duskin_v2` / `duskin_outbox` /
+`sitemap_v1` / `izcrm_v1` 計算數字（今日行程、逾期、試用該收、今日待辦、本週成果、
+各系統同步狀態），只讀不寫、零後端、離線可看；資料不存在時顯示空狀態，永不擋導航。
+
+- **PWA `start_url` 指向 home.html**（manifest）；home 也註冊 sw.js，離線可開。
+- **跨系統切換**：home 底部五格（首頁/客戶/行程/工地/工業區）；三個子系統的底部
+  導覽各加一顆「🏠 首頁」。
+- **深連結**：`index.html#trip|#new|#daily|#clients|#todos|#shops|#inventory|#settings`
+  （INIT 尾端處理，消化後 `history.replaceState` 清掉 hash）；`sitemap.html#place`
+  直接啟動 GPS 放點。首頁所有按鈕靠這些 hash 直達正確分頁。
+- 有自己的 `HOME_VERSION`；改 home.html 屬實質改動 → bump 它與 `sw.js` CACHE。
+- 首頁輸出一律 `esc()`（讀進來的客戶名等自由文字）；問候語用 `textContent`。
+
+---
+
 ## 工地地圖 子系統（sitemap.html）
 
 登記「正在施工裝修的店面」（未來新店＝潛在客戶）。與 izcrm 同樣是**單檔子系統＋柔性接點**：

@@ -957,6 +957,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 <div id="toast"></div>
 
 <nav id="nav">
+  <button class="nav-btn" id="nav-home" onclick="location.href='home.html'"><span class="ico">🏠</span>首頁</button>
   <button class="nav-btn on" id="nav-map" onclick="showPanel('map')"><span class="ico">🗺</span>地圖</button>
   <button class="nav-btn" id="nav-list" onclick="showPanel('list')"><span class="ico">☰</span>清單</button>
   <button class="nav-btn" id="nav-set" onclick="showPanel('set')"><span class="ico">⚙</span>設定</button>
@@ -977,7 +978,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
    底圖：內政部國土測繪中心 臺灣通用電子地圖 / 航照，皆免費免金鑰
    ══════════════════════════════════════════════════════════ */
 
-const APP_VER='v2026.07.28-s1';
+const APP_VER='v2026.07.28-s2';
 
 /* ── Apps Script 後端程式碼（設定頁可一鍵複製） ── */
 const GAS_CODE=[
@@ -1737,6 +1738,12 @@ setTimeout(()=>{
 },600);
 window.addEventListener('online',()=>{ flushQueue(); pullAll(true); });
 setInterval(()=>{ if(CFG.url&&navigator.onLine) pullAll(true); },180000);
+
+// 首頁深連結：home.html「登記工地」→ sitemap.html#place 直接進 GPS 放點
+if(location.hash==='#place'){
+  setTimeout(()=>{ try{ startPlaceGPS(); }catch(e){} },900);
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+}
 </script>
 
 </body>

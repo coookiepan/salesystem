@@ -278,6 +278,7 @@ details.sec>.bd{padding:0 14px 14px}
 <div id="toasts" aria-live="polite"></div>
 
 <nav class="navbar" aria-label="主導覽">
+  <button class="nav-btn" onclick="location.href='home.html'"><span class="ic" aria-hidden="true">🏠</span>首頁</button>
   <button class="nav-btn on" data-p="dash" onclick="navTo('dash',this)"><span class="ic" aria-hidden="true">📊</span>儀表板</button>
   <button class="nav-btn" data-p="list" onclick="navTo('list',this)"><span class="ic" aria-hidden="true">📋</span>名單</button>
   <button class="nav-btn" data-p="plan" onclick="navTo('plan',this)"><span class="ic" aria-hidden="true">📅</span>待訪</button>
@@ -292,7 +293,7 @@ details.sec>.bd{padding:0 14px 14px}
    資料兩層：主檔 izdata.json（唯讀）＋ 個人紀錄層 izcrm_v1（同步雲端）
    與主系統僅三個柔性接點：入口按鈕、商品庫唯讀、sw.js 快取
    ═══════════════════════════════════════════════════════════ */
-const IZ_VERSION='v2026.07.21-z1';
+const IZ_VERSION='v2026.07.28-z2';
 
 /* ═══ 內嵌 Apps Script 後端（獨立部署，勿與主系統共用試算表） ═══ */
 const IZ_GAS_CODE=[
