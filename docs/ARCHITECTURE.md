@@ -59,7 +59,7 @@ flowchart TB
   end
   APP -- "POST JSON（save/delete/getAll…）" --> GAS
   CDN["unpkg CDN：Leaflet 1.9.4（SRI 鎖定，SW 快取）"] -.-> APP
-  OSM["OpenStreetMap 圖磚 / Nominatim + Google Geocoder（經 GAS 代理）"] -.-> APP
+  OSM["圖磚：NLSC WMTS（電子地圖/航照）＋ OSM / Nominatim + Google Geocoder（經 GAS 代理）"] -.-> APP
 ```
 
 ---
