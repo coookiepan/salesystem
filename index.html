@@ -6406,7 +6406,7 @@ autoAddRecycleTodos();validateClients();consumeIzHandoff();consumeSiteHandoff();
   const h=(location.hash||'').replace('#','');
   if(!h)return;
   try{
-    if(h==='trip'){navTo('todos',document.getElementById('nav-todos'));}
+    if(h==='trip'){navTo('todos',document.getElementById('nav-todos'));setTodosMode('trip');}
     else if(h==='new'){navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>{try{openCF(-1);}catch(e){}},120);}
     else if(['clients','daily','todos','shops','inventory','settings'].indexOf(h)>=0){navTo(h,document.getElementById('nav-'+h));}
     history.replaceState(null,'',location.pathname+location.search);

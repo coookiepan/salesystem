@@ -108,6 +108,7 @@ function boot(html, store, url) {
   const m2 = boot(mainHtml, { duskin_v2: JSON.stringify({ clients: [] }) }, 'https://x.github.io/salesystem/index.html#trip');
   await wait(500);
   assert('#trip → 待辦（行程規劃）分頁開啟', m2.document.getElementById('panel-todos').classList.contains('on') && !m2.document.getElementById('panel-clients').classList.contains('on'));
+  assert('#trip → 直接是行程規劃視圖（非待辦清單）', m2.document.getElementById('todos-mode-trip').style.display === 'block');
   const m3 = boot(mainHtml, { duskin_v2: JSON.stringify({ clients: [] }) }, 'https://x.github.io/salesystem/index.html#new');
   await wait(700);
   assert('#new → 新增客戶表單開啟', (m3.document.getElementById('form-title').textContent || '').includes('新增'));
