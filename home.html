@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#085041">
+<title>首頁｜DUSKIN 銷售系統</title>
+<link rel="icon" href="logo-mark.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+</script>
+<style>
+/* ═══ DESIGN TOKENS — 與 index.html / izcrm.html / sitemap.html 同步 ═══ */
+:root{
+  --green:#12A673;--green-d:#0A6849;--green-l:#E3F4ED;--theme:#085041;
+  --red:#B73838;--red-l:#FBEAEA;--amber-d:#633806;
+  --ss-green-bg:#E1F5EE;--ss-green-fg:#085041;--ss-amber-bg:#FAEEDA;--ss-amber-fg:#633806;
+  --ss-red-bg:#FCEBEB;--ss-red-fg:#A32D2D;--ss-blue-bg:#E6F1FB;--ss-blue-fg:#0C447C;
+  --ss-gray-bg:#F1EFE8;--ss-gray-fg:#444441;
+  --bg:#ffffff;--bg2:#F8F8F5;--bg3:#EFEEE9;
+  --text:#14140F;--text2:#56564F;--text3:#8F8F87;
+  --border:#E8E7E0;--border2:#D4D3CB;--surface-hover:#F9F9F5;
+  --r-sm:6px;--r:10px;--r-lg:14px;
+  --shadow-sm:0 1px 2px rgba(20,20,15,.04);--shadow-md:0 4px 14px rgba(20,20,15,.07);
+  --font:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'PingFang TC','Microsoft JhengHei',sans-serif;
+  --hero-top:#085041;--hero-top-fg:#fff;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1A1B19;--bg2:#121311;--bg3:#25262A;--text:#ECECE7;--text2:#A4A49C;--text3:#6A6A63;
+  --border:#292A26;--border2:#3A3A34;--surface-hover:#242520;
+  --green:#1AB180;--green-d:#7BDFBA;--green-l:#163A2C;
+  --red:#E66B6B;--red-l:#3A1F1F;--amber-d:#F0C878;
+  --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;--ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
+  --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;--ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
+  --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow-md:0 4px 14px rgba(0,0,0,.5);
+  --hero-top:#163A2C;--hero-top-fg:#ECECE7;
+}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{font-family:var(--font);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
+.phone{max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:84px}
+.num{font-variant-numeric:tabular-nums}
+button{font-family:inherit;cursor:pointer}
+a{text-decoration:none;color:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+.hd{padding:18px 16px 4px;display:flex;align-items:flex-start;gap:10px}
+.hd .hi{flex:1}
+.hd .date{font-size:12px;color:var(--text3);font-weight:500;letter-spacing:.02em}
+.hd h1{font-size:21px;font-weight:700;letter-spacing:-.015em;margin-top:2px}
+.syncs{display:flex;flex-direction:column;gap:4px;padding-top:4px}
+.sync{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text3);justify-content:flex-end}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot.warn{background:var(--amber-d)}.dot.off{background:var(--text3)}
+
+.wrap{padding:10px 12px 0;display:flex;flex-direction:column;gap:12px}
+.trip{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);overflow:hidden}
+.trip-top{background:var(--hero-top);color:var(--hero-top-fg);padding:13px 16px;display:flex;align-items:center;gap:8px}
+.trip-top .t{flex:1;font-size:15px;font-weight:700}
+.trip-top .n{font-size:24px;font-weight:700;line-height:1}
+.trip-top .u{font-size:11px;opacity:.78;margin-left:2px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stops{padding:6px 16px 2px}
+.stop{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.stop:last-child{border-bottom:none}
+.stop .seq{width:22px;height:22px;border-radius:50%;background:var(--green-l);color:var(--green-d);font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stop .nm{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stop .nm small{display:block;font-size:11px;color:var(--text3);font-weight:400}
+.chip{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;display:inline-block}
+.c-amber{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
+.c-blue{background:var(--ss-blue-bg);color:var(--ss-blue-fg)}
+.c-gray{background:var(--ss-gray-bg);color:var(--ss-gray-fg)}
+.c-green{background:var(--ss-green-bg);color:var(--ss-green-fg)}
+.c-red{background:var(--ss-red-bg);color:var(--ss-red-fg)}
+.overdue{margin:4px 16px 0;padding:8px 10px;background:var(--red-l);border-radius:var(--r-sm);font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px}
+.overdue a{margin-left:auto;font-size:11.5px;font-weight:600;text-decoration:underline;color:inherit}
+.trip-empty{padding:16px;font-size:13px;color:var(--text3);text-align:center}
+.trip-act{display:flex;gap:8px;padding:12px 16px 14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;font-size:14px;font-weight:600;border-radius:var(--r-sm);border:1px solid transparent;line-height:1.2}
+.btn-primary{background:var(--green);color:#fff;flex:1}
+.btn-outline{background:var(--bg);color:var(--text);border-color:var(--border2)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 6px 8px;text-align:center;box-shadow:var(--shadow-sm);display:block}
+.stat .v{font-size:20px;font-weight:700;line-height:1.1}
+.stat .k{font-size:10.5px;color:var(--text3);margin-top:3px}
+.stat.warn .v{color:var(--amber-d)}
+.stat.bad .v{color:var(--red)}
+
+.sec-t{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin:6px 2px -4px}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qa{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;display:flex;align-items:center;gap:11px;box-shadow:var(--shadow-sm);min-height:60px}
+.qa:active{background:var(--surface-hover)}
+.qa .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.qa .tx{min-width:0}
+.qa .tx b{display:block;font-size:14px;font-weight:600}
+.qa .tx small{font-size:11px;color:var(--text3)}
+.ic-site{background:var(--ss-amber-bg)}.ic-client{background:var(--ss-green-bg)}
+.ic-find{background:var(--ss-blue-bg)}.ic-report{background:var(--ss-gray-bg)}
+
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:14px;box-shadow:var(--shadow-sm)}
+.rp-head{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.rp-head b{font-size:15px;font-weight:700}
+.rp-head span{font-size:11px;color:var(--text3)}
+.week{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.week div{font-size:12px;color:var(--text2)}
+.week b{display:block;font-size:17px;font-weight:700;color:var(--text)}
+.rp-act{display:flex;gap:8px}
+.rp-act .btn{flex:1;padding:10px 8px;font-size:13px}
+
+.apps{display:flex;flex-direction:column;gap:8px}
+.app{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-sm)}
+.app:active{background:var(--surface-hover)}
+.app .ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.app .tx{flex:1;min-width:0}
+.app .tx b{display:block;font-size:14.5px;font-weight:600}
+.app .tx small{font-size:11.5px;color:var(--text3)}
+.app .arrow{color:var(--text3);font-size:16px}
+
+.foot{text-align:center;font-size:11px;color:var(--text3);padding:10px 0 4px}
+
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--bg);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:40}
+.nav a{flex:1;font-size:10.5px;color:var(--text3);padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.nav a .ic{font-size:20px;line-height:1}
+.nav a.on{color:var(--green);font-weight:600}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <header class="hd">
+    <div class="hi">
+      <div class="date num" id="h-date"></div>
+      <h1 id="h-greet">你好</h1>
+    </div>
+    <div class="syncs" id="h-syncs" title="三個系統的雲端同步狀態"></div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="trip" aria-label="今日行程">
+      <div class="trip-top">
+        <span class="t">🗓 今日行程</span>
+        <span class="n num" id="t-count">0</span><span class="u" id="t-route"></span>
+      </div>
+      <div class="stops" id="t-stops"></div>
+      <div class="overdue" id="t-overdue" style="display:none">⏰ 逾期 <b class="num" id="t-od">0</b> 家未處理<a href="index.html#trip">處理</a></div>
+      <div class="trip-act">
+        <a class="btn btn-primary" href="index.html#trip">開始跑 →</a>
+        <a class="btn btn-outline" href="index.html#trip">＋順路</a>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="今日概況">
+      <a class="stat" href="index.html#trip"><div class="v num" id="s-trip">0</div><div class="k">今日行程</div></a>
+      <a class="stat bad" href="index.html#trip"><div class="v num" id="s-od">0</div><div class="k">逾期</div></a>
+      <a class="stat warn" href="index.html#clients"><div class="v num" id="s-trial">0</div><div class="k">試用該收</div></a>
+      <a class="stat" href="index.html#todos"><div class="v num" id="s-todo">0</div><div class="k">今日待辦</div></a>
+    </section>
+
+    <div class="sec-t">快速動作</div>
+    <section class="quick">
+      <a class="qa" href="sitemap.html#place"><span class="ic ic-site">🏗</span><span class="tx"><b>登記工地</b><small>GPS 一鍵，3 秒完成</small></span></a>
+      <a class="qa" href="index.html#new"><span class="ic ic-client">＋</span><span class="tx"><b>新客戶</b><small>建檔到主系統</small></span></a>
+      <a class="qa" href="index.html#shops"><span class="ic ic-find">🔍</span><span class="tx"><b>找客戶</b><small>查詢公司既有客戶</small></span></a>
+      <a class="qa" href="index.html#daily"><span class="ic ic-report">📝</span><span class="tx"><b>寫日報</b><small>今天的拜訪紀錄</small></span></a>
+    </section>
+
+    <div class="sec-t">報告</div>
+    <section class="card" aria-label="報告">
+      <div class="rp-head"><b>本週成果</b><span class="num" id="w-range"></span></div>
+      <div class="week">
+        <div><b class="num" id="w-visits">0</b>拜訪</div>
+        <div><b class="num" id="w-deals">0</b>成約</div>
+        <div><b class="num" id="w-trials">0</b>新試用</div>
+      </div>
+      <div class="rp-act">
+        <a class="btn btn-outline" href="index.html#daily">📋 日報表</a>
+        <a class="btn btn-outline" href="index.html#daily">📈 4W 推進表</a>
+      </div>
+    </section>
+
+    <div class="sec-t">系統</div>
+    <section class="apps">
+      <a class="app" href="index.html">
+        <span class="ic ic-client">👥</span>
+        <span class="tx"><b>客戶管理</b><small id="a-main">主系統</small></span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="app" href="sitemap.html">
+        <span class="ic ic-site">🏗</span>
+        <span class="tx"><b>工地地圖</b><small id="a-site">施工店面共享登記</small></span>
+        <span class="arrow">›</span>
+      </a>
+      <a class="app" href="izcrm.html">
+        <span class="ic ic-find">🏭</span>
+        <span class="tx"><b>工業區CRM</b><small id="a-iz">工廠陌生開發</small></span>
+        <span class="arrow">›</span>
+      </a>
+    </section>
+
+    <div class="foot">DUSKIN 銷售系統 首頁 <span id="h-ver"></span></div>
+  </main>
+
+  <nav class="nav" aria-label="系統切換">
+    <a class="on" href="home.html"><span class="ic">🏠</span>首頁</a>
+    <a href="index.html#clients"><span class="ic">👥</span>客戶</a>
+    <a href="index.html#trip"><span class="ic">🗓</span>行程</a>
+    <a href="sitemap.html"><span class="ic">🏗</span>工地</a>
+    <a href="izcrm.html"><span class="ic">🏭</span>工業區</a>
+  </nav>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   DUSKIN 首頁（樞紐）— 唯讀鏡射三個系統的 localStorage，零後端。
+   duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
+   只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
+   ══════════════════════════════════════════════════════════ */
+const HOME_VERSION='v2026.07.28-h1';
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function readJSON(key,fallback){
+  try{const r=localStorage.getItem(key);return r?JSON.parse(r):fallback;}catch(e){return fallback;}
+}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseRegion(addr){
+  const m=String(addr||'').replace(/^臺南市|^台南市/,'').match(/^.{0,6}?([^\s,，]{1,3}區)/);
+  return m?m[1]:'';
+}
+
+const now=new Date();
+const TODAY=ymd(now);
+// 本週（一～日）
+const wd=(now.getDay()+6)%7;
+const monday=new Date(now);monday.setDate(now.getDate()-wd);
+const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+const W0=ymd(monday),W1=ymd(sunday);
+
+/* ── 讀三個系統 ── */
+const main=readJSON('duskin_v2',null);
+const clients=(main&&Array.isArray(main.clients))?main.clients.filter(Boolean):[];
+const gtodos=(main&&Array.isArray(main.gtodos))?main.gtodos:[];
+const outbox=readJSON('duskin_outbox',[]);
+const sm=readJSON('sitemap_v1',null);
+const sites=(sm&&Array.isArray(sm.sites))?sm.sites.filter(s=>s&&!s.deleted):[];
+const iz=readJSON('izcrm_v1',null);
+
+/* ── 頂欄 ── */
+const WEEK=['日','一','二','三','四','五','六'];
+document.getElementById('h-date').textContent=(now.getMonth()+1)+' 月 '+now.getDate()+' 日（'+WEEK[now.getDay()]+'）';
+const hour=now.getHours();
+const greet=hour<11?'早安':hour<18?'午安':'晚安';
+const who=(main&&main.profile&&main.profile.contact)?main.profile.contact:'';
+document.getElementById('h-greet').textContent=greet+(who?'，'+who:''); // textContent 安全，不需轉義
+
+function syncRow(name,ok,pendingN){
+  const cls=ok===null?'off':(pendingN>0?'warn':'');
+  const txt=ok===null?'未設定':(pendingN>0?pendingN+' 筆待推':'已同步');
+  return '<div class="sync"><span class="dot '+cls+'"></span>'+name+' '+txt+'</div>';
+}
+document.getElementById('h-syncs').innerHTML=
+  syncRow('主系統', main&&main.sheetUrl?true:null, Array.isArray(outbox)?outbox.length:0)+
+  syncRow('工地', sm&&sm.cfg&&sm.cfg.url?true:null, sm&&Array.isArray(sm.queue)?sm.queue.length:0)+
+  syncRow('工業區', iz&&iz.gasUrl?true:null, iz&&iz.dirty?Object.keys(iz.dirty).length:0);
+
+/* ── 今日行程 ── */
+const stChip=s=>{
+  if(s==='試用中')return ['試用中','c-amber'];
+  if(s==='報價'||s==='將成約')return [s,'c-blue'];
+  if(s==='已成約')return [s,'c-green'];
+  if(!s||s==='未拜訪')return ['未拜訪','c-gray'];
+  return [s,'c-gray'];
+};
+const trips=clients.filter(c=>c.nextdate===TODAY);
+const overdue=clients.filter(c=>c.nextdate&&c.nextdate<TODAY);
+document.getElementById('t-count').textContent=trips.length;
+document.getElementById('s-trip').textContent=trips.length;
+const regions=[...new Set(trips.map(c=>parseRegion(c.addr)).filter(Boolean))];
+document.getElementById('t-route').textContent=trips.length?('家'+(regions.length?' · '+regions.slice(0,3).join(' → '):'')):'家';
+const stopsEl=document.getElementById('t-stops');
+if(!clients.length){
+  stopsEl.innerHTML='<div class="trip-empty">還沒有客戶資料——先開「客戶管理」完成設定，之後這裡會自動顯示每天的行程。</div>';
+}else if(!trips.length){
+  stopsEl.innerHTML='<div class="trip-empty">今天還沒排行程。按「開始跑 →」從逾期與順路建議把今天排起來。</div>';
+}else{
+  stopsEl.innerHTML=trips.slice(0,3).map((c,i)=>{
+    const [label,cls]=stChip(c.status);
+    const region=parseRegion(c.addr);
+    return '<div class="stop"><span class="seq num">'+(i+1)+'</span>'+
+      '<span class="nm">'+esc(c.name||'-')+'<small>'+esc(region||c.addr||'')+'</small></span>'+
+      '<span class="chip '+cls+'">'+esc(label)+'</span></div>';
+  }).join('')+(trips.length>3?'<div class="trip-empty" style="padding:6px 0 10px">…還有 '+(trips.length-3)+' 家，進行程規劃看全部</div>':'');
+}
+if(overdue.length){
+  document.getElementById('t-overdue').style.display='flex';
+  document.getElementById('t-od').textContent=overdue.length;
+}
+document.getElementById('s-od').textContent=overdue.length;
+
+/* ── 試用該收 / 今日待辦 ── */
+const trialDue=clients.filter(c=>{
+  if(c.status!=='試用中'||!c.trialDate)return false;
+  const days=Math.floor((now-new Date(c.trialDate))/864e5);
+  return days>=14;
+});
+document.getElementById('s-trial').textContent=trialDue.length;
+let todoN=0;
+clients.forEach(c=>(c.todos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate&&t.dueDate<=TODAY)todoN++;}));
+gtodos.forEach(t=>{if(t&&!t.done&&t.dueDate&&t.dueDate<=TODAY)todoN++;});
+document.getElementById('s-todo').textContent=todoN;
+
+/* ── 本週成果 ── */
+document.getElementById('w-range').textContent=W0.slice(5).replace('-','/')+' – '+W1.slice(5).replace('-','/');
+let wVisits=0,wDeals=0,wTrials=0;
+clients.forEach(c=>{
+  (c.visits||[]).forEach(v=>{if(v&&v.date&&v.date>=W0&&v.date<=W1)wVisits++;});
+  if((c.contractedItems||[]).some(it=>it&&it.contractDate&&it.contractDate>=W0&&it.contractDate<=W1))wDeals++;
+  if(c.trialDate&&c.trialDate>=W0&&c.trialDate<=W1)wTrials++;
+});
+document.getElementById('w-visits').textContent=wVisits;
+document.getElementById('w-deals').textContent=wDeals;
+document.getElementById('w-trials').textContent=wTrials;
+
+/* ── 系統卡活資訊 ── */
+if(clients.length){
+  const trial=clients.filter(c=>c.status==='試用中').length;
+  const closing=clients.filter(c=>c.status==='將成約').length;
+  document.getElementById('a-main').textContent=clients.length+' 位客戶 · 試用中 '+trial+(closing?' · 將成約 '+closing:'');
+}
+if(sites.length){
+  const openSoon=sites.filter(s=>['施工中','裝潢收尾','完工待開幕'].indexOf(s.stage)>=0).length;
+  const in7=ymd(new Date(now.getTime()+7*864e5));
+  const visitable=sites.filter(s=>s.openDate&&s.openDate>=TODAY&&s.openDate<=in7&&['已拜訪','不適合'].indexOf(s.stage)<0).length;
+  document.getElementById('a-site').textContent='待開幕 '+openSoon+(visitable?' · 本週可拜訪 '+visitable:'');
+}else if(sm){
+  document.getElementById('a-site').textContent='還沒有登記的工地';
+}
+if(iz&&iz.records&&Object.keys(iz.records).length){
+  const recs=Object.values(iz.records);
+  const plans=recs.filter(r=>r&&r.visitPlan).length;
+  document.getElementById('a-iz').textContent='有紀錄 '+recs.length+' 家'+(plans?' · 待訪 '+plans:'');
+}
+
+document.getElementById('h-ver').textContent=HOME_VERSION;
+</script>
+</body>
+</html>

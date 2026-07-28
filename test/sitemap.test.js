@@ -50,6 +50,8 @@ function boot(html) {
       try { new vm.Script(JSON.parse('[' + m[1].replace(/,\s*$/, '') + ']').join('\n')); return true; } catch (e) { return false; }
     })());
     assert('原生 alert/confirm 已移除（app script 內）', !/[^.\w](alert|confirm)\(/.test(scripts[scripts.length - 1]));
+    assert('支援深色模式（prefers-color-scheme 覆寫變數）', /prefers-color-scheme\s*:\s*dark/.test(smHtml));
+    assert('清單搜尋框 ≥16px（iOS 不自動放大頁面）', !/id="q"[^>]*font-size:1[0-5]px/.test(smHtml) && !/id="listsort"[^>]*font-size:1[0-5]px/.test(smHtml));
   }
 
   console.log('S1 — 登記與清單（JSDOM 真實載入）');
