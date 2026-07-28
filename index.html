@@ -1141,6 +1141,7 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="panel" id="panel-shops">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <div class="page-title" style="margin:0;flex:1">查詢</div>
+    <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">🏗 工地地圖</a>
     <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 工業區CRM</a>
   </div>
 
@@ -1288,6 +1289,15 @@ tbody tr:hover{background:var(--surface-hover)}
       拜訪 check points、標籤回訪、待訪路線與獨立雲端同步，設定方式在該頁的「⚙️ 設定」。
     </div>
     <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 開啟工業區CRM</a>
+  </div>
+  <div class="card">
+    <div class="form-section">工地地圖</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      「工地地圖」子系統（查詢頁右上角進入）：登記正在施工裝修的店面，和同事共享避免重複拜訪。
+      工地按「📇 建檔到主系統」會自動帶進客戶清單（狀態＝未拜訪、座標沿用）。
+      共享同步設定在該頁的「⚙ 設定」（獨立試算表，與主系統資料分開）。
+    </div>
+    <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">🏗 開啟工地地圖</a>
   </div>
   <div class="card">
     <div class="form-section">設定步驟</div>
@@ -1479,7 +1489,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.27-z5';
+const APP_VERSION='v2026.07.28-z1';
 const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -6304,15 +6314,44 @@ function consumeIzHandoff(){
   localStorage.removeItem('duskin_iz_handoff');
   if(n){saveLocal();renderClients();showToast('已從工業區CRM 帶入 '+n+' 家新客戶');}
 }
-// izcrm 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
+// ═══════════════════════════════════════════════════════════
+// SITE HANDOFF — 工地地圖建檔交接信箱（單向：sitemap → 主系統，與 IZ 同模式）
+// 工地點多為 GPS／拖曳定位 → 座標直接沿用（geocodeSource='manual'，不再 geocode 蓋掉）；
+// nextdate 帶「預計可拜訪日」，開幕日一到自然出現在行程規劃。冪等：同 id 跳過。
+// ═══════════════════════════════════════════════════════════
+function consumeSiteHandoff(){
+  let inbox=[];
+  try{inbox=JSON.parse(localStorage.getItem('duskin_site_handoff')||'[]');}catch(e){}
+  if(!Array.isArray(inbox)||!inbox.length)return;
+  let n=0;
+  inbox.forEach(h=>{
+    if(!h||!h.id||!(h.name||h.addr))return;
+    if(DB.clients.some(c=>c&&c.id===h.id))return;
+    const hasGeo=(typeof h.lat==='number'&&typeof h.lng==='number');
+    const c={id:h.id,name:String(h.name||h.addr),contact:'',phone:'',
+      addr:String(h.addr||''),type:String(h.type||''),status:STATUS.UNVISITED,regNo:'',
+      nextdate:String(h.nextdate||''),env:'',note:String(h.note||''),
+      trialItems:[],contractedItems:[],todos:[],visits:[],
+      lat:hasGeo?h.lat:null,lng:hasGeo?h.lng:null,
+      geocodeSource:hasGeo?'manual':null,geocodedAt:hasGeo?Date.now():null,
+      updatedAt:Date.now()};
+    DB.clients.push(c);n++;
+    autoSync('save',{client:c});
+    if(!hasGeo&&c.addr){try{enqueueGeocode(c);processGeoQueue();}catch(e){}}
+  });
+  localStorage.removeItem('duskin_site_handoff');
+  if(n){saveLocal();renderClients();showToast('已從工地地圖帶入 '+n+' 家新客戶');}
+}
+// izcrm／sitemap 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
 window.addEventListener('storage',e=>{if(e.key==='duskin_iz_handoff'&&e.newValue)consumeIzHandoff();});
+window.addEventListener('storage',e=>{if(e.key==='duskin_site_handoff'&&e.newValue)consumeSiteHandoff();});
 // 手機常見情境：主系統分頁沒有重新載入就被切回（bfcache 還原／背景喚醒），
 // 此時 INIT 消化不會再跑，而寫入 handoff 當下若本分頁正被凍結／已丟棄，storage 事件也收不到，
 // 交接信箱就會卡住 → 這是「常常無法正確帶入」的主因。改成每次回到前景都再消化一次。
 // consumeIzHandoff 具冪等性（依 client id 去重、消化完立即清空信箱），重複呼叫安全。
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')consumeIzHandoff();});
-window.addEventListener('pageshow',consumeIzHandoff);   // bfcache 還原也會觸發
-window.addEventListener('focus',consumeIzHandoff);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){consumeIzHandoff();consumeSiteHandoff();}});
+window.addEventListener('pageshow',()=>{consumeIzHandoff();consumeSiteHandoff();});   // bfcache 還原也會觸發
+window.addEventListener('focus',()=>{consumeIzHandoff();consumeSiteHandoff();});
 
 // ═══════════════════════════════════════════════════════════
 // INIT
@@ -6357,7 +6396,7 @@ const MIGRATIONS=[
     }
   }
 })();
-autoAddRecycleTodos();validateClients();consumeIzHandoff();renderClients();
+autoAddRecycleTodos();validateClients();consumeIzHandoff();consumeSiteHandoff();renderClients();
 document.getElementById('daily-date').value=today();
 if(SHEET_URL){updateSheetStatus(true);loadShops();if(OUTBOX.length)flushOutbox();}
 // C2: 恢復網路時自動補送待推送佇列

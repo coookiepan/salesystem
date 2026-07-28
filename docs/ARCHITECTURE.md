@@ -375,6 +375,38 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 
 ---
 
+## 工地地圖 子系統（sitemap.html）
+
+登記「正在施工裝修的店面」（未來新店＝潛在客戶）。與 izcrm 同樣是**單檔子系統＋柔性接點**：
+
+1. 查詢頁／設定頁入口按鈕（`<a href="sitemap.html">`）；sitemap 設定頁有「回主系統」連結。
+2. `sw.js` 預快取 `sitemap.html`（Leaflet 1.9.4 **內嵌**於檔內，離線可開）。
+3. **建檔交接信箱**（單向）：popup「📇 建檔到主系統」把基本資料＋預產 client id 寫進
+   `localStorage.duskin_site_handoff`；主系統以 `consumeSiteHandoff()`（與 IZ 同一組
+   INIT／storage／回前景 hook）建檔並上雲。冪等（同 id 跳過）。連結記在工地
+   `s.main={clientId}`（隨 sitemap 雲端同步，同事也看得到「已建檔」）。
+   **座標沿用**：工地點是 GPS／拖曳定位 → 建入主系統時 `geocodeSource='manual'`，
+   不會被 geocode 蓋掉；`nextdate`＝預計可拜訪日，到期自然進行程規劃。
+
+### 與主系統的關鍵差異（刻意設計，勿「統一」）
+
+| | 主系統 clients | sitemap sites |
+|---|---|---|
+| 共享模型 | 每位業務各自 Sheet（路線 A 隔離） | **全組共用一個 /exec**（避免重複拜訪） |
+| 同步 | outbox 佇列＋srvAt 衝突對話框＋LockService | id upsert＋`updated` LWW＋tombstone（`deleted:true`） |
+| 定位 | 地址 geocode（Google/Nominatim）＋手動修正 | **GPS＋拖曳**（不做 geocoding） |
+
+- 資料：`localStorage.sitemap_v1`＝`{sites,cfg,last,queue}`；一筆 site 含
+  id/name/addr/town/lat/lng/acc/src/type/stage/openDate/note/photo(≤42k data URL)/by/created/updated/deleted。
+- 後端：獨立 Apps Script（`GAS_CODE` 內嵌可一鍵複製；Sheet 分頁 `sites`：id/data(JSON)/updated），
+  action：`ping`/`getAll`/`upsert`/`bulk`/`district`（NLSC 座標→行政區代理）。
+- 行政區判定兩段式：瀏覽器直打 NLSC，被 CORS 擋則走後端 `district`；都失敗留空手填。
+- 前端 POST 刻意不帶 `Content-Type`（維持 simple request 避開 CORS preflight）。
+- 慣例對齊：對話框用 `appAlert`/`appConfirm`（原生已移除）、popup/清單輸出皆經 `esc()`、
+  照片 src 僅接受 `data:image/`。改檔屬實質改動 → 同步 bump `APP_VER` 與 `sw.js` CACHE。
+
+---
+
 ## 行程規劃（主系統，待辦頁「🗓 今日行程」）
 
 三個核心設計決定（程式在 index.html「TRIP PLANNER」區段）：
