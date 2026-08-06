@@ -618,6 +618,11 @@ tbody tr:hover{background:var(--surface-hover)}
       <div class="toolbar-left" id="status-pills" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
     </div>
     <div class="toolbar-left" id="region-bar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div class="toolbar-left" id="seg-bar" style="gap:6px;margin-bottom:8px">
+      <button class="pill pill-sm on" onclick="setSegFilter('all',this)">全部</button>
+      <button class="pill pill-sm" onclick="setSegFilter('街邊店',this)">🏪 街邊店</button>
+      <button class="pill pill-sm" onclick="setSegFilter('工廠',this)">🏭 工廠</button>
+    </div>
     <div class="search-bar">
       <input id="csearch" placeholder="搜尋客戶..." oninput="renderClients()">
       <select id="csort" onchange="renderClients()" style="width:auto">
@@ -695,7 +700,13 @@ tbody tr:hover{background:var(--surface-hover)}
       <div class="g2">
         <div class="f"><label class="lbl">地址</label><input id="cf-addr"></div>
         <div class="f"><label class="lbl">類型</label>
-          <select id="cf-type"><option value="">-</option><option>餐廳</option><option>診所</option><option>寵物</option><option>工廠</option><option>汽車</option><option>眼鏡行</option><option>接待中心</option><option>房仲</option><option>補習班</option><option>美容美甲</option><option>零售店</option><option>辦公室</option><option>遊樂場</option><option>其他</option></select>
+          <select id="cf-type"></select>
+        </div>
+      </div>
+      <div class="f"><label class="lbl">客戶分類</label>
+        <div id="cf-segment" style="display:flex;gap:6px">
+          <button type="button" class="pill" data-seg="街邊店" onclick="setCFSegment('街邊店')">🏪 街邊店</button>
+          <button type="button" class="pill" data-seg="工廠" onclick="setCFSegment('工廠')">🏭 工廠</button>
         </div>
       </div>
       <div class="g3">
@@ -1265,6 +1276,19 @@ tbody tr:hover{background:var(--surface-hover)}
     <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 開啟工業區CRM</a>
   </div>
   <div class="card">
+    <div class="form-section">客戶類別選項</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      建檔表單「類型」下拉的選項（例：餐飲、遊樂場…）。點 ✕ 移除、輸入新增；
+      既有客戶的舊類型不受影響（表單會照樣顯示）。
+    </div>
+    <div class="toolbar-left" id="typeopt-chips" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px">
+      <input id="typeopt-new" placeholder="新增類別，例：遊樂場" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="addTypeOpt()">新增</button>
+      <button class="btn btn-outline btn-sm" onclick="resetTypeOpts()">恢復預設</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="form-section">工地地圖</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
       「工地地圖」子系統（查詢頁右上角進入）：登記正在施工裝修的店面，和同事共享避免重複拜訪。
@@ -1463,7 +1487,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.28-z3';
+const APP_VERSION='v2026.07.28-z4';
 const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -1942,6 +1966,22 @@ const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber
 // 舊狀態顯示文字對應（新舊並存）
 // 未設定狀態一律視為「未拜訪」（舊「已結案」由 migration v3 與 validateClients 轉為「拒絕」，程式內不再映射）
 function displayStatus(s){return s||STATUS.UNVISITED;}
+// ── 客戶分類（街邊店/工廠）：同一系統管理、可切視角；工業區轉入=工廠、工地轉入=街邊店 ──
+function segOf(c){return c&&c.segment?c.segment:((c&&c.type)==='工廠'?'工廠':'街邊店');}
+let CF_SEGMENT='街邊店';
+function setCFSegment(seg){
+  CF_SEGMENT=seg;
+  document.querySelectorAll('#cf-segment .pill').forEach(b=>b.classList.toggle('on',b.dataset.seg===seg));
+}
+// ── 客戶類別選項：可在設定頁自訂（存本機 DB.typeOpts，含於 JSON 匯出；空=用預設）──
+const DEFAULT_TYPE_OPTS=['餐飲','小吃飲料','診所','寵物','工廠','汽車','眼鏡行','接待中心','房仲','補習班','美容美甲','零售店','辦公室','遊樂場','其他'];
+function typeOpts(){return (Array.isArray(DB.typeOpts)&&DB.typeOpts.length)?DB.typeOpts:DEFAULT_TYPE_OPTS;}
+function fillTypeOpts(current){
+  const el=document.getElementById('cf-type');if(!el)return;
+  const opts=typeOpts().slice();
+  if(current&&opts.indexOf(current)<0)opts.push(current); // 舊值不在清單也要能顯示
+  el.innerHTML='<option value="">-</option>'+opts.map(t=>`<option${t===current?' selected':''}>${escHtml(t)}</option>`).join('');
+}
 const CB_STYLE={'拖把':_SS('purple'),'地墊':_SS('blue'),'芳香':_SS('green')};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||_SS('gray');return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 // 新設計：客戶列表卡片專用 — 狀態圓角膠囊（含圓點），放在卡片右上角
@@ -2496,7 +2536,26 @@ function fmtDate(d){
 }
 function today(){return fmtDate();
 }
+function renderTypeOptsUI(){
+  const el=document.getElementById('typeopt-chips');if(!el)return;
+  el.innerHTML=typeOpts().map(t=>`<span class="pill pill-sm" style="gap:4px">${escHtml(t)} <button onclick="removeTypeOpt('${escHtml(t)}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0">✕</button></span>`).join('');
+}
+function addTypeOpt(){
+  const inp=document.getElementById('typeopt-new');
+  const v=(inp.value||'').trim();if(!v)return;
+  const opts=typeOpts().slice();
+  if(opts.indexOf(v)<0){opts.push(v);DB.typeOpts=opts;saveLocal();}
+  inp.value='';renderTypeOptsUI();showToast('已新增類別「'+v+'」');
+}
+function removeTypeOpt(t){
+  DB.typeOpts=typeOpts().filter(x=>x!==t);saveLocal();renderTypeOptsUI();
+}
+async function resetTypeOpts(){
+  if(!await appConfirm('把類別選項恢復成預設清單？（既有客戶資料不受影響）'))return;
+  DB.typeOpts=null;saveLocal();renderTypeOptsUI();showToast('已恢復預設');
+}
 function initSettings(){
+  renderTypeOptsUI();
   const p=getProfile();
   const setv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
   setv('pf-office',p.office);setv('pf-dept',p.dept);setv('pf-contact',p.contact);
@@ -4086,12 +4145,20 @@ function setClientView(v){
   }
 }
 
+let SEG_FILTER='all'; // 街邊店/工廠 視角（session 內記住）
+function setSegFilter(v,btn){
+  SEG_FILTER=v;
+  document.querySelectorAll('#seg-bar .pill').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderClients();
+}
 function renderClients(){
   initPills();   // 藥丸數量隨資料即時更新
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
   let list=DB.clients.map((c,i)=>({c,i}));
   list=list.filter(({c})=>matchCategory(c));
+  if(SEG_FILTER!=='all')list=list.filter(({c})=>segOf(c)===SEG_FILTER);
   // 狀態開關過濾（所有分類都生效；但已明確鎖定單一狀態的視角要跳過，
   // 否則使用者在 ⚙️ 隱藏了該狀態時，這些分類會整頁空白、令人困惑）：
   //   - 「全部」已選特定狀態子篩選
@@ -4192,7 +4259,7 @@ function renderClients(){
     return`${regionHead}<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
-        <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
+        <div class="cc-name">${segOf(c)==='工廠'?'🏭 ':''}${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
         ${statusPill(displayStatus(c.status))}
       </div>
       <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
@@ -4233,7 +4300,8 @@ function openCF(idx){
   document.getElementById('cf-phone').value=c?.phone||'';
   document.getElementById('cf-regno').value=c?.regNo||'';
   document.getElementById('cf-addr').value=c?.addr||'';
-  document.getElementById('cf-type').value=c?.type||'';
+  fillTypeOpts(c?.type||'');
+  setCFSegment(c?segOf(c):'街邊店');
   document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.UNVISITED;
   // 試用日：優先用存的 c.trialDate，否則 fallback 自動推算
   document.getElementById('cf-trialdate').value=c?.trialDate||(c?trialStartDate(c):'')||'';
@@ -4504,6 +4572,7 @@ async function saveClient(){
       regNo:document.getElementById('cf-regno').value.trim(),
       addr:document.getElementById('cf-addr').value,
       type:document.getElementById('cf-type').value,
+      segment:CF_SEGMENT,
       status:document.getElementById('cf-status').value,
       nextdate:document.getElementById('cf-nextdate').value,
       env:document.getElementById('cf-env').value,
@@ -4550,6 +4619,7 @@ async function saveClient(){
       const prev=DB.clients[S.editIdx];
       c.id=prev.id||genId();
       c.visits=prev.visits||[];
+      if(prev.srcSiteId)c.srcSiteId=prev.srcSiteId;
       // 保留座標，若地址改變則清空重新定位
       if(prev.addr===c.addr&&prev.lat){
         c.lat=prev.lat; c.lng=prev.lng;
@@ -6277,6 +6347,35 @@ function renderTrip(){
     });
     html+='</details>';
   }
+  // ═══ 融合視圖：工地與工業區的「今天」（唯讀鏡射，點了行動或跳轉）═══
+  const dueSites=fusionDueSites();
+  if(dueSites.length){
+    html+=`<div class="form-section" style="margin-top:14px">🏗 可拜訪的工地（${dueSites.length}）— 開幕就是最佳拜訪時機</div>`;
+    dueSites.slice(0,8).forEach(st=>{
+      html+=`<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(st.name||'未命名')}</div>
+          <div style="font-size:11.5px;color:var(--text3)">${escHtml([st.town,st.stage].filter(Boolean).join('・'))}・可拜訪 ${escHtml(st.openDate)}${st.by?'・'+escHtml(st.by)+' 登記':''}</div>
+        </div>
+        <a class="btn btn-outline btn-xs" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}">🧭</a>
+        <button class="btn btn-primary btn-xs" onclick="mainConvertSite('${escHtml(st.id)}')">📇 轉為客戶</button>
+      </div>`;
+    });
+    if(dueSites.length>8)html+=`<div style="font-size:11.5px;color:var(--text3);margin:2px 0 6px">…還有 ${dueSites.length-8} 個，<a href="sitemap.html" style="color:var(--green)">開工地地圖看全部</a></div>`;
+  }
+  const izDue=fusionIzDue();
+  if(izDue.length){
+    html+=`<div class="form-section" style="margin-top:14px">🏭 工業區待訪（${izDue.length}）</div>`;
+    izDue.slice(0,8).forEach(r=>{
+      html+=`<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.name)}</div>
+          <div style="font-size:11.5px;color:var(--text3)">${escHtml(r.dist||'')}${r.date?'・約 '+escHtml(r.date):''}</div>
+        </div>
+        <a class="btn btn-outline btn-xs" href="izcrm.html" style="text-decoration:none">開啟 →</a>
+      </div>`;
+    });
+  }
   el.innerHTML=html;
 }
 function tripPickDist(r){
@@ -6324,7 +6423,7 @@ function consumeIzHandoff(){
     if(!h||!h.id||!h.name)return;
     if(DB.clients.some(c=>c&&c.id===h.id))return;
     const c={id:h.id,name:String(h.name),contact:String(h.contact||''),phone:String(h.phone||''),
-      addr:String(h.addr||''),type:'工廠',status:STATUS.UNVISITED,regNo:'',nextdate:'',env:'',
+      addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.UNVISITED,regNo:'',nextdate:'',env:'',
       note:String(h.note||''),trialItems:[],contractedItems:[],todos:[],visits:[],
       lat:null,lng:null,geocodeSource:null,updatedAt:Date.now()};
     DB.clients.push(c);n++;
@@ -6347,9 +6446,10 @@ function consumeSiteHandoff(){
   inbox.forEach(h=>{
     if(!h||!h.id||!(h.name||h.addr))return;
     if(DB.clients.some(c=>c&&c.id===h.id))return;
+    if(h.siteId&&DB.clients.some(c=>c&&c.srcSiteId===h.siteId))return; // 主系統端已轉過同一工地
     const hasGeo=(typeof h.lat==='number'&&typeof h.lng==='number');
     const c={id:h.id,name:String(h.name||h.addr),contact:'',phone:'',
-      addr:String(h.addr||''),type:String(h.type||''),status:STATUS.UNVISITED,regNo:'',
+      addr:String(h.addr||''),type:String(h.type||''),segment:'街邊店',srcSiteId:String(h.siteId||''),status:STATUS.UNVISITED,regNo:'',
       nextdate:String(h.nextdate||''),env:'',note:String(h.note||''),
       trialItems:[],contractedItems:[],todos:[],visits:[],
       lat:hasGeo?h.lat:null,lng:hasGeo?h.lng:null,
@@ -6361,6 +6461,58 @@ function consumeSiteHandoff(){
   });
   localStorage.removeItem('duskin_site_handoff');
   if(n){saveLocal();renderClients();showToast('已從工地地圖帶入 '+n+' 家新客戶');}
+}
+// ═══ 融合視圖（唯讀鏡射）：工地與工業區的「今天」入行程 ═══
+function fusionDueSites(){
+  try{
+    const sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null');
+    if(!sm||!Array.isArray(sm.sites))return[];
+    const td=today();
+    return sm.sites.filter(s=>s&&!s.deleted&&!(s.main&&s.main.clientId)
+      &&typeof s.lat==='number'&&s.openDate&&s.openDate<=td
+      &&['已拜訪','不適合'].indexOf(s.stage)<0
+      &&!DB.clients.some(c=>c&&c.srcSiteId===s.id))
+      .sort((a,b)=>(a.openDate<b.openDate?-1:1));
+  }catch(e){return[];}
+}
+function fusionIzDue(){
+  try{
+    const iz=JSON.parse(localStorage.getItem('izcrm_v1')||'null');
+    if(!iz||!iz.records)return[];
+    const td=today();
+    const due=Object.keys(iz.records).filter(id=>{const r=iz.records[id];return r&&r.visitPlan&&r.visitPlan.date&&r.visitPlan.date<=td;});
+    if(!due.length)return[];
+    const names={};
+    try{const m=JSON.parse(localStorage.getItem('izcrm_master')||'null');
+      if(m&&Array.isArray(m.factories))m.factories.forEach(f=>{if(f&&f.id)names[f.id]={name:f.name||'',dist:f.dist||''};});}catch(e){}
+    return due.map(id=>({id,name:(names[id]&&names[id].name)||('工廠（開工業區CRM 看名稱）'),dist:(names[id]&&names[id].dist)||'',date:iz.records[id].visitPlan.date}));
+  }catch(e){return[];}
+}
+// 工地 → 正規客戶卡（主系統端一鍵轉）：建檔走正規流程上雲；
+// 以回執信箱 duskin_site_ack 通知 sitemap 標記 s.main（單向、冪等，同事經雲端看得到已建檔）
+function mainConvertSite(siteId){
+  let sm=null;try{sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null');}catch(e){}
+  const s=sm&&Array.isArray(sm.sites)?sm.sites.find(x=>x&&x.id===siteId&&!x.deleted):null;
+  if(!s){showToast('找不到這個工地（可能已被刪除）');return;}
+  if((s.main&&s.main.clientId)||DB.clients.some(c=>c&&c.srcSiteId===siteId)){showToast('這個工地已經建檔過');return;}
+  const town=s.town||'';
+  const addr=(s.addr&&s.addr.indexOf(town)===0)?s.addr:[town,s.addr].filter(Boolean).join('');
+  const hasGeo=(typeof s.lat==='number'&&typeof s.lng==='number');
+  const c={id:genId(),name:s.name||addr||'工地新店',contact:'',phone:'',
+    addr,type:(s.type&&s.type!=='不確定')?s.type:'',segment:'街邊店',srcSiteId:siteId,
+    status:STATUS.UNVISITED,regNo:'',nextdate:s.openDate||'',env:'',
+    note:['（工地地圖轉入）',s.stage||'',s.note||''].filter(Boolean).join('　'),
+    trialItems:[],contractedItems:[],todos:[],visits:[],
+    lat:hasGeo?s.lat:null,lng:hasGeo?s.lng:null,
+    geocodeSource:hasGeo?'manual':null,geocodedAt:hasGeo?Date.now():null,
+    updatedAt:Date.now()};
+  DB.clients.push(c);saveLocal();autoSync('save',{client:c});
+  let ack=[];try{ack=JSON.parse(localStorage.getItem('duskin_site_ack')||'[]');}catch(e){}
+  if(!Array.isArray(ack))ack=[];
+  ack.push({siteId,clientId:c.id});
+  try{localStorage.setItem('duskin_site_ack',JSON.stringify(ack));}catch(e){}
+  renderClients();try{renderTrip();}catch(e){}
+  showToast('✓ 已轉為客戶：'+c.name+'（拜訪日 '+(c.nextdate||'未定')+'）');
 }
 // izcrm／sitemap 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
 window.addEventListener('storage',e=>{if(e.key==='duskin_iz_handoff'&&e.newValue)consumeIzHandoff();});
@@ -6399,6 +6551,7 @@ const MIGRATIONS=[
   {v:5, desc:'backfill inventory cat', fn:backfillInventoryCat},
   {v:6, desc:'remove deprecated fw4 field', fn:removeDeprecatedFw4},
   {v:7, desc:'add geocode fields', fn:prepareGeocodeFields},
+  {v:8, desc:'add client segment', fn:function(){(DB.clients||[]).forEach(c=>{if(c&&!c.segment)c.segment=(c.type==='工廠'?'工廠':'街邊店');});}},
 ];
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);

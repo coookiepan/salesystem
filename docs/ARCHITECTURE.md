@@ -377,6 +377,25 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 
 ---
 
+## 深度融合：統一行程與回執信箱
+
+融合「視圖」不融合「資料庫」（個人/共享權限邊界不動）。機制全部是既有模式的複用：
+
+- **統一行程**：`renderTrip()` 尾端以唯讀鏡射列出 `fusionDueSites()`（sitemap_v1 中
+  openDate 到期、未建檔、未刪除的工地）與 `fusionIzDue()`（izcrm_v1 有到期 visitPlan 的
+  工廠，名稱從 izcrm_master 快取解出）。首頁行程卡顯示兩者數量。
+- **主系統端轉為客戶**：`mainConvertSite(siteId)` 走正規建檔流程（segment=街邊店、
+  nextdate=openDate、GPS 座標標 manual、srcSiteId 記來源），並寫**回執信箱**
+  `duskin_site_ack`；sitemap 以 `consumeMainAck()`（啟動/storage/回前景同組 hook）標記
+  `s.main` 並 push 上雲。與 sitemap 端「📇 建檔到主系統」雙路徑互相冪等
+  （`s.main` ∪ `srcSiteId` 雙保險）。
+- **客戶分類 segment**（街邊店/工廠）：migration v8 回填（type=工廠→工廠）；
+  IZ 轉入=工廠、工地轉入=街邊店；列表 `SEG_FILTER` 視角、卡片 🏭 徽章。
+- **類別選項**：`DB.typeOpts`（僅本機、含於 JSON 匯出；空＝`DEFAULT_TYPE_OPTS`），
+  設定頁增刪；表單下拉動態填充，舊值不在清單仍可顯示。
+
+---
+
 ## 首頁樞紐（home.html）
 
 四系統的入口與每日儀表板。**唯讀鏡射**：直接讀 `duskin_v2` / `duskin_outbox` /

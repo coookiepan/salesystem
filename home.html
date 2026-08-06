@@ -129,6 +129,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
       </div>
       <div class="stops" id="t-stops"></div>
       <div class="overdue" id="t-overdue" style="display:none">⏰ 逾期 <b class="num" id="t-od">0</b> 家未處理<a href="index.html#trip">處理</a></div>
+      <div class="overdue" id="t-fusion" style="display:none;background:var(--ss-amber-bg);color:var(--ss-amber-fg)"><span id="t-fusion-txt"></span><a href="index.html#trip">看行程</a></div>
       <div class="trip-act">
         <a class="btn btn-primary" href="index.html#trip">開始跑 →</a>
         <a class="btn btn-outline" href="index.html#trip">＋順路</a>
@@ -201,7 +202,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
    duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
    只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
    ══════════════════════════════════════════════════════════ */
-const HOME_VERSION='v2026.07.28-h2';
+const HOME_VERSION='v2026.07.28-h3';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readJSON(key,fallback){
@@ -281,6 +282,26 @@ if(overdue.length){
   document.getElementById('t-od').textContent=overdue.length;
 }
 document.getElementById('s-od').textContent=overdue.length;
+
+/* ── 融合：工地可拜訪＋工業區待訪（唯讀鏡射，數字掛在行程卡上）── */
+(function(){
+  let dueSites=0,izDue=0;
+  const clientSiteIds=new Set(clients.map(c=>c&&c.srcSiteId).filter(Boolean));
+  sites.forEach(s=>{
+    if(s.openDate&&s.openDate<=TODAY&&['已拜訪','不適合'].indexOf(s.stage)<0
+       &&!(s.main&&s.main.clientId)&&!clientSiteIds.has(s.id))dueSites++;
+  });
+  if(iz&&iz.records)Object.values(iz.records).forEach(r=>{
+    if(r&&r.visitPlan&&r.visitPlan.date&&r.visitPlan.date<=TODAY)izDue++;
+  });
+  if(dueSites||izDue){
+    const parts=[];
+    if(dueSites)parts.push('🏗 '+dueSites+' 個工地可拜訪');
+    if(izDue)parts.push('🏭 '+izDue+' 家工廠待訪');
+    document.getElementById('t-fusion-txt').textContent=parts.join('　');
+    document.getElementById('t-fusion').style.display='flex';
+  }
+})();
 
 /* ── 試用該收 / 今日待辦 ── */
 const trialDue=clients.filter(c=>{

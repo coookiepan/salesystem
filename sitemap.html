@@ -304,7 +304,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
    底圖：內政部國土測繪中心 臺灣通用電子地圖 / 航照，皆免費免金鑰
    ══════════════════════════════════════════════════════════ */
 
-const APP_VER='v2026.07.28-s3';
+const APP_VER='v2026.07.28-s4';
 
 /* ── Apps Script 後端程式碼（設定頁可一鍵複製） ── */
 const GAS_CODE=[
@@ -1073,6 +1073,30 @@ setTimeout(()=>{
 },600);
 window.addEventListener('online',()=>{ flushQueue(); pullAll(true); });
 setInterval(()=>{ if(CFG.url&&navigator.onLine) pullAll(true); },180000);
+
+// ══ 主系統回執信箱（單向：main → sitemap）══
+// 主系統行程頁「📇 轉為客戶」後寫 duskin_site_ack；這裡消化並把工地標記
+// s.main={clientId}（隨雲端同步，同事看得到「已建檔」）。冪等：已標記者跳過。
+function consumeMainAck(){
+  let ack=[];
+  try{ ack=JSON.parse(localStorage.getItem('duskin_site_ack')||'[]'); }catch(e){}
+  if(!Array.isArray(ack)||!ack.length) return;
+  let n=0;
+  ack.forEach(a=>{
+    if(!a||!a.siteId||!a.clientId) return;
+    const s=DB.sites.find(x=>x&&x.id===a.siteId);
+    if(!s||(s.main&&s.main.clientId)) return;
+    s.main={clientId:a.clientId}; s.updated=Date.now(); n++;
+    push(s);
+  });
+  localStorage.removeItem('duskin_site_ack');
+  if(n){ save(); renderMarkers(); renderList(); toast('✓ '+n+' 個工地已在主系統建檔'); }
+}
+consumeMainAck();
+window.addEventListener('storage',e=>{ if(e.key==='duskin_site_ack'&&e.newValue) consumeMainAck(); });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') consumeMainAck(); });
+window.addEventListener('pageshow',consumeMainAck);
+window.addEventListener('focus',consumeMainAck);
 
 // 首頁深連結：home.html「登記工地」→ sitemap.html#place 直接進 GPS 放點
 if(location.hash==='#place'){
