@@ -41,9 +41,10 @@ function boot(html, store, url) {
   console.log('H3 — 整合接點靜態檢查');
   assert('manifest start_url 指向首頁', manifest.start_url === './home.html');
   assert('sw 預快取 home.html', swJs.includes("'./home.html'"));
-  assert('主系統底部導覽有 🏠 首頁', mainHtml.includes('id="nav-home"') && mainHtml.includes("location.href='home.html'"));
-  assert('工地地圖底部導覽有 🏠 首頁', smHtml.includes('id="nav-home"'));
-  assert('工業區CRM 底部導覽有 🏠 首頁', izHtml.includes("location.href='home.html'"));
+  const navJs = fs.readFileSync(path.join(root, 'nav.js'), 'utf8');
+  assert('四頁都掛全域導覽 nav.js（data-page 正確）', mainHtml.includes('nav.js" data-page="clients"') && smHtml.includes('nav.js" data-page="site"') && izHtml.includes('nav.js" data-page="iz"') && homeHtml.includes('nav.js" data-page="home"'));
+  assert('全域導覽五格齊全（單色 SVG、無 emoji）', ['首頁','客戶','行程','工地','工業區'].every(t => navJs.includes(t)) && !/[\u{1F300}-\u{1FAFF}]/u.test(navJs));
+  assert('主系統內部導覽已置頂（sticky）且無首頁鈕', mainHtml.includes('#app-nav{position:sticky') && !mainHtml.includes('id="nav-home"'));
   assert('工地地圖支援 #place 深連結', smHtml.includes("location.hash==='#place'") && smHtml.includes('startPlaceGPS'));
   assert('home 註冊 Service Worker、連 manifest', /serviceWorker.+register\(\s*['"]sw\.js['"]/s.test(homeHtml) && homeHtml.includes('rel="manifest"'));
 

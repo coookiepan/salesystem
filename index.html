@@ -21,48 +21,25 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 </script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="tokens.css">
+<script src="nav.js" data-page="clients" defer></script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    DESIGN TOKENS
    ═══════════════════════════════════════════════════════════ */
 :root{
   /* Brand (single accent) */
-  --green:#12A673;--green-d:#0A6849;--green-l:#E3F4ED;--green-b:#A1DFC7;
-  --theme:#085041;  /* PWA theme / logo plate / deal */
+    /* PWA theme / logo plate / deal */
   /* Semantic (muted) */
-  --red:#B73838;--red-l:#FBEAEA;
-  --amber:#B5701A;--amber-l:#FAEEDA;--amber-d:#633806;
-  --blue:#2A6BB0;--blue-l:#E6F0FA;--blue-d:#0C447C;
-  --purple-l:#EEEDFE;--purple-d:#3C3489;
-  --yellow:#BA7517;--yellow-b:#EF9F27;
+      --yellow:#BA7517;--yellow-b:#EF9F27;
   /* Alert borders */
-  --amber-b:#FAC775;--red-b:#F7C1C1;--blue-b:#B5D4F4;
-  /* Status badge palette（深色模式於下方覆寫） */
-  --ss-gray-bg:#F1EFE8;--ss-gray-fg:#444441;
-  --ss-blue-bg:#E6F1FB;--ss-blue-fg:#0C447C;
-  --ss-amber-bg:#FAEEDA;--ss-amber-fg:#633806;
-  --ss-purple-bg:#EEEDFE;--ss-purple-fg:#3C3489;
-  --ss-green-bg:#E1F5EE;--ss-green-fg:#085041;
-  --ss-green2-bg:#D4EDDA;--ss-green2-fg:#155724;
-  --ss-red-bg:#FCEBEB;--ss-red-fg:#A32D2D;
-  /* Neutrals (warm) */
-  --bg:#ffffff;--bg2:#F8F8F5;--bg3:#EFEEE9;
-  --text:#14140F;--text2:#56564F;--text3:#8F8F87;
-  --border:#E8E7E0;--border2:#D4D3CB;
-  --surface-hover:#F9F9F5;
-  /* Radius scale */
-  --r-sm:6px;--r:10px;--r-lg:14px;
-  --radius:var(--r);--radius-sm:var(--r-sm);--radius-lg:var(--r-lg);
+     /* Status badge palette（深色模式於下方覆寫） */
+    /* Neutrals (warm) */
+     /* Radius scale */
+     --radius:var(--r);--radius-sm:var(--r-sm);--radius-lg:var(--r-lg);
   /* Shadow (minimal) */
-  --shadow-sm:0 1px 2px rgba(20,20,15,.04);
-  --shadow:0 1px 3px rgba(20,20,15,.05);
-  --shadow-md:0 4px 14px rgba(20,20,15,.07);
-  --shadow-lg:0 12px 32px rgba(20,20,15,.14);
-  --ring:0 0 0 3px rgba(18,166,115,.18);
-  --ease:cubic-bezier(.22,.61,.36,1);
-  /* Type — Inter (Latin) + Noto Sans TC (CJK), then native stack */
-  --font-sans:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Microsoft JhengHei',sans-serif;
-  --font-num:var(--font-sans);
+     /* Type — Inter (Latin) + Noto Sans TC (CJK), then native stack */
+   --font-num:var(--font-sans);
   /* Semantic type scale (size / weight / tracking) */
   --fs-base:14.5px;--lh-base:1.55;--fs-input:14px;
   --fs-page-title:20px;--fw-page-title:600;--tr-page-title:-.012em;
@@ -77,29 +54,7 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 }
 @media(prefers-color-scheme:dark){
   :root{
-    --bg:#1A1B19;--bg2:#121311;--bg3:#25262A;
-    --text:#ECECE7;--text2:#A4A49C;--text3:#6A6A63;
-    --border:#292A26;--border2:#3A3A34;
-    --surface-hover:#242520;
-    --green:#1AB180;--green-d:#7BDFBA;--green-l:#163A2C;--green-b:#2A6551;
-    --red:#E66B6B;--red-l:#3A1F1F;
-    --amber-l:#3A2F1A;--amber-d:#F0C878;
-    --blue-l:#1A2A3D;--blue-d:#9ECCFF;
-    --purple-l:#24223D;--purple-d:#C5C0FA;
-    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
-    --shadow:0 1px 3px rgba(0,0,0,.4);
-    --shadow-md:0 4px 14px rgba(0,0,0,.5);
-    --shadow-lg:0 12px 32px rgba(0,0,0,.6);
-    --ring:0 0 0 3px rgba(26,177,128,.3);
-    --amber-b:#54431F;--red-b:#553030;--blue-b:#2A3F58;
-    --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
-    --ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
-    --ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
-    --ss-purple-bg:#24223D;--ss-purple-fg:#C5C0FA;
-    --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;
-    --ss-green2-bg:#17361F;--ss-green2-fg:#8FD9A8;
-    --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;
-  }
+          }
   body{background:var(--bg2)!important}
 }
 
@@ -378,16 +333,15 @@ tbody tr:hover{background:var(--surface-hover)}
 /* ═══════════════════════════════════════════════════════════
    NAVIGATION — simple, no glow
    ═══════════════════════════════════════════════════════════ */
-#app-nav{position:fixed;bottom:0;left:0;right:0;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+#app-nav{position:sticky;top:32px;margin-top:32px;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid var(--border);display:flex;z-index:100}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:10.5px;font-family:inherit;transition:color .12s var(--ease);font-weight:500;letter-spacing:.01em}
 .nav-btn.on{color:var(--text)}
 .nav-btn.on svg{color:var(--green)}
 .nav-btn:active{background:var(--bg2)}
 .nav-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#content{padding:40px 0 calc(68px + env(safe-area-inset-bottom)) 0}
+#content{padding:10px 0 24px 0}
 
 @media(min-width:700px){
-  #app-nav{position:sticky;top:32px;bottom:auto;border-top:none;border-bottom:1px solid var(--border);padding-bottom:0;z-index:100;background:color-mix(in srgb,var(--bg) 94%,transparent)}
   .nav-btn{flex-direction:row;gap:7px;padding:13px 18px;font-size:13.5px;justify-content:center;border-bottom:2px solid transparent;margin-bottom:-1px}
   .nav-btn.on{border-bottom-color:var(--green)}
   .nav-btn svg{width:17px;height:17px}
@@ -497,7 +451,14 @@ tbody tr:hover{background:var(--surface-hover)}
 /* leaflet marker override for cleaner look */
 .duskin-marker{border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);width:16px!important;height:16px!important;display:flex;align-items:center;justify-content:center}
 .duskin-marker.has-todo::after{content:'';position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
+.seg-ic{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-1px;color:var(--text3)}
 .duskin-marker.geo-approx{border-style:dashed;opacity:.85} /* 模糊定位（路段/概略）→ 虛線框提示可修正 */
+/* 工地地圖模式：地圖上直接建檔（FAB＋確認列覆蓋於地圖之上，z>1 即可蓋過 #leaflet-map） */
+#map-stage{position:relative}
+#map-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;background:var(--green);color:#fff;border:none;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;font-family:inherit;box-shadow:var(--shadow-md);cursor:pointer;display:flex;align-items:center;gap:6px}
+#map-fab:active{background:var(--green-d)}
+#map-place-bar{position:absolute;left:10px;right:10px;bottom:12px;z-index:6;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-md);padding:12px}
+#map-place-msg{font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5}
 
 /* ═══════════════════════════════════════════════════════════
    INVENTORY ITEM
@@ -607,10 +568,6 @@ tbody tr:hover{background:var(--surface-hover)}
 <div id="sync-status"></div>
 
 <nav id="app-nav">
-  <button class="nav-btn" onclick="location.href='home.html'" id="nav-home">
-    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    首頁
-  </button>
   <button class="nav-btn on" onclick="navTo('clients',this)" id="nav-clients">
     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     客戶
@@ -642,14 +599,14 @@ tbody tr:hover{background:var(--surface-hover)}
 <!-- ═══ CLIENTS ═══ -->
 <div class="panel on" id="panel-clients">
   <div id="view-list">
-    <div id="pull-banner" style="display:none"><span>🌥</span><div class="pb-txt">今天還沒從雲端拉最新資料，可能不是最新版本</div><button class="btn btn-primary btn-xs" onclick="pullAndDismiss()">拉最新</button><button class="pb-close" onclick="dismissPullBanner()" aria-label="關閉提示">×</button></div>
+    <div id="pull-banner" style="display:none"><span></span><div class="pb-txt">今天還沒從雲端拉最新資料，可能不是最新版本</div><button class="btn btn-primary btn-xs" onclick="pullAndDismiss()">拉最新</button><button class="pb-close" onclick="dismissPullBanner()" aria-label="關閉提示">×</button></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
       <div class="cv-switch" style="margin-bottom:0">
         <button class="cv-sw on" onclick="setClientView('list')"><svg aria-hidden="true" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>清單</button>
         <button class="cv-sw" onclick="setClientView('map')"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>地圖</button>
       </div>
       <div style="margin-left:auto;display:flex;gap:8px;flex-shrink:0">
-        <button class="btn btn-outline btn-sm" onclick="openStatusFilterModal()" title="狀態篩選" aria-label="狀態篩選">⚙️</button>
+        <button class="btn btn-outline btn-sm" onclick="openStatusFilterModal()" title="狀態篩選" aria-label="狀態篩選"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg></button>
         <button class="btn btn-primary btn-sm" onclick="openCF(-1)">+ 新增</button>
       </div>
     </div>
@@ -658,6 +615,11 @@ tbody tr:hover{background:var(--surface-hover)}
       <div class="toolbar-left" id="status-pills" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
     </div>
     <div class="toolbar-left" id="region-bar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div class="toolbar-left" id="seg-bar" style="gap:6px;margin-bottom:8px">
+      <button class="pill pill-sm on" onclick="setSegFilter('all',this)">全部</button>
+      <button class="pill pill-sm" onclick="setSegFilter('街邊店',this)">街邊店</button>
+      <button class="pill pill-sm" onclick="setSegFilter('工廠',this)">工廠</button>
+    </div>
     <div class="search-bar">
       <input id="csearch" placeholder="搜尋客戶..." oninput="renderClients()">
       <select id="csort" onchange="renderClients()" style="width:auto">
@@ -680,7 +642,7 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="map-toolbar">
       <div id="geo-progress" style="display:none">
         <div class="gp-main">
-          <span class="gp-ico">🔍</span>
+          <span class="gp-ico"></span>
           <div class="gp-body">
             <div class="gp-row1"><span class="gp-label">定位中…</span><span class="gp-txt">0 / 0</span></div>
             <div class="gp-bar"><div class="gp-fill" style="width:0%"></div></div>
@@ -703,7 +665,17 @@ tbody tr:hover{background:var(--surface-hover)}
         <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 家</span>
       </div>
     </div>
-    <div id="leaflet-map"></div>
+    <div id="map-stage">
+      <div id="leaflet-map"></div>
+      <button id="map-fab" onclick="startClientPlace()">＋ 在這裡建檔</button>
+      <div id="map-place-bar" style="display:none">
+        <div id="map-place-msg"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-outline btn-sm" onclick="cancelClientPlace()">取消</button>
+          <button class="btn btn-primary btn-sm" onclick="confirmClientPlace()">位置就是這裡 →</button>
+        </div>
+      </div>
+    </div>
     <div id="failed-geocode" class="map-failed" style="display:none"></div>
   </div>
 
@@ -725,7 +697,13 @@ tbody tr:hover{background:var(--surface-hover)}
       <div class="g2">
         <div class="f"><label class="lbl">地址</label><input id="cf-addr"></div>
         <div class="f"><label class="lbl">類型</label>
-          <select id="cf-type"><option value="">-</option><option>餐廳</option><option>診所</option><option>寵物</option><option>工廠</option><option>汽車</option><option>眼鏡行</option><option>接待中心</option><option>房仲</option><option>補習班</option><option>美容美甲</option><option>零售店</option><option>辦公室</option><option>遊樂場</option><option>其他</option></select>
+          <select id="cf-type"></select>
+        </div>
+      </div>
+      <div class="f"><label class="lbl">客戶分類</label>
+        <div id="cf-segment" style="display:flex;gap:6px">
+          <button type="button" class="pill" data-seg="街邊店" onclick="setCFSegment('街邊店')">街邊店</button>
+          <button type="button" class="pill" data-seg="工廠" onclick="setCFSegment('工廠')">工廠</button>
         </div>
       </div>
       <div class="g3">
@@ -778,9 +756,9 @@ tbody tr:hover{background:var(--surface-hover)}
           <div style="font-size:13px;color:var(--text2);margin-top:3px;overflow-wrap:anywhere" id="cd-sub"></div>
         </div>
         <div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end">
-          <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">🗺 地圖</button>
-          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="startQuoteDoc()" title="產生報價單 Word（分步精靈）">📄 報價單</button>
-          <button class="btn btn-primary btn-sm" id="cd-contract-btn" onclick="startContractDoc()" title="製作公版 DUSKIN商品租賃契約書（分步精靈）">📑 產生合約</button>
+          <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">地圖</button>
+          <button class="btn btn-outline btn-sm" id="cd-cm-btn" onclick="startQuoteDoc()" title="產生報價單 Word（分步精靈）">報價單</button>
+          <button class="btn btn-primary btn-sm" id="cd-contract-btn" onclick="startContractDoc()" title="製作公版 DUSKIN商品租賃契約書（分步精靈）">產生合約</button>
           <button class="btn btn-outline btn-sm" onclick="editCur()">編輯</button>
           <button class="btn btn-danger btn-sm" onclick="delCur()">刪除</button>
         </div>
@@ -795,7 +773,7 @@ tbody tr:hover{background:var(--surface-hover)}
       <div id="cd-phone-w" style="display:none"><div class="detail-label">電話</div><div class="detail-val" id="cd-phone"></div></div>
       <div id="cd-env-w" style="display:none"><div class="detail-label">環境觀察</div><div class="detail-val" id="cd-env"></div></div>
       <div id="cd-note-w" style="display:none"><div class="detail-label">備註</div><div class="detail-val" id="cd-note"></div></div>
-      <div id="cd-tri-w"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="detail-label" style="margin-bottom:0">試用 / 成約品項</div><button class="btn btn-outline btn-xs" onclick="openCDItems()">✏️ 編輯品項</button></div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
+      <div id="cd-tri-w"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="detail-label" style="margin-bottom:0">試用 / 成約品項</div><button class="btn btn-outline btn-xs" onclick="openCDItems()">編輯品項</button></div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -811,17 +789,17 @@ tbody tr:hover{background:var(--surface-hover)}
       </div>
       <div id="vl-form" style="display:none;background:var(--bg2);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
         <div class="f"><label class="lbl">拜訪日期</label><input id="vl-date" type="date" onchange="updVLMode()"></div>
-        <div id="vl-future-hint" style="display:none;font-size:13px;color:var(--green-d);background:var(--green-l);border-radius:6px;padding:8px 12px;margin-bottom:10px">🗓️ 未來日期 → 將設為下次拜訪日</div>
+        <div id="vl-future-hint" style="display:none;font-size:13px;color:var(--green-d);background:var(--green-l);border-radius:6px;padding:8px 12px;margin-bottom:10px">未來日期 → 將設為下次拜訪日</div>
         <div id="vl-extra">
           <div class="f"><label class="lbl">狀態更新</label>
             <select id="vl-status"><option value="">不更新</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已轉交</option><option>拒絕</option></select>
           </div>
           <div class="f"><label class="lbl" style="margin-bottom:6px">心情</label>
             <div class="mood-row">
-              <button class="mood-btn" id="vm1" onclick="setMood(1)">😞</button>
-              <button class="mood-btn" id="vm2" onclick="setMood(2)">😐</button>
-              <button class="mood-btn on" id="vm3" onclick="setMood(3)">😊</button>
-              <button class="mood-btn" id="vm4" onclick="setMood(4)">😄</button>
+              <button class="mood-btn" id="vm1" onclick="setMood(1)">差</button>
+              <button class="mood-btn" id="vm2" onclick="setMood(2)">普</button>
+              <button class="mood-btn on" id="vm3" onclick="setMood(3)">好</button>
+              <button class="mood-btn" id="vm4" onclick="setMood(4)">優</button>
             </div>
           </div>
           <div class="g2">
@@ -844,7 +822,7 @@ tbody tr:hover{background:var(--surface-hover)}
   <div class="page-title">今日日報</div>
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="daily-date" type="date" style="width:auto" onchange="renderDaily()">
-    <button class="btn btn-outline btn-sm" onclick="openReportModal()">📋 產出報表</button>
+    <button class="btn btn-outline btn-sm" onclick="openReportModal()">產出報表</button>
   </div>
   <div class="stat-grid">
     <div class="scard"><div class="snum" id="ds-v">0</div><div class="slbl">拜訪軒數</div><div class="prog"><div class="prog-f" id="dp-v" style="width:0%"></div></div><div class="prog-hint">目標 15</div></div>
@@ -858,7 +836,7 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="cm-overlay" id="cm-modal">
   <div class="cm-panel">
     <header class="cm-head">
-      <h3>📋 產生報價單 <span id="cm-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
+      <h3>產生報價單 <span id="cm-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
       <button class="btn btn-outline btn-sm" id="cm-close-btn">關閉</button>
     </header>
     <div class="cm-body">
@@ -872,7 +850,7 @@ tbody tr:hover{background:var(--surface-hover)}
         <div id="cm-items" class="cm-items"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
           <button class="btn btn-outline btn-sm" id="cm-additem-cat">＋ 從商品庫新增</button>
-          <button class="btn btn-outline btn-sm" id="cm-additem-new">🆕 臨時新品</button>
+          <button class="btn btn-outline btn-sm" id="cm-additem-new">臨時新品</button>
         </div>
         <div id="cm-grandtotal" style="margin-top:10px;font-weight:700;text-align:right"></div>
       </section>
@@ -896,14 +874,14 @@ tbody tr:hover{background:var(--surface-hover)}
       </section>
 
       <div class="cm-ios-tip" id="cm-ios-tip">
-        <b>📱 iPhone / iPad 提示：</b>點「下載圖片」或「下載 Word」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、儲存到「照片」、Mail、訊息、LINE 任一都可保存或傳出。若沒跳分享面板，會在新分頁開啟。
+        <b>iPhone / iPad 提示：</b>點「下載圖片」或「下載 Word」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、儲存到「照片」、Mail、訊息、LINE 任一都可保存或傳出。若沒跳分享面板，會在新分頁開啟。
       </div>
     </div>
     <div class="cm-actions">
       <button class="btn btn-outline" id="cm-prev-btn" style="display:none">← 上一步</button>
       <button class="btn btn-primary" id="cm-next-btn">下一步 →</button>
-      <button class="btn btn-primary" id="cm-download-img-btn" style="display:none">🖼️ 下載圖片</button>
-      <button class="btn btn-outline" id="cm-download-btn" style="display:none">📄 下載 Word</button>
+      <button class="btn btn-primary" id="cm-download-img-btn" style="display:none">下載圖片</button>
+      <button class="btn btn-outline" id="cm-download-btn" style="display:none">下載 Word</button>
     </div>
   </div>
 </div>
@@ -926,7 +904,7 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="cm-overlay" id="cm-wiz" style="z-index:1005">
   <div class="cm-panel">
     <header class="cm-head">
-      <h3>📑 製作 DUSKIN 合約 <span id="cmw-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
+      <h3>製作 DUSKIN 合約 <span id="cmw-client-name" style="font-weight:500;color:var(--text2);font-size:13px"></span></h3>
       <button class="btn btn-outline btn-sm" id="cmw-close-btn">關閉</button>
     </header>
     <div class="cm-body">
@@ -937,7 +915,7 @@ tbody tr:hover{background:var(--surface-hover)}
         <h4>步驟 1／6 · 詢問客戶的公版訊息</h4>
         <p style="font-size:13px;color:var(--text2);margin:0 0 8px">把下面訊息複製、傳給客戶，請對方回覆製作合約所需的資料。已知欄位會自動帶入。</p>
         <textarea id="cmw-inquiry" rows="13" readonly style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
-        <div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="cmw-copy-btn">📋 複製訊息</button></div>
+        <div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="cmw-copy-btn">複製訊息</button></div>
       </section>
 
       <section data-wiz-step="1" class="cm-section" style="display:none">
@@ -1015,13 +993,13 @@ tbody tr:hover{background:var(--surface-hover)}
       </section>
 
       <div class="cm-ios-tip" id="cmw-ios-tip">
-        <b>📱 iPhone / iPad 提示：</b>點「下載合約」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、Mail、訊息、LINE 任一都可保存或傳出。
+        <b>iPhone / iPad 提示：</b>點「下載合約」後會跳出 <b>系統分享面板</b> → 選 <b>「儲存到檔案」</b>、Mail、訊息、LINE 任一都可保存或傳出。
       </div>
     </div>
     <div class="cm-actions">
       <button class="btn btn-outline" id="cmw-prev-btn" style="display:none">← 上一步</button>
       <button class="btn btn-primary" id="cmw-next-btn">下一步 →</button>
-      <button class="btn btn-primary" id="cmw-download-btn" style="display:none">📥 下載合約</button>
+      <button class="btn btn-primary" id="cmw-download-btn" style="display:none">下載合約</button>
     </div>
   </div>
 </div>
@@ -1056,15 +1034,15 @@ tbody tr:hover{background:var(--surface-hover)}
     </div>
     <div id="rpt-output" style="display:none">
       <div class="alert-info alert" style="font-size:12px;margin-bottom:12px">
-        💡 三段內容請分別貼到 RS 模板：① 推進表貼 <b>A20</b>　② 未來兩週貼 <b>A74</b>　③ 本週日報貼 <b>A7</b>。<br>
-        💡 大客戶（4W ≥ 3000）會列在每段下方的提示，請在 Excel 中按住 Ctrl 點選那幾列再上色。Q2 專案請自行手動標色。
+        三段內容請分別貼到 RS 模板：① 推進表貼 <b>A20</b>　② 未來兩週貼 <b>A74</b>　③ 本週日報貼 <b>A7</b>。<br>
+        大客戶（4W ≥ 3000）會列在每段下方的提示，請在 Excel 中按住 Ctrl 點選那幾列再上色。Q2 專案請自行手動標色。
       </div>
 
       <div class="form-section" style="margin-bottom:6px">
         ① RS 推進表 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶，最多 50 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
-        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-4w')">📋 複製</button>
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-4w')">複製</button>
         <span id="rpt-4w-cnt" style="font-size:11px;color:var(--text3)"></span>
         <span id="rpt-4w-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
       </div>
@@ -1075,7 +1053,7 @@ tbody tr:hover{background:var(--surface-hover)}
         ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A74，未拜訪的客戶清單，最多 35 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
-        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-plan')">📋 複製</button>
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-plan')">複製</button>
         <span id="rpt-plan-cnt" style="font-size:11px;color:var(--text3)"></span>
         <span id="rpt-plan-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
       </div>
@@ -1086,7 +1064,7 @@ tbody tr:hover{background:var(--surface-hover)}
         ③ 本週日報 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到本週日報 A7，每筆拜訪一列，最多 50 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
-        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">📋 複製</button>
+        <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">複製</button>
         <span id="rpt-daily-cnt" style="font-size:11px;color:var(--text3)"></span>
         <span id="rpt-daily-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
       </div>
@@ -1114,7 +1092,7 @@ tbody tr:hover{background:var(--surface-hover)}
   <div class="page-title">待辦事項</div>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <button class="pill on" id="tmode-list" onclick="setTodosMode('list',this)">待辦清單</button>
-    <button class="pill" id="tmode-trip" onclick="setTodosMode('trip',this)">🗓 今日行程</button>
+    <button class="pill" id="tmode-trip" onclick="setTodosMode('trip',this)">今日行程</button>
   </div>
 
   <div id="todos-mode-list">
@@ -1145,14 +1123,14 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="panel" id="panel-shops">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <div class="page-title" style="margin:0;flex:1">查詢</div>
-    <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">🏗 工地地圖</a>
-    <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 工業區CRM</a>
+    <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">工地地圖</a>
+    <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">工業區CRM</a>
   </div>
 
   <div id="q-shops">
     <div style="display:flex;align-items:center;gap:8px">
       <div class="page-subtitle" id="shops-status" style="flex:1;margin:0">公司現有客戶名單（從雲端載入）</div>
-      <button class="btn btn-outline btn-xs" onclick="loadShops()">🔄 重新載入</button>
+      <button class="btn btn-outline btn-xs" onclick="loadShops()">重新載入</button>
     </div>
     <div class="search-bar" style="position:sticky;top:60px;z-index:50;background:var(--bg2);padding:8px 0">
       <input id="shop-search" placeholder="輸入店名、地址、電話、負責人…" oninput="renderShops(this.value)" autocomplete="off">
@@ -1170,8 +1148,8 @@ tbody tr:hover{background:var(--surface-hover)}
     <button class="btn btn-primary btn-sm" onclick="openInvModal(-1)">+ 新增品項</button>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:10px">
-    <button class="pill on" onclick="invSetMode('all',this)" id="inv-m-all">📦 全部品項</button>
-    <button class="pill" onclick="invSetMode('short',this)" id="inv-m-short">🚨 缺貨清單</button>
+    <button class="pill on" onclick="invSetMode('all',this)" id="inv-m-all">全部品項</button>
+    <button class="pill" onclick="invSetMode('short',this)" id="inv-m-short">缺貨清單</button>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
     <button class="pill on" onclick="invSetCat('',this)" id="inv-c-all">全部</button>
@@ -1213,7 +1191,7 @@ tbody tr:hover{background:var(--surface-hover)}
         <input id="prod-search" placeholder="搜尋代號/品名..." oninput="renderProducts()" style="flex:1;max-width:200px;margin-left:auto">
       </div>
       <div class="alert-info alert" style="font-size:12px;margin-bottom:10px">
-        ✏️ 點任一商品可編輯；停用的商品不會出現在試用品項選單中
+        點任一商品可編輯；停用的商品不會出現在試用品項選單中
       </div>
       <div id="prod-list"></div>
     </div>
@@ -1226,16 +1204,16 @@ tbody tr:hover{background:var(--surface-hover)}
         <div style="font-size:18px;font-weight:700;color:var(--green-d)" id="st-ver">v...</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">目前使用的版本</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="forceReload()">🔄 強制重新載入</button>
+      <button class="btn btn-outline btn-sm" onclick="forceReload()">強制重新載入</button>
     </div>
     <div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      💡 每天打開時確認此版本號是否為最新。若顯示舊版，按「強制重新載入」清除快取。
+      每天打開時確認此版本號是否為最新。若顯示舊版，按「強制重新載入」清除快取。
     </div>
   </div>
   <div class="card">
     <div class="form-section">業務個人資料（我的名片）</div>
     <div class="alert-info alert" style="font-size:12px;margin-bottom:12px;line-height:1.7">
-      📇 這裡填的資料會自動帶入<b>報價單</b>與<b>合約書</b>的「承辦人（乙方）」欄位，不必每次重打。僅儲存在本機。
+      這裡填的資料會自動帶入<b>報價單</b>與<b>合約書</b>的「承辦人（乙方）」欄位，不必每次重打。僅儲存在本機。
     </div>
     <div class="f"><label class="lbl">承辦人姓名</label>
       <input id="pf-contact" placeholder="例：王小明" oninput="saveProfile()"></div>
@@ -1282,7 +1260,7 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="form-section">診斷紀錄</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">遇到問題時，按下方按鈕可複製最近的錯誤紀錄，回報給維護人員協助排查。</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-outline btn-sm" onclick="showErrorLog()">🩺 複製診斷紀錄</button>
+      <button class="btn btn-outline btn-sm" onclick="showErrorLog()">複製診斷紀錄</button>
       <button class="btn btn-outline btn-sm" onclick="clearErrorLog()">清除</button>
     </div>
   </div>
@@ -1290,18 +1268,31 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="form-section">工業區CRM</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
       工業區開發已獨立為「工業區CRM」子系統（查詢頁右上角進入）：內建 5,000+ 家工廠名單、
-      拜訪 check points、標籤回訪、待訪路線與獨立雲端同步，設定方式在該頁的「⚙️ 設定」。
+      拜訪 check points、標籤回訪、待訪路線與獨立雲端同步，設定方式在該頁的「設定」。
     </div>
-    <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">🏭 開啟工業區CRM</a>
+    <a class="btn btn-outline btn-sm" href="izcrm.html" style="text-decoration:none">開啟工業區CRM</a>
+  </div>
+  <div class="card">
+    <div class="form-section">客戶類別選項</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      建檔表單「類型」下拉的選項（例：餐飲、遊樂場…）。點 ✕ 移除、輸入新增；
+      既有客戶的舊類型不受影響（表單會照樣顯示）。
+    </div>
+    <div class="toolbar-left" id="typeopt-chips" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px">
+      <input id="typeopt-new" placeholder="新增類別，例：遊樂場" style="flex:1">
+      <button class="btn btn-outline btn-sm" onclick="addTypeOpt()">新增</button>
+      <button class="btn btn-outline btn-sm" onclick="resetTypeOpts()">恢復預設</button>
+    </div>
   </div>
   <div class="card">
     <div class="form-section">工地地圖</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
       「工地地圖」子系統（查詢頁右上角進入）：登記正在施工裝修的店面，和同事共享避免重複拜訪。
-      工地按「📇 建檔到主系統」會自動帶進客戶清單（狀態＝未拜訪、座標沿用）。
-      共享同步設定在該頁的「⚙ 設定」（獨立試算表，與主系統資料分開）。
+      工地按「建檔到主系統」會自動帶進客戶清單（狀態＝未拜訪、座標沿用）。
+      共享同步設定在該頁的「設定」（獨立試算表，與主系統資料分開）。
     </div>
-    <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">🏗 開啟工地地圖</a>
+    <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">開啟工地地圖</a>
   </div>
   <div class="card">
     <div class="form-section">設定步驟</div>
@@ -1419,7 +1410,7 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="f">
       <label class="lbl">優先級</label>
       <div class="mood-row" id="tm-pri-row">
-        <button type="button" class="pill" data-pri="1" onclick="tmSetPri(1)">🚩 P1</button>
+        <button type="button" class="pill" data-pri="1" onclick="tmSetPri(1)">P1</button>
         <button type="button" class="pill" data-pri="2" onclick="tmSetPri(2)">P2</button>
         <button type="button" class="pill" data-pri="3" onclick="tmSetPri(3)">P3</button>
         <button type="button" class="pill on" data-pri="0" onclick="tmSetPri(0)">無</button>
@@ -1441,7 +1432,7 @@ tbody tr:hover{background:var(--surface-hover)}
       <button class="btn btn-primary" onclick="closeVerMenu();syncFromSheet()">從雲端拉最新（每日開工建議）</button>
       <button class="btn btn-outline" onclick="closeVerMenu();pushAllToSheet()">推送全部到雲端</button>
       <button class="btn btn-outline" onclick="closeVerMenu();openDedupModal()">清理重複店家</button>
-      <button class="btn btn-outline" id="vm-admin-btn" style="display:none;background:#FFF6CC;border-color:#E0B400" onclick="closeVerMenu();openAdminModal()">📊 長官儀表板</button>
+      <button class="btn btn-outline" id="vm-admin-btn" style="display:none;background:#FFF6CC;border-color:#E0B400" onclick="closeVerMenu();openAdminModal()">長官儀表板</button>
       <button class="btn btn-outline" onclick="closeVerMenu();forceReload()" style="color:var(--text3)">強制重新載入程式</button>
       <button class="btn btn-outline" onclick="closeVerMenu()">關閉</button>
     </div>
@@ -1463,7 +1454,7 @@ tbody tr:hover{background:var(--surface-hover)}
 <div class="modal-bg" id="admin-modal" onclick="if(event.target===this)closeAdminModal()">
   <div class="modal" style="max-width:96vw;width:96vw;max-height:94vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="modal-title" style="font-size:14px;margin:0">📊 長官儀表板（唯讀）</div>
+      <div class="modal-title" style="font-size:14px;margin:0">長官儀表板（唯讀）</div>
       <button class="btn btn-outline btn-sm" onclick="closeAdminModal()">關閉</button>
     </div>
     <div id="admin-tabs" style="display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px"></div>
@@ -1493,8 +1484,10 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.28-z2';
-const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
+const APP_VERSION='v2026.07.28-z5';
+const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
+const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
+const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
 const PROSPECT_SHEET_NAME='prospects';
@@ -1530,7 +1523,7 @@ function handleRequest(e){
       case 'getShops':      result=getShops();break;
       case 'getProspects':  result=getProspects();break;
       case 'getSnapshot':   result=getSnapshot();break;
-      case 'ping':          result={ok:true};break;
+      case 'ping':          result={ok:true,ver:BACKEND_VER};break;
       case 'geocode':       result=geocodeAddr(body.addr);break;
       default:              result={error:'Unknown action'};
     }
@@ -1950,7 +1943,7 @@ const SEED=[
   {name:'範例-美美沙龍',addr:'信義區松仁路88號',type:'美容美甲',status:'已成約',contact:'陳小姐',nextdate:'2026-05-10',fw4:280,env:'門口無，店內裝潢精美',note:'範例客戶：已成約的美容店',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'準備合約書',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-05',mood:4,note:'老闆決定簽約',insight:'成約FSSK',statusChange:'已成約',nextdate:'2026-05-10'}],updatedAt:1741783108000},
   {name:'範例-永和早餐店',addr:'永和區中正路200號',type:'餐廳',status:'未拜訪',contact:'',nextdate:'',fw4:0,env:'',note:'範例客戶：尚未拜訪',trialItems:[],todos:[],visits:[],updatedAt:1712476000000},
   {name:'範例-大樓管委會',addr:'板橋區文化路300號',type:'接待中心',status:'複訪',contact:'張經理',nextdate:'2026-04-20',fw4:0,env:'門口有舊地墊',note:'範例客戶：需要複訪',trialItems:[],todos:[{text:'帶DM再去拜訪',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-01',mood:2,note:'經理在忙，下次再來',insight:'',statusChange:'複訪',nextdate:'2026-04-20'}],updatedAt:1743476400000},
-  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trialItems:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741478143000},
+  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trialItems:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'拒絕',nextdate:null}],updatedAt:1741478143000},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -1960,17 +1953,32 @@ const SEED=[
 const STATUS={
   UNVISITED:'未拜訪', FIRST:'初訪', REVISIT:'複訪',
   TRIAL:'試用中', QUOTE:'報價', CLOSING:'將成約',
-  DEAL:'已成約', TRANSFER:'已轉交', REFUSE:'拒絕', CLOSED:'已結案'
+  DEAL:'已成約', TRANSFER:'已轉交', REFUSE:'拒絕'
 };
 const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
-const MOODS=['','😞','😐','😊','😄'];
+const MOODS=['','差','普','好','優'];
 // 狀態徽章配色：用 CSS 變數（深淺色模式自動切換，變數定義在 <style> :root）
 const _SS=k=>['var(--ss-'+k+'-bg)','var(--ss-'+k+'-fg)'];
-const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber'),'試用中':_SS('blue'),'報價':_SS('amber'),'將成約':_SS('purple'),'已成約':_SS('green'),'已轉交':_SS('green2'),'已結案':_SS('red'),'拒絕':_SS('red')};
+const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber'),'試用中':_SS('blue'),'報價':_SS('amber'),'將成約':_SS('purple'),'已成約':_SS('green'),'已轉交':_SS('green2'),'拒絕':_SS('red')};
 // 舊狀態顯示文字對應（新舊並存）
-// 安全轉換：已結案→拒絕（migration v3 後不應再有，但保留防禦）
-function displayStatus(s){return s===STATUS.CLOSED?STATUS.REFUSE:(s||STATUS.UNVISITED);}
-function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)===n(b);}
+// 未設定狀態一律視為「未拜訪」（舊「已結案」由 migration v3 與 validateClients 轉為「拒絕」，程式內不再映射）
+function displayStatus(s){return s||STATUS.UNVISITED;}
+// ── 客戶分類（街邊店/工廠）：同一系統管理、可切視角；工業區轉入=工廠、工地轉入=街邊店 ──
+function segOf(c){return c&&c.segment?c.segment:((c&&c.type)==='工廠'?'工廠':'街邊店');}
+let CF_SEGMENT='街邊店';
+function setCFSegment(seg){
+  CF_SEGMENT=seg;
+  document.querySelectorAll('#cf-segment .pill').forEach(b=>b.classList.toggle('on',b.dataset.seg===seg));
+}
+// ── 客戶類別選項：可在設定頁自訂（存本機 DB.typeOpts，含於 JSON 匯出；空=用預設）──
+const DEFAULT_TYPE_OPTS=['餐飲','小吃飲料','診所','寵物','工廠','汽車','眼鏡行','接待中心','房仲','補習班','美容美甲','零售店','辦公室','遊樂場','其他'];
+function typeOpts(){return (Array.isArray(DB.typeOpts)&&DB.typeOpts.length)?DB.typeOpts:DEFAULT_TYPE_OPTS;}
+function fillTypeOpts(current){
+  const el=document.getElementById('cf-type');if(!el)return;
+  const opts=typeOpts().slice();
+  if(current&&opts.indexOf(current)<0)opts.push(current); // 舊值不在清單也要能顯示
+  el.innerHTML='<option value="">-</option>'+opts.map(t=>`<option${t===current?' selected':''}>${escHtml(t)}</option>`).join('');
+}
 const CB_STYLE={'拖把':_SS('purple'),'地墊':_SS('blue'),'芳香':_SS('green')};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||_SS('gray');return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 // 新設計：客戶列表卡片專用 — 狀態圓角膠囊（含圓點），放在卡片右上角
@@ -1988,7 +1996,7 @@ function saveLocal(){
     logErr('saveLocal'+(quota?'(quota)':''),e);
     if(quota&&!_quotaWarned){
       _quotaWarned=true;
-      try{appAlert('本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。','⚠ 儲存空間不足');}catch(_){}
+      try{appAlert('本機儲存空間已滿，最新修改可能無法保存到這台裝置。\n請先點「推送到雲端」備份資料，再重新整理頁面。','儲存空間不足');}catch(_){}
     }
   }
 }
@@ -2040,7 +2048,7 @@ if(typeof window!=='undefined'){
   window.addEventListener('unhandledrejection',ev=>logErr('unhandledRejection',(ev&&ev.reason)||'unknown'));
 }
 function showErrorLog(){
-  if(!ERR_LOG.length){showToast('診斷紀錄：目前沒有任何錯誤 🎉');return;}
+  if(!ERR_LOG.length){showToast('診斷紀錄：目前沒有任何錯誤 ');return;}
   const txt='DUSKIN '+APP_VERSION+' 診斷紀錄（最近 '+ERR_LOG.length+' 筆）\n'+
     ERR_LOG.slice().reverse().map(e=>{
       let ts;try{ts=new Date(e.t).toLocaleString('zh-Hant');}catch(_){ts=e.t;}
@@ -2048,7 +2056,7 @@ function showErrorLog(){
     }).join('\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(
-      ()=>showToast('✅ 已複製最近 '+ERR_LOG.length+' 筆診斷紀錄，可貼給維護人員'),
+      ()=>showToast('✓ 已複製最近 '+ERR_LOG.length+' 筆診斷紀錄，可貼給維護人員'),
       ()=>{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){appAlert(txt,'診斷紀錄');}}
     );
   }else{try{prompt('最近診斷紀錄（請手動複製）：',txt);}catch(_){appAlert(txt,'診斷紀錄');}}
@@ -2293,7 +2301,7 @@ function setSyncBar(s){
   if(s==='ok'){st.textContent='✓ 已同步';setTimeout(()=>st.textContent='',3000);}
   else if(s==='err'){
     const pend=SYNC.pending||0;
-    st.textContent='⚠ 同步失敗'+(pend>0?' ('+pend+' 筆待推送)':'');
+    st.textContent='同步失敗'+(pend>0?' ('+pend+' 筆待推送)':'');
     // 失敗狀態常駐，不自動消失，讓使用者意識到問題
   }
   else if(s==='sync')st.textContent='同步中...';
@@ -2314,8 +2322,13 @@ async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
   if(!url){showToast('請先填入 URL');return;}
   SHEET_URL=url;saveLocal();setSyncBar('sync');
-  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');refreshSheetIdentity();}
-  catch(e){setSyncBar('err');appAlert('連線失敗：'+e.message,'❌ 無法連線');}
+  try{
+    const r=await api({action:'ping'});
+    setSyncBar('ok');updateSheetStatus(true);showToast('✓ 連線成功！');refreshSheetIdentity();
+    if((r&&r.ver||0)<REQUIRED_BACKEND_VER)
+      appAlert('你的後端（Apps Script）是舊版，部分功能（如重複店家雲端清理）無法使用。\n請到設定頁按「複製 Apps Script 程式碼」，貼回 Apps Script 專案覆寫並重新部署。','後端需要更新');
+  }
+  catch(e){setSyncBar('err');appAlert('連線失敗：'+e.message,'無法連線');}
 }
 async function syncFromSheet(silent){
   if(!SHEET_URL){if(!silent)showToast('請先設定 URL');return false;}
@@ -2324,7 +2337,7 @@ async function syncFromSheet(silent){
   if(OUTBOX.length){
     const ok=await flushOutbox();
     if(!ok||OUTBOX.length){
-      if(!silent)appAlert('還有 '+OUTBOX.length+' 筆本機修改尚未上傳，已暫停拉取以免覆蓋你的修改。\n請確認網路後再試一次。','⚠ 尚未上傳完成');
+      if(!silent)appAlert('還有 '+OUTBOX.length+' 筆本機修改尚未上傳，已暫停拉取以免覆蓋你的修改。\n請確認網路後再試一次。','尚未上傳完成');
       return false;
     }
   }
@@ -2355,14 +2368,14 @@ async function syncFromSheet(silent){
     renderVerBadge();
     dismissPullBanner();
     if(!silent){
-      if(skipped)appAlert('已從雲端拉取 '+DB.clients.length+' 筆資料。\n\n⚠ 有 '+skipped.length+' 列資料異常已跳過（試算表列號：'+skipped.join('、')+'），請檢查雲端該列 JSON。','拉取完成');
-      else showToast('✅ 已從雲端拉取 '+DB.clients.length+' 筆資料');
+      if(skipped)appAlert('已從雲端拉取 '+DB.clients.length+' 筆資料。\n\n有 '+skipped.length+' 列資料異常已跳過（試算表列號：'+skipped.join('、')+'），請檢查雲端該列 JSON。','拉取完成');
+      else showToast('✓ 已從雲端拉取 '+DB.clients.length+' 筆資料');
     }
     return true;
   }catch(e){
     SYNC.state='err';setSyncBar('err');renderVerBadge();
     logErr('syncFromSheet',e);
-    if(!silent)appAlert('拉取失敗：'+e.message,'❌ 同步錯誤');
+    if(!silent)appAlert('拉取失敗：'+e.message,'同步錯誤');
     return false;
   }
 }
@@ -2380,10 +2393,10 @@ async function pushAllToSheet(){
     SYNC.pending=0;
     SYNC.state='ok';
     saveLocal();setSyncBar('ok');renderVerBadge();
-    showToast('✅ 已推送 '+DB.clients.length+' 筆資料');
+    showToast('✓ 已推送 '+DB.clients.length+' 筆資料');
   }catch(e){
     SYNC.state='err';setSyncBar('err');renderVerBadge();
-    appAlert('推送失敗：'+e.message,'❌ 同步錯誤');
+    appAlert('推送失敗：'+e.message,'同步錯誤');
   }
 }
 function saveSheetUrl(){SHEET_URL=document.getElementById('sheet-url').value.trim();saveLocal();renderOnboardChecklist();}
@@ -2407,7 +2420,7 @@ function onSealPick(input){
   const f=input.files&&input.files[0]; if(!f) return;
   if(!/^image\//.test(f.type)){ appAlert('請選擇圖片檔（PNG／JPG）'); input.value=''; return; }
   const rd=new FileReader();
-  rd.onload=e=>{ saveProfile(); DB.profile.seal=e.target.result; saveLocal(); renderSealPreview(); showToast('✅ 已更新印章圖檔'); };
+  rd.onload=e=>{ saveProfile(); DB.profile.seal=e.target.result; saveLocal(); renderSealPreview(); showToast('✓ 已更新印章圖檔'); };
   rd.readAsDataURL(f); input.value='';
 }
 function clearSeal(){ saveProfile(); DB.profile.seal=''; saveLocal(); renderSealPreview(); }
@@ -2425,7 +2438,7 @@ function renderOnboardChecklist(){
   const box=document.getElementById('onboard-checklist'); if(!box) return;
   const p=getProfile();
   const row=(st,title,sub)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)">
-     <span style="font-size:15px;line-height:1.4">${st==='ok'?'✅':st==='warn'?'⚠️':'⬜'}</span>
+     <span style="font-size:15px;line-height:1.4">${st==='ok'?'✓':st==='warn'?'':'○'}</span>
      <div style="flex:1"><div style="font-size:13px;color:var(--text)">${title}</div>${sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>
    </div>`;
   const c1=profileNeedsSetup()?'todo':'ok';
@@ -2485,19 +2498,21 @@ function importJSON(input){
       if(data.products)DB.products=data.products;
       if(Array.isArray(data.gtodos))DB.gtodos=data.gtodos;
       if(data.profile&&typeof data.profile==='object'){DB.profile=data.profile;DB.profileAcked=!!data.profileAcked;}
-      saveLocal();renderClients();renderProducts();initSettings();showToast('✅ 匯入成功');
-    }catch(err){appAlert('匯入失敗：'+err.message,'❌ 無法匯入');}
+      saveLocal();renderClients();renderProducts();initSettings();showToast('✓ 匯入成功');
+    }catch(err){appAlert('匯入失敗：'+err.message,'無法匯入');}
   };reader.readAsText(file);input.value='';
 }
 function copyScript(){
-  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(()=>showToast('✅ 已複製 Apps Script 程式碼'),()=>appAlert('複製失敗，請改用手動選取複製。'));
+  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(()=>showToast('✓ 已複製 Apps Script 程式碼'),()=>appAlert('複製失敗，請改用手動選取複製。'));
 }
 
 // ═══════════════════════════════════════════════════════════
 // NAV
 // ═══════════════════════════════════════════════════════════
 function navTo(id,el){
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  try{localStorage.setItem('duskin_last_panel',id==='todos'&&TODOS_MODE==='trip'?'trip':id);}catch(e){}
+  if(window.setGlobalTab)setGlobalTab(id==='todos'&&TODOS_MODE==='trip'?'trip':'clients');
+  document.querySelectorAll('#app-nav .nav-btn').forEach(b=>b.classList.remove('on'));
   (el.classList?el:document.getElementById('nav-'+id)).classList.add('on');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('panel-'+id).classList.add('on');
@@ -2520,7 +2535,26 @@ function fmtDate(d){
 }
 function today(){return fmtDate();
 }
+function renderTypeOptsUI(){
+  const el=document.getElementById('typeopt-chips');if(!el)return;
+  el.innerHTML=typeOpts().map(t=>`<span class="pill pill-sm" style="gap:4px">${escHtml(t)} <button onclick="removeTypeOpt('${escHtml(t)}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0">✕</button></span>`).join('');
+}
+function addTypeOpt(){
+  const inp=document.getElementById('typeopt-new');
+  const v=(inp.value||'').trim();if(!v)return;
+  const opts=typeOpts().slice();
+  if(opts.indexOf(v)<0){opts.push(v);DB.typeOpts=opts;saveLocal();}
+  inp.value='';renderTypeOptsUI();showToast('已新增類別「'+v+'」');
+}
+function removeTypeOpt(t){
+  DB.typeOpts=typeOpts().filter(x=>x!==t);saveLocal();renderTypeOptsUI();
+}
+async function resetTypeOpts(){
+  if(!await appConfirm('把類別選項恢復成預設清單？（既有客戶資料不受影響）'))return;
+  DB.typeOpts=null;saveLocal();renderTypeOptsUI();showToast('已恢復預設');
+}
 function initSettings(){
+  renderTypeOptsUI();
   const p=getProfile();
   const setv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
   setv('pf-office',p.office);setv('pf-dept',p.dept);setv('pf-contact',p.contact);
@@ -2610,7 +2644,7 @@ function renderInventory(){
         html+=`<div class="inv-item">
           <div class="inv-item-head">
             <span class="inv-item-code">${escHtml(x.name)}</span>
-            <button data-inv-btn onclick="openInvModal('${esc}')" title="編輯" class="inv-edit" aria-label="編輯 ${escHtml(x.name)}">⚙</button>
+            <button data-inv-btn onclick="openInvModal('${esc}')" title="編輯" class="inv-edit" aria-label="編輯 ${escHtml(x.name)}"></button>
             <span class="inv-item-stock" style="color:${color}"><span class="num">${x.stock}</span><span class="inv-sep">/</span><span class="inv-std">${x.std}</span></span>
           </div>
           <div class="inv-item-actions">
@@ -2658,7 +2692,7 @@ function validateClients(){
       fixed++;
     }
     // 不變式 2：已結案 → 轉為拒絕（migration v3 應已處理，此為二次防禦）
-    if(c.status===STATUS.CLOSED){
+    if(c.status==='已結案'){
       c.status=STATUS.REFUSE;
       console.warn('[validateClients] 自動轉換已結案→拒絕: #'+i+' '+c.name);
       fixed++;
@@ -2672,9 +2706,9 @@ function validateClients(){
 function normalizeClosed(){
   let count=0;
   (DB.clients||[]).forEach(c=>{
-    if(c.status===STATUS.CLOSED){c.status=STATUS.REFUSE;count++;}
+    if(c.status==='已結案'){c.status=STATUS.REFUSE;count++;}
     (c.visits||[]).forEach(v=>{
-      if(v.statusChange===STATUS.CLOSED)v.statusChange=STATUS.REFUSE;
+      if(v.statusChange==='已結案')v.statusChange=STATUS.REFUSE;
     });
   });
   if(count)saveLocal();
@@ -3267,7 +3301,7 @@ function collectRegions(){
     if((c.visits||[]).length>0)return;
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
     if(mains.length>0)return;
-    if(statusEq(c.status,STATUS.REFUSE))return;
+    if(c.status===STATUS.REFUSE)return;
     const r=parseRegion(c.addr);
     if(r)regions.add(r);
   });
@@ -3292,7 +3326,7 @@ function renderRegionBar(){
     bar.style.alignItems='center';
     const opts=SO.map(s=>`<option value="${s}"${s===activeStatusSub?' selected':''}>${s}</option>`).join('');
     const cnt=activeStatusSub
-      ? DB.clients.filter(c=>activeStatusSub===STATUS.REFUSE?statusEq(c.status,STATUS.REFUSE):(c.status||STATUS.UNVISITED)===activeStatusSub).length
+      ? DB.clients.filter(c=>activeStatusSub===STATUS.REFUSE?c.status===STATUS.REFUSE:(c.status||STATUS.UNVISITED)===activeStatusSub).length
       : DB.clients.length;
     bar.innerHTML=`<span style="font-size:13px;color:var(--text2)">狀態：</span>`
       +`<select onchange="setStatusSub(this.value)" style="width:auto;padding:4px 8px;font-size:13px">`
@@ -3344,8 +3378,8 @@ function calcFW4(c){
 // - 忽略 quoted 報價、忽略 contractedItems、忽略日期區間
 function calcReportAmt(c){
   if(!c) return 0;
-  // 拒絕（含舊「已結案」）視為已無試用商品，保留歷史紀錄但不計入報表金額
-  if(statusEq(c.status,STATUS.REFUSE)) return 0;
+  // 拒絕視為已無試用商品，保留歷史紀錄但不計入報表金額
+  if(c.status===STATUS.REFUSE) return 0;
   return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
@@ -3444,7 +3478,7 @@ function autoAddRecycleTodos(){
 let statusFilter={};
 function defaultStatusFilter(){
   const f={};
-  SO.forEach(s=>{f[s]=(s!==STATUS.REFUSE&&s!==STATUS.CLOSED);});
+  SO.forEach(s=>{f[s]=(s!==STATUS.REFUSE);});
   return f;
 }
 function loadStatusFilter(){
@@ -3463,18 +3497,17 @@ function saveStatusFilter(){
 function statusVisible(status){
   // 未設定狀態 視為「未拜訪」
   const s=status||STATUS.UNVISITED;
-  const key=(s===STATUS.CLOSED)?STATUS.REFUSE:s;
-  return statusFilter[key]!==false;
+  return statusFilter[s]!==false;
 }
 function openStatusFilterModal(){
   const el=document.getElementById('status-filter-list');
-  el.innerHTML=SO.filter(s=>s!==STATUS.CLOSED).map(s=>{
+  el.innerHTML=SO.map(s=>{
     const checked=statusFilter[s]!==false;
     const [bg,fg]=SS_STYLE[s]||['#F1EFE8','#666'];
     return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--bg2)">
       <input type="checkbox" ${checked?'checked':''} onchange="toggleStatusFilter('${s}',this.checked)" style="width:18px;height:18px;cursor:pointer">
       <span class="badge" style="background:${bg};color:${fg}">${s}</span>
-      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||STATUS.UNVISITED)===s||(s===STATUS.REFUSE&&c.status===STATUS.CLOSED)).length} 筆</span>
+      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||STATUS.UNVISITED)===s).length} 筆</span>
     </label>`;
   }).join('');
   document.getElementById('status-filter-modal').classList.add('on');
@@ -3500,7 +3533,7 @@ function matchCategoryFor(c,cat){
   const visitsN=(c.visits||[]).length;
   const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
   const contractedN=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;
-  const isRefused=statusEq(c.status,STATUS.REFUSE);
+  const isRefused=c.status===STATUS.REFUSE;
   switch(cat){
     // 已拜訪＝有任何互動（拜訪過／有試用品項／有成約品項）——
     // 含品項是為了不漏掉「直接成約、沒補拜訪紀錄」的客戶
@@ -3521,12 +3554,12 @@ function matchCategory(c){
   if(!matchCategoryFor(c,activeCat))return false;
   if(activeCat==='未拜訪'&&activeRegion)return parseRegion(c.addr)===activeRegion;
   if(activeCat==='全部'&&activeStatusSub){
-    if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
+    if(activeStatusSub===STATUS.REFUSE)return c.status===STATUS.REFUSE;
     return (c.status||STATUS.UNVISITED)===activeStatusSub;
   }
   return true;
 }
-// 藥丸數量：與該分類實際會顯示的一致（單一狀態分類不受 ⚙️ 狀態篩選影響）
+// 藥丸數量：與該分類實際會顯示的一致（單一狀態分類不受 狀態篩選影響）
 function categoryCount(cat){
   const skip=(cat==='試用回收'||cat==='成約待轉交');
   return DB.clients.filter(c=>c&&matchCategoryFor(c,cat)&&(skip||statusVisible(c.status))).length;
@@ -3594,8 +3627,7 @@ function mapColorForStatus(s){
 // 是否該在地圖上顯示（排除 拒絕/結案）
 function mapShouldShow(c){
   if(!c) return false;
-  if(statusEq(c.status,STATUS.REFUSE)) return false;
-  if(c.status===STATUS.CLOSED) return false;
+  if(c.status===STATUS.REFUSE) return false;
   return true;
 }
 
@@ -3786,7 +3818,7 @@ function cycleBasemap(){
   if(!MAP_STATE.map) return;
   const i=BASEMAPS.findIndex(b=>b.key===MAP_STATE.basemap);
   const bm=applyBasemap(BASEMAPS[(i+1)%BASEMAPS.length].key);
-  showToast('🗺 底圖：'+bm.name);
+  showToast('底圖：'+bm.name);
 }
 
 function initMap(){
@@ -3799,7 +3831,7 @@ function initMap(){
   const BasemapCtrl=L.Control.extend({
     onAdd:function(){
       const btn=L.DomUtil.create('button','leaflet-bar');
-      btn.innerHTML='<span style="font-size:16px">🗺️</span>';
+      btn.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" style="width:17px;height:17px;stroke:var(--text);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
       btn.style.cssText='background:#fff;width:34px;height:34px;border:none;cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0';
       btn.title='切換底圖（電子地圖／航照／OSM）';
       btn.onclick=(e)=>{e.stopPropagation();cycleBasemap();};
@@ -3812,7 +3844,7 @@ function initMap(){
   const LocateCtrl=L.Control.extend({
     onAdd:function(){
       const btn=L.DomUtil.create('button','leaflet-bar');
-      btn.innerHTML='<span style="font-size:16px">📍</span>';
+      btn.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" style="width:17px;height:17px;stroke:var(--text);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
       btn.style.cssText='background:#fff;width:34px;height:34px;border:none;cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0';
       btn.title='移至我的位置';
       btn.onclick=(e)=>{e.stopPropagation();goToMyLocation();};
@@ -3825,7 +3857,7 @@ function initMap(){
 
 function goToMyLocation(){
   if(!navigator.geolocation){showToast('此瀏覽器不支援定位');return;}
-  showToast('📍 定位中…');
+  showToast('定位中…');
   navigator.geolocation.getCurrentPosition(pos=>{
     const {latitude,longitude}=pos.coords;
     if(MAP_STATE.map) MAP_STATE.map.setView([latitude,longitude],15);
@@ -3876,7 +3908,7 @@ function renderMapMarkers(){
 // 定位來源 → 使用者可讀標籤（讓「圖釘為什麼不準」有跡可循）
 function geoSourceLabel(c){
   if(!c.lat||!c.lng) return '';
-  if(c.geocodeSource==='manual') return '📌 手動定位';
+  if(c.geocodeSource==='manual') return '手動定位';
   if(c.geocodeSource==='google'||c.geocodeSource==='google-approx')
     return '定位精度：'+geoPrecisionLabel(c.geoLocationType||(c.geocodeSource==='google'?'ROOFTOP':''));
   if(c.geocodeSource==='auto') return '定位精度：概略';
@@ -3908,14 +3940,14 @@ function buildMapPopup(c,idx){
     <div class="mp-sub">${escHtml([c.contact,c.type].filter(Boolean).join(' · ')||c.addr||'')}</div>
     <div class="mp-badges">${badges}</div>
     <div class="mp-meta">
-      ${c.nextdate?`📅 下次：${c.nextdate}<br>`:''}
-      ${c.addr?`📍 ${escHtml(c.addr)}<br>`:''}
+      ${c.nextdate?`下次：${c.nextdate}<br>`:''}
+      ${c.addr?`${escHtml(c.addr)}<br>`:''}
       ${geoSourceLabel(c)?`${geoSourceLabel(c)}${geoIsApprox(c)?'（可能有誤差）':''}`:''}
     </div>
     <div class="mp-actions">
       <button class="btn btn-primary btn-xs" onclick="openCDFromMap(${idx})">看詳情</button>
-      ${navUrl?`<a class="btn btn-outline btn-xs" href="${navUrl}" target="_blank" rel="noopener">🧭 導航</a>`:''}
-      <button class="btn btn-outline btn-xs" onclick="startPinDrop(${idx})">📍 修正位置</button>
+      ${navUrl?`<a class="btn btn-outline btn-xs" href="${navUrl}" target="_blank" rel="noopener">導航</a>`:''}
+      <button class="btn btn-outline btn-xs" onclick="startPinDrop(${idx})">修正位置</button>
     </div>
   </div>`;
 }
@@ -3960,7 +3992,7 @@ function renderFailedGeocode(){
   const noAddr=(DB.clients||[]).filter(c=>mapShouldShow(c)&&!c.addr);
   if(!failed.length&&!noAddr.length){el.style.display='none';el.innerHTML='';return;}
   el.style.display='block';
-  let html=`<div class="map-failed-title">⚠ 無法定位（${failed.length+noAddr.length}）</div>`;
+  let html=`<div class="map-failed-title">無法定位（${failed.length+noAddr.length}）</div>`;
   failed.forEach(c=>{
     const idx=DB.clients.indexOf(c);
     html+=`<div class="mf-row">
@@ -4016,7 +4048,7 @@ function startPinDrop(idx){
     saveLocal(); autoSync('save',{client:c});
     cancelPinDrop();
     renderMapMarkers();
-    showToast('📌 已更新「'+(c.name||'')+'」的位置');
+    showToast('已更新「'+(c.name||'')+'」的位置');
   };
   MAP_STATE.pinDropHandler=e=>commit(e.latlng.lat,e.latlng.lng);
   MAP_STATE.map.on('click',MAP_STATE.pinDropHandler);
@@ -4045,6 +4077,51 @@ function cancelPinDrop(){
   if(hint) hint.remove();
 }
 
+// ── 工地地圖模式：地圖上直接建檔（GPS 抓點 → 拖圖釘/點地圖微調 → 開建檔表單）──
+// 站在店門口 3 秒定位建檔，座標標 manual（比地址 geocode 準、不會被蓋掉）。
+let PLACE_STATE={temp:null,acc:null,src:'gps',clickH:null};
+let PLACE_COORDS=null; // confirmClientPlace 設定；saveClient 新增時帶入後清空
+function startClientPlace(){
+  if(!MAP_STATE.map)return;
+  cancelPinDrop();MAP_STATE.map.closePopup();
+  const fab=document.getElementById('map-fab');if(fab)fab.style.display='none';
+  const begin=(latlng,acc,src)=>{
+    PLACE_STATE.acc=acc;PLACE_STATE.src=src;
+    const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker" style="background:var(--red);width:24px;height:24px;position:relative"></div>',iconSize:[24,24],iconAnchor:[12,12]});
+    PLACE_STATE.temp=L.marker(latlng,{draggable:true,icon,zIndexOffset:1000}).addTo(MAP_STATE.map);
+    PLACE_STATE.temp.on('dragend',()=>{PLACE_STATE.src='drag';});
+    MAP_STATE.map.setView(latlng,Math.max(MAP_STATE.map.getZoom(),17));
+    PLACE_STATE.clickH=e=>{if(PLACE_STATE.temp){PLACE_STATE.temp.setLatLng(e.latlng);PLACE_STATE.src='map';}};
+    MAP_STATE.map.on('click',PLACE_STATE.clickH);
+    document.getElementById('map-place-msg').innerHTML=
+      src==='gps'?'已抓到你的位置'+(acc?'（精度約 <b>'+acc+' 公尺</b>）':'')+'，圖釘可<b>拖到店門口</b>，或點地圖換位置。'
+                 :'沒抓到 GPS，先放在地圖中心：<b>拖曳圖釘</b>或點地圖，放到那家店的門口。';
+    document.getElementById('map-place-bar').style.display='block';
+  };
+  if(navigator.geolocation){
+    showToast('定位中…');
+    navigator.geolocation.getCurrentPosition(
+      p=>begin([p.coords.latitude,p.coords.longitude],Math.round(p.coords.accuracy),'gps'),
+      ()=>begin(MAP_STATE.map.getCenter(),null,'map'),
+      {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+  }else begin(MAP_STATE.map.getCenter(),null,'map');
+}
+function cancelClientPlace(){
+  if(PLACE_STATE.temp&&MAP_STATE.map)MAP_STATE.map.removeLayer(PLACE_STATE.temp);
+  if(PLACE_STATE.clickH&&MAP_STATE.map)MAP_STATE.map.off('click',PLACE_STATE.clickH);
+  PLACE_STATE={temp:null,acc:null,src:'gps',clickH:null};
+  const bar=document.getElementById('map-place-bar');if(bar)bar.style.display='none';
+  const fab=document.getElementById('map-fab');if(fab)fab.style.display='flex';
+}
+function confirmClientPlace(){
+  if(!PLACE_STATE.temp)return;
+  const p=PLACE_STATE.temp.getLatLng();
+  cancelClientPlace();
+  openCF(-1);
+  PLACE_COORDS={lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6)};
+  showToast('已帶入 GPS 位置，填店名即可儲存');
+}
+
 // ── View switcher ────────────────────────────────────────
 function setClientView(v){
   MAP_STATE.view=v;
@@ -4067,14 +4144,22 @@ function setClientView(v){
   }
 }
 
+let SEG_FILTER='all'; // 街邊店/工廠 視角（session 內記住）
+function setSegFilter(v,btn){
+  SEG_FILTER=v;
+  document.querySelectorAll('#seg-bar .pill').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderClients();
+}
 function renderClients(){
   initPills();   // 藥丸數量隨資料即時更新
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
   let list=DB.clients.map((c,i)=>({c,i}));
   list=list.filter(({c})=>matchCategory(c));
+  if(SEG_FILTER!=='all')list=list.filter(({c})=>segOf(c)===SEG_FILTER);
   // 狀態開關過濾（所有分類都生效；但已明確鎖定單一狀態的視角要跳過，
-  // 否則使用者在 ⚙️ 隱藏了該狀態時，這些分類會整頁空白、令人困惑）：
+  // 否則使用者在 隱藏了該狀態時，這些分類會整頁空白、令人困惑）：
   //   - 「全部」已選特定狀態子篩選
   //   - 「試用回收」（固定＝試用中）、「成約待轉交」（固定＝已成約）
   const skipStatusFilter=(activeCat==='全部'&&activeStatusSub)||activeCat==='試用回收'||activeCat==='成約待轉交';
@@ -4156,7 +4241,7 @@ function renderClients(){
     let regionHead='';
     if(groupByRegion){
       const r=parseRegion(c.addr)||'（無地址區）';
-      if(r!==_lastRegion){_lastRegion=r;regionHead=`<div style="font-size:11.5px;color:var(--text3);margin:10px 0 4px">📍 ${escHtml(r)}</div>`;}
+      if(r!==_lastRegion){_lastRegion=r;regionHead=`<div style="font-size:11.5px;color:var(--text3);margin:10px 0 4px">${escHtml(r)}</div>`;}
     }
     const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
@@ -4173,7 +4258,7 @@ function renderClients(){
     return`${regionHead}<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
-        <div class="cc-name">${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px">📍⚠</span>':''}</div>
+        <div class="cc-name">${segOf(c)==='工廠'?'<svg class="seg-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/></svg> ':''}${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px"></span>':''}</div>
         ${statusPill(displayStatus(c.status))}
       </div>
       <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
@@ -4214,7 +4299,8 @@ function openCF(idx){
   document.getElementById('cf-phone').value=c?.phone||'';
   document.getElementById('cf-regno').value=c?.regNo||'';
   document.getElementById('cf-addr').value=c?.addr||'';
-  document.getElementById('cf-type').value=c?.type||'';
+  fillTypeOpts(c?.type||'');
+  setCFSegment(c?segOf(c):'街邊店');
   document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.UNVISITED;
   // 試用日：優先用存的 c.trialDate，否則 fallback 自動推算
   document.getElementById('cf-trialdate').value=c?.trialDate||(c?trialStartDate(c):'')||'';
@@ -4228,7 +4314,7 @@ function openCF(idx){
   renderItems();renderContracted();renderTodoFields();updProd();
   showView('view-form');
 }
-function closeForm(){showView('view-list');}
+function closeForm(){PLACE_COORDS=null;showView('view-list');} // 未存檔離開 → 丟棄暫存座標
 function updProd(){const el=document.getElementById('cf-product');if(el)el.value=autoProd(S.cfItems);}
 
 // 商品選單 options
@@ -4485,6 +4571,7 @@ async function saveClient(){
       regNo:document.getElementById('cf-regno').value.trim(),
       addr:document.getElementById('cf-addr').value,
       type:document.getElementById('cf-type').value,
+      segment:CF_SEGMENT,
       status:document.getElementById('cf-status').value,
       nextdate:document.getElementById('cf-nextdate').value,
       env:document.getElementById('cf-env').value,
@@ -4509,7 +4596,7 @@ async function saveClient(){
       if(k){
         const dup=(DB.clients||[]).find(x=>x&&normalizeName(x.name)===k);
         if(dup){
-          const ok=await appConfirm(`已存在同名店家「${dup.name}」。\n\n若是同一家店請按「取消」改用編輯既有資料；\n若確實是不同分店再新增。`,{title:'⚠ 同名店家',okText:'仍要新增'});
+          const ok=await appConfirm(`已存在同名店家「${dup.name}」。\n\n若是同一家店請按「取消」改用編輯既有資料；\n若確實是不同分店再新增。`,{title:'同名店家',okText:'仍要新增'});
           if(!ok){btn.disabled=false;btn.textContent='儲存客戶';return;}
         }
       }
@@ -4531,6 +4618,7 @@ async function saveClient(){
       const prev=DB.clients[S.editIdx];
       c.id=prev.id||genId();
       c.visits=prev.visits||[];
+      if(prev.srcSiteId)c.srcSiteId=prev.srcSiteId;
       // 保留座標，若地址改變則清空重新定位
       if(prev.addr===c.addr&&prev.lat){
         c.lat=prev.lat; c.lng=prev.lng;
@@ -4538,7 +4626,12 @@ async function saveClient(){
       }
       DB.clients[S.editIdx]=c;
     }
-    else{c.id=genId();c.visits=autoVisits;DB.clients.push(c);}
+    let placedOnMap=false;
+    if(!isEdit){
+      c.id=genId();c.visits=autoVisits;
+      if(PLACE_COORDS){c.lat=PLACE_COORDS.lat;c.lng=PLACE_COORDS.lng;c.geocodeSource='manual';c.geocodedAt=Date.now();PLACE_COORDS=null;placedOnMap=true;}
+      DB.clients.push(c);
+    }
     saveLocal();autoSync('save',{client:c});
     // 無座標且有地址 → 排入 geocode queue 背景處理
     if(c.addr&&!c.lat){enqueueGeocode(c);processGeoQueue();}
@@ -4555,6 +4648,7 @@ async function saveClient(){
       },100);
     }
     S.editIdx=-1;closeForm();renderClients();
+    if(placedOnMap)setClientView('map'); // 從地圖建檔 → 存完回地圖看到新圖釘
   }catch(e){
     appAlert('儲存失敗：'+(e.message||e));
   }finally{
@@ -4587,7 +4681,7 @@ function openCD(i){
   // 若狀態是試用中但成約區有殘留，顯示警告
   const srcW=document.getElementById('cd-fw4-src');
   if(srcW&&fwContractSum>0&&(c.status===STATUS.TRIAL||c.status===STATUS.QUOTE)){
-    srcW.textContent='⚠ 來自成約（狀態為'+c.status+'，可能有殘留）';
+    srcW.textContent='來自成約（狀態為'+c.status+'，可能有殘留）';
     srcW.style.color='var(--yellow)';
   }else if(srcW){
     srcW.style.color='var(--text3)';
@@ -4708,7 +4802,7 @@ function renderCDTodos(){
       <input type="checkbox" ${t.done?'checked':''} onchange="togCDTodo(${i})">
       <div style="flex:1;cursor:pointer" onclick="gtEdit('c',${S.curIdx},${i})" title="點擊編輯">
         <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}</div>
-        ${t.dueDate?`<div style="font-size:11px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'⚠ ':''}${dueLabel(t.dueDate)}</div>`:''}
+        ${t.dueDate?`<div style="font-size:11px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'':''}${dueLabel(t.dueDate)}</div>`:''}
       </div>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦（點「+ 新增待辦」或直接點待辦文字可編輯）</div>';
 }
@@ -4754,8 +4848,8 @@ function tmOnInput(){
   const p=parseQuickTodo(document.getElementById('tm-text').value);
   const box=document.getElementById('tm-hint');if(!box)return;
   const chips=[];
-  if(p.dueDate)chips.push(`<span class="qa-chip date">📅 ${dueLabel(p.dueDate)}</span>`);
-  if(p.priority)chips.push(`<span class="qa-chip pri${p.priority}">🚩 P${p.priority}</span>`);
+  if(p.dueDate)chips.push(`<span class="qa-chip date">${dueLabel(p.dueDate)}</span>`);
+  if(p.priority)chips.push(`<span class="qa-chip pri${p.priority}">P${p.priority}</span>`);
   box.innerHTML=chips.join('');
   box.style.display=chips.length?'flex':'none';
 }
@@ -4836,7 +4930,7 @@ function saveVL(){
       document.getElementById('vl-form').style.display='none';
       S.editVisitIdx=-1;
       renderVisits();renderClients();openCD(S.curIdx);
-      showVerToast('🗓️ 已設下次拜訪日為 '+selDate);
+      showVerToast('已設下次拜訪日為 '+selDate);
       return;
     }
     const ns=document.getElementById('vl-status').value;
@@ -4886,7 +4980,7 @@ function renderVisits(){
         <span style="font-weight:600;font-size:14px">${v.date} ${MOODS[v.mood]||''}</span>
         <div style="display:flex;align-items:center;gap:6px">
           ${v.statusChange?bdg(v.statusChange):''}
-          <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯">✏️</button>
+          <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯"></button>
         </div>
       </div>
       ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${escHtml(v.note)}</div>`:''}
@@ -4999,7 +5093,7 @@ function rptVisitAction(sc){
 // 大客戶提示文字：依列號排序、附客戶名
 function rptVipHint(list){
   if(!list.length) return '';
-  return `🔴 大客戶（4W≥${RPT_VIP_THRESHOLD}，建議標色）：第 ${list.map(x=>x.row).join(', ')} 列（${list.map(x=>x.name).join('、')}）`;
+  return `大客戶（4W≥${RPT_VIP_THRESHOLD}，建議標色）：第 ${list.map(x=>x.row).join(', ')} 列（${list.map(x=>x.name).join('、')}）`;
 }
 
 function genReport(){
@@ -5016,7 +5110,7 @@ function genReport(){
   const STATUS_A=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
   const picked=DB.clients.filter(c=>{
     // 拒絕的客戶視為已無試用品，不出現在推進表
-    if(statusEq(c.status,STATUS.REFUSE)) return false;
+    if(c.status===STATUS.REFUSE) return false;
     const a=STATUS_A.has(c.status);
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
     const hasMain=mains.length>0;
@@ -5054,7 +5148,7 @@ function genReport(){
   });
   document.getElementById('rpt-4w').value=rows4w.join('\n');
   document.getElementById('rpt-4w-cnt').textContent=
-    `共 ${rows4w.length} 筆${rows4w.length>50?'（⚠ 超過模板 50 列上限，請刪減後再貼）':''}`;
+    `共 ${rows4w.length} 筆${rows4w.length>50?'（超過模板 50 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-4w-vip').textContent=rptVipHint(vip4w);
 
   // ═════════════════════════════════════════════
@@ -5084,7 +5178,7 @@ function genReport(){
   });
   document.getElementById('rpt-plan').value=rowsPlan.join('\n');
   document.getElementById('rpt-plan-cnt').textContent=
-    `共 ${rowsPlan.length} 筆${rowsPlan.length>35?'（⚠ 超過模板 35 列上限，請刪減後再貼）':''}`;
+    `共 ${rowsPlan.length} 筆${rowsPlan.length>35?'（超過模板 35 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-plan-vip').textContent=rptVipHint(vipPlan);
 
   // ═════════════════════════════════════════════
@@ -5106,7 +5200,7 @@ function genReport(){
   // 攤平：每次拜訪一筆（拒絕的客戶整筆排除）
   const visitRows=[];
   DB.clients.forEach(c=>{
-    if(statusEq(c.status,STATUS.REFUSE)) return;
+    if(c.status===STATUS.REFUSE) return;
     (c.visits||[]).forEach(v=>{
       if(v&&v.date&&weekSet.has(v.date)){
         visitRows.push({c,v});
@@ -5141,7 +5235,7 @@ function genReport(){
   });
   document.getElementById('rpt-daily').value=rowsDaily.join('\n');
   document.getElementById('rpt-daily-cnt').textContent=
-    `週一 ${weekDates[0]} ~ 週日 ${weekDates[6]}・共 ${rowsDaily.length} 筆拜訪${rowsDaily.length>50?'（⚠ 超過模板 50 列上限，請刪減後再貼）':''}`;
+    `週一 ${weekDates[0]} ~ 週日 ${weekDates[6]}・共 ${rowsDaily.length} 筆拜訪${rowsDaily.length>50?'（超過模板 50 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-daily-vip').textContent=rptVipHint(vipDaily);
 
   document.getElementById('rpt-output').style.display='block';
@@ -5294,9 +5388,9 @@ function qaOnKey(e){
 function qaRenderChips(p){
   const box=document.getElementById('qa-chips');if(!box)return;
   const chips=[];
-  if(QA.client)chips.push(`<span class="qa-chip client">👤 ${escHtml(QA.client.name)}<button onclick="QA.client=null;qaOnInput()" aria-label="移除客戶">×</button></span>`);
-  if(p.dueDate&&!QA.ignore.date)chips.push(`<span class="qa-chip date">📅 ${dueLabel(p.dueDate)}<button onclick="QA.ignore.date=true;qaOnInput()" aria-label="移除日期">×</button></span>`);
-  if(p.priority&&!QA.ignore.pri)chips.push(`<span class="qa-chip pri${p.priority}">🚩 P${p.priority}<button onclick="QA.ignore.pri=true;qaOnInput()" aria-label="移除優先級">×</button></span>`);
+  if(QA.client)chips.push(`<span class="qa-chip client">${escHtml(QA.client.name)}<button onclick="QA.client=null;qaOnInput()" aria-label="移除客戶">×</button></span>`);
+  if(p.dueDate&&!QA.ignore.date)chips.push(`<span class="qa-chip date">${dueLabel(p.dueDate)}<button onclick="QA.ignore.date=true;qaOnInput()" aria-label="移除日期">×</button></span>`);
+  if(p.priority&&!QA.ignore.pri)chips.push(`<span class="qa-chip pri${p.priority}">P${p.priority}<button onclick="QA.ignore.pri=true;qaOnInput()" aria-label="移除優先級">×</button></span>`);
   box.innerHTML=chips.join('');
   box.style.display=chips.length?'flex':'none';
 }
@@ -5325,10 +5419,10 @@ function qaSubmit(){
     if(!c){showToast('找不到客戶，請重新選取');QA.client=null;qaOnInput();return;}
     c.todos=c.todos||[];c.todos.push(todo);
     c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
-    showToast('✅ 已加到「'+c.name+'」');
+    showToast('✓ 已加到「'+c.name+'」');
   }else{
     DB.gtodos=DB.gtodos||[];DB.gtodos.push(todo);saveLocal();
-    showToast('✅ 已加入一般待辦（僅存本機）');
+    showToast('✓ 已加入一般待辦（僅存本機）');
   }
   qaReset();renderGT();renderClients();
 }
@@ -5352,7 +5446,7 @@ function gtRow(t){
     <input type="checkbox" ${t.done?'checked':''} onchange="togGT('${t.src}',${t.ci},${t.ti})">
     <div style="flex:1;cursor:pointer" onclick="gtEdit('${t.src}',${t.ci},${t.ti})" title="點擊編輯">
       <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}${cnHtml}</div>
-      ${t.dueDate?`<div style="font-size:11px;color:${od?'var(--red)':'var(--text3)'};">${od?'⚠ ':''}${dueLabel(t.dueDate)}</div>`:''}
+      ${t.dueDate?`<div style="font-size:11px;color:${od?'var(--red)':'var(--text3)'};">${od?'':''}${dueLabel(t.dueDate)}</div>`:''}
     </div>
   </div>`;
 }
@@ -5367,12 +5461,12 @@ function gtTrialSection(){
     return`<div class="todo-row gt-trial-row" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
       <div style="flex:1">
         <div>${escHtml(c.name)}<span class="xbadge x${info.level}">${info.marks}</span></div>
-        <div style="font-size:11px;color:${info.level>=3?'var(--red)':'var(--text3)'}">試用第 ${info.days} 天${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・⚠ 已達業助提醒等級':''}</div>
+        <div style="font-size:11px;color:${info.level>=3?'var(--red)':'var(--text3)'}">試用第 ${info.days} 天${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・已達業助提醒等級':''}</div>
       </div>
       <span style="color:var(--text3);font-size:16px;flex-shrink:0">›</span>
     </div>`;
   }).join('');
-  return`<div class="gt-sec overdue">🔄 試用回收（超過 ${TRIAL_DEFAULT_DAYS} 天） <span class="gt-count">${list.length}</span></div>`+
+  return`<div class="gt-sec overdue">試用回收（超過 ${TRIAL_DEFAULT_DAYS} 天） <span class="gt-count">${list.length}</span></div>`+
     '<div class="card" style="padding:0 14px">'+rows+'</div>';
 }
 function renderGT(){
@@ -5407,7 +5501,7 @@ function renderGT(){
     html+=`<div class="gt-sec">已完成 <span class="gt-count">${done.length}</span></div>`;
     html+='<div class="card" style="padding:0 14px">'+done.map(gtRow).join('')+'</div>';
   }
-  if(!html)html='<div class="empty">'+(q?'沒有符合的待辦':'目前沒有待辦事項 🎉<br><span style="font-size:12px;color:var(--text3)">用上方輸入框快速新增，例如「明天回收試用品 #客戶名 p1」</span>')+'</div>';
+  if(!html)html='<div class="empty">'+(q?'沒有符合的待辦':'目前沒有待辦事項 <br><span style="font-size:12px;color:var(--text3)">用上方輸入框快速新增，例如「明天回收試用品 #客戶名 p1」</span>')+'</div>';
   el.innerHTML=html;
 }
 function _gtArr(src,ci){return src==='g'?(DB.gtodos||[]):(DB.clients[ci]?DB.clients[ci].todos||[]:[]);}
@@ -5451,7 +5545,7 @@ function initVersion(){
   try{
     const prev=localStorage.getItem('app_version');
     if(prev&&prev!==APP_VERSION){
-      showVerToast('📦 已更新至 '+APP_VERSION);
+      showVerToast('已更新至 '+APP_VERSION);
     }
     localStorage.setItem('app_version',APP_VERSION);
   }catch(e){}
@@ -5486,7 +5580,7 @@ function showUpdateBanner(newVer){
   if(old)old.remove();
   const b=document.createElement('div');
   b.id='update-banner';
-  b.innerHTML=`🆕 有新版本 <b>${newVer}</b> 可用 <button class="btn btn-primary btn-xs" onclick="forceReload()">立即更新</button> <button class="pb-close" onclick="this.parentElement.remove()" aria-label="關閉">×</button>`;
+  b.innerHTML=`有新版本 <b>${newVer}</b> 可用 <button class="btn btn-primary btn-xs" onclick="forceReload()">立即更新</button> <button class="pb-close" onclick="this.parentElement.remove()" aria-label="關閉">×</button>`;
   document.body.appendChild(b);
 }
 function showVerToast(msg){
@@ -5523,11 +5617,11 @@ function renderVerBadge(){
 function showVerMenu(){
   let html=`<div>程式版本：<b>${APP_VERSION}</b></div>`;
   if(SHEET_URL){
-    const stText=SYNC.state==='syncing'?'同步中...':SYNC.state==='err'||SYNC.pending>0?('⚠ '+(SYNC.pending>0?SYNC.pending+' 筆待推送':'同步失敗')):SYNC.lastSyncAt?'✓ 已同步 · '+relTime(SYNC.lastSyncAt):'尚未同步';
+    const stText=SYNC.state==='syncing'?'同步中...':SYNC.state==='err'||SYNC.pending>0?(''+(SYNC.pending>0?SYNC.pending+' 筆待推送':'同步失敗')):SYNC.lastSyncAt?'✓ 已同步 · '+relTime(SYNC.lastSyncAt):'尚未同步';
     html+=`<div>資料狀態：${stText}</div>`;
     if(SYNC.lastPullAt)html+=`<div>上次拉雲端：${relTime(SYNC.lastPullAt)}</div>`;
   }else{
-    html+=`<div style="color:var(--red)">⚠ 尚未連接 Google Sheets</div>`;
+    html+=`<div style="color:var(--red)">尚未連接 Google Sheets</div>`;
   }
   document.getElementById('vm-info').innerHTML=html;
   // 長官模式按鈕：?admin=1 才顯示
@@ -5564,12 +5658,12 @@ function renderDedupModal(){
   const cfltCnt=groups.length-autoCnt;
   sum.innerHTML=`找到 <b>${groups.length}</b> 組重複 · 無衝突可自動合併 <b>${autoCnt}</b> 組 · 有衝突需手動處理 <b>${cfltCnt}</b> 組`;
   const list=document.getElementById('dedup-list');
-  if(!groups.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">🎉 沒有發現重複店家</div>';return;}
+  if(!groups.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">沒有發現重複店家</div>';return;}
   list.innerHTML=groups.map(g=>{
     const {keeper}=pickMergeKeeper(g.clients);
     const conflicts=s.conflicts[g.key];
     const rowsHtml=g.clients.map(x=>{
-      const mark=x.idx===keeper.idx?'<span style="color:var(--green);font-weight:600">⭐ 保留</span>':'<span style="color:var(--text3)">將合併並刪除</span>';
+      const mark=x.idx===keeper.idx?'<span style="color:var(--green);font-weight:600">保留</span>':'<span style="color:var(--text3)">將合併並刪除</span>';
       const upd=x.client.updatedAt?new Date(x.client.updatedAt).toISOString().slice(0,16).replace('T',' '):'無時間';
       const visitCnt=(x.client.visits||[]).length;
       return `<div style="font-size:12px;padding:4px 8px;background:var(--bg2);border-radius:4px;margin-bottom:3px">
@@ -5580,7 +5674,7 @@ function renderDedupModal(){
     let cHtml='';
     if(conflicts.length){
       cHtml='<div style="margin-top:6px;padding:6px;border:1px solid var(--yellow);border-radius:4px;background:#fffbe6">'+
-        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text2)">⚠ 欄位衝突，選擇要保留的值：</div>'+
+        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text2)">欄位衝突，選擇要保留的值：</div>'+
         conflicts.map(c=>{
           const chosen=(s.resolutions[g.key]||{})[c.field];
           const opts=c.values.map(v=>{
@@ -5618,19 +5712,12 @@ async function dedupApi(action,payload){
 }
 // 單組合併：先合併本地 → 呼叫 deleteByName（新版 Apps Script）清雲端同名舊列 → save keeper
 // 若伺服器還是舊版（不認 deleteByName），fallback 用 delete(id,name)
-async function syncMergedGroupToCloud(merged,removerClients){
+async function syncMergedGroupToCloud(merged){
   const log=[];
   // 先用 deleteByName 一次清掉所有同名但非 keeper id 的雲端列（涵蓋舊資料無 id 的情況）
   const dnRes=await dedupApi('deleteByName',{name:merged.name,keepId:merged.id});
   if(dnRes.ok&&dnRes.resp&&typeof dnRes.resp.deleted==='number'){
     log.push({type:'deleteByName',name:merged.name,ok:true,deleted:dnRes.resp.deleted});
-  }else if(dnRes.ok){
-    // 舊版 Apps Script 不認 deleteByName，fallback 逐筆刪
-    log.push({type:'deleteByName',name:merged.name,ok:false,error:'舊版 Apps Script 不支援 deleteByName，改用逐筆刪除'});
-    for(const r of removerClients){
-      const res=await dedupApi('delete',{id:r.id,name:r.name});
-      log.push({type:'delete',id:r.id||'(無 id)',name:r.name,ok:res.ok,error:res.error,deleted:res.resp?.deleted});
-    }
   }else{
     log.push({type:'deleteByName',name:merged.name,ok:false,error:dnRes.error});
   }
@@ -5647,18 +5734,18 @@ function showDedupReport(fullLog,totalGroups){
   const fails=fullLog.filter(x=>!x.ok);
   const totalDeleted=delByName.reduce((s,x)=>s+(x.deleted||0),0)+deletes.reduce((s,x)=>s+(x.deleted||0),0);
   let html=`<div style="font-size:13px;line-height:1.6">
-    <div>✅ 合併 <b>${totalGroups}</b> 組</div>
-    <div>☁️ 雲端實際刪除 <b>${totalDeleted}</b> 列</div>
-    <div>💾 keeper 存回雲端 <b>${saves.filter(x=>x.ok).length}/${saves.length}</b> 筆</div>`;
+    <div>✓ 合併 <b>${totalGroups}</b> 組</div>
+    <div>雲端實際刪除 <b>${totalDeleted}</b> 列</div>
+    <div>keeper 存回雲端 <b>${saves.filter(x=>x.ok).length}/${saves.length}</b> 筆</div>`;
   if(fails.length){
-    html+=`<div style="color:var(--red);margin-top:8px">⚠ <b>${fails.length} 筆失敗</b>：</div>`;
+    html+=`<div style="color:var(--red);margin-top:8px"><b>${fails.length} 筆失敗</b>：</div>`;
     html+='<ul style="margin:4px 0 0 18px;font-size:12px;color:var(--text2)">'+
       fails.map(f=>`<li>${f.type} <b>${escHtml(f.name||f.id||'')}</b>：${escHtml(f.error||'未知')}</li>`).join('')+'</ul>';
     html+=`<div style="margin-top:8px;padding:8px;background:#fffbe6;border:1px solid var(--yellow);border-radius:4px;font-size:12px">
       <b>若顯示「舊版 Apps Script 不支援 deleteByName」</b>：請到「Google Sheets 同步」區塊按「複製 Apps Script 程式碼」，貼回你的 Apps Script 專案覆寫 → 重新部署後再跑一次清理即可徹底清乾淨。
     </div>`;
   }else{
-    html+='<div style="color:var(--green);margin-top:8px">🎉 全部成功</div>';
+    html+='<div style="color:var(--green);margin-top:8px">全部成功</div>';
   }
   html+='</div>';
   const list=document.getElementById('dedup-list');
@@ -5677,11 +5764,10 @@ async function mergeDedupGroup(key){
   if(!await appConfirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n此操作會：\n1. 本地合併並保留最新那筆\n2. 雲端刪除所有同名的其他列\n3. 把合併結果推回雲端\n\n無法復原，建議先做一次 Google Sheets 備份。`,{title:'合併重複店家',okText:'合併',danger:true}))return;
   const btn=document.querySelector('#dedup-list button');if(btn){btn.disabled=true;}
   const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,s.resolutions[key]);
-  const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
   DB.clients[keeperIdx]=merged;
   removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
   saveLocal();
-  const log=await syncMergedGroupToCloud(merged,removerClients);
+  const log=await syncMergedGroupToCloud(merged);
   renderClients();
   showDedupReport(log,1);
 }
@@ -5696,8 +5782,7 @@ async function dedupAutoMerge(){
   const mergedList=[];
   targets.forEach(g=>{
     const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,null);
-    const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
-    mergedList.push({merged,removerClients});
+    mergedList.push({merged});
     DB.clients[keeperIdx]=merged;
     removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
   });
@@ -5706,9 +5791,9 @@ async function dedupAutoMerge(){
   // 再逐組 sync 雲端（顯示進度）
   const sum=document.getElementById('dedup-summary');
   for(let i=0;i<mergedList.length;i++){
-    const {merged,removerClients}=mergedList[i];
+    const {merged}=mergedList[i];
     if(sum)sum.innerHTML=`同步中... (${i+1}/${mergedList.length}) <b>${escHtml(merged.name)}</b>`;
-    const log=await syncMergedGroupToCloud(merged,removerClients);
+    const log=await syncMergedGroupToCloud(merged);
     fullLog.push(...log);
   }
   showDedupReport(fullLog,mergedList.length);
@@ -5812,14 +5897,14 @@ function renderAdminDashboard(){
   const cards=_adminSnapshots.map((s,idx)=>{
     if(s.error){
       return `<div style="border:1px solid var(--red);border-radius:6px;padding:10px;margin-bottom:10px;background:#FCEBEB">
-        <div style="font-weight:600;color:var(--red)">⚠ ${escHtml(s.sheetName)}</div>
+        <div style="font-weight:600;color:var(--red)">${escHtml(s.sheetName)}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:4px">${escHtml(s.error)}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px;word-break:break-all">${escHtml(s.url||'')}</div>
       </div>`;
     }
     const m=calcAdminMetrics(s.clients);
     const dups=findDuplicateGroupsIn(s.clients);
-    const dupWarn=dups>0?`<span style="color:var(--yellow);font-size:11px;margin-left:6px">⚠ ${dups} 組重複未清</span>`:'';
+    const dupWarn=dups>0?`<span style="color:var(--yellow);font-size:11px;margin-left:6px">${dups} 組重複未清</span>`:'';
     return `<div onclick="switchAdminTab(${idx})" style="cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--bg2);transition:background .15s" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='var(--bg2)'">
       <div style="font-weight:600;font-size:14px">${escHtml(s.sheetName)} <span style="color:var(--text3);font-weight:400;font-size:11px">${s.clients.length} 筆客戶 · 點選看詳情 →</span>${dupWarn}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px">
@@ -5842,7 +5927,7 @@ function renderAdminDashboard(){
   const totalEngaged=totalM.trialShop+totalM.contractShop;
   const totalConv=totalEngaged>0?(totalM.contractShop/totalEngaged):0;
   const totalCard=`<div style="border:2px solid var(--green-d);border-radius:6px;padding:10px;margin-bottom:10px;background:#E1F5EE">
-    <div style="font-weight:700;font-size:14px;color:var(--green-d)">🏆 總計（${validSnaps.length} 位業務員）</div>
+    <div style="font-weight:700;font-size:14px;color:var(--green-d)">總計（${validSnaps.length} 位業務員）</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px">
       <div><div style="font-size:11px;color:var(--text3)">試用軒數</div><div style="font-size:18px;font-weight:700">${totalM.trialShop}</div></div>
       <div><div style="font-size:11px;color:var(--text3)">試用金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${totalM.trialAmount.toLocaleString()}</div></div>
@@ -5868,7 +5953,7 @@ let _adminRepSearch='';
 function renderAdminTabs(){
   const tabs=document.getElementById('admin-tabs');
   if(!tabs)return;
-  let html=`<button class="btn ${_adminCurrentTab==='overview'?'btn-primary':'btn-outline'} btn-sm" onclick="switchAdminTab('overview')">📋 概覽</button>`;
+  let html=`<button class="btn ${_adminCurrentTab==='overview'?'btn-primary':'btn-outline'} btn-sm" onclick="switchAdminTab('overview')">概覽</button>`;
   (_adminSnapshots||[]).forEach((s,i)=>{
     const cnt=(s.clients||[]).length;
     const active=_adminCurrentTab===i?'btn-primary':'btn-outline';
@@ -5907,7 +5992,7 @@ function renderAdminRepView(){
   const view=document.getElementById('admin-rep-view');
   if(!s||!view)return;
   if(s.error){
-    view.innerHTML=`<div style="padding:16px;color:var(--red)">⚠ 此業務員的資料載入失敗：${escHtml(s.error)}</div>`;
+    view.innerHTML=`<div style="padding:16px;color:var(--red)">此業務員的資料載入失敗：${escHtml(s.error)}</div>`;
     return;
   }
   if(_adminSelectedClient!==null){
@@ -5922,7 +6007,7 @@ function renderAdminRepView(){
       <input id="admin-rep-search-inp" placeholder="搜尋店名 / 聯絡人 / 地址" value="${escHtml(_adminRepSearch)}"
              oninput="_adminRepSearch=this.value;filterAdminRepList()"
              style="flex:1;min-width:200px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px">
-      <button class="btn btn-outline btn-sm" onclick="exportAdminRepCSV()">⬇ 匯出 CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="exportAdminRepCSV()">匯出 CSV</button>
     </div>
     <div id="admin-rep-list" style="overflow-y:auto;flex:1"></div>
   `;
@@ -5981,7 +6066,7 @@ function renderAdminClientDetailHTML(s,idx){
   const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
   const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
   const visits=(c.visits||[]).slice().sort((a,b)=>(a.date||'')<(b.date||'')?1:-1);
-  const moods=['','😍','😊','😐','😕','😞'];
+  const moods=['','極佳','好','普','差','很差'];
   const visitsHtml=visits.length?visits.map(v=>{
     const noteParts=[v.note,v.insight].filter(x=>x&&x.trim()).join(' ／ ');
     return `<div style="border-left:3px solid var(--green);padding:6px 10px;margin-bottom:6px;background:var(--bg2);font-size:12px">
@@ -6107,7 +6192,7 @@ function forceReload(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// TRIP PLANNER — 行程規劃（待辦頁「🗓 今日行程」模式）
+// TRIP PLANNER — 行程規劃（待辦頁「今日行程」模式）
 // 設計要點：
 //   - 行程「不新增資料結構」：行程＝ nextdate 為今天的客戶。nextdate 是 client 欄位、
 //     本來就跟雲端同步 → 三台裝置零後端改動即共享行程。拉進行程＝設 nextdate=今天。
@@ -6134,6 +6219,8 @@ try{TRIP_PICK=localStorage.getItem('duskin_trip_pick')||'';}catch(e){}
 const TRIP_OPEN={overdue:false,future:false};
 function setTodosMode(m,el){
   TODOS_MODE=m;
+  try{localStorage.setItem('duskin_last_panel',m==='trip'?'trip':'todos');}catch(e){}
+  if(window.setGlobalTab)setGlobalTab(m==='trip'?'trip':'clients');
   document.querySelectorAll('#tmode-list,#tmode-trip').forEach(b=>b.classList.remove('on'));
   (el||document.getElementById('tmode-'+m)).classList.add('on');
   document.getElementById('todos-mode-list').style.display=m==='list'?'block':'none';
@@ -6173,14 +6260,14 @@ function tripUndoneTodos(c){return (c.todos||[]).filter(t=>!t.done);}
 function tripCard(it,actions){
   const c=it.c;const undone=tripUndoneTodos(c);
   const region=parseRegion(c.addr)||'（無區）';
-  const tel=c.phone?`<a class="btn btn-outline btn-xs" href="tel:${escHtml(String(c.phone).replace(/[^\d+#]/g,''))}" onclick="event.stopPropagation()">☎</a>`:'';
-  const map=c.addr?`<a class="btn btn-outline btn-xs" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.addr)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🗺</a>`:'';
+  const tel=c.phone?`<a class="btn btn-outline btn-xs" href="tel:${escHtml(String(c.phone).replace(/[^\d+#]/g,''))}" onclick="event.stopPropagation()"></a>`:'';
+  const map=c.addr?`<a class="btn btn-outline btn-xs" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.addr)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"></a>`:'';
   return `<div class="card" style="margin-bottom:6px">
     <div style="display:flex;gap:8px;align-items:flex-start">
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openCD(${it.i})">
         <div style="font-size:14.5px;font-weight:600">${escHtml(c.name)} ${bdg(displayStatus(c.status||STATUS.UNVISITED))}</div>
         <div style="font-size:12.5px;color:var(--text2);margin-top:2px">${escHtml(region)}・${escHtml(c.addr||'')}</div>
-        ${undone.length?`<div style="font-size:12px;color:var(--amber-d);margin-top:2px">📌 ${escHtml(undone[0].text)}${undone.length>1?'（＋'+(undone.length-1)+' 項）':''}</div>`:''}
+        ${undone.length?`<div style="font-size:12px;color:var(--amber-d);margin-top:2px">${escHtml(undone[0].text)}${undone.length>1?'（＋'+(undone.length-1)+' 項）':''}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${tel}${map}</div>
     </div>
@@ -6203,13 +6290,13 @@ function renderTrip(){
   groups.overdue.sort((a,b)=>a.c.nextdate<b.c.nextdate?-1:1);
   let html='';
   // ── 今天（依區分組）──
-  html+=`<div class="form-section" style="margin-top:0">📅 今天（${groups.today.length} 家）</div>`;
+  html+=`<div class="form-section" style="margin-top:0">今天（${groups.today.length} 家）</div>`;
   if(!groups.today.length)html+='<div class="empty" style="padding:14px">今天還沒排行程。<br>從下方「順路建議」或客戶卡的「下次拜訪日」加入。</div>';
   else{
     let lastR='';
     groups.today.forEach(it=>{
       const r=parseRegion(it.c.addr)||'（無區）';
-      if(r!==lastR){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">📍 ${escHtml(r)}</div>`;lastR=r;}
+      if(r!==lastR){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">${escHtml(r)}</div>`;lastR=r;}
       html+=tripCard(it,
         `<button class="btn btn-outline btn-xs" onclick="tripSetDate(${it.i},'')">移出行程</button>
          <label style="font-size:11.5px;color:var(--text3);margin-left:auto">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>`);
@@ -6220,7 +6307,7 @@ function renderTrip(){
   const tripDists=new Set(groups.today.map(it=>parseRegion(it.c.addr)).filter(Boolean));
   if(TRIP_PICK)tripDists.add(TRIP_PICK);
   const allRegions=[...new Set(DB.clients.map(c=>c&&parseRegion(c.addr)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
-  html+=`<div class="form-section">💡 順路建議</div>
+  html+=`<div class="form-section">順路建議</div>
     <div style="font-size:11.5px;color:var(--text3);margin-bottom:4px">今天想跑哪一區？（點選看該區＋順路的建議）</div>
     <div class="toolbar-left" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;margin-bottom:8px;padding-bottom:2px">`+
     allRegions.map(r=>`<button class="pill pill-sm${TRIP_PICK===r?' on':''}" onclick="tripPickDist('${escHtml(r)}')">${escHtml(r)}</button>`).join('')+
@@ -6230,7 +6317,7 @@ function renderTrip(){
     let lastKey='';
     sug.forEach(s=>{
       const key=s.region+'｜'+s.where;
-      if(key!==lastKey){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">📍 ${escHtml(s.region)} <span style="color:var(--blue)">${escHtml(s.where)}</span></div>`;lastKey=key;}
+      if(key!==lastKey){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">${escHtml(s.region)} <span style="color:var(--blue)">${escHtml(s.where)}</span></div>`;lastKey=key;}
       html+=tripCard(s,
         `<span style="font-size:12px;color:var(--text2)">${s.whyIcon} ${escHtml(s.why)}</span>
          <button class="btn btn-primary btn-xs" style="margin-left:auto" onclick="tripSetDate(${s.i},'${td}')">＋拉進今天</button>`);
@@ -6240,7 +6327,7 @@ function renderTrip(){
   }
   // ── 逾期（收合；展開狀態跨渲染保留）──
   if(groups.overdue.length){
-    html+=`<details${TRIP_OPEN.overdue?' open':''} ontoggle="TRIP_OPEN.overdue=this.open" style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">⏰ 逾期（${groups.overdue.length} 家）— 點開處理</summary>
+    html+=`<details${TRIP_OPEN.overdue?' open':''} ontoggle="TRIP_OPEN.overdue=this.open" style="margin-top:14px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--red);padding:8px 0">逾期（${groups.overdue.length} 家）— 點開處理</summary>
       <div style="margin:6px 0"><button class="btn btn-outline btn-sm" onclick="tripMoveAllToday()">全部移到今天</button></div>`;
     groups.overdue.forEach(it=>{
       html+=tripCard(it,
@@ -6253,13 +6340,42 @@ function renderTrip(){
   }
   // ── 未來 7 天（收合預覽；展開狀態跨渲染保留）──
   if(groups.future.length){
-    html+=`<details${TRIP_OPEN.future?' open':''} ontoggle="TRIP_OPEN.future=this.open" style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">🔜 未來 7 天（${groups.future.length} 家）</summary>`;
+    html+=`<details${TRIP_OPEN.future?' open':''} ontoggle="TRIP_OPEN.future=this.open" style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);padding:8px 0">未來 7 天（${groups.future.length} 家）</summary>`;
     groups.future.forEach(it=>{
       html+=tripCard(it,
-        `<span style="font-size:12px;color:var(--text2)">📅 ${escHtml(it.c.nextdate)}</span>
+        `<span style="font-size:12px;color:var(--text2)">${escHtml(it.c.nextdate)}</span>
          <button class="btn btn-outline btn-xs" onclick="tripSetDate(${it.i},'${td}')">提前到今天</button>`);
     });
     html+='</details>';
+  }
+  // ═══ 融合視圖：工地與工業區的「今天」（唯讀鏡射，點了行動或跳轉）═══
+  const dueSites=fusionDueSites();
+  if(dueSites.length){
+    html+=`<div class="form-section" style="margin-top:14px">可拜訪的工地（${dueSites.length}）— 開幕就是最佳拜訪時機</div>`;
+    dueSites.slice(0,8).forEach(st=>{
+      html+=`<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(st.name||'未命名')}</div>
+          <div style="font-size:11.5px;color:var(--text3)">${escHtml([st.town,st.stage].filter(Boolean).join('・'))}・可拜訪 ${escHtml(st.openDate)}${st.by?'・'+escHtml(st.by)+' 登記':''}</div>
+        </div>
+        <a class="btn btn-outline btn-xs" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}"></a>
+        <button class="btn btn-primary btn-xs" onclick="mainConvertSite('${escHtml(st.id)}')">轉為客戶</button>
+      </div>`;
+    });
+    if(dueSites.length>8)html+=`<div style="font-size:11.5px;color:var(--text3);margin:2px 0 6px">…還有 ${dueSites.length-8} 個，<a href="sitemap.html" style="color:var(--green)">開工地地圖看全部</a></div>`;
+  }
+  const izDue=fusionIzDue();
+  if(izDue.length){
+    html+=`<div class="form-section" style="margin-top:14px">工業區待訪（${izDue.length}）</div>`;
+    izDue.slice(0,8).forEach(r=>{
+      html+=`<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.name)}</div>
+          <div style="font-size:11.5px;color:var(--text3)">${escHtml(r.dist||'')}${r.date?'・約 '+escHtml(r.date):''}</div>
+        </div>
+        <a class="btn btn-outline btn-xs" href="izcrm.html" style="text-decoration:none">開啟 →</a>
+      </div>`;
+    });
   }
   el.innerHTML=html;
 }
@@ -6283,9 +6399,9 @@ function tripSuggestions(tripDists){
     else return;
     const undone=tripUndoneTodos(c);
     let why,whyIcon,pri;
-    if(undone.length){why='有待辦';whyIcon='📌';pri=0;}
-    else if(!c.status||c.status===STATUS.UNVISITED){why='未拜訪';whyIcon='⚪';pri=1;}
-    else if(statusEq(c.status,STATUS.DEAL)&&(c.contractedItems||[]).length){why='成交客戶';whyIcon='🤝';pri=2;}
+    if(undone.length){why='有待辦';whyIcon='';pri=0;}
+    else if(!c.status||c.status===STATUS.UNVISITED){why='未拜訪';whyIcon='';pri=1;}
+    else if(c.status===STATUS.DEAL&&(c.contractedItems||[]).length){why='成交客戶';whyIcon='';pri=2;}
     else return;
     out.push({c,i,region,where,why,whyIcon,pri});
   });
@@ -6308,7 +6424,7 @@ function consumeIzHandoff(){
     if(!h||!h.id||!h.name)return;
     if(DB.clients.some(c=>c&&c.id===h.id))return;
     const c={id:h.id,name:String(h.name),contact:String(h.contact||''),phone:String(h.phone||''),
-      addr:String(h.addr||''),type:'工廠',status:STATUS.UNVISITED,regNo:'',nextdate:'',env:'',
+      addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.UNVISITED,regNo:'',nextdate:'',env:'',
       note:String(h.note||''),trialItems:[],contractedItems:[],todos:[],visits:[],
       lat:null,lng:null,geocodeSource:null,updatedAt:Date.now()};
     DB.clients.push(c);n++;
@@ -6331,9 +6447,10 @@ function consumeSiteHandoff(){
   inbox.forEach(h=>{
     if(!h||!h.id||!(h.name||h.addr))return;
     if(DB.clients.some(c=>c&&c.id===h.id))return;
+    if(h.siteId&&DB.clients.some(c=>c&&c.srcSiteId===h.siteId))return; // 主系統端已轉過同一工地
     const hasGeo=(typeof h.lat==='number'&&typeof h.lng==='number');
     const c={id:h.id,name:String(h.name||h.addr),contact:'',phone:'',
-      addr:String(h.addr||''),type:String(h.type||''),status:STATUS.UNVISITED,regNo:'',
+      addr:String(h.addr||''),type:String(h.type||''),segment:'街邊店',srcSiteId:String(h.siteId||''),status:STATUS.UNVISITED,regNo:'',
       nextdate:String(h.nextdate||''),env:'',note:String(h.note||''),
       trialItems:[],contractedItems:[],todos:[],visits:[],
       lat:hasGeo?h.lat:null,lng:hasGeo?h.lng:null,
@@ -6345,6 +6462,58 @@ function consumeSiteHandoff(){
   });
   localStorage.removeItem('duskin_site_handoff');
   if(n){saveLocal();renderClients();showToast('已從工地地圖帶入 '+n+' 家新客戶');}
+}
+// ═══ 融合視圖（唯讀鏡射）：工地與工業區的「今天」入行程 ═══
+function fusionDueSites(){
+  try{
+    const sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null');
+    if(!sm||!Array.isArray(sm.sites))return[];
+    const td=today();
+    return sm.sites.filter(s=>s&&!s.deleted&&!(s.main&&s.main.clientId)
+      &&typeof s.lat==='number'&&s.openDate&&s.openDate<=td
+      &&['已拜訪','不適合'].indexOf(s.stage)<0
+      &&!DB.clients.some(c=>c&&c.srcSiteId===s.id))
+      .sort((a,b)=>(a.openDate<b.openDate?-1:1));
+  }catch(e){return[];}
+}
+function fusionIzDue(){
+  try{
+    const iz=JSON.parse(localStorage.getItem('izcrm_v1')||'null');
+    if(!iz||!iz.records)return[];
+    const td=today();
+    const due=Object.keys(iz.records).filter(id=>{const r=iz.records[id];return r&&r.visitPlan&&r.visitPlan.date&&r.visitPlan.date<=td;});
+    if(!due.length)return[];
+    const names={};
+    try{const m=JSON.parse(localStorage.getItem('izcrm_master')||'null');
+      if(m&&Array.isArray(m.factories))m.factories.forEach(f=>{if(f&&f.id)names[f.id]={name:f.name||'',dist:f.dist||''};});}catch(e){}
+    return due.map(id=>({id,name:(names[id]&&names[id].name)||('工廠（開工業區CRM 看名稱）'),dist:(names[id]&&names[id].dist)||'',date:iz.records[id].visitPlan.date}));
+  }catch(e){return[];}
+}
+// 工地 → 正規客戶卡（主系統端一鍵轉）：建檔走正規流程上雲；
+// 以回執信箱 duskin_site_ack 通知 sitemap 標記 s.main（單向、冪等，同事經雲端看得到已建檔）
+function mainConvertSite(siteId){
+  let sm=null;try{sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null');}catch(e){}
+  const s=sm&&Array.isArray(sm.sites)?sm.sites.find(x=>x&&x.id===siteId&&!x.deleted):null;
+  if(!s){showToast('找不到這個工地（可能已被刪除）');return;}
+  if((s.main&&s.main.clientId)||DB.clients.some(c=>c&&c.srcSiteId===siteId)){showToast('這個工地已經建檔過');return;}
+  const town=s.town||'';
+  const addr=(s.addr&&s.addr.indexOf(town)===0)?s.addr:[town,s.addr].filter(Boolean).join('');
+  const hasGeo=(typeof s.lat==='number'&&typeof s.lng==='number');
+  const c={id:genId(),name:s.name||addr||'工地新店',contact:'',phone:'',
+    addr,type:(s.type&&s.type!=='不確定')?s.type:'',segment:'街邊店',srcSiteId:siteId,
+    status:STATUS.UNVISITED,regNo:'',nextdate:s.openDate||'',env:'',
+    note:['（工地地圖轉入）',s.stage||'',s.note||''].filter(Boolean).join('　'),
+    trialItems:[],contractedItems:[],todos:[],visits:[],
+    lat:hasGeo?s.lat:null,lng:hasGeo?s.lng:null,
+    geocodeSource:hasGeo?'manual':null,geocodedAt:hasGeo?Date.now():null,
+    updatedAt:Date.now()};
+  DB.clients.push(c);saveLocal();autoSync('save',{client:c});
+  let ack=[];try{ack=JSON.parse(localStorage.getItem('duskin_site_ack')||'[]');}catch(e){}
+  if(!Array.isArray(ack))ack=[];
+  ack.push({siteId,clientId:c.id});
+  try{localStorage.setItem('duskin_site_ack',JSON.stringify(ack));}catch(e){}
+  renderClients();try{renderTrip();}catch(e){}
+  showToast('✓ 已轉為客戶：'+c.name+'（拜訪日 '+(c.nextdate||'未定')+'）');
 }
 // izcrm／sitemap 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
 window.addEventListener('storage',e=>{if(e.key==='duskin_iz_handoff'&&e.newValue)consumeIzHandoff();});
@@ -6383,6 +6552,7 @@ const MIGRATIONS=[
   {v:5, desc:'backfill inventory cat', fn:backfillInventoryCat},
   {v:6, desc:'remove deprecated fw4 field', fn:removeDeprecatedFw4},
   {v:7, desc:'add geocode fields', fn:prepareGeocodeFields},
+  {v:8, desc:'add client segment', fn:function(){(DB.clients||[]).forEach(c=>{if(c&&!c.segment)c.segment=(c.type==='工廠'?'工廠':'街邊店');});}},
 ];
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);
@@ -6403,11 +6573,15 @@ const MIGRATIONS=[
 autoAddRecycleTodos();validateClients();consumeIzHandoff();consumeSiteHandoff();renderClients();
 // ═══ 首頁深連結（home.html 樞紐 → index.html#daily / #trip / #new …）═══
 (function(){
-  const h=(location.hash||'').replace('#','');
-  if(!h)return;
+  let h=(location.hash||'').replace('#','');
+  if(!h){
+    try{h=localStorage.getItem('duskin_last_panel')||'';}catch(e){}
+    if(!h||h==='clients')return; // 預設本來就是客戶頁
+  }
   try{
     if(h==='trip'){navTo('todos',document.getElementById('nav-todos'));setTodosMode('trip');}
     else if(h==='new'){navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>{try{openCF(-1);}catch(e){}},120);}
+    else if(h==='map'){navTo('clients',document.getElementById('nav-clients'));setClientView('map');}
     else if(['clients','daily','todos','shops','inventory','settings'].indexOf(h)>=0){navTo(h,document.getElementById('nav-'+h));}
     history.replaceState(null,'',location.pathname+location.search);
   }catch(e){}
@@ -6425,8 +6599,8 @@ window.addEventListener('online',()=>{if(SHEET_URL&&OUTBOX.length)flushOutbox();
 // 與主程式「以 host adapter 解耦」——模組不直接讀寫主程式全域（DB / S / today …），
 // 一律透過 init() 注入的 adapter 取得資料與動作；UI 事件於 mount() 內部綁定。
 //   ContractMaker.init({ getClients, getCurIdx, getProduct, today, save, sync, onChange, escapeHtml })
-//   ContractMaker.open()         → 客戶卡「📄 報價單」：開啟分步精靈
-//   ContractMaker.openContract() → 客戶卡「📑 產生合約」：開啟公版合約精靈
+//   ContractMaker.open()         → 客戶卡「報價單」：開啟分步精靈
+//   ContractMaker.openContract() → 客戶卡「產生合約」：開啟公版合約精靈
 // docx@8.5.0 UMD 庫於首次開啟時延遲載入（unpkg CDN）
 // ═══════════════════════════════════════════════════════════
 window.ContractMaker = (function(){
@@ -6855,7 +7029,7 @@ const CM_builder = (function(){
       sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
   }
   // ═══ 公版「DUSKIN商品租賃契約書」專用 builder（與報價單完全獨立） ═══
-  function cmCk(on){ return on ? '☑' : '☐'; }
+  function cmCk(on){ return on ? '✓' : '○'; }
   function cmCycleLabel(c){ return c==='1W'?'1週' : c==='2W'?'2週' : '4週'; }
   function ctTitle(){
     const {Paragraph,AlignmentType}=getDocx();
@@ -7238,7 +7412,7 @@ function cmRenderItems(){
     nameField.style.flex = '1 1 auto';
     head.appendChild(nameField);
     const pick = document.createElement('button');
-    pick.type = 'button'; pick.className = 'btn btn-outline btn-sm'; pick.textContent = '🔍 商品庫';
+    pick.type = 'button'; pick.className = 'btn btn-outline btn-sm'; pick.textContent = '商品庫';
     pick.title = '從商品庫選擇（自動帶入品名、週期、單價）';
     pick.onclick = () => cmOpenProdPicker(idx);
     head.appendChild(pick);
@@ -7483,7 +7657,7 @@ async function cmTriggerSave(blob, filename){
           '<body style="font-family:sans-serif;padding:20px;text-align:center">'+
           '<h3 style="margin:0 0 12px">文件已產生</h3>'+
           '<p style="color:#555;margin:0 0 16px">請點下方按鈕，或點右上角「分享」⤴ 儲存／傳送檔案。</p>'+
-          '<a id="dl" href="'+reader.result+'" download="'+filename+'" style="display:inline-block;padding:12px 20px;background:#1f4e79;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">📥 下載 '+filename+'</a>'+
+          '<a id="dl" href="'+reader.result+'" download="'+filename+'" style="display:inline-block;padding:12px 20px;background:#1f4e79;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">下載 '+filename+'</a>'+
           '</body>');
         w.document.close();
         resolve('newtab');
@@ -7526,11 +7700,11 @@ async function cmDownload(){
     if(result === 'cancelled'){
       box.className = 'cm-msg warn'; box.textContent = '已取消分享。';
     } else if(result === 'shared'){
-      box.className = 'cm-msg success'; box.textContent = '✅ 已透過系統分享 '+fname;
+      box.className = 'cm-msg success'; box.textContent = '✓ 已透過系統分享 '+fname;
     } else if(result === 'newtab'){
-      box.className = 'cm-msg success'; box.textContent = '✅ 已在新分頁開啟 '+fname+'，請於該頁點「分享」→「儲存到檔案」';
+      box.className = 'cm-msg success'; box.textContent = '✓ 已在新分頁開啟 '+fname+'，請於該頁點「分享」→「儲存到檔案」';
     } else {
-      box.className = 'cm-msg success'; box.textContent = '✅ 已下載 '+fname+'，並寫入拜訪紀錄。';
+      box.className = 'cm-msg success'; box.textContent = '✓ 已下載 '+fname+'，並寫入拜訪紀錄。';
     }
   } catch(e){
     cmShowError('產生失敗：'+(e.message || String(e)));
@@ -7729,9 +7903,9 @@ async function cmDownloadImage(){
     }
     const box = document.getElementById('cm-msg-box');
     if(result === 'cancelled'){ box.className='cm-msg warn'; box.textContent='已取消分享。'; }
-    else if(result === 'shared'){ box.className='cm-msg success'; box.textContent='✅ 已透過系統分享 '+fname; }
-    else if(result === 'newtab'){ box.className='cm-msg success'; box.textContent='✅ 已在新分頁開啟 '+fname+'，請長按圖片儲存或點「分享」。'; }
-    else { box.className='cm-msg success'; box.textContent='✅ 已下載 '+fname+'，並寫入拜訪紀錄。'; }
+    else if(result === 'shared'){ box.className='cm-msg success'; box.textContent='✓ 已透過系統分享 '+fname; }
+    else if(result === 'newtab'){ box.className='cm-msg success'; box.textContent='✓ 已在新分頁開啟 '+fname+'，請長按圖片儲存或點「分享」。'; }
+    else { box.className='cm-msg success'; box.textContent='✓ 已下載 '+fname+'，並寫入拜訪紀錄。'; }
   }catch(e){
     cmShowError('產生圖片失敗：'+(e.message || String(e)));
   }finally{
@@ -7918,7 +8092,7 @@ function cmwRenderItems(){
     const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'cm-item-pick' + (it.code ? '' : ' empty');
     pick.innerHTML = it.code
       ? '<span class="code">' + HOST.escapeHtml(it.code) + '</span>' + HOST.escapeHtml(it.name || '') + (it.isCustomMat ? '<span class="price" style="color:#A36B00">特製地墊</span>' : '')
-      : '👉 點此從商品庫選擇';
+      : '點此從商品庫選擇';
     pick.onclick = () => cmwOpenPicker(idx);
     const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'cm-item-rm'; rm.textContent = '✕'; rm.title = '刪除品項'; rm.setAttribute('aria-label', '刪除此品項');
     rm.onclick = () => cmwRemoveItem(idx);
@@ -8092,9 +8266,9 @@ async function cmwDownload(){
       HOST.save(); HOST.sync('save', { client: c }); HOST.onChange();
     }
     if(result === 'cancelled') cmwShowMsg('已取消分享。', 'warn');
-    else if(result === 'shared') cmwShowMsg('✅ 已透過系統分享 ' + fname, 'success');
-    else if(result === 'newtab') cmwShowMsg('✅ 已在新分頁開啟 ' + fname + '，請於該頁點「分享」→「儲存到檔案」', 'success');
-    else cmwShowMsg('✅ 已下載 ' + fname + '，並寫入拜訪紀錄。', 'success');
+    else if(result === 'shared') cmwShowMsg('✓ 已透過系統分享 ' + fname, 'success');
+    else if(result === 'newtab') cmwShowMsg('✓ 已在新分頁開啟 ' + fname + '，請於該頁點「分享」→「儲存到檔案」', 'success');
+    else cmwShowMsg('✓ 已下載 ' + fname + '，並寫入拜訪紀錄。', 'success');
   } catch(e){
     cmwShowMsg('產生失敗：' + (e.message || String(e)), 'error');
   } finally {
@@ -8159,9 +8333,9 @@ function cmwMount(){
 return {
   // 注入 host adapter（主程式啟動時呼叫一次）
   init(host){ if(host) Object.assign(HOST, host); return this; },
-  // 客戶卡「📄 報價／合約」：開啟完整視窗
+  // 客戶卡「報價／合約」：開啟完整視窗
   open(){ cmMount(); openCM(); },
-  // 客戶卡「📑 產生合約」：開啟公版合約精靈
+  // 客戶卡「產生合約」：開啟公版合約精靈
   openContract(){ cmwMount(); cmwOpen(); },
   // 測試用內部 handle（正式 UI 不使用；供 ?test=1 驗證純函式）
   _test: {
@@ -8372,14 +8546,8 @@ if(location.search.includes('test=1')){
   assert('mergeClientGroup 用 resolution', merged2.merged.contact, '乙');
   DB.clients=savedClients;
 
-  // --- statusEq ---
-  assert('statusEq 拒絕=已結案', statusEq(STATUS.REFUSE,STATUS.CLOSED), true);
-  assert('statusEq 已結案=拒絕', statusEq(STATUS.CLOSED,STATUS.REFUSE), true);
-  assert('statusEq 試用中≠已成約', statusEq(STATUS.TRIAL,STATUS.DEAL), false);
-  assert('statusEq 同狀態', statusEq(STATUS.TRIAL,STATUS.TRIAL), true);
 
   // --- displayStatus ---
-  assert('displayStatus 已結案→拒絕', displayStatus(STATUS.CLOSED), STATUS.REFUSE);
   assert('displayStatus 空→未拜訪', displayStatus(''), STATUS.UNVISITED);
   assert('displayStatus 試用中→試用中', displayStatus(STATUS.TRIAL), STATUS.TRIAL);
 
@@ -8407,8 +8575,6 @@ if(location.search.includes('test=1')){
   assert('calcReportAmt 只看試用 - 不用 c.fw4', calcReportAmt(testClient3), 0);
   const testClient4={status:STATUS.REFUSE,trialItems:[{product:'S-20',qty:1}]};
   assert('calcReportAmt 拒絕→0（不算試用）', calcReportAmt(testClient4), 0);
-  const testClient5={status:STATUS.CLOSED,trialItems:[{product:'S-20',qty:1}]};
-  assert('calcReportAmt 已結案→0（拒絕別名）', calcReportAmt(testClient5), 0);
 
   // --- matchCategory ---
   const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trialItems:[{product:'S-20',qty:1,quoted:0}],contractedItems:[]};

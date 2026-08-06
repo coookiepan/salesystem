@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "資料層測試：C4 後端逐列容錯、C2 前端持久待推送佇列",
   "scripts": {
-    "test": "node syntax-check.js && node xss-guard.test.js && node gas-getall.test.js && node outbox.test.js && node sync.test.js && node errlog.test.js && node validate.test.js && node todo-parse.test.js && node a11y.test.js && node pwa.test.js && node izcrm.test.js && node trip-handoff.test.js && node client-views.test.js && node sitemap.test.js && node home.test.js"
+    "test": "node syntax-check.js && node xss-guard.test.js && node gas-getall.test.js && node outbox.test.js && node sync.test.js && node errlog.test.js && node validate.test.js && node todo-parse.test.js && node a11y.test.js && node pwa.test.js && node izcrm.test.js && node trip-handoff.test.js && node client-views.test.js && node sitemap.test.js && node home.test.js && node map-place.test.js && node fusion.test.js"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

@@ -55,11 +55,11 @@ const D = (off) => { const d = new Date(Date.now() + off * 86400000); return d.g
   w.appConfirm = async () => true;
   w.renderTrip();
   const out = w.document.getElementById('trip-out').innerHTML;
-  assert('今天分組含今天A', /今天A/.test(out) && /📅 今天（1 家）/.test(out));
+  assert('今天分組含今天A', /今天A/.test(out) && /今天（1 家）/.test(out));
   assert('逾期收合區含逾期B', /逾期（1 家）/.test(out) && /逾期B/.test(out));
   assert('逾期在 details 裡（不蓋住今天）', /<details[^>]*>[\s\S]*逾期B/.test(out));
   assert('未來 7 天含未來C', /未來C/.test(out));
-  assert('順路建議：同區待辦E', /建議E待辦/.test(out) && /📌/.test(out));
+  assert('順路建議：同區待辦E', /建議E待辦/.test(out) && /有待辦/.test(out));
   assert('順路建議：途中的善化未拜訪D', /建議D未拜訪/.test(out) && /往官田區途中/.test(out));
   assert('順路建議：再過去一站的六甲成交F', /建議F成交/.test(out) && /官田區再過去一站/.test(out));
   assert('一般複訪G不在建議中', !/不建議G複訪/.test(out));
