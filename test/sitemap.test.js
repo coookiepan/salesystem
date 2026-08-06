@@ -24,6 +24,32 @@ function makeLS() {
     clear: () => { for (const k in store) delete store[k]; }
   };
 }
+// 最小 Leaflet stub：sitemap 改走 CDN 後，JSDOM 不載外部 script，需在頁面腳本前備妥 L
+function makeL(w) {
+  class Marker {
+    constructor(latlng, opt) { this._ll = latlng.lat !== undefined ? latlng : { lat: latlng[0], lng: latlng[1] }; this.opt = opt || {}; this._ev = {}; }
+    addTo(m) { if (m && m._markers) m._markers.push(this); return this; }
+    bindPopup(h) { this._popup = h; return this; }
+    setLatLng(ll) { this._ll = ll.lat !== undefined ? ll : { lat: ll[0], lng: ll[1] }; return this; }
+    getLatLng() { return this._ll; }
+    on(ev, fn) { this._ev[ev] = fn; return this; }
+    off(ev) { delete this._ev[ev]; }
+  }
+  class LMap {
+    constructor() { this._markers = []; this._h = {}; }
+    setView() { return this; } getZoom() { return 16; } getCenter() { return { lat: 23.02, lng: 120.25 }; }
+    addLayer() {} removeLayer(l) { const i = this._markers.indexOf(l); if (i >= 0) this._markers.splice(i, 1); }
+    closePopup() {} invalidateSize() {} on(ev, fn) { this._h[ev] = fn; } off(ev) { delete this._h[ev]; }
+  }
+  return {
+    map: () => new LMap(),
+    tileLayer: () => ({ addTo: () => ({}) }),
+    marker: (ll, opt) => new Marker(ll, opt),
+    divIcon: o => o,
+    latLng: (a, b) => (a && a.lat !== undefined ? a : { lat: a, lng: b }),
+    control: { attribution: () => ({ addTo: () => ({}) }) }
+  };
+}
 function boot(html) {
   const vc = new VirtualConsole(); vc.on('jsdomError', () => {});
   const dom = new JSDOM(html, {
@@ -32,6 +58,7 @@ function boot(html) {
       Object.defineProperty(w, 'localStorage', { value: makeLS(), configurable: true });
       w.scrollTo = () => {};
       w.fetch = async () => { throw new Error('offline'); };
+      w.L = makeL(w);
     }
   });
   return dom.window;
@@ -41,7 +68,7 @@ function boot(html) {
   console.log('S1 — sitemap.html 語法檢查');
   {
     const scripts = [...smHtml.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim());
-    assert('找得到 inline script（含 Leaflet 與 app）', scripts.length >= 2);
+    assert('app inline script 存在、Leaflet 改走 CDN＋SRI（與主系統同源）', scripts.length === 1 && smHtml.includes('unpkg.com/leaflet@1.9.4') && smHtml.includes('integrity='));
     let ok = true, err = '';
     for (const s of scripts) { try { new vm.Script(s); } catch (e) { ok = false; err = e.message; } }
     assert('所有 inline script 可解析' + (err ? '（' + err + '）' : ''), ok);
@@ -50,7 +77,8 @@ function boot(html) {
       try { new vm.Script(JSON.parse('[' + m[1].replace(/,\s*$/, '') + ']').join('\n')); return true; } catch (e) { return false; }
     })());
     assert('原生 alert/confirm 已移除（app script 內）', !/[^.\w](alert|confirm)\(/.test(scripts[scripts.length - 1]));
-    assert('支援深色模式（prefers-color-scheme 覆寫變數）', /prefers-color-scheme\s*:\s*dark/.test(smHtml));
+    const tokensCss = fs.readFileSync(path.join(root, 'tokens.css'), 'utf8');
+    assert('引用共用 tokens.css，深色覆寫由該檔提供', smHtml.includes('href="tokens.css"') && /prefers-color-scheme:dark/.test(tokensCss));
     assert('清單搜尋框 ≥16px（iOS 不自動放大頁面）', !/id="q"[^>]*font-size:1[0-5]px/.test(smHtml) && !/id="listsort"[^>]*font-size:1[0-5]px/.test(smHtml));
   }
 

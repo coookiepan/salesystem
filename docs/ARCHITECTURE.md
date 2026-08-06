@@ -92,7 +92,8 @@ index.html
     DEDUP                 重複店家掃描／合併（含雲端清理）
     全域 UI               showToast / appAlert / appConfirm / 全域 Esc 關 modal
     SHOPS SEARCH          查詢頁（公司既有客戶，含四週營業額）
-    CLIENT LIST / MAP     列表（分頁渲染）與 Leaflet 地圖（geocode 佇列）
+    CLIENT LIST / MAP     列表（分頁渲染）與 Leaflet 地圖（geocode 佇列＋
+                          工地地圖模式：FAB「＋在這裡建檔」GPS 抓點→拖圖釘→建檔，座標標 manual）
     CLIENT FORM / DETAIL  建檔表單精靈、詳情頁（拜訪/品項/待辦）
     DAILY / REPORT        日報與 4W 推進表產生器
     GLOBAL TODOS          Todoist 式：parseQuickTodo 解析器＋分區清單
@@ -238,6 +239,7 @@ sequenceDiagram
 | `ping` | 連線測試 |
 | `getAll` (`since?`) | 全量或增量拉取 clients（逐列容錯：壞 JSON 列跳過並回報列號） |
 | `save` (`client`, `force?`) | upsert 單筆＋衝突偵測；`LockService` 20 秒鎖防並行寫入互蓋 |
+| `ping` 回 `ver` | 後端版本號（`BACKEND_VER`）；前端測試連線時比對 `REQUIRED_BACKEND_VER`，過舊提示重新部署（取代永久 fallback） |
 | `delete` / `deleteByName` | 刪除（後者供 dedup 清理雲端同名列） |
 | `saveInventory` / `getInventory` | 庫存整包讀寫 |
 | `saveProducts` / `getProducts` | 商品整包讀寫 |
@@ -267,7 +269,7 @@ sequenceDiagram
 
 ## UI 系統
 
-- **設計 tokens**：所有顏色/字級/圓角/陰影都是 `:root` CSS 變數，深色模式以 `prefers-color-scheme` 覆寫同名變數——**JS 產生的 HTML 也必須引用變數**，不可寫死 hex（測試會抓部分情況，review 時留意）
+- **設計 tokens 唯一來源＝`tokens.css`**：四個頁面（index/home/izcrm/sitemap）共用引入，深色模式以 `prefers-color-scheme` 覆寫同名變數；頁面專屬變數（index 字級表、home hero 色、sitemap radius）留在各自檔內。**JS 產生的 HTML 也必須引用變數**，不可寫死 hex
 - **狀態色票**：`SS_STYLE`／`CB_STYLE` 以 `var(--ss-*)` 引用，雙色票（淺/深）定義在 tokens 區
 - **對話框**：原生 `alert/confirm` 已全面棄用，改用 `appAlert()`／`appConfirm()`（Promise-based、Esc/背景可關、danger 紅鈕）與非阻斷 `showToast()`；測試 stub 時覆寫 `w.appConfirm` 即可
 - **設計系統**：[design-system/](../design-system/README.md) 內有 tokens 文件、元件預覽 HTML 與可瀏覽的 UI kit，供設計工具或重建畫面時參照
@@ -397,7 +399,7 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 登記「正在施工裝修的店面」（未來新店＝潛在客戶）。與 izcrm 同樣是**單檔子系統＋柔性接點**：
 
 1. 查詢頁／設定頁入口按鈕（`<a href="sitemap.html">`）；sitemap 設定頁有「回主系統」連結。
-2. `sw.js` 預快取 `sitemap.html`（Leaflet 1.9.4 **內嵌**於檔內，離線可開）。
+2. `sw.js` 預快取 `sitemap.html`；Leaflet 與主系統同一組 unpkg CDN＋SRI 標籤（SW 快取，離線可開）。
 3. **建檔交接信箱**（單向）：popup「📇 建檔到主系統」把基本資料＋預產 client id 寫進
    `localStorage.duskin_site_handoff`；主系統以 `consumeSiteHandoff()`（與 IZ 同一組
    INIT／storage／回前景 hook）建檔並上雲。冪等（同 id 跳過）。連結記在工地
@@ -416,7 +418,8 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 - 資料：`localStorage.sitemap_v1`＝`{sites,cfg,last,queue}`；一筆 site 含
   id/name/addr/town/lat/lng/acc/src/type/stage/openDate/note/photo(≤42k data URL)/by/created/updated/deleted。
 - 後端：獨立 Apps Script（`GAS_CODE` 內嵌可一鍵複製；Sheet 分頁 `sites`：id/data(JSON)/updated），
-  action：`ping`/`getAll`/`upsert`/`bulk`/`district`（NLSC 座標→行政區代理）。
+  action：`ping`/`getAll`/`upsert`/`bulk`/`district`（NLSC 座標→行政區代理）；
+  `upsert` 走 `LockService` 寫入鎖（全組共寫一份 Sheet，bulk 逐筆經 upsert 同受保護）。
 - 行政區判定兩段式：瀏覽器直打 NLSC，被 CORS 擋則走後端 `district`；都失敗留空手填。
 - 前端 POST 刻意不帶 `Content-Type`（維持 simple request 避開 CORS preflight）。
 - 慣例對齊：對話框用 `appAlert`/`appConfirm`（原生已移除）、popup/清單輸出皆經 `esc()`、

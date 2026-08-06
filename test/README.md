@@ -25,6 +25,10 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 | `pwa.test.js` | H2 | Service Worker 行為：預快取、離線退回外殼、HTML 網路優先、POST 不攔、Leaflet CDN 快取優先 |
 | `izcrm.test.js` | Z1 | 工業區CRM：主檔載入與渲染（XSS）、聚落規則 zoneOf、報價 fw4、LWW 同步合併、CSV 跳脫、seed 匯入冪等、建檔 handoff 寫入＋鏡射 |
 | `trip-handoff.test.js` | Z2 | 行程規劃：走廊順路、今天/逾期/未來分組、批次移到今天；主系統消化 handoff 建檔（冪等、進 outbox） |
+| `client-views.test.js` | Z3 | 客戶列表視圖：試用回收分組排序、成約待轉交、排序誠實化、已拜訪定義與藥丸數量 |
+| `sitemap.test.js` | S1/S2 | 工地地圖：語法（含 GAS_CODE）、登記/60m 重複/離線佇列/LWW/tombstone/XSS、📇 建檔交接端對端（工地→主系統、冪等） |
+| `home.test.js` | H3 | 首頁樞紐：接點靜態檢查（start_url/sw/🏠 鈕/#place）、三系統數字鏡射正確性、空狀態、深連結（#daily/#trip/#new） |
+| `map-place.test.js` | P1 | 主系統工地地圖模式：FAB→GPS 抓點→拖圖釘→建檔表單→manual 座標入庫；取消路徑與暫存座標不外洩 |
 
 ## 寫新測試的慣例
 

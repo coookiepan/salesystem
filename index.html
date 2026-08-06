@@ -21,48 +21,24 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 </script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="tokens.css">
 <style>
 /* ═══════════════════════════════════════════════════════════
    DESIGN TOKENS
    ═══════════════════════════════════════════════════════════ */
 :root{
   /* Brand (single accent) */
-  --green:#12A673;--green-d:#0A6849;--green-l:#E3F4ED;--green-b:#A1DFC7;
-  --theme:#085041;  /* PWA theme / logo plate / deal */
+    /* PWA theme / logo plate / deal */
   /* Semantic (muted) */
-  --red:#B73838;--red-l:#FBEAEA;
-  --amber:#B5701A;--amber-l:#FAEEDA;--amber-d:#633806;
-  --blue:#2A6BB0;--blue-l:#E6F0FA;--blue-d:#0C447C;
-  --purple-l:#EEEDFE;--purple-d:#3C3489;
-  --yellow:#BA7517;--yellow-b:#EF9F27;
+      --yellow:#BA7517;--yellow-b:#EF9F27;
   /* Alert borders */
-  --amber-b:#FAC775;--red-b:#F7C1C1;--blue-b:#B5D4F4;
-  /* Status badge palette（深色模式於下方覆寫） */
-  --ss-gray-bg:#F1EFE8;--ss-gray-fg:#444441;
-  --ss-blue-bg:#E6F1FB;--ss-blue-fg:#0C447C;
-  --ss-amber-bg:#FAEEDA;--ss-amber-fg:#633806;
-  --ss-purple-bg:#EEEDFE;--ss-purple-fg:#3C3489;
-  --ss-green-bg:#E1F5EE;--ss-green-fg:#085041;
-  --ss-green2-bg:#D4EDDA;--ss-green2-fg:#155724;
-  --ss-red-bg:#FCEBEB;--ss-red-fg:#A32D2D;
-  /* Neutrals (warm) */
-  --bg:#ffffff;--bg2:#F8F8F5;--bg3:#EFEEE9;
-  --text:#14140F;--text2:#56564F;--text3:#8F8F87;
-  --border:#E8E7E0;--border2:#D4D3CB;
-  --surface-hover:#F9F9F5;
-  /* Radius scale */
-  --r-sm:6px;--r:10px;--r-lg:14px;
-  --radius:var(--r);--radius-sm:var(--r-sm);--radius-lg:var(--r-lg);
+     /* Status badge palette（深色模式於下方覆寫） */
+    /* Neutrals (warm) */
+     /* Radius scale */
+     --radius:var(--r);--radius-sm:var(--r-sm);--radius-lg:var(--r-lg);
   /* Shadow (minimal) */
-  --shadow-sm:0 1px 2px rgba(20,20,15,.04);
-  --shadow:0 1px 3px rgba(20,20,15,.05);
-  --shadow-md:0 4px 14px rgba(20,20,15,.07);
-  --shadow-lg:0 12px 32px rgba(20,20,15,.14);
-  --ring:0 0 0 3px rgba(18,166,115,.18);
-  --ease:cubic-bezier(.22,.61,.36,1);
-  /* Type — Inter (Latin) + Noto Sans TC (CJK), then native stack */
-  --font-sans:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Microsoft JhengHei',sans-serif;
-  --font-num:var(--font-sans);
+     /* Type — Inter (Latin) + Noto Sans TC (CJK), then native stack */
+   --font-num:var(--font-sans);
   /* Semantic type scale (size / weight / tracking) */
   --fs-base:14.5px;--lh-base:1.55;--fs-input:14px;
   --fs-page-title:20px;--fw-page-title:600;--tr-page-title:-.012em;
@@ -77,29 +53,7 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 }
 @media(prefers-color-scheme:dark){
   :root{
-    --bg:#1A1B19;--bg2:#121311;--bg3:#25262A;
-    --text:#ECECE7;--text2:#A4A49C;--text3:#6A6A63;
-    --border:#292A26;--border2:#3A3A34;
-    --surface-hover:#242520;
-    --green:#1AB180;--green-d:#7BDFBA;--green-l:#163A2C;--green-b:#2A6551;
-    --red:#E66B6B;--red-l:#3A1F1F;
-    --amber-l:#3A2F1A;--amber-d:#F0C878;
-    --blue-l:#1A2A3D;--blue-d:#9ECCFF;
-    --purple-l:#24223D;--purple-d:#C5C0FA;
-    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
-    --shadow:0 1px 3px rgba(0,0,0,.4);
-    --shadow-md:0 4px 14px rgba(0,0,0,.5);
-    --shadow-lg:0 12px 32px rgba(0,0,0,.6);
-    --ring:0 0 0 3px rgba(26,177,128,.3);
-    --amber-b:#54431F;--red-b:#553030;--blue-b:#2A3F58;
-    --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
-    --ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
-    --ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
-    --ss-purple-bg:#24223D;--ss-purple-fg:#C5C0FA;
-    --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;
-    --ss-green2-bg:#17361F;--ss-green2-fg:#8FD9A8;
-    --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;
-  }
+          }
   body{background:var(--bg2)!important}
 }
 
@@ -498,6 +452,12 @@ tbody tr:hover{background:var(--surface-hover)}
 .duskin-marker{border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);width:16px!important;height:16px!important;display:flex;align-items:center;justify-content:center}
 .duskin-marker.has-todo::after{content:'';position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
 .duskin-marker.geo-approx{border-style:dashed;opacity:.85} /* 模糊定位（路段/概略）→ 虛線框提示可修正 */
+/* 工地地圖模式：地圖上直接建檔（FAB＋確認列覆蓋於地圖之上，z>1 即可蓋過 #leaflet-map） */
+#map-stage{position:relative}
+#map-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;background:var(--green);color:#fff;border:none;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;font-family:inherit;box-shadow:var(--shadow-md);cursor:pointer;display:flex;align-items:center;gap:6px}
+#map-fab:active{background:var(--green-d)}
+#map-place-bar{position:absolute;left:10px;right:10px;bottom:12px;z-index:6;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-md);padding:12px}
+#map-place-msg{font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5}
 
 /* ═══════════════════════════════════════════════════════════
    INVENTORY ITEM
@@ -703,7 +663,17 @@ tbody tr:hover{background:var(--surface-hover)}
         <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 家</span>
       </div>
     </div>
-    <div id="leaflet-map"></div>
+    <div id="map-stage">
+      <div id="leaflet-map"></div>
+      <button id="map-fab" onclick="startClientPlace()">＋ 在這裡建檔</button>
+      <div id="map-place-bar" style="display:none">
+        <div id="map-place-msg"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-outline btn-sm" onclick="cancelClientPlace()">取消</button>
+          <button class="btn btn-primary btn-sm" onclick="confirmClientPlace()">位置就是這裡 →</button>
+        </div>
+      </div>
+    </div>
     <div id="failed-geocode" class="map-failed" style="display:none"></div>
   </div>
 
@@ -1493,8 +1463,10 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.28-z2';
-const APPS_SCRIPT_CODE=`const SHEET_NAME='clients';
+const APP_VERSION='v2026.07.28-z3';
+const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
+const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
+const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
 const PROSPECT_SHEET_NAME='prospects';
@@ -1530,7 +1502,7 @@ function handleRequest(e){
       case 'getShops':      result=getShops();break;
       case 'getProspects':  result=getProspects();break;
       case 'getSnapshot':   result=getSnapshot();break;
-      case 'ping':          result={ok:true};break;
+      case 'ping':          result={ok:true,ver:BACKEND_VER};break;
       case 'geocode':       result=geocodeAddr(body.addr);break;
       default:              result={error:'Unknown action'};
     }
@@ -1950,7 +1922,7 @@ const SEED=[
   {name:'範例-美美沙龍',addr:'信義區松仁路88號',type:'美容美甲',status:'已成約',contact:'陳小姐',nextdate:'2026-05-10',fw4:280,env:'門口無，店內裝潢精美',note:'範例客戶：已成約的美容店',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'準備合約書',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-05',mood:4,note:'老闆決定簽約',insight:'成約FSSK',statusChange:'已成約',nextdate:'2026-05-10'}],updatedAt:1741783108000},
   {name:'範例-永和早餐店',addr:'永和區中正路200號',type:'餐廳',status:'未拜訪',contact:'',nextdate:'',fw4:0,env:'',note:'範例客戶：尚未拜訪',trialItems:[],todos:[],visits:[],updatedAt:1712476000000},
   {name:'範例-大樓管委會',addr:'板橋區文化路300號',type:'接待中心',status:'複訪',contact:'張經理',nextdate:'2026-04-20',fw4:0,env:'門口有舊地墊',note:'範例客戶：需要複訪',trialItems:[],todos:[{text:'帶DM再去拜訪',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-01',mood:2,note:'經理在忙，下次再來',insight:'',statusChange:'複訪',nextdate:'2026-04-20'}],updatedAt:1743476400000},
-  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trialItems:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'已結案',nextdate:null}],updatedAt:1741478143000},
+  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trialItems:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'拒絕',nextdate:null}],updatedAt:1741478143000},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -1960,17 +1932,16 @@ const SEED=[
 const STATUS={
   UNVISITED:'未拜訪', FIRST:'初訪', REVISIT:'複訪',
   TRIAL:'試用中', QUOTE:'報價', CLOSING:'將成約',
-  DEAL:'已成約', TRANSFER:'已轉交', REFUSE:'拒絕', CLOSED:'已結案'
+  DEAL:'已成約', TRANSFER:'已轉交', REFUSE:'拒絕'
 };
 const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
 const MOODS=['','😞','😐','😊','😄'];
 // 狀態徽章配色：用 CSS 變數（深淺色模式自動切換，變數定義在 <style> :root）
 const _SS=k=>['var(--ss-'+k+'-bg)','var(--ss-'+k+'-fg)'];
-const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber'),'試用中':_SS('blue'),'報價':_SS('amber'),'將成約':_SS('purple'),'已成約':_SS('green'),'已轉交':_SS('green2'),'已結案':_SS('red'),'拒絕':_SS('red')};
+const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber'),'試用中':_SS('blue'),'報價':_SS('amber'),'將成約':_SS('purple'),'已成約':_SS('green'),'已轉交':_SS('green2'),'拒絕':_SS('red')};
 // 舊狀態顯示文字對應（新舊並存）
-// 安全轉換：已結案→拒絕（migration v3 後不應再有，但保留防禦）
-function displayStatus(s){return s===STATUS.CLOSED?STATUS.REFUSE:(s||STATUS.UNVISITED);}
-function statusEq(a,b){const n=s=>s===STATUS.CLOSED?STATUS.REFUSE:s;return n(a)===n(b);}
+// 未設定狀態一律視為「未拜訪」（舊「已結案」由 migration v3 與 validateClients 轉為「拒絕」，程式內不再映射）
+function displayStatus(s){return s||STATUS.UNVISITED;}
 const CB_STYLE={'拖把':_SS('purple'),'地墊':_SS('blue'),'芳香':_SS('green')};
 function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||_SS('gray');return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 // 新設計：客戶列表卡片專用 — 狀態圓角膠囊（含圓點），放在卡片右上角
@@ -2314,7 +2285,12 @@ async function testConnection(){
   const url=document.getElementById('sheet-url').value.trim();
   if(!url){showToast('請先填入 URL');return;}
   SHEET_URL=url;saveLocal();setSyncBar('sync');
-  try{await api({action:'ping'});setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');refreshSheetIdentity();}
+  try{
+    const r=await api({action:'ping'});
+    setSyncBar('ok');updateSheetStatus(true);showToast('✅ 連線成功！');refreshSheetIdentity();
+    if((r&&r.ver||0)<REQUIRED_BACKEND_VER)
+      appAlert('你的後端（Apps Script）是舊版，部分功能（如重複店家雲端清理）無法使用。\n請到設定頁按「複製 Apps Script 程式碼」，貼回 Apps Script 專案覆寫並重新部署。','⚠ 後端需要更新');
+  }
   catch(e){setSyncBar('err');appAlert('連線失敗：'+e.message,'❌ 無法連線');}
 }
 async function syncFromSheet(silent){
@@ -2658,7 +2634,7 @@ function validateClients(){
       fixed++;
     }
     // 不變式 2：已結案 → 轉為拒絕（migration v3 應已處理，此為二次防禦）
-    if(c.status===STATUS.CLOSED){
+    if(c.status==='已結案'){
       c.status=STATUS.REFUSE;
       console.warn('[validateClients] 自動轉換已結案→拒絕: #'+i+' '+c.name);
       fixed++;
@@ -2672,9 +2648,9 @@ function validateClients(){
 function normalizeClosed(){
   let count=0;
   (DB.clients||[]).forEach(c=>{
-    if(c.status===STATUS.CLOSED){c.status=STATUS.REFUSE;count++;}
+    if(c.status==='已結案'){c.status=STATUS.REFUSE;count++;}
     (c.visits||[]).forEach(v=>{
-      if(v.statusChange===STATUS.CLOSED)v.statusChange=STATUS.REFUSE;
+      if(v.statusChange==='已結案')v.statusChange=STATUS.REFUSE;
     });
   });
   if(count)saveLocal();
@@ -3267,7 +3243,7 @@ function collectRegions(){
     if((c.visits||[]).length>0)return;
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
     if(mains.length>0)return;
-    if(statusEq(c.status,STATUS.REFUSE))return;
+    if(c.status===STATUS.REFUSE)return;
     const r=parseRegion(c.addr);
     if(r)regions.add(r);
   });
@@ -3292,7 +3268,7 @@ function renderRegionBar(){
     bar.style.alignItems='center';
     const opts=SO.map(s=>`<option value="${s}"${s===activeStatusSub?' selected':''}>${s}</option>`).join('');
     const cnt=activeStatusSub
-      ? DB.clients.filter(c=>activeStatusSub===STATUS.REFUSE?statusEq(c.status,STATUS.REFUSE):(c.status||STATUS.UNVISITED)===activeStatusSub).length
+      ? DB.clients.filter(c=>activeStatusSub===STATUS.REFUSE?c.status===STATUS.REFUSE:(c.status||STATUS.UNVISITED)===activeStatusSub).length
       : DB.clients.length;
     bar.innerHTML=`<span style="font-size:13px;color:var(--text2)">狀態：</span>`
       +`<select onchange="setStatusSub(this.value)" style="width:auto;padding:4px 8px;font-size:13px">`
@@ -3344,8 +3320,8 @@ function calcFW4(c){
 // - 忽略 quoted 報價、忽略 contractedItems、忽略日期區間
 function calcReportAmt(c){
   if(!c) return 0;
-  // 拒絕（含舊「已結案」）視為已無試用商品，保留歷史紀錄但不計入報表金額
-  if(statusEq(c.status,STATUS.REFUSE)) return 0;
+  // 拒絕視為已無試用商品，保留歷史紀錄但不計入報表金額
+  if(c.status===STATUS.REFUSE) return 0;
   return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
@@ -3444,7 +3420,7 @@ function autoAddRecycleTodos(){
 let statusFilter={};
 function defaultStatusFilter(){
   const f={};
-  SO.forEach(s=>{f[s]=(s!==STATUS.REFUSE&&s!==STATUS.CLOSED);});
+  SO.forEach(s=>{f[s]=(s!==STATUS.REFUSE);});
   return f;
 }
 function loadStatusFilter(){
@@ -3463,18 +3439,17 @@ function saveStatusFilter(){
 function statusVisible(status){
   // 未設定狀態 視為「未拜訪」
   const s=status||STATUS.UNVISITED;
-  const key=(s===STATUS.CLOSED)?STATUS.REFUSE:s;
-  return statusFilter[key]!==false;
+  return statusFilter[s]!==false;
 }
 function openStatusFilterModal(){
   const el=document.getElementById('status-filter-list');
-  el.innerHTML=SO.filter(s=>s!==STATUS.CLOSED).map(s=>{
+  el.innerHTML=SO.map(s=>{
     const checked=statusFilter[s]!==false;
     const [bg,fg]=SS_STYLE[s]||['#F1EFE8','#666'];
     return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--bg2)">
       <input type="checkbox" ${checked?'checked':''} onchange="toggleStatusFilter('${s}',this.checked)" style="width:18px;height:18px;cursor:pointer">
       <span class="badge" style="background:${bg};color:${fg}">${s}</span>
-      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||STATUS.UNVISITED)===s||(s===STATUS.REFUSE&&c.status===STATUS.CLOSED)).length} 筆</span>
+      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||STATUS.UNVISITED)===s).length} 筆</span>
     </label>`;
   }).join('');
   document.getElementById('status-filter-modal').classList.add('on');
@@ -3500,7 +3475,7 @@ function matchCategoryFor(c,cat){
   const visitsN=(c.visits||[]).length;
   const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
   const contractedN=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;
-  const isRefused=statusEq(c.status,STATUS.REFUSE);
+  const isRefused=c.status===STATUS.REFUSE;
   switch(cat){
     // 已拜訪＝有任何互動（拜訪過／有試用品項／有成約品項）——
     // 含品項是為了不漏掉「直接成約、沒補拜訪紀錄」的客戶
@@ -3521,7 +3496,7 @@ function matchCategory(c){
   if(!matchCategoryFor(c,activeCat))return false;
   if(activeCat==='未拜訪'&&activeRegion)return parseRegion(c.addr)===activeRegion;
   if(activeCat==='全部'&&activeStatusSub){
-    if(activeStatusSub===STATUS.REFUSE)return statusEq(c.status,STATUS.REFUSE);
+    if(activeStatusSub===STATUS.REFUSE)return c.status===STATUS.REFUSE;
     return (c.status||STATUS.UNVISITED)===activeStatusSub;
   }
   return true;
@@ -3594,8 +3569,7 @@ function mapColorForStatus(s){
 // 是否該在地圖上顯示（排除 拒絕/結案）
 function mapShouldShow(c){
   if(!c) return false;
-  if(statusEq(c.status,STATUS.REFUSE)) return false;
-  if(c.status===STATUS.CLOSED) return false;
+  if(c.status===STATUS.REFUSE) return false;
   return true;
 }
 
@@ -4045,6 +4019,51 @@ function cancelPinDrop(){
   if(hint) hint.remove();
 }
 
+// ── 工地地圖模式：地圖上直接建檔（GPS 抓點 → 拖圖釘/點地圖微調 → 開建檔表單）──
+// 站在店門口 3 秒定位建檔，座標標 manual（比地址 geocode 準、不會被蓋掉）。
+let PLACE_STATE={temp:null,acc:null,src:'gps',clickH:null};
+let PLACE_COORDS=null; // confirmClientPlace 設定；saveClient 新增時帶入後清空
+function startClientPlace(){
+  if(!MAP_STATE.map)return;
+  cancelPinDrop();MAP_STATE.map.closePopup();
+  const fab=document.getElementById('map-fab');if(fab)fab.style.display='none';
+  const begin=(latlng,acc,src)=>{
+    PLACE_STATE.acc=acc;PLACE_STATE.src=src;
+    const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker" style="background:var(--red);width:24px;height:24px;position:relative"></div>',iconSize:[24,24],iconAnchor:[12,12]});
+    PLACE_STATE.temp=L.marker(latlng,{draggable:true,icon,zIndexOffset:1000}).addTo(MAP_STATE.map);
+    PLACE_STATE.temp.on('dragend',()=>{PLACE_STATE.src='drag';});
+    MAP_STATE.map.setView(latlng,Math.max(MAP_STATE.map.getZoom(),17));
+    PLACE_STATE.clickH=e=>{if(PLACE_STATE.temp){PLACE_STATE.temp.setLatLng(e.latlng);PLACE_STATE.src='map';}};
+    MAP_STATE.map.on('click',PLACE_STATE.clickH);
+    document.getElementById('map-place-msg').innerHTML=
+      src==='gps'?'已抓到你的位置'+(acc?'（精度約 <b>'+acc+' 公尺</b>）':'')+'，圖釘可<b>拖到店門口</b>，或點地圖換位置。'
+                 :'沒抓到 GPS，先放在地圖中心：<b>拖曳圖釘</b>或點地圖，放到那家店的門口。';
+    document.getElementById('map-place-bar').style.display='block';
+  };
+  if(navigator.geolocation){
+    showToast('📍 定位中…');
+    navigator.geolocation.getCurrentPosition(
+      p=>begin([p.coords.latitude,p.coords.longitude],Math.round(p.coords.accuracy),'gps'),
+      ()=>begin(MAP_STATE.map.getCenter(),null,'map'),
+      {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+  }else begin(MAP_STATE.map.getCenter(),null,'map');
+}
+function cancelClientPlace(){
+  if(PLACE_STATE.temp&&MAP_STATE.map)MAP_STATE.map.removeLayer(PLACE_STATE.temp);
+  if(PLACE_STATE.clickH&&MAP_STATE.map)MAP_STATE.map.off('click',PLACE_STATE.clickH);
+  PLACE_STATE={temp:null,acc:null,src:'gps',clickH:null};
+  const bar=document.getElementById('map-place-bar');if(bar)bar.style.display='none';
+  const fab=document.getElementById('map-fab');if(fab)fab.style.display='flex';
+}
+function confirmClientPlace(){
+  if(!PLACE_STATE.temp)return;
+  const p=PLACE_STATE.temp.getLatLng();
+  cancelClientPlace();
+  openCF(-1);
+  PLACE_COORDS={lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6)};
+  showToast('📌 已帶入 GPS 位置，填店名即可儲存');
+}
+
 // ── View switcher ────────────────────────────────────────
 function setClientView(v){
   MAP_STATE.view=v;
@@ -4228,7 +4247,7 @@ function openCF(idx){
   renderItems();renderContracted();renderTodoFields();updProd();
   showView('view-form');
 }
-function closeForm(){showView('view-list');}
+function closeForm(){PLACE_COORDS=null;showView('view-list');} // 未存檔離開 → 丟棄暫存座標
 function updProd(){const el=document.getElementById('cf-product');if(el)el.value=autoProd(S.cfItems);}
 
 // 商品選單 options
@@ -4538,7 +4557,12 @@ async function saveClient(){
       }
       DB.clients[S.editIdx]=c;
     }
-    else{c.id=genId();c.visits=autoVisits;DB.clients.push(c);}
+    let placedOnMap=false;
+    if(!isEdit){
+      c.id=genId();c.visits=autoVisits;
+      if(PLACE_COORDS){c.lat=PLACE_COORDS.lat;c.lng=PLACE_COORDS.lng;c.geocodeSource='manual';c.geocodedAt=Date.now();PLACE_COORDS=null;placedOnMap=true;}
+      DB.clients.push(c);
+    }
     saveLocal();autoSync('save',{client:c});
     // 無座標且有地址 → 排入 geocode queue 背景處理
     if(c.addr&&!c.lat){enqueueGeocode(c);processGeoQueue();}
@@ -4555,6 +4579,7 @@ async function saveClient(){
       },100);
     }
     S.editIdx=-1;closeForm();renderClients();
+    if(placedOnMap)setClientView('map'); // 從地圖建檔 → 存完回地圖看到新圖釘
   }catch(e){
     appAlert('儲存失敗：'+(e.message||e));
   }finally{
@@ -5016,7 +5041,7 @@ function genReport(){
   const STATUS_A=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
   const picked=DB.clients.filter(c=>{
     // 拒絕的客戶視為已無試用品，不出現在推進表
-    if(statusEq(c.status,STATUS.REFUSE)) return false;
+    if(c.status===STATUS.REFUSE) return false;
     const a=STATUS_A.has(c.status);
     const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
     const hasMain=mains.length>0;
@@ -5106,7 +5131,7 @@ function genReport(){
   // 攤平：每次拜訪一筆（拒絕的客戶整筆排除）
   const visitRows=[];
   DB.clients.forEach(c=>{
-    if(statusEq(c.status,STATUS.REFUSE)) return;
+    if(c.status===STATUS.REFUSE) return;
     (c.visits||[]).forEach(v=>{
       if(v&&v.date&&weekSet.has(v.date)){
         visitRows.push({c,v});
@@ -5618,19 +5643,12 @@ async function dedupApi(action,payload){
 }
 // 單組合併：先合併本地 → 呼叫 deleteByName（新版 Apps Script）清雲端同名舊列 → save keeper
 // 若伺服器還是舊版（不認 deleteByName），fallback 用 delete(id,name)
-async function syncMergedGroupToCloud(merged,removerClients){
+async function syncMergedGroupToCloud(merged){
   const log=[];
   // 先用 deleteByName 一次清掉所有同名但非 keeper id 的雲端列（涵蓋舊資料無 id 的情況）
   const dnRes=await dedupApi('deleteByName',{name:merged.name,keepId:merged.id});
   if(dnRes.ok&&dnRes.resp&&typeof dnRes.resp.deleted==='number'){
     log.push({type:'deleteByName',name:merged.name,ok:true,deleted:dnRes.resp.deleted});
-  }else if(dnRes.ok){
-    // 舊版 Apps Script 不認 deleteByName，fallback 逐筆刪
-    log.push({type:'deleteByName',name:merged.name,ok:false,error:'舊版 Apps Script 不支援 deleteByName，改用逐筆刪除'});
-    for(const r of removerClients){
-      const res=await dedupApi('delete',{id:r.id,name:r.name});
-      log.push({type:'delete',id:r.id||'(無 id)',name:r.name,ok:res.ok,error:res.error,deleted:res.resp?.deleted});
-    }
   }else{
     log.push({type:'deleteByName',name:merged.name,ok:false,error:dnRes.error});
   }
@@ -5677,11 +5695,10 @@ async function mergeDedupGroup(key){
   if(!await appConfirm(`確定合併「${g.clients[0].client.name}」（${g.clients.length} 筆）？\n\n此操作會：\n1. 本地合併並保留最新那筆\n2. 雲端刪除所有同名的其他列\n3. 把合併結果推回雲端\n\n無法復原，建議先做一次 Google Sheets 備份。`,{title:'合併重複店家',okText:'合併',danger:true}))return;
   const btn=document.querySelector('#dedup-list button');if(btn){btn.disabled=true;}
   const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,s.resolutions[key]);
-  const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
   DB.clients[keeperIdx]=merged;
   removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
   saveLocal();
-  const log=await syncMergedGroupToCloud(merged,removerClients);
+  const log=await syncMergedGroupToCloud(merged);
   renderClients();
   showDedupReport(log,1);
 }
@@ -5696,8 +5713,7 @@ async function dedupAutoMerge(){
   const mergedList=[];
   targets.forEach(g=>{
     const {keeperIdx,merged,removerIdxs}=mergeClientGroup(g,null);
-    const removerClients=removerIdxs.map(i=>({id:DB.clients[i]?.id,name:DB.clients[i]?.name}));
-    mergedList.push({merged,removerClients});
+    mergedList.push({merged});
     DB.clients[keeperIdx]=merged;
     removerIdxs.sort((a,b)=>b-a).forEach(i=>{DB.clients.splice(i,1);});
   });
@@ -5706,9 +5722,9 @@ async function dedupAutoMerge(){
   // 再逐組 sync 雲端（顯示進度）
   const sum=document.getElementById('dedup-summary');
   for(let i=0;i<mergedList.length;i++){
-    const {merged,removerClients}=mergedList[i];
+    const {merged}=mergedList[i];
     if(sum)sum.innerHTML=`同步中... (${i+1}/${mergedList.length}) <b>${escHtml(merged.name)}</b>`;
-    const log=await syncMergedGroupToCloud(merged,removerClients);
+    const log=await syncMergedGroupToCloud(merged);
     fullLog.push(...log);
   }
   showDedupReport(fullLog,mergedList.length);
@@ -6285,7 +6301,7 @@ function tripSuggestions(tripDists){
     let why,whyIcon,pri;
     if(undone.length){why='有待辦';whyIcon='📌';pri=0;}
     else if(!c.status||c.status===STATUS.UNVISITED){why='未拜訪';whyIcon='⚪';pri=1;}
-    else if(statusEq(c.status,STATUS.DEAL)&&(c.contractedItems||[]).length){why='成交客戶';whyIcon='🤝';pri=2;}
+    else if(c.status===STATUS.DEAL&&(c.contractedItems||[]).length){why='成交客戶';whyIcon='🤝';pri=2;}
     else return;
     out.push({c,i,region,where,why,whyIcon,pri});
   });
@@ -6408,6 +6424,7 @@ autoAddRecycleTodos();validateClients();consumeIzHandoff();consumeSiteHandoff();
   try{
     if(h==='trip'){navTo('todos',document.getElementById('nav-todos'));setTodosMode('trip');}
     else if(h==='new'){navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>{try{openCF(-1);}catch(e){}},120);}
+    else if(h==='map'){navTo('clients',document.getElementById('nav-clients'));setClientView('map');}
     else if(['clients','daily','todos','shops','inventory','settings'].indexOf(h)>=0){navTo(h,document.getElementById('nav-'+h));}
     history.replaceState(null,'',location.pathname+location.search);
   }catch(e){}
@@ -8372,14 +8389,8 @@ if(location.search.includes('test=1')){
   assert('mergeClientGroup 用 resolution', merged2.merged.contact, '乙');
   DB.clients=savedClients;
 
-  // --- statusEq ---
-  assert('statusEq 拒絕=已結案', statusEq(STATUS.REFUSE,STATUS.CLOSED), true);
-  assert('statusEq 已結案=拒絕', statusEq(STATUS.CLOSED,STATUS.REFUSE), true);
-  assert('statusEq 試用中≠已成約', statusEq(STATUS.TRIAL,STATUS.DEAL), false);
-  assert('statusEq 同狀態', statusEq(STATUS.TRIAL,STATUS.TRIAL), true);
 
   // --- displayStatus ---
-  assert('displayStatus 已結案→拒絕', displayStatus(STATUS.CLOSED), STATUS.REFUSE);
   assert('displayStatus 空→未拜訪', displayStatus(''), STATUS.UNVISITED);
   assert('displayStatus 試用中→試用中', displayStatus(STATUS.TRIAL), STATUS.TRIAL);
 
@@ -8407,8 +8418,6 @@ if(location.search.includes('test=1')){
   assert('calcReportAmt 只看試用 - 不用 c.fw4', calcReportAmt(testClient3), 0);
   const testClient4={status:STATUS.REFUSE,trialItems:[{product:'S-20',qty:1}]};
   assert('calcReportAmt 拒絕→0（不算試用）', calcReportAmt(testClient4), 0);
-  const testClient5={status:STATUS.CLOSED,trialItems:[{product:'S-20',qty:1}]};
-  assert('calcReportAmt 已結案→0（拒絕別名）', calcReportAmt(testClient5), 0);
 
   // --- matchCategory ---
   const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trialItems:[{product:'S-20',qty:1,quoted:0}],contractedItems:[]};

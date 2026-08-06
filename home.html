@@ -10,36 +10,19 @@
 <script>
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
 </script>
+<link rel="stylesheet" href="tokens.css">
 <style>
 /* ═══ DESIGN TOKENS — 與 index.html / izcrm.html / sitemap.html 同步 ═══ */
 :root{
-  --green:#12A673;--green-d:#0A6849;--green-l:#E3F4ED;--theme:#085041;
-  --red:#B73838;--red-l:#FBEAEA;--amber-d:#633806;
-  --ss-green-bg:#E1F5EE;--ss-green-fg:#085041;--ss-amber-bg:#FAEEDA;--ss-amber-fg:#633806;
-  --ss-red-bg:#FCEBEB;--ss-red-fg:#A32D2D;--ss-blue-bg:#E6F1FB;--ss-blue-fg:#0C447C;
-  --ss-gray-bg:#F1EFE8;--ss-gray-fg:#444441;
-  --bg:#ffffff;--bg2:#F8F8F5;--bg3:#EFEEE9;
-  --text:#14140F;--text2:#56564F;--text3:#8F8F87;
-  --border:#E8E7E0;--border2:#D4D3CB;--surface-hover:#F9F9F5;
-  --r-sm:6px;--r:10px;--r-lg:14px;
-  --shadow-sm:0 1px 2px rgba(20,20,15,.04);--shadow-md:0 4px 14px rgba(20,20,15,.07);
-  --font:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'PingFang TC','Microsoft JhengHei',sans-serif;
+  /* tokens 移至 tokens.css；以下為首頁專屬 */
   --hero-top:#085041;--hero-top-fg:#fff;
 }
 @media(prefers-color-scheme:dark){:root{
-  --bg:#1A1B19;--bg2:#121311;--bg3:#25262A;--text:#ECECE7;--text2:#A4A49C;--text3:#6A6A63;
-  --border:#292A26;--border2:#3A3A34;--surface-hover:#242520;
-  --green:#1AB180;--green-d:#7BDFBA;--green-l:#163A2C;
-  --red:#E66B6B;--red-l:#3A1F1F;--amber-d:#F0C878;
-  --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;--ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
-  --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;--ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
-  --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow-md:0 4px 14px rgba(0,0,0,.5);
   --hero-top:#163A2C;--hero-top-fg:#ECECE7;
 }}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-body{font-family:var(--font);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
+body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
 .phone{max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:84px}
 .num{font-variant-numeric:tabular-nums}
 button{font-family:inherit;cursor:pointer}
@@ -218,7 +201,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
    duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
    只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
    ══════════════════════════════════════════════════════════ */
-const HOME_VERSION='v2026.07.28-h1';
+const HOME_VERSION='v2026.07.28-h2';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readJSON(key,fallback){

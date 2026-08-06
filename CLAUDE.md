@@ -46,7 +46,7 @@ DUSKIN 銷售系統是單檔 PWA，幾乎所有程式都在 `index.html`（內�
 
 ## UI 紅線
 
-- 顏色一律用 `:root` CSS 變數（含 JS 產生的 inline style）——深色模式靠變數覆寫，寫死 hex 會在深色模式爆版。
+- 顏色一律用 CSS 變數（含 JS 產生的 inline style），**唯一來源是共用的 `tokens.css`**——深色模式靠變數覆寫，寫死 hex 會在深色模式爆版；頁面專屬變數才放各自檔內。
 - 提示一律用 `showToast`（非阻斷）／`appAlert`／`appConfirm`（危險操作帶 `danger:true` 紅鈕）。
 
 ## 合約製作（ContractMaker 模組，index.html）
