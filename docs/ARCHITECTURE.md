@@ -396,6 +396,21 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 
 ---
 
+## 全域導覽與切頁效能
+
+- **`nav.js`**（與 tokens.css 同級共用檔）：四頁注入同一條底部五格導覽
+  （首頁/客戶/行程/工地/工業區，單色 SVG）。在 index 內點「客戶/行程」走頁內切換
+  不重載；`window.setGlobalTab()` 供 index 動態高亮。各頁內部分頁移至**頂部**
+  （index `#app-nav` sticky、izcrm `.navbar` sticky、sitemap 頂部分段鈕）。
+- **SWR 快取**：`sw.js` HTML 改「快取優先＋背景更新」——切頁不等網路；
+  新版背景入快取、下次開啟生效，搭配 App 內版本橫幅提示。
+- **分頁記憶**：`duskin_last_panel`／`sitemap_last_panel`／`izcrm_last_panel`
+  記住各系統上次視圖，重開回到原處（深連結 hash 優先）。
+- **圖示規範**：UI 一律無 emoji——導覽/動作用單色 stroke SVG（currentColor），
+  其餘純文字；心情用文字標籤（差/普/好/優）。彩色僅來自 tokens 的語意色。
+
+---
+
 ## 首頁樞紐（home.html）
 
 四系統的入口與每日儀表板。**唯讀鏡射**：直接讀 `duskin_v2` / `duskin_outbox` /

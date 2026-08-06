@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="tokens.css">
+<script src="nav.js" data-page="site" defer></script>
 <style>
 :root{
   /* tokens 移至 tokens.css（品牌色自此與全站一致）；以下為本頁專屬 */
@@ -34,28 +35,28 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .btn-xs{padding:6px 10px;font-size:12px}
 
 /* ── 地圖 ── */
-#map{position:absolute;inset:0;bottom:calc(58px + var(--safe-b));background:#e8e6e0;z-index:1}
+#map{position:absolute;inset:0;bottom:calc(60px + var(--safe-b));background:#e8e6e0;z-index:1}
 .leaflet-container{font-family:inherit}
 .pin{width:26px;height:26px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700}
 .pin.dim{opacity:.45}
 .me-dot{width:16px;height:16px;border-radius:50%;background:#3C8DD9;border:3px solid #fff;box-shadow:0 0 0 2px rgba(60,141,217,.4),0 2px 5px rgba(0,0,0,.3)}
 
 /* ── 上方列 ── */
-#topbar{position:absolute;top:0;left:0;right:0;z-index:600;padding:calc(8px + env(safe-area-inset-top)) 10px 8px;pointer-events:none}
+#topbar{position:absolute;top:calc(50px + env(safe-area-inset-top));left:0;right:0;z-index:600;padding:0 10px 8px;pointer-events:none}
 #filters{display:flex;gap:6px;overflow-x:auto;pointer-events:auto;scrollbar-width:none;padding-bottom:2px}
 #filters::-webkit-scrollbar{display:none}
 .pill{padding:7px 13px;font-size:13px;border:1px solid var(--border2);border-radius:20px;background:rgba(255,255,255,.94);color:var(--text2);font-family:inherit;white-space:nowrap;cursor:pointer;box-shadow:var(--shadow);font-weight:500}
 .pill.on{background:var(--green);color:#fff;border-color:var(--green)}
-#basemap-btn{position:absolute;right:10px;top:calc(58px + env(safe-area-inset-top));z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;box-shadow:var(--shadow);cursor:pointer;font-family:inherit}
-#locate-btn{position:absolute;right:10px;top:calc(104px + env(safe-area-inset-top));z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--border2);border-radius:var(--radius-sm);width:40px;height:40px;font-size:18px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center}
+#basemap-btn{position:absolute;right:10px;top:calc(96px + env(safe-area-inset-top));z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;box-shadow:var(--shadow);cursor:pointer;font-family:inherit}
+#locate-btn{position:absolute;right:10px;top:calc(142px + env(safe-area-inset-top));z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--border2);border-radius:var(--radius-sm);width:40px;height:40px;font-size:18px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center}
 
 /* ── FAB ── */
-#fab{position:absolute;right:14px;bottom:calc(74px + var(--safe-b));z-index:650;background:var(--green);color:#fff;border:none;border-radius:28px;height:56px;padding:0 22px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(29,158,117,.5);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px}
+#fab{position:absolute;right:14px;bottom:calc(80px + var(--safe-b));z-index:650;background:var(--green);color:#fff;border:none;border-radius:28px;height:56px;padding:0 22px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(29,158,117,.5);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px}
 #fab:active{transform:scale(.96)}
 #fab.busy{background:var(--text3);box-shadow:none}
 
 /* ── 放置模式提示條 ── */
-#place-bar{position:absolute;left:10px;right:10px;bottom:calc(74px + var(--safe-b));z-index:660;background:var(--bg);border-radius:var(--radius);box-shadow:0 4px 18px rgba(0,0,0,.25);padding:12px 14px;display:none}
+#place-bar{position:absolute;left:10px;right:10px;bottom:calc(80px + var(--safe-b));z-index:660;background:var(--bg);border-radius:var(--radius);box-shadow:0 4px 18px rgba(0,0,0,.25);padding:12px 14px;display:none}
 #place-bar.on{display:block}
 #place-msg{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:10px}
 #place-msg b{color:var(--text)}
@@ -63,13 +64,13 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .place-actions .btn{flex:1}
 
 /* ── 底部導覽 ── */
-#nav{position:absolute;bottom:0;left:0;right:0;height:calc(58px + var(--safe-b));padding-bottom:var(--safe-b);background:var(--bg);border-top:1px solid var(--border);display:flex;z-index:700}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;color:var(--text2);font-size:11px;font-family:inherit;font-weight:500;cursor:pointer}
-.nav-btn.on{color:var(--green)}
+#nav{position:absolute;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:700;background:var(--bg);border:1px solid var(--border2);border-radius:99px;box-shadow:var(--shadow);display:flex;overflow:hidden}
+.nav-btn{border:none;background:none;color:var(--text2);font-size:13.5px;font-family:inherit;font-weight:600;cursor:pointer;padding:9px 18px}
+.nav-btn.on{color:#fff;background:var(--green)}
 .nav-btn .ico{font-size:19px;line-height:1}
 
 /* ── 面板（清單 / 設定） ── */
-.panel{position:absolute;inset:0;bottom:calc(58px + var(--safe-b));background:var(--bg2);z-index:680;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:calc(12px + env(safe-area-inset-top)) 12px 20px}
+.panel{position:absolute;inset:0;bottom:calc(60px + var(--safe-b));background:var(--bg2);z-index:680;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:calc(56px + env(safe-area-inset-top)) 12px 20px}
 .panel.on{display:block}
 .panel-title{font-size:19px;font-weight:700;margin-bottom:10px}
 .card{background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:14px;margin-bottom:10px}
@@ -226,9 +227,9 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
   <div class="card">
     <div class="sec">DUSKIN 主系統</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-      在地圖上點任何一個工地的「📇 建檔到主系統」，回主系統就會自動出現在客戶清單（狀態＝未拜訪、下次拜訪日＝預計可拜訪日、座標直接沿用）。
+      在地圖上點任何一個工地的「建檔到主系統」，回主系統就會自動出現在客戶清單（狀態＝未拜訪、下次拜訪日＝預計可拜訪日、座標直接沿用）。
     </div>
-    <a class="btn btn-outline btn-sm" href="index.html" style="text-decoration:none">🏠 回主系統</a>
+    <a class="btn btn-outline btn-sm" href="index.html" style="text-decoration:none">回主系統</a>
   </div>
 
   <div style="text-align:center;font-size:11px;color:var(--text3);padding:6px 0 20px">
@@ -268,7 +269,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
       <img id="photo-prev">
       <div style="display:flex;gap:8px">
         <input type="file" id="fm-photo" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(this)">
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('fm-photo').click()">📷 拍照 / 選圖</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('fm-photo').click()">拍照 / 選圖</button>
         <button class="btn btn-outline btn-sm" id="photo-del" style="display:none" onclick="clearPhoto()">移除</button>
       </div>
     </div>
@@ -290,11 +291,10 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 
 <div id="toast"></div>
 
-<nav id="nav">
-  <button class="nav-btn" id="nav-home" onclick="location.href='home.html'"><span class="ico">🏠</span>首頁</button>
-  <button class="nav-btn on" id="nav-map" onclick="showPanel('map')"><span class="ico">🗺</span>地圖</button>
-  <button class="nav-btn" id="nav-list" onclick="showPanel('list')"><span class="ico">☰</span>清單</button>
-  <button class="nav-btn" id="nav-set" onclick="showPanel('set')"><span class="ico">⚙</span>設定</button>
+<nav id="nav" aria-label="工地地圖分頁">
+  <button class="nav-btn on" id="nav-map" onclick="showPanel('map')">地圖</button>
+  <button class="nav-btn" id="nav-list" onclick="showPanel('list')">清單</button>
+  <button class="nav-btn" id="nav-set" onclick="showPanel('set')">設定</button>
 </nav>
 
 <script>
@@ -304,7 +304,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
    底圖：內政部國土測繪中心 臺灣通用電子地圖 / 航照，皆免費免金鑰
    ══════════════════════════════════════════════════════════ */
 
-const APP_VER='v2026.07.28-s4';
+const APP_VER='v2026.07.28-s5';
 
 /* ── Apps Script 後端程式碼（設定頁可一鍵複製） ── */
 const GAS_CODE=[
@@ -450,7 +450,7 @@ function load(){
 function save(){
   try{
     localStorage.setItem('sitemap_v1',JSON.stringify({sites:DB.sites,cfg:CFG,last:SYNC.last,queue:SYNC.queue}));
-  }catch(e){ toast('⚠ 手機儲存空間不足，照片可能存不下'); }
+  }catch(e){ toast('手機儲存空間不足，照片可能存不下'); }
 }
 function uid(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -547,7 +547,7 @@ function popupHtml(s){
       '<button class="btn btn-outline btn-xs" onclick="editSite(\''+s.id+'\')">編輯</button>'+
       (s.main&&s.main.clientId
         ?'<button class="btn btn-outline btn-xs" disabled>✓ 已建檔</button>'
-        :'<button class="btn btn-outline btn-xs" onclick="toClient(\''+s.id+'\')">📇 建檔到主系統</button>')+
+        :'<button class="btn btn-outline btn-xs" onclick="toClient(\''+s.id+'\')">建檔到主系統</button>')+
     '</div>';
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -851,6 +851,7 @@ function renderFilters(){
 }
 function setFilter(k){ filter=k; renderFilters(); renderMarkers(); renderList(); }
 function showPanel(p){
+  try{localStorage.setItem('sitemap_last_panel',p);}catch(e){}
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));
   document.getElementById('nav-'+p).classList.add('on');
@@ -927,8 +928,8 @@ async function testConn(){
   saveCfg();
   if(!CFG.url){ toast('請先貼上網址'); return; }
   setSyncBar('busy');
-  try{ await api({action:'ping'}); SYNC.state='ok'; toast('✅ 連線成功'); }
-  catch(e){ SYNC.state='err'; toast('❌ 連線失敗：'+e.message,4200); }
+  try{ await api({action:'ping'}); SYNC.state='ok'; toast('✓ 連線成功'); }
+  catch(e){ SYNC.state='err'; toast('連線失敗：'+e.message,4200); }
   setSyncBar(''); save(); updateSyncBox();
 }
 async function push(site){
@@ -975,7 +976,7 @@ async function pullAll(silent){
     if(!silent) toast('✓ 已同步 '+DB.sites.filter(s=>!s.deleted).length+' 個工地');
   }catch(e){
     SYNC.state='err';
-    if(!silent) toast('❌ 拉取失敗：'+e.message,4200);
+    if(!silent) toast('拉取失敗：'+e.message,4200);
   }
   setSyncBar(''); updateSyncBox();
 }
@@ -987,7 +988,7 @@ async function pushAll(){
     await api({action:'bulk',sites:DB.sites});
     SYNC.state='ok'; SYNC.last=Date.now(); SYNC.queue=[]; save();
     toast('✓ 已推送 '+DB.sites.length+' 筆');
-  }catch(e){ SYNC.state='err'; toast('❌ 推送失敗：'+e.message,4200); }
+  }catch(e){ SYNC.state='err'; toast('推送失敗：'+e.message,4200); }
   setSyncBar(''); updateSyncBox();
 }
 
@@ -1020,7 +1021,7 @@ function toClient(id){
     siteId:s.id
   });
   try{ localStorage.setItem('duskin_site_handoff',JSON.stringify(inbox)); }
-  catch(e){ toast('⚠ 交接信箱寫入失敗（儲存空間不足？）'); return; }
+  catch(e){ toast('交接信箱寫入失敗（儲存空間不足？）'); return; }
   s.main={clientId:cid}; s.updated=Date.now();
   save(); push(s); renderMarkers(); renderList();
   toast('✓ 已送交主系統，開主系統即完成建檔');
@@ -1065,6 +1066,9 @@ renderMarkers();
 
 document.getElementById('sm-ver').textContent=APP_VER;
 document.getElementById('nav-map').classList.add('on');
+if(location.hash!=='#place'){
+  try{const lp=localStorage.getItem('sitemap_last_panel');if(lp&&lp!=='map')showPanel(lp);}catch(e){}
+}
 
 // 開場：先拉雲端，再定位到自己
 if(CFG.url){ pullAll(true).then(()=>flushQueue()); }
@@ -1075,7 +1079,7 @@ window.addEventListener('online',()=>{ flushQueue(); pullAll(true); });
 setInterval(()=>{ if(CFG.url&&navigator.onLine) pullAll(true); },180000);
 
 // ══ 主系統回執信箱（單向：main → sitemap）══
-// 主系統行程頁「📇 轉為客戶」後寫 duskin_site_ack；這裡消化並把工地標記
+// 主系統行程頁「轉為客戶」後寫 duskin_site_ack；這裡消化並把工地標記
 // s.main={clientId}（隨雲端同步，同事看得到「已建檔」）。冪等：已標記者跳過。
 function consumeMainAck(){
   let ack=[];

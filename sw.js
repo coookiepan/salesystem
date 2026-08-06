@@ -1,13 +1,14 @@
 // DUSKIN 銷售系統 — Service Worker（H2 PWA 離線 / M4 離線地圖）
 // 目標：沒網路時也能開啟 App（搭配 localStorage 資料 + C2 待推送佇列離線作業）。
 // 策略：
-//   - HTML 文件：網路優先、離線退回快取（上線一定拿到最新程式）。
+//   - HTML 文件：快取優先＋背景更新（stale-while-revalidate）——切頁秒開，
+//     新版背景抓、下次開啟生效；App 內版本橫幅照樣提示更新。
 //   - 同網域靜態資源：快取優先。
 //   - Leaflet CDN（版本固定、immutable，且帶 CORS 標頭可安全重播）：快取優先，
 //     讓離線也能載入地圖程式庫與樣式（M4）。地圖磚 tile 本質需連線，不快取。
 //   - 對 Apps Script 的寫入(POST)與其他跨網域請求：完全不攔。
-const CACHE = 'duskin-shell-v32';
-const SHELL = ['./', './index.html', './home.html', './izcrm.html', './izdata.json', './sitemap.html', './tokens.css', './manifest.webmanifest', './icon.svg', './logo-mark.svg'];
+const CACHE = 'duskin-shell-v33';
+const SHELL = ['./', './index.html', './home.html', './izcrm.html', './izdata.json', './sitemap.html', './tokens.css', './nav.js', './manifest.webmanifest', './icon.svg', './logo-mark.svg'];
 const CDN = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
@@ -54,17 +55,18 @@ self.addEventListener('fetch', e => {
 
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (isHTML) {
-    // 網路優先：上線時永遠拿到最新 HTML，順手更新快取；離線才退回快取
-    // 注意：快取 key 必須用實際請求（index.html 與 izcrm.html 各自獨立），不可寫死
+    // 快取優先＋背景更新：有快取立即回（切頁不等網路），同時背景抓新版更新快取；
+    // 沒快取（首次）才等網路。快取 key 用實際請求（各頁各自獨立），不可寫死。
     e.respondWith((async () => {
-      try {
-        const fresh = await fetch(req);
+      const cached = await caches.match(req);
+      const refresh = fetch(req).then(async fresh => {
         const c = await caches.open(CACHE);
         c.put(req, fresh.clone());
         return fresh;
-      } catch (err) {
-        return (await caches.match(req)) || (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
-      }
+      }).catch(() => null);
+      if (cached) { e.waitUntil(refresh); return cached; }
+      const fresh = await refresh;
+      return fresh || (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
     })());
     return;
   }
