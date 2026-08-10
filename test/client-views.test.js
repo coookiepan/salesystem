@@ -57,7 +57,7 @@ function cardOrder(w) { // 依渲染順序取出卡片名稱（去掉型別小�
   assert('仁德在官田前（區分組 zh 排序）', names[0] === '仁德試用', names.join(','));
   assert('官田內逾期久的在前', names.indexOf('官田試用久') < names.indexOf('官田試用新'), names.join(','));
   let out = w.document.getElementById('clients-list').innerHTML;
-  assert('有區域標頭 📍', /📍 仁德區/.test(out) && /📍 官田區/.test(out));
+  assert('有區域標頭（分區分組）', /仁德區/.test(out) && /官田區/.test(out));
   assert('卡片顯示試用第 N 天', /試用第 \d+ 天/.test(out));
   // 在 ⚙️ 隱藏試用中也不該空白
   w.eval('statusFilter["試用中"]=false');

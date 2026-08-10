@@ -1,7 +1,7 @@
 // H2 測試：PWA 離線
 // 不依賴真瀏覽器：用假的 Cache API + FetchEvent 載入 sw.js，驗證
 //   1) install 會把 app shell 預快取
-//   2) HTML 網路優先；離線時退回快取（核心：沒網路也開得起來）
+//   2) HTML 快取優先＋背景更新（SWR）；離線退回快取（核心：沒網路也開得起來、切頁不等網路）
 //   3) 寫入(POST)與跨網域請求完全不攔（不會干擾 Apps Script 同步）
 // 另外靜態檢查 index.html 有註冊 SW / 連 manifest，manifest 本身是合法 JSON。
 const fs = require('fs');
@@ -53,11 +53,21 @@ new Function('self', 'caches', 'fetch', 'Response', 'URL', swCode)(self, caches,
   handlers.fetch(ev); let res = await ev.p;
   assert('剛安裝即離線也能開（退回預快取 shell）', res && /index\.html/.test(res.tag) && res.tag !== 'error');
 
-  // HTML 上線 → 網路優先（拿最新程式）
-  fetchImpl = async () => new Resp('network:index');
-  ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; } };
+  // HTML SWR：上一步離線開啟後仍無快取；先上線開一次讓快取入庫
+  fetchImpl = async () => new Resp('network:v1');
+  ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; }, waitUntil(p) { this.w = p; } };
   handlers.fetch(ev); res = await ev.p;
-  assert('上線時 HTML 走網路（拿最新）', res.tag === 'network:index');
+  assert('首次（無快取）等網路取得頁面', res.tag === 'network:v1');
+  // 之後同頁：立即回快取（不等網路），新版在背景更新快取
+  fetchImpl = async () => new Resp('network:v2');
+  ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; }, waitUntil(p) { this.w = p; } };
+  handlers.fetch(ev); res = await ev.p;
+  assert('有快取時 HTML 立即回快取（切頁秒開）', res.tag === 'network:v1');
+  if (ev.w) await ev.w;
+  fetchImpl = async () => { throw new Error('offline'); };
+  ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; }, waitUntil() {} };
+  handlers.fetch(ev); res = await ev.p;
+  assert('背景更新已入快取（下次開啟就是新版）', res.tag === 'network:v2');
 
   // POST 不攔（不干擾 Apps Script 寫入）
   ev = { request: { method: 'POST', url: 'https://script.google.com/x/exec', mode: 'cors', headers: { get: () => null } }, respondWith() { this.called = true; } };
