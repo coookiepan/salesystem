@@ -310,7 +310,7 @@ function recW(id){ // 取得可寫紀錄（不存在則建立）
   if(!S.records[id])S.records[id]={status:'未接觸',updatedAt:0};
   return S.records[id];
 }
-function touch(id){const r=recW(id);r.updatedAt=Date.now();S.dirty[id]=1;saveS();scheduleSync();}
+function touch(id){const r=recW(id);r.updatedAt=Date.now();S.dirty[id]=1;queueMainUpdate(id);saveS();scheduleSync();}
 // 狀態正名（z2）：舊名可能留在本機或從未升級裝置經雲端同步進來，
 // 故啟動與每次拉取後都跑（冪等）；改名記為新修改（updatedAt+dirty）以推回雲端。
 const ST_RENAME={'拜訪中':'已電訪','考慮中':'已拜訪'};
@@ -368,6 +368,12 @@ function appConfirm(msg,opt){opt=opt||{};
 function appPrompt(msg,dflt,title){
   return dlg('<h3>'+esc(title||'輸入')+'</h3><div style="font-size:13px;color:var(--text2);margin-bottom:8px">'+esc(msg)+'</div>'+
   '<input id="dlg-in" value="'+esc(dflt||'')+'" style="margin-bottom:14px">'+
+  '<div style="display:flex;gap:8px"><button class="btn btn-outline" style="flex:1" onclick="_dlgDone(null)">取消</button>'+
+  '<button class="btn btn-primary" style="flex:1" onclick="_dlgDone(document.getElementById(\'dlg-in\').value)">確定</button></div>');
+}
+function appPromptDate(msg,dflt,title){ // 跟主系統一樣拉出原生月曆
+  return dlg('<h3>'+esc(title||'選日期')+'</h3><div style="font-size:13px;color:var(--text2);margin-bottom:8px">'+esc(msg)+'</div>'+
+  '<input type="date" id="dlg-in" value="'+esc(dflt||'')+'" style="margin-bottom:14px">'+
   '<div style="display:flex;gap:8px"><button class="btn btn-outline" style="flex:1" onclick="_dlgDone(null)">取消</button>'+
   '<button class="btn btn-primary" style="flex:1" onclick="_dlgDone(document.getElementById(\'dlg-in\').value)">確定</button></div>');
 }
@@ -603,7 +609,7 @@ function closeDetail(){CUR='';document.getElementById('dt').classList.remove('on
 function fld(id,path,val){ // onchange 即存
   const r=recW(id);r[path]=val;touch(id);
 }
-window.izFld=(path,el)=>{fld(CUR,path,el.value);if(path==='status')renderDetail();};
+window.izFld=(path,el)=>{fld(CUR,path,el.value);if(path==='status'){renderDetail();offerMainLink();}};
 function renderDetail(){
   const f=FID[CUR];if(!f)return;
   const r=rec(CUR)||{};
@@ -684,12 +690,12 @@ function izPlanBtn(r){
   return '<button class="btn btn-sm btn-outline" onclick="planAdd()">加入待訪清單</button>';
 }
 window.planAdd=async()=>{
-  const d=await appPrompt('預計拜訪日期（YYYY-MM-DD，可留空）',today(),'加入待訪');
+  const d=await appPromptDate('預計拜訪日期（可留空）',today(),'加入待訪');
   if(d===null)return;
   const r=recW(CUR);r.visitPlan={date:(d||'').trim(),note:''};touch(CUR);renderDetail();showToast('已加入待訪清單');
 };
 window.planDate=async()=>{
-  const r=recW(CUR);const d=await appPrompt('預計拜訪日期（YYYY-MM-DD，可留空）',r.visitPlan?r.visitPlan.date:'','改期');
+  const r=recW(CUR);const d=await appPromptDate('預計拜訪日期（可留空）',r.visitPlan?r.visitPlan.date:'','改期');
   if(d===null)return;r.visitPlan=Object.assign(r.visitPlan||{},{date:(d||'').trim()});touch(CUR);renderDetail();
 };
 window.planRemove=()=>{const r=recW(CUR);r.visitPlan=null;touch(CUR);renderDetail();};
@@ -697,7 +703,7 @@ window.toggleCp=a=>{const r=recW(CUR);r.cps=r.cps||{};r.cps[a]=!r.cps[a];touch(C
 window.setRx=x=>{
   const r=recW(CUR);r.reaction=r.reaction===x?'':x;
   if(r.reaction&&RX_TO_STATUS[r.reaction]&&r.status!=='已成交')r.status=RX_TO_STATUS[r.reaction];
-  touch(CUR);renderDetail();
+  touch(CUR);renderDetail();offerMainLink();
 };
 window.pickRx=el=>{[...el.parentNode.children].forEach(c=>c.classList.remove('on'));el.classList.add('on');};
 window.addContact=()=>{
@@ -730,16 +736,18 @@ window.addVisit=async()=>{
   let clearPlan=false;
   if(r.visitPlan)clearPlan=await appConfirm('這家在待訪清單上，拜訪完成後把它移出清單嗎？',{okText:'移出'});
   if(clearPlan)r.visitPlan=null;
-  touch(CUR);renderDetail();showToast('已記錄拜訪');
+  touch(CUR);renderDetail();showToast('已記錄拜訪');offerMainLink();
 };
 window.delVisit=async i=>{
   if(!await appConfirm('刪除這筆拜訪紀錄？',{danger:true,okText:'刪除'}))return;
   const r=recW(CUR);r.visits.splice(i,1);touch(CUR);renderDetail();
 };
 
-/* ═══ 主系統連結 — 單向建檔＋唯讀鏡射 ═══
+/* ═══ 主系統連結 — 單向建檔＋更新同步＋唯讀鏡射 ═══
    建檔：把工廠基本資料（含預產 client id）寫進交接信箱 duskin_iz_handoff，
-   主系統啟動時用它自己的正規流程建客戶並上主系統雲端——izcrm 永不直接碰 DB/outbox。
+   主系統啟動時用它自己的正規流程建客戶（狀態＝初訪）並上主系統雲端——izcrm 永不直接碰 DB/outbox。
+   更新：已建檔工廠每次修改（窗口/備註/話題/反應…）排 {up:1,clientId,contact,phone,note}
+   進同一信箱（同客戶合併為最新一筆），主系統消化後套用到客戶卡並上雲端。
    連結記在 r.main={clientId,at}（跟 izcrm 雲端同步 → 三裝置都知道已建檔）。
    鏡射：詳情頁現場讀 duskin_v2.clients 顯示主系統狀態（唯讀、不複製資料）。 */
 function mainClientOf(id){
@@ -766,15 +774,9 @@ function mainLinkHtml(f,r){
       (c.contact?'窗口 '+esc(c.contact)+'　':'')+(c.phone?''+esc(c.phone)+'　':'')+
       (lastV?'最近拜訪 '+esc(lastV.date):'尚未拜訪')+(undone?'　待辦 '+undone+' 項':'')+
     '</div>'+
-    '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">基本資料請在主系統維護，此處即時唯讀顯示。</div></div>';
+    '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">這裡更新窗口／備註會自動同步到主系統；拜訪、試用、合約請在主系統操作。</div></div>';
 }
-window.linkToMain=async()=>{
-  const f=FID[CUR];if(!f)return;
-  const r=recW(CUR);
-  if(r.main&&r.main.clientId)return;
-  const ok=await appConfirm('把「'+f.name+'」建檔到主系統？\n會帶入：名稱、地址、電話、窗口（前兩位）與開發摘要。\n下次開啟主系統時自動完成建檔並上主系統雲端。',{okText:'建檔'});
-  if(!ok)return;
-  const cid=(crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function buildMainPayload(f,r){ // 交接欄位：contact/phone＋單行開發摘要（主系統 note 首行＝本區塊）
   const cts=r.contacts||[];const c1=cts[0]||{},c2=cts[1]||null;
   const parts=['（由工業區CRM 建檔）'];
   if(f.ind)parts.push('業種：'+f.ind);
@@ -786,11 +788,34 @@ window.linkToMain=async()=>{
   if(doneCps.length)parts.push('已達成：'+doneCps.join('、'));
   if(r.topics)parts.push('話題：'+r.topics);
   if(r.note)parts.push('備註：'+r.note);
+  return {contact:c1.name||'',phone:c1.phone||f.phone||'',
+    note:parts.join('　').replace(/\s*\n+\s*/g,'；')};
+}
+function izInbox(){let a=[];try{a=JSON.parse(localStorage.getItem('duskin_iz_handoff')||'[]');}catch(e){}return Array.isArray(a)?a:[];}
+function queueMainUpdate(id){ // 已建檔工廠的每次修改 → 排更新訊息（同客戶合併為最新一筆），主系統消化後套用＋上雲端
+  const r=rec(id),f=FID[id];
+  if(!r||!f||!(r.main&&r.main.clientId))return;
+  const p=buildMainPayload(f,r);
+  const inbox=izInbox().filter(h=>!(h&&h.up&&h.clientId===r.main.clientId));
+  inbox.push({up:1,clientId:r.main.clientId,izId:id,contact:p.contact,phone:p.phone,note:p.note,at:Date.now()});
+  try{localStorage.setItem('duskin_iz_handoff',JSON.stringify(inbox));}catch(e){}
+}
+function offerMainLink(){ // 狀態成為「已電訪」且尚未建檔 → 提醒建檔到主系統
+  const r=rec(CUR);
+  if(!r||r.status!=='已電訪'||(r.main&&r.main.clientId))return;
+  linkToMain('已標記「已電訪」——');
+}
+window.linkToMain=async reason=>{
+  const f=FID[CUR];if(!f)return;
+  const r=recW(CUR);
+  if(r.main&&r.main.clientId)return;
+  const ok=await appConfirm((reason||'')+'把「'+f.name+'」建檔到主系統？\n會帶入：名稱、地址、電話、窗口（前兩位）與開發摘要，狀態＝初訪。\n下次開啟主系統時自動完成建檔並上主系統雲端。',{okText:'建檔'});
+  if(!ok)return;
+  const cid=(crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const p=buildMainPayload(f,r);
   const h={id:cid,izId:f.id,name:f.name,addr:f.addr,
-    phone:c1.phone||f.phone||'',contact:c1.name||'',note:parts.join('　'),at:Date.now()};
-  let inbox=[];
-  try{inbox=JSON.parse(localStorage.getItem('duskin_iz_handoff')||'[]');}catch(e){}
-  if(!Array.isArray(inbox))inbox=[];
+    phone:p.phone,contact:p.contact,note:p.note,at:Date.now()};
+  const inbox=izInbox();
   inbox.push(h);
   try{localStorage.setItem('duskin_iz_handoff',JSON.stringify(inbox));}
   catch(e){await appAlert('寫入交接信箱失敗：'+e.message);return;}

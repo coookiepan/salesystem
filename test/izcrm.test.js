@@ -129,14 +129,34 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   w.eval('recW(CUR).contacts=[{name:"王一",title:"廠長",phone:"0911111111",line:""},{name:"李二",title:"",phone:"0922222222",line:"lee2"}]');
   await w.linkToMain();
   const inbox = JSON.parse(w._store.duskin_iz_handoff || '[]');
-  assert('交接信箱寫入一筆', inbox.length === 1 && inbox[0].name.includes('甲工廠'));
-  assert('第一位窗口進 contact/phone', inbox[0].contact === '王一' && inbox[0].phone === '0911111111');
-  assert('第二位窗口寫入備註', /窗口2：李二/.test(inbox[0].note) && /0922222222/.test(inbox[0].note));
-  assert('r.main 記下 clientId（隨 izcrm 雲端同步）', w.eval('S.records.aaa1.main.clientId') === inbox[0].id);
-  assert('再按一次不重複寫入', (await w.linkToMain(), JSON.parse(w._store.duskin_iz_handoff).length === 1));
+  const creates = inbox.filter(h => !h.up);
+  assert('交接信箱寫入一筆建檔', creates.length === 1 && creates[0].name.includes('甲工廠'));
+  assert('第一位窗口進 contact/phone', creates[0].contact === '王一' && creates[0].phone === '0911111111');
+  assert('第二位窗口寫入備註', /窗口2：李二/.test(creates[0].note) && /0922222222/.test(creates[0].note));
+  assert('r.main 記下 clientId（隨 izcrm 雲端同步）', w.eval('S.records.aaa1.main.clientId') === creates[0].id);
+  assert('再按一次不重複寫入', (await w.linkToMain(), JSON.parse(w._store.duskin_iz_handoff).filter(h => !h.up).length === 1));
+
+  console.log('Z1 — 已建檔工廠的修改同步到主系統（更新訊息＋合併）');
+  w.eval('izFld("note",{value:"改約下週"})');
+  w.eval('izFld("note",{value:"改約下下週"})');
+  const ups = JSON.parse(w._store.duskin_iz_handoff).filter(h => h.up);
+  assert('更新訊息排入信箱、同客戶合併為一筆', ups.length === 1 && ups[0].clientId === creates[0].id);
+  assert('更新帶最新備註與窗口', /備註：改約下下週/.test(ups[0].note) && ups[0].contact === '王一');
+  assert('開發摘要強制單行（換行轉；）', !w.eval('buildMainPayload(FID.aaa1,{note:"第一行\\n第二行"}).note').includes('\n'));
+
+  console.log('Z1 — 已電訪提醒建檔＋月曆日期');
+  w.openDetail('ccc3');
+  w.eval('izFld("status",{value:"已電訪"})');   // appConfirm 已 stub 為 true → 應自動建檔
+  await wait(50);
+  assert('狀態改已電訪 → 提醒並建檔到主系統', !!w.eval('S.records.ccc3.main&&S.records.ccc3.main.clientId'));
+  assert('丙工廠的建檔進了信箱', JSON.parse(w._store.duskin_iz_handoff).some(h => !h.up && h.name === '丙工廠'));
+  w.planAdd(); await wait(30);
+  assert('待訪日期用月曆（type=date）', w.document.getElementById('dlg-in').type === 'date');
+  w._dlgDone('2026-09-02'); await wait(30);
+  assert('選定日期寫入待訪', w.eval('S.records.ccc3.visitPlan.date') === '2026-09-02');
   // 鏡射：主系統同步到該客戶後，詳情頁唯讀顯示
-  w._store.duskin_v2 = JSON.stringify({ clients: [{ id: inbox[0].id, name: '甲工廠', status: '試用中', contact: '王一', phone: '0911111111', todos: [], visits: [{ date: '2026-07-01', mood: 3, note: '' }] }], products: [] });
-  w.renderDetail();
+  w._store.duskin_v2 = JSON.stringify({ clients: [{ id: creates[0].id, name: '甲工廠', status: '試用中', contact: '王一', phone: '0911111111', todos: [], visits: [{ date: '2026-07-01', mood: 3, note: '' }] }], products: [] });
+  w.openDetail('aaa1');
   const dt = w.document.getElementById('dt-body').innerHTML;
   assert('鏡射卡顯示主系統狀態', /主系統客戶（唯讀鏡射）/.test(dt) && /試用中/.test(dt) && /2026-07-01/.test(dt));
 
