@@ -307,11 +307,17 @@ sequenceDiagram
 1. 查詢頁／設定頁的入口按鈕（`<a href="izcrm.html">`）。
 2. **商品庫唯讀共享**：報價試算直接讀 `localStorage.duskin_v2.products`（只讀不寫；不存在時顯示提示）。
 3. `sw.js` 預快取 `izcrm.html` 與 `izdata.json`（離線可用）。
-4. **建檔交接信箱**（單向）：izcrm「📇 建檔到主系統」把工廠基本資料＋預產 client id 寫進
+4. **建檔交接信箱**（單向）：izcrm「建檔到主系統」把工廠基本資料＋預產 client id 寫進
    `localStorage.duskin_iz_handoff`；主系統啟動（或 storage 事件）時以自己的正規流程
-   `consumeIzHandoff()` 建檔並上主系統雲端。izcrm 永不直接碰 DB/outbox。冪等（同 id 跳過）。
+   `consumeIzHandoff()` 建檔（狀態＝初訪，自帶一筆 visit 滿足不變式）並上主系統雲端。
+   izcrm 永不直接碰 DB/outbox。冪等（同 id 跳過）。狀態改「已電訪」時若尚未建檔會主動提醒。
    連結記在 izcrm 紀錄 `r.main={clientId}`（隨 izcrm 雲端同步），詳情頁據此**現場唯讀讀取**
    `duskin_v2.clients` 顯示主系統狀態（鏡射，不複製資料——與商品庫同一模式）。
+5. **更新訊息**（同一信箱）：已建檔工廠每次修改（窗口/備註/話題/反應…）由 `touch()` 排
+   `{up:1,clientId,contact,phone,note}` 進 `duskin_iz_handoff`（同客戶合併為最新一筆）；
+   `consumeIzHandoff()` 套用到客戶卡並上雲端——note **首行**為工業區開發摘要區塊（固定前綴
+   `（由工業區CRM` 辨識，強制單行），其餘行是主系統自行補記、更新時保留。客戶尚未從主系統
+   雲端同步到本機時，更新訊息留在信箱（30 天內）等下次消化。
 
 ### 資料兩層
 

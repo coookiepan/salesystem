@@ -1484,7 +1484,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.08.11-z1';
+const APP_VERSION='v2026.08.11-z2';
 const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -6422,20 +6422,38 @@ function consumeIzHandoff(){
   let inbox=[];
   try{inbox=JSON.parse(localStorage.getItem('duskin_iz_handoff')||'[]');}catch(e){}
   if(!Array.isArray(inbox)||!inbox.length)return;
-  let n=0;
+  let n=0,u=0;const later=[];
   inbox.forEach(h=>{
-    if(!h||!h.id||!h.name)return;
+    if(!h)return;
+    if(h.up){ // 更新訊息：izcrm 窗口/備註變動 → 套到既有客戶並上雲端
+      const c=DB.clients.find(x=>x&&x.id===h.clientId);
+      if(!c){if(Date.now()-(h.at||0)<30*86400000)later.push(h);return;} // 客戶還沒從雲端同步到本機 → 留著下次再套
+      c.contact=String(h.contact||'');c.phone=String(h.phone||'');
+      // note 首行＝工業區開發摘要區塊（以固定前綴辨識），其餘行（主系統自行補記）保留
+      const lines=String(c.note||'').split('\n');
+      if((lines[0]||'').indexOf('（由工業區CRM')===0)lines[0]=String(h.note||'');
+      else lines.unshift(String(h.note||''));
+      c.note=lines.join('\n');
+      c.updatedAt=Date.now();u++;
+      autoSync('save',{client:c});
+      return;
+    }
+    if(!h.id||!h.name)return;
     if(DB.clients.some(c=>c&&c.id===h.id))return;
+    // 從 izcrm 建檔的客戶已電訪過 → 狀態＝初訪，並補一筆拜訪紀錄滿足不變式（status≠未拜訪 ⇒ 有 visit）
     const c={id:h.id,name:String(h.name),contact:String(h.contact||''),phone:String(h.phone||''),
-      addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.UNVISITED,regNo:'',nextdate:'',env:'',
-      note:String(h.note||''),trialItems:[],contractedItems:[],todos:[],visits:[],
+      addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.FIRST,regNo:'',nextdate:'',env:'',
+      note:String(h.note||''),trialItems:[],contractedItems:[],todos:[],
+      visits:[{date:today(),mood:0,note:'',insight:'(工業區CRM 轉入)',statusChange:STATUS.FIRST,nextdate:null}],
       lat:null,lng:null,geocodeSource:null,updatedAt:Date.now()};
     DB.clients.push(c);n++;
     autoSync('save',{client:c});
     if(c.addr){try{enqueueGeocode(c);processGeoQueue();}catch(e){}}
   });
-  localStorage.removeItem('duskin_iz_handoff');
-  if(n){saveLocal();renderClients();showToast('已從工業區CRM 帶入 '+n+' 家新客戶');}
+  if(later.length)localStorage.setItem('duskin_iz_handoff',JSON.stringify(later));
+  else localStorage.removeItem('duskin_iz_handoff');
+  if(n||u){saveLocal();renderClients();
+    showToast([n?'已從工業區CRM 帶入 '+n+' 家新客戶':'',u?'已同步工業區更新 '+u+' 筆':''].filter(Boolean).join('、'));}
 }
 // ═══════════════════════════════════════════════════════════
 // SITE HANDOFF — 工地地圖建檔交接信箱（單向：sitemap → 主系統，與 IZ 同模式）
@@ -6545,7 +6563,8 @@ window.addEventListener('storage',e=>{if(e.key==='duskin_site_handoff'&&e.newVal
 // 手機常見情境：主系統分頁沒有重新載入就被切回（bfcache 還原／背景喚醒），
 // 此時 INIT 消化不會再跑，而寫入 handoff 當下若本分頁正被凍結／已丟棄，storage 事件也收不到，
 // 交接信箱就會卡住 → 這是「常常無法正確帶入」的主因。改成每次回到前景都再消化一次。
-// consumeIzHandoff 具冪等性（依 client id 去重、消化完立即清空信箱），重複呼叫安全。
+// consumeIzHandoff 具冪等性（建檔依 client id 去重、更新訊息重複套用結果相同；
+// 消化完清空信箱，只保留「客戶尚未從雲端同步到本機」的更新訊息等下次再套），重複呼叫安全。
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){consumeIzHandoff();consumeSiteHandoff();}});
 window.addEventListener('pageshow',()=>{consumeIzHandoff();consumeSiteHandoff();});   // bfcache 還原也會觸發
 window.addEventListener('focus',()=>{consumeIzHandoff();consumeSiteHandoff();});

@@ -105,7 +105,8 @@ const D = (off) => { const d = new Date(Date.now() + off * 86400000); return d.g
   await wait(400);
   assert('新工廠建檔成功', w.eval('DB.clients.some(c=>c.id==="iz-new-1"&&c.name==="新工廠甲")'));
   assert('帶入電話與窗口', w.eval('DB.clients.find(c=>c.id==="iz-new-1").phone') === '06-1234567' && w.eval('DB.clients.find(c=>c.id==="iz-new-1").contact') === '王窗口');
-  assert('型態=工廠、狀態=未拜訪', w.eval('DB.clients.find(c=>c.id==="iz-new-1").type') === '工廠' && w.eval('DB.clients.find(c=>c.id==="iz-new-1").status') === '未拜訪');
+  assert('型態=工廠、狀態=初訪（電訪過才建檔）', w.eval('DB.clients.find(c=>c.id==="iz-new-1").type') === '工廠' && w.eval('DB.clients.find(c=>c.id==="iz-new-1").status') === '初訪');
+  assert('自帶一筆拜訪紀錄（滿足 status≠未拜訪 ⇒ 有 visit 不變式）', w.eval('DB.clients.find(c=>c.id==="iz-new-1").visits.length') === 1);
   assert('同 id 冪等：既有客戶未被覆蓋', w.eval('DB.clients.filter(c=>c.id==="exist1").length') === 1 && w.eval('DB.clients.find(c=>c.id==="exist1").name') === '既有客戶');
   assert('信箱消化後清空', w._store.duskin_iz_handoff === undefined);
   assert('建檔進入待推送佇列（斷網不丟）', w.eval('OUTBOX.some(op=>op.payload&&op.payload.client&&op.payload.client.id==="iz-new-1")'));
@@ -126,6 +127,23 @@ const D = (off) => { const d = new Date(Date.now() + off * 86400000); return d.g
   w.dispatchEvent(new w.Event('pageshow'));
   await wait(20);
   assert('重複回前景不重複建檔', w.eval('DB.clients.filter(c=>c.id==="iz-late-1").length') === 1);
+
+  console.log('Z2 — 工業區更新訊息（窗口/備註同步到主系統）');
+  w = boot({
+    duskin_v2: JSON.stringify({ clients: [{ id: 'izup1', name: '同步工廠', addr: '', status: '初訪', contact: '舊窗口', phone: '06-1111111',
+      note: '（由工業區CRM 建檔）　業種：金屬\n主系統自己補的第二行', todos: [], visits: [{date:'2026-08-01',mood:0,note:''}], updatedAt: 1 }], products: [], inventory: null, sheetUrl: 'https://script.google.com/x/exec' }),
+    duskin_iz_handoff: JSON.stringify([
+      { up: 1, clientId: 'izup1', izId: 'facU', contact: '新窗口', phone: '0988-000111', note: '（由工業區CRM 建檔）　業種：金屬　窗口1：新窗口(廠長)　備註：改約下週', at: Date.now() },
+      { up: 1, clientId: 'no-such-client', izId: 'facX', contact: '', phone: '', note: '（由工業區CRM 建檔）', at: Date.now() }
+    ])
+  });
+  await wait(400);
+  assert('窗口/電話被更新', w.eval('DB.clients.find(c=>c.id==="izup1").contact') === '新窗口' && w.eval('DB.clients.find(c=>c.id==="izup1").phone') === '0988-000111');
+  assert('note 首行（開發摘要）被替換', w.eval('DB.clients.find(c=>c.id==="izup1").note').startsWith('（由工業區CRM 建檔）　業種：金屬　窗口1：新窗口(廠長)'));
+  assert('主系統自行補記的行保留', w.eval('DB.clients.find(c=>c.id==="izup1").note').includes('主系統自己補的第二行'));
+  assert('更新進待推送佇列（上主系統雲端）', w.eval('OUTBOX.some(op=>op.payload&&op.payload.client&&op.payload.client.id==="izup1")'));
+  const left = JSON.parse(w._store.duskin_iz_handoff || '[]');
+  assert('找不到客戶的更新留在信箱等下次', left.length === 1 && left[0].clientId === 'no-such-client');
 
   console.log(failed ? `Z2 FAILED (${failed})` : 'Z2 PASSED ✅');
   process.exit(failed ? 1 : 0);
