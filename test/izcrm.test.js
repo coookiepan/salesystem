@@ -68,12 +68,41 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('引號翻倍', w.eval('csvCell(\'say "hi"\')') === '"say ""hi"""');
   assert('一般值原樣', w.eval('csvCell("abc")') === 'abc');
 
+  console.log('Z1 — 狀態正名遷移（拜訪中→已電訪、考慮中→已拜訪）');
+  w = boot({ izcrm_v1: JSON.stringify({
+    records: {
+      aaa1: { status: '拜訪中', updatedAt: 100 },
+      bbb2: { status: '考慮中', updatedAt: 200 },
+      ccc3: { status: '已成交', updatedAt: 300 }
+    },
+    meta: {}, gasUrl: '', lastPullAt: 0, dirty: {}, metaDirty: {}
+  }) });
+  await wait(300);
+  assert('拜訪中 → 已電訪', w.eval('S.records.aaa1.status') === '已電訪');
+  assert('考慮中 → 已拜訪', w.eval('S.records.bbb2.status') === '已拜訪');
+  assert('其他狀態不動', w.eval('S.records.ccc3.status') === '已成交');
+  assert('改名視為新修改（updatedAt 提升＋標記待同步）',
+    w.eval('S.records.aaa1.updatedAt') > 100 && w.eval('S.dirty.aaa1') === 1 && w.eval('S.dirty.bbb2') === 1);
+  assert('未改名者不標記待同步', w.eval('S.dirty.ccc3') !== 1);
+
+  console.log('Z1 — 待訪清單：同區優先分組＋路名第二層＋狀態徽章');
+  w.eval(`S.records.aaa1={status:'已電訪',visitPlan:{date:''},updatedAt:1};
+    S.records.bbb2={status:'未接觸',visitPlan:{date:''},updatedAt:1};
+    S.records.ccc3={status:'已成交',visitPlan:{date:''},updatedAt:1};`);
+  w.renderPlan();
+  const plan = w.document.getElementById('plan-out').innerHTML;
+  assert('同區排一起（永康區標頭只出現一次）', (plan.match(/>永康區</g) || []).length === 1);
+  assert('兩個區各有標頭', plan.includes('>仁德區<') && plan.includes('>永康區<'));
+  assert('第二層是路名', plan.includes('中正南路') && plan.includes('永科五路') && plan.includes('太子四街'));
+  assert('路名標頭在區標頭之後', plan.indexOf('>永康區<') < plan.indexOf('中正南路'));
+  assert('卡片顯示狀態徽章', plan.includes('class="badge"') && plan.includes('>已電訪<') && plan.includes('>已成交<'));
+
   console.log('Z1 — 同步：LWW 合併');
   const calls = [];
   w = boot({ izcrm_v1: JSON.stringify({
     records: {
-      aaa1: { status: '拜訪中', updatedAt: 100 },
-      bbb2: { status: '考慮中', note: '本機較新', updatedAt: 900 }
+      aaa1: { status: '已電訪', updatedAt: 100 },
+      bbb2: { status: '已拜訪', note: '本機較新', updatedAt: 900 }
     },
     meta: {}, gasUrl: 'https://script.google.com/z/exec', lastPullAt: 0, dirty: { bbb2: 1 }, metaDirty: {}
   }) }, async (u, o) => {
@@ -90,7 +119,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('同步成功', ok === true);
   assert('推送帶上 dirty 紀錄', calls.length && calls[0].records && calls[0].records.bbb2);
   assert('雲端較新者被採用', w.eval('S.records.aaa1.status') === '已成交');
-  assert('本機較新者被保留', w.eval('S.records.bbb2.status') === '考慮中');
+  assert('本機較新者被保留', w.eval('S.records.bbb2.status') === '已拜訪');
   assert('lastPullAt 更新', w.eval('S.lastPullAt') === 5000);
 
   console.log('Z1 — 建檔到主系統（handoff 寫入＋鏡射）');
@@ -113,12 +142,12 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
 
   console.log('Z1 — seed 匯入（新工廠建檔＋既有工廠併入標籤）');
   w = boot(); await wait(300);
-  w.eval('S.records.aaa1={status:"拜訪中",tags:["每季回訪"],updatedAt:123}');
+  w.eval('S.records.aaa1={status:"已電訪",tags:["每季回訪"],updatedAt:123}');
   w.eval(`window._r=applySeedRecords({
     aaa1:{status:"已成交",tags:["上市"],updatedAt:0},
     ccc3:{status:"未接觸",tags:["外商"],customer:"某客戶",updatedAt:0}
   })`);
-  assert('既有紀錄其他欄位不被覆蓋', w.eval('S.records.aaa1.status') === '拜訪中');
+  assert('既有紀錄其他欄位不被覆蓋', w.eval('S.records.aaa1.status') === '已電訪');
   assert('既有紀錄標籤聯集併入', w.eval('JSON.stringify(S.records.aaa1.tags)') === JSON.stringify(['每季回訪','上市']));
   assert('既有紀錄併入後標記待同步', w.eval('S.dirty.aaa1') === 1);
   assert('新紀錄整筆帶入並標記待同步', w.eval('S.records.ccc3.customer') === '某客戶' && w.eval('S.dirty.ccc3') === 1);
