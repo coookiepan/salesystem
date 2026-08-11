@@ -245,7 +245,7 @@ details.sec>.bd{padding:0 14px 14px}
    資料兩層：主檔 izdata.json（唯讀）＋ 個人紀錄層 izcrm_v1（同步雲端）
    與主系統僅三個柔性接點：入口按鈕、商品庫唯讀、sw.js 快取
    ═══════════════════════════════════════════════════════════ */
-const IZ_VERSION='v2026.07.28-z4';
+const IZ_VERSION='v2026.08.11-z1';
 
 /* ═══ 內嵌 Apps Script 後端（獨立部署，勿與主系統共用試算表） ═══ */
 const IZ_GAS_CODE=[
@@ -872,8 +872,8 @@ function renderPlan(){
         (it.r.visitPlan.note?'<div class="meta-line">'+esc(it.r.visitPlan.note)+'</div>':'')+
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:4px">'+
-        (it.f.phone?'<a class="btn btn-xs btn-outline" href="tel:'+esc(it.f.phone.replace(/[^\d+#]/g,''))+'"></a>':'')+
-        '<a class="btn btn-xs btn-outline" href="'+mapsUrl+'" target="_blank" rel="noopener"></a>'+
+        (it.f.phone?'<a class="btn btn-xs btn-outline" href="tel:'+esc(it.f.phone.replace(/[^\d+#]/g,''))+'" aria-label="撥打電話">電話</a>':'')+
+        '<a class="btn btn-xs btn-outline" href="'+mapsUrl+'" target="_blank" rel="noopener" aria-label="開地圖導航">導航</a>'+
         '</div></div></div>';
     });
     return html;

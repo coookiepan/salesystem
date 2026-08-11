@@ -7,7 +7,7 @@
 //   - Leaflet CDN（版本固定、immutable，且帶 CORS 標頭可安全重播）：快取優先，
 //     讓離線也能載入地圖程式庫與樣式（M4）。地圖磚 tile 本質需連線，不快取。
 //   - 對 Apps Script 的寫入(POST)與其他跨網域請求：完全不攔。
-const CACHE = 'duskin-shell-v33';
+const CACHE = 'duskin-shell-v34';
 const SHELL = ['./', './index.html', './home.html', './izcrm.html', './izdata.json', './sitemap.html', './tokens.css', './nav.js', './manifest.webmanifest', './icon.svg', './logo-mark.svg'];
 const CDN = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
@@ -60,8 +60,11 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       const cached = await caches.match(req);
       const refresh = fetch(req).then(async fresh => {
-        const c = await caches.open(CACHE);
-        c.put(req, fresh.clone());
+        // 只快取 2xx：擋 captive portal / 5xx 錯誤頁污染外殼快取
+        if (fresh && fresh.ok) {
+          const c = await caches.open(CACHE);
+          c.put(req, fresh.clone());
+        }
         return fresh;
       }).catch(() => null);
       if (cached) { e.waitUntil(refresh); return cached; }
