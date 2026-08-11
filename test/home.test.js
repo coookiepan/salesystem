@@ -45,6 +45,12 @@ function boot(html, store, url) {
   assert('四頁都掛全域導覽 nav.js（data-page 正確）', mainHtml.includes('nav.js" data-page="clients"') && smHtml.includes('nav.js" data-page="site"') && izHtml.includes('nav.js" data-page="iz"') && homeHtml.includes('nav.js" data-page="home"'));
   assert('全域導覽五格齊全（單色 SVG、無 emoji）', ['首頁','客戶','行程','工地','工業區'].every(t => navJs.includes(t)) && !/[\u{1F300}-\u{1FAFF}]/u.test(navJs));
   assert('主系統內部導覽已置頂（sticky）且無首頁鈕', mainHtml.includes('#app-nav{position:sticky') && !mainHtml.includes('id="nav-home"'));
+  assert('全域導覽只在主系統攔截 客戶/行程（其他頁走連結）', navJs.includes("PAGE==='clients'&&typeof window.navTo"));
+  assert('合約勾選框維持公版 ☑/☐（文件輸出不受去 emoji 影響）', mainHtml.includes("return on ? '☑' : '☐'"));
+  assert('管理儀表板心情標籤與 MOODS 同序（1=差…4=優）', mainHtml.includes("const moods=['','差','普','好','優']"));
+  for (const [nm, f] of [['index', mainHtml], ['home', homeHtml], ['sitemap', smHtml], ['izcrm', izHtml]]) {
+    assert('無空白互動元件（' + nm + '）', !f.includes('"></a>') && !f.includes('"></button>'));
+  }
   assert('工地地圖支援 #place 深連結', smHtml.includes("location.hash==='#place'") && smHtml.includes('startPlaceGPS'));
   assert('home 註冊 Service Worker、連 manifest', /serviceWorker.+register\(\s*['"]sw\.js['"]/s.test(homeHtml) && homeHtml.includes('rel="manifest"'));
 

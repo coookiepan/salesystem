@@ -1484,7 +1484,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.07.28-z5';
+const APP_VERSION='v2026.08.11-z1';
 const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2357,6 +2357,7 @@ async function syncFromSheet(silent){
     }else{
       DB.clients=(res.clients||[]).map(c=>{if(c)c.srvAt=c.updatedAt;return c;});  // M3 標記雲端版本
     }
+    validateClients(); // 雲端可能仍有 migration 前的舊列（如已結案）→ 在資料邊界正規化
     const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
     const prods=await api({action:'getProducts'});if(prods.products)DB.products=prods.products;
@@ -2494,6 +2495,7 @@ function importJSON(input){
       if(!Array.isArray(data.clients))throw new Error('格式不正確（缺少 clients 陣列）');
       if(!await appConfirm('匯入 '+data.clients.length+' 筆資料？\n\n這會覆蓋目前本機的所有資料。',{title:'匯入備份',okText:'匯入',danger:true}))return;
       DB.clients=data.clients;
+      validateClients(); // 匯入的備份可能含舊格式列 → 正規化
       if(data.inventory)DB.inventory=data.inventory;
       if(data.products)DB.products=data.products;
       if(Array.isArray(data.gtodos))DB.gtodos=data.gtodos;
@@ -2537,7 +2539,7 @@ function today(){return fmtDate();
 }
 function renderTypeOptsUI(){
   const el=document.getElementById('typeopt-chips');if(!el)return;
-  el.innerHTML=typeOpts().map(t=>`<span class="pill pill-sm" style="gap:4px">${escHtml(t)} <button onclick="removeTypeOpt('${escHtml(t)}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0">✕</button></span>`).join('');
+  el.innerHTML=typeOpts().map((t,i)=>`<span class="pill pill-sm" style="gap:4px">${escHtml(t)} <button onclick="removeTypeOpt(${i})" aria-label="移除 ${escHtml(t)}" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0">✕</button></span>`).join('');
 }
 function addTypeOpt(){
   const inp=document.getElementById('typeopt-new');
@@ -2546,8 +2548,9 @@ function addTypeOpt(){
   if(opts.indexOf(v)<0){opts.push(v);DB.typeOpts=opts;saveLocal();}
   inp.value='';renderTypeOptsUI();showToast('已新增類別「'+v+'」');
 }
-function removeTypeOpt(t){
-  DB.typeOpts=typeOpts().filter(x=>x!==t);saveLocal();renderTypeOptsUI();
+function removeTypeOpt(i){
+  const opts=typeOpts().slice();opts.splice(i,1);
+  DB.typeOpts=opts;saveLocal();renderTypeOptsUI();
 }
 async function resetTypeOpts(){
   if(!await appConfirm('把類別選項恢復成預設清單？（既有客戶資料不受影響）'))return;
@@ -2644,7 +2647,7 @@ function renderInventory(){
         html+=`<div class="inv-item">
           <div class="inv-item-head">
             <span class="inv-item-code">${escHtml(x.name)}</span>
-            <button data-inv-btn onclick="openInvModal('${esc}')" title="編輯" class="inv-edit" aria-label="編輯 ${escHtml(x.name)}"></button>
+            <button data-inv-btn onclick="openInvModal('${esc}')" title="編輯" class="inv-edit" aria-label="編輯 ${escHtml(x.name)}"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <span class="inv-item-stock" style="color:${color}"><span class="num">${x.stock}</span><span class="inv-sep">/</span><span class="inv-std">${x.std}</span></span>
           </div>
           <div class="inv-item-actions">
@@ -4980,7 +4983,7 @@ function renderVisits(){
         <span style="font-weight:600;font-size:14px">${v.date} ${MOODS[v.mood]||''}</span>
         <div style="display:flex;align-items:center;gap:6px">
           ${v.statusChange?bdg(v.statusChange):''}
-          <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯"></button>
+          <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯" aria-label="編輯拜訪"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         </div>
       </div>
       ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${escHtml(v.note)}</div>`:''}
@@ -6066,7 +6069,7 @@ function renderAdminClientDetailHTML(s,idx){
   const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
   const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
   const visits=(c.visits||[]).slice().sort((a,b)=>(a.date||'')<(b.date||'')?1:-1);
-  const moods=['','極佳','好','普','差','很差'];
+  const moods=['','差','普','好','優'];
   const visitsHtml=visits.length?visits.map(v=>{
     const noteParts=[v.note,v.insight].filter(x=>x&&x.trim()).join(' ／ ');
     return `<div style="border-left:3px solid var(--green);padding:6px 10px;margin-bottom:6px;background:var(--bg2);font-size:12px">
@@ -6260,8 +6263,8 @@ function tripUndoneTodos(c){return (c.todos||[]).filter(t=>!t.done);}
 function tripCard(it,actions){
   const c=it.c;const undone=tripUndoneTodos(c);
   const region=parseRegion(c.addr)||'（無區）';
-  const tel=c.phone?`<a class="btn btn-outline btn-xs" href="tel:${escHtml(String(c.phone).replace(/[^\d+#]/g,''))}" onclick="event.stopPropagation()"></a>`:'';
-  const map=c.addr?`<a class="btn btn-outline btn-xs" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.addr)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"></a>`:'';
+  const tel=c.phone?`<a class="btn btn-outline btn-xs" href="tel:${escHtml(String(c.phone).replace(/[^\d+#]/g,''))}" onclick="event.stopPropagation()" aria-label="撥打電話"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.81.3 1.6.54 2.36a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.72-1.22a2 2 0 0 1 2.11-.45c.76.24 1.55.42 2.36.54A2 2 0 0 1 22 16.92z"/></svg></a>`:'';
+  const map=c.addr?`<a class="btn btn-outline btn-xs" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.addr)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="開地圖導航"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></a>`:'';
   return `<div class="card" style="margin-bottom:6px">
     <div style="display:flex;gap:8px;align-items:flex-start">
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openCD(${it.i})">
@@ -6358,7 +6361,7 @@ function renderTrip(){
           <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(st.name||'未命名')}</div>
           <div style="font-size:11.5px;color:var(--text3)">${escHtml([st.town,st.stage].filter(Boolean).join('・'))}・可拜訪 ${escHtml(st.openDate)}${st.by?'・'+escHtml(st.by)+' 登記':''}</div>
         </div>
-        <a class="btn btn-outline btn-xs" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}"></a>
+        <a class="btn btn-outline btn-xs" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}">導航</a>
         <button class="btn btn-primary btn-xs" onclick="mainConvertSite('${escHtml(st.id)}')">轉為客戶</button>
       </div>`;
     });
@@ -6464,35 +6467,56 @@ function consumeSiteHandoff(){
   if(n){saveLocal();renderClients();showToast('已從工地地圖帶入 '+n+' 家新客戶');}
 }
 // ═══ 融合視圖（唯讀鏡射）：工地與工業區的「今天」入行程 ═══
+// 快取解析結果（sitemap_v1 含照片可達數 MB、izcrm 主檔 1.3MB）：
+// 只有別的分頁會改這些 key → storage 事件/回前景時失效重讀即可。
+let FUSION_CACHE={sm:null,iz:null,master:null};
+function fusionInvalidate(){FUSION_CACHE={sm:null,iz:null,master:null};}
+window.addEventListener('storage',e=>{if(e.key==='sitemap_v1'||e.key==='izcrm_v1'||e.key==='izcrm_master')fusionInvalidate();});
+window.addEventListener('pageshow',fusionInvalidate);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')fusionInvalidate();});
+function fusionSm(){
+  if(FUSION_CACHE.sm===null){
+    try{FUSION_CACHE.sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null')||false;}catch(e){FUSION_CACHE.sm=false;}
+  }
+  return FUSION_CACHE.sm;
+}
 function fusionDueSites(){
   try{
-    const sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null');
+    const sm=fusionSm();
     if(!sm||!Array.isArray(sm.sites))return[];
     const td=today();
+    const converted=new Set(DB.clients.map(c=>c&&c.srcSiteId).filter(Boolean));
     return sm.sites.filter(s=>s&&!s.deleted&&!(s.main&&s.main.clientId)
-      &&typeof s.lat==='number'&&s.openDate&&s.openDate<=td
+      &&typeof s.lat==='number'&&typeof s.lng==='number'&&s.openDate&&s.openDate<=td
       &&['已拜訪','不適合'].indexOf(s.stage)<0
-      &&!DB.clients.some(c=>c&&c.srcSiteId===s.id))
+      &&!converted.has(s.id))
       .sort((a,b)=>(a.openDate<b.openDate?-1:1));
   }catch(e){return[];}
 }
 function fusionIzDue(){
   try{
-    const iz=JSON.parse(localStorage.getItem('izcrm_v1')||'null');
+    if(FUSION_CACHE.iz===null){
+      try{FUSION_CACHE.iz=JSON.parse(localStorage.getItem('izcrm_v1')||'null')||false;}catch(e){FUSION_CACHE.iz=false;}
+    }
+    const iz=FUSION_CACHE.iz;
     if(!iz||!iz.records)return[];
     const td=today();
     const due=Object.keys(iz.records).filter(id=>{const r=iz.records[id];return r&&r.visitPlan&&r.visitPlan.date&&r.visitPlan.date<=td;});
     if(!due.length)return[];
-    const names={};
-    try{const m=JSON.parse(localStorage.getItem('izcrm_master')||'null');
-      if(m&&Array.isArray(m.factories))m.factories.forEach(f=>{if(f&&f.id)names[f.id]={name:f.name||'',dist:f.dist||''};});}catch(e){}
+    if(FUSION_CACHE.master===null){
+      const names={};
+      try{const m=JSON.parse(localStorage.getItem('izcrm_master')||'null');
+        if(m&&Array.isArray(m.factories))m.factories.forEach(f=>{if(f&&f.id)names[f.id]={name:f.name||'',dist:f.dist||''};});}catch(e){}
+      FUSION_CACHE.master=names;
+    }
+    const names=FUSION_CACHE.master;
     return due.map(id=>({id,name:(names[id]&&names[id].name)||('工廠（開工業區CRM 看名稱）'),dist:(names[id]&&names[id].dist)||'',date:iz.records[id].visitPlan.date}));
   }catch(e){return[];}
 }
 // 工地 → 正規客戶卡（主系統端一鍵轉）：建檔走正規流程上雲；
 // 以回執信箱 duskin_site_ack 通知 sitemap 標記 s.main（單向、冪等，同事經雲端看得到已建檔）
 function mainConvertSite(siteId){
-  let sm=null;try{sm=JSON.parse(localStorage.getItem('sitemap_v1')||'null');}catch(e){}
+  const sm=fusionSm();
   const s=sm&&Array.isArray(sm.sites)?sm.sites.find(x=>x&&x.id===siteId&&!x.deleted):null;
   if(!s){showToast('找不到這個工地（可能已被刪除）');return;}
   if((s.main&&s.main.clientId)||DB.clients.some(c=>c&&c.srcSiteId===siteId)){showToast('這個工地已經建檔過');return;}
@@ -7029,7 +7053,7 @@ const CM_builder = (function(){
       sections:[{properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}}, children}]});
   }
   // ═══ 公版「DUSKIN商品租賃契約書」專用 builder（與報價單完全獨立） ═══
-  function cmCk(on){ return on ? '✓' : '○'; }
+  function cmCk(on){ return on ? '☑' : '☐'; }  // 公版契約勾選框字元，勿因 UI 去 emoji 改動
   function cmCycleLabel(c){ return c==='1W'?'1週' : c==='2W'?'2週' : '4週'; }
   function ctTitle(){
     const {Paragraph,AlignmentType}=getDocx();

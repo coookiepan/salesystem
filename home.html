@@ -191,7 +191,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
    duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
    只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
    ══════════════════════════════════════════════════════════ */
-const HOME_VERSION='v2026.07.28-h4';
+const HOME_VERSION='v2026.08.11-h1';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readJSON(key,fallback){
@@ -277,7 +277,8 @@ document.getElementById('s-od').textContent=overdue.length;
   let dueSites=0,izDue=0;
   const clientSiteIds=new Set(clients.map(c=>c&&c.srcSiteId).filter(Boolean));
   sites.forEach(s=>{
-    if(s.openDate&&s.openDate<=TODAY&&['已拜訪','不適合'].indexOf(s.stage)<0
+    if(typeof s.lat==='number'&&typeof s.lng==='number'
+       &&s.openDate&&s.openDate<=TODAY&&['已拜訪','不適合'].indexOf(s.stage)<0
        &&!(s.main&&s.main.clientId)&&!clientSiteIds.has(s.id))dueSites++;
   });
   if(iz&&iz.records)Object.values(iz.records).forEach(r=>{

@@ -90,7 +90,11 @@ function boot(html, url) {
   m.eval('closeForm()');
   m.eval('DB.typeOpts=["民宿"];saveLocal();openCF(0)');
   assert('舊類型不在清單仍可顯示選取', m.document.getElementById('cf-type').value === '餐飲');
-  m.eval('closeForm();DB.typeOpts=null;saveLocal()');
+  m.eval('closeForm();DB.typeOpts=["Bob\'s 店","餐飲"];saveLocal();renderTypeOptsUI()');
+  assert('類別 chips 用索引移除（含引號名稱不炸 onclick）', m.document.getElementById('typeopt-chips').innerHTML.includes('removeTypeOpt(0)'));
+  m.eval('removeTypeOpt(0)');
+  assert('索引移除正確', JSON.stringify(m.eval('DB.typeOpts')) === '["餐飲"]');
+  m.eval('DB.typeOpts=null;saveLocal()');
 
   console.log('F1 — 統一行程：工地/工業區的「今天」');
   m.eval('navTo("todos",document.getElementById("nav-todos"));setTodosMode("trip")');

@@ -16,7 +16,7 @@ console.log('H2 — PWA 離線');
 // ---- 用假環境載入 sw.js ----
 const swCode = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const keyOf = k => (typeof k === 'string' ? k : (k && k.url) || String(k));
-class Resp { constructor(tag) { this.tag = tag; } clone() { return new Resp(this.tag); } }
+class Resp { constructor(tag, ok) { this.tag = tag; this.ok = ok !== false; } clone() { return new Resp(this.tag, this.ok); } }
 class Cache {
   constructor() { this.m = new Map(); }
   async put(k, v) { this.m.set(keyOf(k), v); }
@@ -68,6 +68,15 @@ new Function('self', 'caches', 'fetch', 'Response', 'URL', swCode)(self, caches,
   ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; }, waitUntil() {} };
   handlers.fetch(ev); res = await ev.p;
   assert('背景更新已入快取（下次開啟就是新版）', res.tag === 'network:v2');
+  // 非 2xx（captive portal / 5xx）不得覆蓋快取
+  fetchImpl = async () => new Resp('portal:garbage', false);
+  ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; }, waitUntil(p) { this.w = p; } };
+  handlers.fetch(ev); res = await ev.p;
+  if (ev.w) await ev.w;
+  fetchImpl = async () => { throw new Error('offline'); };
+  ev = { request: { method: 'GET', url: 'https://x.github.io/salesystem/', mode: 'navigate', headers: { get: () => 'text/html' } }, respondWith(p) { this.p = p; }, waitUntil() {} };
+  handlers.fetch(ev); res = await ev.p;
+  assert('壞回應不覆蓋外殼快取（仍是正常版本）', res.tag === 'network:v2');
 
   // POST 不攔（不干擾 Apps Script 寫入）
   ev = { request: { method: 'POST', url: 'https://script.google.com/x/exec', mode: 'cors', headers: { get: () => null } }, respondWith() { this.called = true; } };

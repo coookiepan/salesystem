@@ -32,7 +32,7 @@
       var a=e.target.closest?e.target.closest('a'):null;
       if(!a)return;
       var tab=a.dataset.tab;
-      if((tab==='clients'||tab==='trip')&&typeof window.navTo==='function'){
+      if((tab==='clients'||tab==='trip')&&PAGE==='clients'&&typeof window.navTo==='function'){ // 只在主系統做頁內切換；其他頁走連結
         e.preventDefault();
         if(tab==='trip'){window.navTo('todos',document.getElementById('nav-todos'));if(typeof window.setTodosMode==='function')window.setTodosMode('trip');}
         else{window.navTo('clients',document.getElementById('nav-clients'));}
