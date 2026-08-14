@@ -106,6 +106,37 @@ const w = dom.window;
   const c2 = w.eval('DB.clients.find(x=>x.name==="一般表單新增")');
   assert('一般新增不帶座標（走地址 geocode 流程）', !!c2 && c2.lat == null && c2.geocodeSource == null);
 
+  console.log('P1 — 地圖圖層（開發客戶／既有客戶／工地 複選）');
+  w.setClientView('map'); await wait(100);
+  w.eval(`SHOPS=[{name:'老店A',phone:'06-1112222',addr:'臺南市東區裕農路100號',owner:'陳老闆',revenue:'12000'}]`);
+  w.eval('SHOPS_GEO[shopGeoKey(SHOPS[0])]={lat:22.98,lng:120.22,at:1}');   // 已有定位快取 → 不需上網
+  store['sitemap_v1'] = JSON.stringify({ sites: [
+    { id: 'sA', name: '新工地', town: '東區', addr: '東區X路1號', stage: '施工中', openDate: '2026-09-01', lat: 22.99, lng: 120.21, deleted: false },
+    { id: 'sDel', name: '已刪工地', lat: 22.99, lng: 120.21, deleted: true },
+    { id: 'sConv', name: '已轉工地', lat: 22.99, lng: 120.21, deleted: false, main: { clientId: 'x1' } }
+  ], cfg: {}, queue: [] });
+  w.eval('FUSION_CACHE.sm=null');
+  const base = w.eval('MAP_STATE.markers.length');
+  w.toggleMapLayer('shops', w.document.getElementById('map-layer-shops')); await wait(50);
+  assert('開既有客戶圖層 → 名單店家上圖', w.eval('MAP_STATE.markers.length') === base + 1);
+  w.toggleMapLayer('sites', w.document.getElementById('map-layer-sites')); await wait(50);
+  assert('開工地圖層 → 只畫未刪除且未轉檔的工地', w.eval('MAP_STATE.markers.length') === base + 2);
+  assert('點數統計＝三層合計', w.document.getElementById('map-count').textContent === String(base + 2));
+  assert('圖層選擇有記住', JSON.parse(store['duskin_map_layers']).shops === true && JSON.parse(store['duskin_map_layers']).sites === true);
+  w.toggleMapLayer('dev', w.document.getElementById('map-layer-dev')); await wait(50);
+  assert('關開發客戶層 → 只剩既有客戶＋工地', w.eval('MAP_STATE.markers.length') === 2);
+
+  console.log('P1 — 工地點一鍵轉為客戶＋名單新地址批次定位');
+  w.mainConvertSite('sA'); await wait(50);
+  assert('工地轉成正規客戶（座標沿用 manual）', w.eval('DB.clients.some(c=>c.srcSiteId==="sA"&&c.geocodeSource==="manual")'));
+  assert('轉檔後工地點從圖上消失', w.eval('MAP_STATE.markers.length') === 1);
+  // 名單多了一家沒定位過的 → ensureShopsGeo 走 Nominatim（stub fetch）補定位並快取
+  w.fetch = async () => ({ ok: true, json: async () => [{ lat: '22.97', lon: '120.20' }] });
+  w.eval(`SHOPS.push({name:'新開的店',phone:'',addr:'臺南市南區新興路5號',owner:'',revenue:''})`);
+  await w.ensureShopsGeo(); await wait(50);
+  assert('新地址定位成功並寫入快取', JSON.parse(store['duskin_shops_geo'] || '{}')[w.eval('shopGeoKey(SHOPS[1])')].lat === 22.97);
+  assert('新店家出現在圖上', w.eval('MAP_STATE.markers.length') === 2);
+
   console.log(failed ? 'P1 FAILED ✗ (' + failed + ')' : 'P1 PASSED ✅');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('  ✗ exception:', e); process.exit(1); });

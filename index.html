@@ -453,6 +453,7 @@ tbody tr:hover{background:var(--surface-hover)}
 .duskin-marker.has-todo::after{content:'';position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
 .seg-ic{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-1px;color:var(--text3)}
 .duskin-marker.geo-approx{border-style:dashed;opacity:.85} /* 模糊定位（路段/概略）→ 虛線框提示可修正 */
+.duskin-marker.sq{border-radius:4px} /* 方形＝工地圖層（與客戶圓點區分） */
 /* 工地地圖模式：地圖上直接建檔（FAB＋確認列覆蓋於地圖之上，z>1 即可蓋過 #leaflet-map） */
 #map-stage{position:relative}
 #map-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;background:var(--green);color:#fff;border:none;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;font-family:inherit;box-shadow:var(--shadow-md);cursor:pointer;display:flex;align-items:center;gap:6px}
@@ -650,6 +651,13 @@ tbody tr:hover{background:var(--surface-hover)}
           </div>
         </div>
       </div>
+      <div id="map-layer-bar" class="toolbar-left" style="margin-bottom:6px;gap:6px">
+        <span style="font-size:11.5px;color:var(--text3);align-self:center">圖層</span>
+        <button class="pill pill-sm on" id="map-layer-dev" onclick="toggleMapLayer('dev',this)">開發客戶</button>
+        <button class="pill pill-sm" id="map-layer-shops" onclick="toggleMapLayer('shops',this)">既有客戶</button>
+        <button class="pill pill-sm" id="map-layer-sites" onclick="toggleMapLayer('sites',this)">工地</button>
+        <span id="map-shops-geo" style="font-size:11.5px;color:var(--text3);align-self:center"></span>
+      </div>
       <div id="map-filter-bar" class="toolbar-left" style="margin-bottom:10px;gap:6px">
         <button class="pill pill-sm on" onclick="setMapFilter('all',this)">全部</button>
         <button class="pill pill-sm" onclick="setMapFilter('week',this)">本週要拜訪</button>
@@ -662,7 +670,9 @@ tbody tr:hover{background:var(--surface-hover)}
         <span class="map-legend-item"><span class="map-legend-dot" style="background:#9A9A93"></span>已成約</span>
         <span class="map-legend-item"><span class="map-legend-dot" style="background:#2A6BB0"></span>初訪/複訪</span>
         <span class="map-legend-item"><span class="map-legend-dot" style="background:#8DB4D9"></span>未拜訪</span>
-        <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 家</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#2F7D6D"></span>既有客戶</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:#C77B3B;border-radius:3px"></span>工地</span>
+        <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 點</span>
       </div>
     </div>
     <div id="map-stage">
@@ -1484,7 +1494,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.08.11-z2';
+const APP_VERSION='v2026.08.14-z1';
 const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -3585,7 +3595,26 @@ const BASEMAPS=[
   {key:'photo', name:'航照圖',              url:'https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', maxZoom:20, attr:'&copy; 內政部國土測繪中心'},
   {key:'osm',   name:'OSM 街道圖',          url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom:19, attr:'&copy; OpenStreetMap'}
 ];
-let MAP_STATE={view:'list', map:null, markers:[], pinDropFor:null, pinDropHandler:null, filter:'all', markersById:{}, basemap:null, baseLayer:null, dragMarker:null};
+let MAP_STATE={view:'list', map:null, markers:[], pinDropFor:null, pinDropHandler:null, filter:'all', markersById:{}, basemap:null, baseLayer:null, dragMarker:null,
+  layers:{dev:true,shops:false,sites:false}};
+try{const sv=JSON.parse(localStorage.getItem('duskin_map_layers')||'null');if(sv)MAP_STATE.layers=Object.assign(MAP_STATE.layers,sv);}catch(e){}
+function syncMapLayerBar(){
+  ['dev','shops','sites'].forEach(k=>{
+    const el=document.getElementById('map-layer-'+k);
+    if(el)el.classList.toggle('on',!!MAP_STATE.layers[k]);
+  });
+}
+window.toggleMapLayer=(k,el)=>{
+  MAP_STATE.layers[k]=!MAP_STATE.layers[k];
+  if(el)el.classList.toggle('on',MAP_STATE.layers[k]);
+  try{localStorage.setItem('duskin_map_layers',JSON.stringify(MAP_STATE.layers));}catch(e){}
+  MAP_STATE._boundsFitted=false;
+  if(k==='shops'&&MAP_STATE.layers.shops){
+    if(!SHOPS.length)showToast('既有客戶名單還沒載入（到「查詢」頁按重新載入）');
+    else ensureShopsGeo();
+  }
+  renderMapMarkers();
+};
 
 // 地圖篩選邏輯
 function mapMatchesFilter(c){
@@ -3869,14 +3898,78 @@ function goToMyLocation(){
 }
 
 // ── Render markers ────────────────────────────────────────
+// ═══ 既有客戶圖層（公司名單 SHOPS）─ 地址定位快取 ═══
+// 名單每次從雲端整批重載（無 id），座標以「正規化地址」為 key 存 duskin_shops_geo，
+// 重載名單只補定位新地址；失敗 24hr 後才重試。
+let SHOPS_GEO={};
+try{SHOPS_GEO=JSON.parse(localStorage.getItem('duskin_shops_geo')||'{}')||{};}catch(e){}
+function shopGeoKey(s){return normalizeAddr(ensureCityPrefix((s&&s.addr)||''));}
+let SHOPS_GEO_WORKING=false;
+function shopsGeoStatus(txt){const el=document.getElementById('map-shops-geo');if(el)el.textContent=txt||'';}
+async function ensureShopsGeo(){
+  if(SHOPS_GEO_WORKING)return;
+  const todo=SHOPS.filter(s=>{
+    const k=shopGeoKey(s);if(!k)return false;
+    const g=SHOPS_GEO[k];
+    return !g||(g.failed&&Date.now()-(g.at||0)>86400000);
+  });
+  if(!todo.length)return;
+  SHOPS_GEO_WORKING=true;
+  let done=0;
+  for(const s of todo){
+    if(!MAP_STATE.layers.shops)break; // 圖層被關掉就停，下次再開續跑
+    let coord=null,viaGoogle=false;
+    try{coord=await googleGeocode(s.addr);if(coord)viaGoogle=true;}catch(e){}
+    if(!coord){try{coord=await nominatimGeocode(s.addr);}catch(e){}}
+    SHOPS_GEO[shopGeoKey(s)]=coord?{lat:coord.lat,lng:coord.lng,at:Date.now()}:{failed:1,at:Date.now()};
+    done++;
+    shopsGeoStatus('既有客戶定位中 '+done+'/'+todo.length+'…');
+    if(done%10===0||done===todo.length){
+      try{localStorage.setItem('duskin_shops_geo',JSON.stringify(SHOPS_GEO));}catch(e){}
+      if(MAP_STATE.view==='map'&&MAP_STATE.layers.shops)renderMapMarkers();
+    }
+    if(done<todo.length)await new Promise(r=>setTimeout(r,viaGoogle?150:1100));
+  }
+  try{localStorage.setItem('duskin_shops_geo',JSON.stringify(SHOPS_GEO));}catch(e){}
+  SHOPS_GEO_WORKING=false;
+  shopsGeoStatus('');
+  if(MAP_STATE.view==='map')renderMapMarkers();
+}
+function buildShopPopup(s){
+  const tel=(s.phone||'').replace(/[^\d+#]/g,'');
+  const nav='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.addr||'');
+  return '<div style="font-size:13px;min-width:180px"><b>'+escHtml(s.name)+'</b>'+
+    '<div style="color:var(--text3);font-size:11px;margin:2px 0">既有客戶（公司名單）</div>'+
+    (s.owner?'<div>負責人：'+escHtml(s.owner)+'</div>':'')+
+    (s.phone?'<div><a href="tel:'+escHtml(tel)+'">'+escHtml(s.phone)+'</a></div>':'')+
+    (s.addr?'<div style="color:var(--text2)">'+escHtml(s.addr)+'</div>':'')+
+    (s.revenue?'<div>四週營業額：'+escHtml(s.revenue)+'</div>':'')+
+    '<a class="btn btn-xs btn-outline" style="margin-top:6px" target="_blank" rel="noopener" href="'+nav+'">導航</a></div>';
+}
+// ═══ 工地圖層（唯讀鏡射 sitemap_v1，與行程融合同一資料源） ═══
+function mapSites(){
+  try{
+    const sm=fusionSm();
+    if(!sm||!Array.isArray(sm.sites))return[];
+    const converted=new Set(DB.clients.map(c=>c&&c.srcSiteId).filter(Boolean));
+    return sm.sites.filter(s=>s&&!s.deleted&&typeof s.lat==='number'&&typeof s.lng==='number'
+      &&!(s.main&&s.main.clientId)&&!converted.has(s.id));
+  }catch(e){return[];}
+}
+function buildSitePopup(s){
+  return '<div style="font-size:13px;min-width:180px"><b>'+escHtml(s.name||s.addr||'工地')+'</b>'+
+    '<div style="color:var(--text3);font-size:11px;margin:2px 0">工地（工地地圖鏡射）</div>'+
+    '<div>'+escHtml(s.town||'')+(s.stage?'　'+escHtml(s.stage):'')+(s.openDate?'　開幕 '+escHtml(s.openDate):'')+'</div>'+
+    (s.note?'<div style="color:var(--text2)">'+escHtml(s.note)+'</div>':'')+
+    '<button class="btn btn-xs btn-primary" style="margin-top:6px" onclick="mainConvertSite(\''+escHtml(String(s.id))+'\')">轉為客戶</button></div>';
+}
+
 function renderMapMarkers(){
   if(!MAP_STATE.map) return;
   MAP_STATE.markers.forEach(m=>MAP_STATE.map.removeLayer(m));
   MAP_STATE.markers=[];
   MAP_STATE.markersById={};
-  const visible=(DB.clients||[]).filter(c=>mapShouldShow(c)&&typeof c.lat==='number'&&typeof c.lng==='number'&&mapMatchesFilter(c));
-  const cnt=document.getElementById('map-count');
-  if(cnt) cnt.textContent=visible.length;
+  const visible=MAP_STATE.layers.dev?(DB.clients||[]).filter(c=>mapShouldShow(c)&&typeof c.lat==='number'&&typeof c.lng==='number'&&mapMatchesFilter(c)):[];
   const bounds=[];
   visible.forEach(c=>{
     const color=mapColorForStatus(c.status);
@@ -3894,6 +3987,26 @@ function renderMapMarkers(){
     if(c.id) MAP_STATE.markersById[c.id]=marker;
     bounds.push([c.lat,c.lng]);
   });
+  if(MAP_STATE.layers.shops){
+    SHOPS.forEach(s=>{
+      const g=SHOPS_GEO[shopGeoKey(s)];
+      if(!g||g.failed)return;
+      const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker" style="background:#2F7D6D"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+      const m=L.marker([g.lat,g.lng],{icon}).addTo(MAP_STATE.map);
+      m.bindPopup(buildShopPopup(s),{maxWidth:280});
+      MAP_STATE.markers.push(m);bounds.push([g.lat,g.lng]);
+    });
+  }
+  if(MAP_STATE.layers.sites){
+    mapSites().forEach(s=>{
+      const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker sq" style="background:#C77B3B"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+      const m=L.marker([s.lat,s.lng],{icon}).addTo(MAP_STATE.map);
+      m.bindPopup(buildSitePopup(s),{maxWidth:280});
+      MAP_STATE.markers.push(m);bounds.push([s.lat,s.lng]);
+    });
+  }
+  const cnt=document.getElementById('map-count');
+  if(cnt) cnt.textContent=MAP_STATE.markers.length;
   if(bounds.length&&!MAP_STATE._boundsFitted){
     MAP_STATE.map.fitBounds(bounds,{padding:[40,40],maxZoom:15});
     MAP_STATE._boundsFitted=true;
@@ -3905,6 +4018,7 @@ function renderMapMarkers(){
   // 修正位置模式中被重繪（背景 geocode 完成等）→ 圖釘是新建的，重掛拖曳讓模式不中斷。
   // 不會遞迴：拖曳存檔的 commit 先 cancelPinDrop 才重繪，屆時 pinDropFor 已清空。
   if(MAP_STATE.pinDropFor!=null) startPinDrop(MAP_STATE.pinDropFor);
+  if(MAP_STATE.layers.shops&&SHOPS.length)ensureShopsGeo(); // 圖層開著就補定位缺的（有快取則秒回）
   renderFailedGeocode();
 }
 
@@ -6488,7 +6602,9 @@ function consumeSiteHandoff(){
 // 快取解析結果（sitemap_v1 含照片可達數 MB、izcrm 主檔 1.3MB）：
 // 只有別的分頁會改這些 key → storage 事件/回前景時失效重讀即可。
 let FUSION_CACHE={sm:null,iz:null,master:null};
-function fusionInvalidate(){FUSION_CACHE={sm:null,iz:null,master:null};}
+function fusionInvalidate(){FUSION_CACHE={sm:null,iz:null,master:null};
+  try{if(MAP_STATE.view==='map'&&MAP_STATE.layers.sites)renderMapMarkers();}catch(e){} // 工地圖層跟著更新
+}
 window.addEventListener('storage',e=>{if(e.key==='sitemap_v1'||e.key==='izcrm_v1'||e.key==='izcrm_master')fusionInvalidate();});
 window.addEventListener('pageshow',fusionInvalidate);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')fusionInvalidate();});
@@ -6555,6 +6671,7 @@ function mainConvertSite(siteId){
   ack.push({siteId,clientId:c.id});
   try{localStorage.setItem('duskin_site_ack',JSON.stringify(ack));}catch(e){}
   renderClients();try{renderTrip();}catch(e){}
+  try{if(MAP_STATE.view==='map')renderMapMarkers();}catch(e){} // 地圖開著 → 工地點換成客戶點
   showToast('✓ 已轉為客戶：'+c.name+'（拜訪日 '+(c.nextdate||'未定')+'）');
 }
 // izcrm／sitemap 分頁同時開著也能即時消化（storage 事件跨分頁觸發）
@@ -6572,7 +6689,7 @@ window.addEventListener('focus',()=>{consumeIzHandoff();consumeSiteHandoff();});
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-loadStatusFilter();initVersion();initPills();initProdCats();
+loadStatusFilter();initVersion();initPills();initProdCats();syncMapLayerBar();
 // Migration runner — 統一管理資料遷移，每個 migration 只跑一次
 function prepareGeocodeFields(){
   // v7: 確保所有 client 有 lat/lng/geocodeSource 欄位（undefined 也 OK）
