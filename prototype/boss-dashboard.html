@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>長官儀表板 MVP Prototype｜DUSKIN 銷售系統</title>
+<!--
+  ═══════════════════════════════════════════════════════════════════════
+  長官儀表板 — MVP Prototype（僅供驗證，非正式產品）
+  ─────────────────────────────────────────────────────────────────────
+  目的：驗證 資訊架構 / 使用流程 / 頁面層級 / 操作方式 / 狀態與 Edge Case
+  限制：單一 HTML、CSS/JS 內嵌、無 Backend、無 DB、無登入、全 Mock Data
+  外部依賴：僅 Leaflet 1.9.4（與主系統同一組 unpkg CDN + SRI）；載入失敗
+           會自動退為「無地圖」提示，不影響其他功能。
+  資料：TODAY 固定為 2026-08-16、亂數為 seeded（mulberry32），
+       每次開啟結果完全相同，方便反覆對照討論。
+  ═══════════════════════════════════════════════════════════════════════
+-->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+/* ═══ DESIGN TOKENS（對齊主系統 tokens.css，內嵌以維持單檔） ═══ */
+:root{
+  --green:#12A673;--green-d:#0A6849;--green-l:#E3F4ED;--green-b:#A1DFC7;
+  --theme:#085041;
+  --red:#B73838;--red-l:#FBEAEA;--red-b:#F7C1C1;
+  --amber:#B5701A;--amber-l:#FAEEDA;--amber-d:#633806;--amber-b:#FAC775;
+  --blue:#2A6BB0;--blue-l:#E6F0FA;--blue-d:#0C447C;--blue-b:#B5D4F4;
+  --purple-l:#EEEDFE;--purple-d:#3C3489;
+  --ss-gray-bg:#F1EFE8;--ss-gray-fg:#444441;
+  --ss-blue-bg:#E6F1FB;--ss-blue-fg:#0C447C;
+  --ss-amber-bg:#FAEEDA;--ss-amber-fg:#633806;
+  --ss-purple-bg:#EEEDFE;--ss-purple-fg:#3C3489;
+  --ss-green-bg:#E1F5EE;--ss-green-fg:#085041;
+  --ss-green2-bg:#D4EDDA;--ss-green2-fg:#155724;
+  --ss-red-bg:#FCEBEB;--ss-red-fg:#A32D2D;
+  --bg:#ffffff;--bg2:#F8F8F5;--bg3:#EFEEE9;
+  --text:#14140F;--text2:#56564F;--text3:#8F8F87;
+  --border:#E8E7E0;--border2:#D4D3CB;
+  --surface-hover:#F9F9F5;
+  --r-sm:6px;--r:10px;--r-lg:14px;
+  --shadow-sm:0 1px 2px rgba(20,20,15,.04);
+  --shadow:0 1px 3px rgba(20,20,15,.05);
+  --shadow-md:0 4px 14px rgba(20,20,15,.07);
+  --shadow-lg:0 12px 32px rgba(20,20,15,.14);
+  --ring:0 0 0 3px rgba(18,166,115,.18);
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --font-sans:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang TC','Microsoft JhengHei',sans-serif;
+  --skel:#EFEEE9;--skel2:#F8F8F5;
+  /* 主色的「選中態」組合：深色模式整組換掉，避免各處寫死 */
+  --accent:#085041;--accent-fg:#ffffff;--link:#2A6BB0;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#1A1B19;--bg2:#121311;--bg3:#25262A;
+  --text:#ECECE7;--text2:#A4A49C;--text3:#6A6A63;
+  --border:#292A26;--border2:#3A3A34;
+  --surface-hover:#242520;
+  --green:#1AB180;--green-d:#7BDFBA;--green-l:#163A2C;--green-b:#2A6551;
+  --red:#E66B6B;--red-l:#3A1F1F;--red-b:#553030;
+  --amber-l:#3A2F1A;--amber-d:#F0C878;--amber-b:#54431F;
+  --blue-l:#1A2A3D;--blue-d:#9ECCFF;--blue-b:#2A3F58;
+  --purple-l:#24223D;--purple-d:#C5C0FA;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow:0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:0 4px 14px rgba(0,0,0,.5);--shadow-lg:0 12px 32px rgba(0,0,0,.6);
+  --ring:0 0 0 3px rgba(26,177,128,.3);
+  --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
+  --ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
+  --ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
+  --ss-purple-bg:#24223D;--ss-purple-fg:#C5C0FA;
+  --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;
+  --ss-green2-bg:#17361F;--ss-green2-fg:#8FD9A8;
+  --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;
+  --skel:#25262A;--skel2:#2E2F30;
+  --accent:#1AB180;--accent-fg:#0B1210;--link:#9ECCFF;
+}}
+:root[data-theme=dark]{
+  --bg:#1A1B19;--bg2:#121311;--bg3:#25262A;
+  --text:#ECECE7;--text2:#A4A49C;--text3:#6A6A63;
+  --border:#292A26;--border2:#3A3A34;
+  --surface-hover:#242520;
+  --green:#1AB180;--green-d:#7BDFBA;--green-l:#163A2C;--green-b:#2A6551;
+  --red:#E66B6B;--red-l:#3A1F1F;--red-b:#553030;
+  --amber-l:#3A2F1A;--amber-d:#F0C878;--amber-b:#54431F;
+  --blue-l:#1A2A3D;--blue-d:#9ECCFF;--blue-b:#2A3F58;
+  --purple-l:#24223D;--purple-d:#C5C0FA;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow:0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:0 4px 14px rgba(0,0,0,.5);--shadow-lg:0 12px 32px rgba(0,0,0,.6);
+  --ring:0 0 0 3px rgba(26,177,128,.3);
+  --ss-gray-bg:#2A2B27;--ss-gray-fg:#B9B9B0;
+  --ss-blue-bg:#1A2A3D;--ss-blue-fg:#9ECCFF;
+  --ss-amber-bg:#3A2F1A;--ss-amber-fg:#F0C878;
+  --ss-purple-bg:#24223D;--ss-purple-fg:#C5C0FA;
+  --ss-green-bg:#163A2C;--ss-green-fg:#7BDFBA;
+  --ss-green2-bg:#17361F;--ss-green2-fg:#8FD9A8;
+  --ss-red-bg:#3A1F1F;--ss-red-fg:#E66B6B;
+  --skel:#25262A;--skel2:#2E2F30;
+  --accent:#1AB180;--accent-fg:#0B1210;--link:#9ECCFF;
+}
+
+/* ═══ BASE ═══ */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font-sans);background:var(--bg2);color:var(--text);
+  font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  padding-bottom:56px;
+}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--r-sm)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ═══ TOPBAR ═══ */
+.topbar{
+  position:sticky;top:0;z-index:60;background:var(--bg);
+  border-bottom:1px solid var(--border);
+}
+.tb-row{
+  max-width:1360px;margin:0 auto;padding:10px 20px;
+  display:flex;align-items:center;gap:14px;
+}
+.brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.brand-mark{
+  width:26px;height:26px;border-radius:7px;background:var(--theme);
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;
+}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:.01em}
+.brand-sub{font-size:11px;color:var(--text3);margin-left:2px}
+.tb-spacer{flex:1}
+.search-wrap{position:relative;flex:0 1 300px;min-width:150px}
+.search-wrap input{
+  width:100%;padding:7px 11px 7px 32px;border:1px solid var(--border2);
+  border-radius:var(--r);background:var(--bg2);color:var(--text);
+  font-family:inherit;font-size:13px;
+}
+.search-wrap input:focus{outline:none;box-shadow:var(--ring);border-color:var(--green)}
+.search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);display:flex}
+.sugg{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--bg);
+  border:1px solid var(--border2);border-radius:var(--r);box-shadow:var(--shadow-lg);
+  max-height:320px;overflow:auto;z-index:70;display:none;
+}
+.sugg.on{display:block}
+.sugg-item{padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px}
+.sugg-item:last-child{border-bottom:0}
+.sugg-item:hover,.sugg-item.sel{background:var(--surface-hover)}
+.sugg-item .s-sub{font-size:11px;color:var(--text3)}
+.sugg-empty{padding:14px;text-align:center;color:var(--text3);font-size:12px}
+
+.icon-btn{
+  background:transparent;border:1px solid var(--border2);border-radius:var(--r);
+  padding:6px 9px;color:var(--text2);display:flex;align-items:center;gap:5px;font-size:12px;
+}
+.icon-btn:hover{background:var(--surface-hover);color:var(--text)}
+
+/* ═══ VIEW TABS ═══ */
+.tabs{max-width:1360px;margin:0 auto;padding:0 20px;display:flex;gap:2px}
+.tab{
+  background:transparent;border:0;border-bottom:2px solid transparent;
+  padding:9px 14px;color:var(--text2);font-size:13.5px;font-weight:500;
+  display:flex;align-items:center;gap:6px;
+}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.tab .cnt{
+  font-size:11px;background:var(--bg3);color:var(--text2);
+  padding:1px 6px;border-radius:9px;font-weight:600;
+}
+
+/* ═══ LAYOUT ═══ */
+.wrap{max-width:1360px;margin:0 auto;padding:16px 20px 40px}
+.grid-main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:16px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:16px}
+
+/* ═══ CARD ═══ */
+.card{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-sm);overflow:hidden;
+}
+.card-h{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:9px;
+}
+.card-t{font-weight:700;font-size:14px}
+.card-sub{font-size:11.5px;color:var(--text3);font-weight:400}
+.card-b{padding:14px 16px}
+.card-b.tight{padding:6px 0}
+
+/* ═══ 資料狀態列 ═══ */
+.databar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:9px 14px;border-radius:var(--r);margin-bottom:14px;
+  font-size:12.5px;border:1px solid var(--border);background:var(--bg);color:var(--text2);
+}
+.databar.warn{background:var(--amber-l);border-color:var(--amber-b);color:var(--amber-d)}
+.databar.err{background:var(--red-l);border-color:var(--red-b);color:var(--red)}
+.databar b{font-weight:700}
+.databar .db-spacer{flex:1}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot.warn{background:var(--amber)}
+.dot.err{background:var(--red)}
+
+/* ═══ KPI ═══ */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:13px 15px;box-shadow:var(--shadow-sm);text-align:left;
+  transition:transform .12s var(--ease),box-shadow .12s var(--ease);
+  display:block;width:100%;
+}
+.kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow-md);border-color:var(--border2)}
+.kpi-l{font-size:11.5px;color:var(--text3);display:flex;align-items:center;gap:4px}
+.kpi-v{font-size:27px;font-weight:800;letter-spacing:-.02em;margin-top:3px;line-height:1.1}
+.kpi-v small{font-size:14px;font-weight:600;color:var(--text2);margin-left:2px}
+.kpi-d{font-size:11.5px;color:var(--text3);margin-top:3px}
+.kpi.accent .kpi-v{color:var(--green-d)}
+.kpi .go{font-size:10.5px;color:var(--text3);margin-top:5px;opacity:0;transition:opacity .12s}
+.kpi:hover .go{opacity:1}
+
+/* ═══ ATTENTION FEED ═══ */
+.att-filters{display:flex;gap:5px;flex-wrap:wrap;padding:10px 16px 0}
+.chip{
+  border:1px solid var(--border2);background:var(--bg);color:var(--text2);
+  border-radius:20px;padding:3px 11px;font-size:12px;display:inline-flex;align-items:center;gap:5px;
+}
+.chip:hover{background:var(--surface-hover)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.chip .n{font-size:11px;opacity:.8;font-variant-numeric:tabular-nums}
+.sev-d{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sev-1{background:var(--red)}
+.sev-2{background:var(--amber)}
+.sev-3{background:var(--blue)}
+.sev-4{background:var(--text3)}
+
+.att-list{display:flex;flex-direction:column}
+.att{
+  display:flex;gap:11px;padding:11px 16px;border-top:1px solid var(--border);
+  cursor:pointer;text-align:left;background:transparent;border-left:0;border-right:0;border-bottom:0;
+  width:100%;align-items:flex-start;
+}
+.att:hover{background:var(--surface-hover)}
+.att-bar{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
+.att-bar.s1{background:var(--red)}
+.att-bar.s2{background:var(--amber)}
+.att-bar.s3{background:var(--blue)}
+.att-bar.s4{background:var(--border2)}
+.att-body{flex:1;min-width:0}
+.att-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.att-name{font-weight:700;font-size:13.5px;max-width:100%}
+.att-reason{font-size:12.5px;color:var(--text2);margin-top:2px}
+.att-reason b{color:var(--text);font-weight:700}
+.att-meta{font-size:11.5px;color:var(--text3);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.att-amt{text-align:right;flex-shrink:0}
+.att-amt .a{font-weight:800;font-size:14.5px;font-variant-numeric:tabular-nums}
+.att-amt .l{font-size:10.5px;color:var(--text3)}
+
+/* ═══ BADGE ═══ */
+.badge{
+  display:inline-block;padding:1px 8px;border-radius:20px;
+  font-size:11px;font-weight:700;white-space:nowrap;line-height:1.7;
+}
+.badge.sm{font-size:10.5px;padding:0 7px}
+.tag{
+  display:inline-block;padding:0 6px;border-radius:4px;font-size:10.5px;
+  background:var(--bg3);color:var(--text2);font-weight:600;
+}
+.tag.warn{background:var(--amber-l);color:var(--amber-d)}
+.tag.err{background:var(--red-l);color:var(--red)}
+
+/* ═══ FUNNEL ═══ */
+.fn{display:flex;flex-direction:column;gap:9px}
+.fn-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:10px;align-items:center}
+.fn-lab{font-size:12.5px;color:var(--text2);text-align:right}
+.fn-track{background:var(--bg3);border-radius:5px;height:22px;position:relative;overflow:hidden}
+.fn-fill{display:block;height:100%;border-radius:5px;transition:width .5s var(--ease);min-width:3px}
+.fn-num{font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text2)}
+.fn-num b{color:var(--text);font-weight:700;font-size:13.5px}
+.fn-foot{
+  margin-top:12px;padding-top:10px;border-top:1px dashed var(--border2);
+  font-size:11.5px;color:var(--text3);display:flex;gap:14px;flex-wrap:wrap;
+}
+
+/* ═══ REP CARD ═══ */
+.rep{
+  padding:11px 14px;border-top:1px solid var(--border);cursor:pointer;
+  background:transparent;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;
+}
+.rep:hover{background:var(--surface-hover)}
+.rep-top{display:flex;align-items:center;gap:9px}
+.avatar{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-size:12px;font-weight:700;color:#fff;
+}
+.rep-name{font-weight:700;font-size:13.5px}
+.rep-area{font-size:11px;color:var(--text3)}
+.rep-nums{margin-left:auto;text-align:right;flex-shrink:0}
+.rep-nums .a{font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;color:var(--green-d)}
+.rep-nums .l{font-size:10.5px;color:var(--text3)}
+.mini{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--bg3)}
+.mini i{display:block;height:100%}
+.rep-foot{display:flex;gap:12px;font-size:11px;color:var(--text3);margin-top:6px;flex-wrap:wrap}
+.rep-foot b{color:var(--text2);font-weight:700}
+
+/* ═══ DISTRICT BARS ═══ */
+.dist{
+  display:grid;grid-template-columns:62px minmax(0,1fr) 74px;gap:9px;align-items:center;
+  padding:6px 14px;cursor:pointer;background:transparent;border:0;width:100%;text-align:left;
+}
+.dist:hover{background:var(--surface-hover)}
+.dist-lab{font-size:12.5px;color:var(--text2)}
+.dist-track{background:var(--bg3);border-radius:4px;height:16px;overflow:hidden;display:flex}
+.dist-track i{height:100%;display:block}
+.dist-num{font-size:11.5px;color:var(--text3);text-align:right;font-variant-numeric:tabular-nums}
+.dist-num b{color:var(--text);font-weight:700}
+
+/* ═══ FILTER BAR ═══ */
+.fbar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:12px 14px;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--r-lg);margin-bottom:12px;
+}
+.fbar select{
+  padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r-sm);
+  background:var(--bg2);color:var(--text);font-family:inherit;font-size:12.5px;max-width:160px;
+}
+.fbar select:focus{outline:none;box-shadow:var(--ring)}
+.fbar-lab{font-size:11.5px;color:var(--text3);margin-right:-4px}
+.fbar .res{margin-left:auto;font-size:12.5px;color:var(--text2)}
+.fbar .res b{color:var(--text);font-weight:700}
+.linkbtn{background:transparent;border:0;color:var(--link);font-size:12.5px;text-decoration:underline;padding:2px 4px}
+
+/* ═══ TABLE ═══ */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+.tbl th{
+  text-align:left;font-size:11.5px;color:var(--text3);font-weight:600;
+  padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;
+  background:var(--bg);position:sticky;top:0;z-index:2;
+}
+.tbl th.sortable{cursor:pointer;user-select:none}
+.tbl th.sortable:hover{color:var(--text)}
+.tbl th .ar{opacity:.45;font-size:9px}
+.tbl th.act .ar{opacity:1;color:var(--green-d)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover{background:var(--surface-hover)}
+.tbl .r{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .cname{font-weight:600;max-width:230px}
+.tbl .csub{font-size:11px;color:var(--text3);font-weight:400}
+.muted{color:var(--text3)}
+
+/* ═══ MAP ═══ */
+.map-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:12px;align-items:start}
+#map{height:620px;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--bg3);z-index:1}
+.map-side{max-height:620px;overflow:auto}
+.mlist{
+  display:flex;gap:9px;align-items:center;padding:9px 13px;border-top:1px solid var(--border);
+  cursor:pointer;background:transparent;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;
+}
+.mlist:hover,.mlist.on{background:var(--surface-hover)}
+.mlist .pin{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--bg)}
+.mlist .mn{flex:1;min-width:0;font-size:12.5px;font-weight:600}
+.mlist .ms{font-size:10.5px;color:var(--text3);font-weight:400}
+.mlist .ma{font-size:12px;font-variant-numeric:tabular-nums;color:var(--text2);flex-shrink:0}
+.legend{display:flex;gap:11px;flex-wrap:wrap;padding:10px 14px;font-size:11.5px;color:var(--text2)}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:9px;height:9px;border-radius:50%;display:block}
+.map-note{
+  padding:9px 14px;font-size:12px;background:var(--amber-l);color:var(--amber-d);
+  border-top:1px solid var(--amber-b);display:flex;align-items:center;gap:7px;
+}
+.map-fallback{
+  height:620px;border-radius:var(--r-lg);border:1px dashed var(--border2);
+  display:grid;place-items:center;text-align:center;padding:30px;color:var(--text3);background:var(--bg);
+}
+.leaflet-popup-content{margin:11px 13px;font-family:var(--font-sans)}
+.pop-n{font-weight:700;font-size:13.5px;margin-bottom:3px}
+.pop-r{font-size:11.5px;color:#56564F;margin-bottom:6px}
+.pop-b{
+  background:#085041;color:#fff;border:0;border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;
+}
+
+/* ═══ DRAWER ═══ */
+.scrim{
+  position:fixed;inset:0;background:rgba(20,20,15,.42);backdrop-filter:blur(1px);
+  opacity:0;pointer-events:none;transition:opacity .2s var(--ease);z-index:90;
+}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--bg);
+  border-left:1px solid var(--border);box-shadow:var(--shadow-lg);
+  transform:translateX(100%);transition:transform .26s var(--ease);z-index:100;
+  display:flex;flex-direction:column;
+}
+.drawer.on{transform:none}
+.dr-h{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.dr-top{display:flex;align-items:flex-start;gap:10px}
+.dr-name{font-size:17px;font-weight:800;line-height:1.35;flex:1;min-width:0}
+.dr-close{
+  background:transparent;border:1px solid var(--border2);border-radius:var(--r-sm);
+  width:28px;height:28px;display:grid;place-items:center;color:var(--text2);flex-shrink:0;
+}
+.dr-close:hover{background:var(--surface-hover);color:var(--text)}
+.dr-sub{font-size:12px;color:var(--text3);margin-top:5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.dr-b{flex:1;overflow:auto;padding:0 0 20px}
+.dr-sec{padding:14px 16px;border-bottom:1px solid var(--border)}
+.dr-sec-t{
+  font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:9px;
+}
+.dr-money{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dr-money>div{background:var(--bg2);border-radius:var(--r);padding:10px 12px}
+.dr-money .l{font-size:11px;color:var(--text3)}
+.dr-money .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:1px}
+.dr-money .v.g{color:var(--green-d)}
+.itbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.itbl th{text-align:left;font-size:10.5px;color:var(--text3);font-weight:600;padding:4px 0;border-bottom:1px solid var(--border)}
+.itbl td{padding:6px 0;border-bottom:1px solid var(--border)}
+.itbl .r{text-align:right;font-variant-numeric:tabular-nums}
+.itbl tr:last-child td{border-bottom:0}
+.tl{display:flex;flex-direction:column;gap:0}
+.tl-i{display:flex;gap:10px;padding-bottom:12px;position:relative}
+.tl-i:last-child{padding-bottom:0}
+.tl-d{
+  width:9px;height:9px;border-radius:50%;background:var(--green);
+  margin-top:5px;flex-shrink:0;z-index:1;border:2px solid var(--bg);box-sizing:content-box;
+}
+.tl-i:not(:last-child)::before{
+  content:'';position:absolute;left:6px;top:16px;bottom:0;width:1px;background:var(--border2);
+}
+.tl-c{flex:1;min-width:0}
+.tl-t{font-size:11.5px;color:var(--text3);display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.tl-n{font-size:12.5px;margin-top:1px;white-space:pre-wrap;word-break:break-word}
+.kv{display:grid;grid-template-columns:74px minmax(0,1fr);gap:5px 10px;font-size:12.5px}
+.kv dt{color:var(--text3)}
+.kv dd{margin:0;word-break:break-word}
+.dr-f{
+  padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;background:var(--bg);
+}
+.btn{
+  border-radius:var(--r);padding:8px 13px;font-size:13px;font-weight:600;
+  border:1px solid var(--border2);background:var(--bg);color:var(--text);
+}
+.btn:hover{background:var(--surface-hover)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn-primary:hover{filter:brightness(1.12)}
+.btn.grow{flex:1}
+
+/* ═══ EMPTY / ERROR / SKELETON ═══ */
+.empty{padding:44px 24px;text-align:center;color:var(--text3)}
+.empty .e-ico{font-size:26px;opacity:.5}
+.empty .e-t{font-size:14px;font-weight:700;color:var(--text2);margin-top:8px}
+.empty .e-d{font-size:12.5px;margin-top:5px;max-width:400px;margin-left:auto;margin-right:auto}
+.empty .e-a{margin-top:14px}
+.errcard{
+  border:1px solid var(--red-b);background:var(--red-l);border-radius:var(--r);
+  padding:11px 13px;font-size:12.5px;color:var(--red);
+}
+.errcard .e-n{font-weight:700;margin-bottom:3px}
+.errcard .e-u{font-size:10.5px;color:var(--text3);word-break:break-all;margin-top:4px}
+.sk{
+  background:linear-gradient(90deg,var(--skel) 25%,var(--skel2) 37%,var(--skel) 63%);
+  background-size:400% 100%;animation:shimmer 1.3s infinite linear;border-radius:var(--r-sm);
+}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.sk-line{height:11px;margin:7px 0}
+@media(prefers-reduced-motion:reduce){
+  .sk{animation:none}
+  *{transition-duration:.01ms!important}
+}
+
+/* ═══ TOAST ═══ */
+.toast{
+  position:fixed;left:50%;bottom:78px;transform:translate(-50%,14px);
+  background:var(--text);color:var(--bg);padding:9px 17px;border-radius:20px;
+  font-size:13px;font-weight:600;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s var(--ease);z-index:200;box-shadow:var(--shadow-lg);
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ═══ 原型狀態切換器（僅 prototype，正式版不會有） ═══ */
+.devbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:150;background:var(--bg);
+  border-top:1px solid var(--border2);box-shadow:0 -2px 12px rgba(0,0,0,.06);
+}
+.devbar-in{
+  max-width:1360px;margin:0 auto;padding:7px 20px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.dev-t{
+  font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--text3);
+  text-transform:uppercase;display:flex;align-items:center;gap:5px;
+}
+.dev-t::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--amber)}
+.dev-sep{width:1px;height:16px;background:var(--border2)}
+.dev-b{
+  border:1px solid var(--border2);background:var(--bg);color:var(--text2);
+  border-radius:var(--r-sm);padding:3px 9px;font-size:11.5px;
+}
+.dev-b:hover{background:var(--surface-hover)}
+.dev-b.on{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:700}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1100px){
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grid-main{grid-template-columns:minmax(0,1fr)}
+  .map-layout{grid-template-columns:minmax(0,1fr)}
+  .map-side{max-height:none}
+  #map,.map-fallback{height:420px}
+}
+@media(max-width:720px){
+  body{padding-bottom:120px}   /* 模擬狀態列在窄螢幕會折成兩行 */
+  .tb-row{padding:9px 13px;gap:9px;flex-wrap:wrap}
+  .search-wrap{flex:1 1 100%;order:3}
+  .tabs{padding:0 13px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:9px 11px;font-size:13px;white-space:nowrap}
+  .wrap{padding:13px 13px 30px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .kpi{padding:11px 12px}
+  .kpi-v{font-size:22px}
+  .kpi .go{display:none}
+  .att{padding:11px 13px}
+  .att-amt{display:none}
+  .fn-row{grid-template-columns:64px minmax(0,1fr) auto}
+  .fbar select{flex:1 1 44%;max-width:none}
+  .fbar .res{flex:1 1 100%;margin-left:0;text-align:right}
+  .drawer{width:100%;top:auto;height:92dvh;border-left:0;border-top-left-radius:16px;border-top-right-radius:16px;transform:translateY(100%)}
+  .drawer.on{transform:none}
+  .dev-t span{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ TOPBAR ══════════ -->
+<header class="topbar">
+  <div class="tb-row">
+    <div class="brand">
+      <div class="brand-mark">D</div>
+      <div>
+        <div class="brand-name">業務戰情室<span class="brand-sub">台南營業所</span></div>
+      </div>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="search-wrap">
+      <span class="search-ico" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      </span>
+      <input id="q" type="search" placeholder="搜尋客戶、業務、地區…" autocomplete="off" aria-label="搜尋客戶">
+      <div class="sugg" id="sugg" role="listbox"></div>
+    </div>
+    <button class="icon-btn" id="theme-btn" title="切換深淺色">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M19.1 4.9l-1.5 1.5M6.4 17.6l-1.5 1.5" stroke-linecap="round"/></svg>
+      <span id="theme-lab">自動</span>
+    </button>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="主要視角"></nav>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<!-- ══════════ DRAWER（L3 客戶詳情） ══════════ -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-name" tabindex="-1"></aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ══════════ 原型狀態切換器（僅存在於 prototype） ══════════ -->
+<div class="devbar">
+  <div class="devbar-in">
+    <span class="dev-t">Prototype<span> · 模擬狀態</span></span>
+    <span class="dev-sep"></span>
+    <button class="dev-b" data-scn="normal">正常</button>
+    <button class="dev-b" data-scn="loading">載入中</button>
+    <button class="dev-b" data-scn="empty">首次使用（無來源）</button>
+    <button class="dev-b" data-scn="partial">部分業務失敗</button>
+    <button class="dev-b" data-scn="stale">資料過期</button>
+    <button class="dev-b" data-scn="newbie">全所皆新人（無客戶）</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   0. 共用工具
+   ═══════════════════════════════════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function money(n){return '$'+Math.round(n||0).toLocaleString('en-US');}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2100);}
+
+/* 固定「今天」→ prototype 每次開啟數字完全一致，方便反覆討論 */
+const TODAY=new Date(2026,7,16);           // 2026-08-16
+const DAY=86400000;
+function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function ago(n){return iso(new Date(TODAY.getTime()-n*DAY));}
+function daysSince(s){if(!s)return null;const d=new Date(s+'T00:00:00');if(isNaN(d))return null;return Math.round((TODAY-d)/DAY);}
+function dLabel(s){const n=daysSince(s);if(n==null)return '—';if(n===0)return '今天';if(n===1)return '昨天';return n+' 天前';}
+
+/* seeded RNG：同一顆 seed 永遠產生同一份 mock data */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rnd=mulberry32(20260816);
+const pick=arr=>arr[Math.floor(rnd()*arr.length)];
+const rint=(a,b)=>a+Math.floor(rnd()*(b-a+1));
+function wpick(pairs){let t=0;pairs.forEach(p=>t+=p[1]);let r=rnd()*t;for(const p of pairs){r-=p[1];if(r<=0)return p[0];}return pairs[0][0];}
+
+/* ═══════════════════════════════════════════════════════════════════
+   1. MOCK DATA — 商品（取自主系統 DEFAULT_PRODUCTS 的代表性子集）
+   ═══════════════════════════════════════════════════════════════════ */
+const PRODUCTS=[
+  {code:'S-20',   cat:'拖把',desc:'業務用握把式抹布',      price:100, cycle:'2W'},
+  {code:'NH-S',   cat:'拖把',desc:'紫色除塵抹布',          price:120, cycle:'2W'},
+  {code:'SSS-R',  cat:'拖把',desc:'SHUSHU 抹布',           price:170, cycle:'2W'},
+  {code:'LALA-R', cat:'拖把',desc:'LALA 拖把',             price:190, cycle:'2W'},
+  {code:'N-AC',   cat:'拖把',desc:'業務用除塵大拖把',      price:210, cycle:'2W'},
+  {code:'M-90',   cat:'拖把',desc:'業務用除塵特大拖把',    price:220, cycle:'2W'},
+  {code:'M-120',  cat:'拖把',desc:'業務用除塵超大拖把',    price:280, cycle:'2W'},
+  {code:'DECSR',  cat:'地墊',desc:'中英歡迎地墊 S 71x85',  price:170, cycle:'2W'},
+  {code:'DECLR',  cat:'地墊',desc:'中英歡迎地墊 L 85x150', price:280, cycle:'2W'},
+  {code:'FFLK',   cat:'地墊',desc:'FOREVER 地墊 L 85x150', price:280, cycle:'2W'},
+  {code:'FFMK',   cat:'地墊',desc:'FOREVER 地墊 M 115x180',price:420, cycle:'2W'},
+  {code:'TJTH',   cat:'地墊',desc:'豪華地墊灰 T 150x240',  price:720, cycle:'2W'},
+  {code:'DWLH',   cat:'地墊',desc:'吸塵吸水地墊 L',        price:390, cycle:'2W'},
+  {code:'DW3MH',  cat:'地墊',desc:'吸塵吸水地墊 3M 90x300',price:680, cycle:'2W'},
+  {code:'TJ5H',   cat:'地墊',desc:'豪華地墊灰 5M 85x500',  price:880, cycle:'2W'},
+];
+const PMAP={};PRODUCTS.forEach(p=>PMAP[p.code]=p);
+
+/* 金額口徑（與主系統 displayFw4 一致）：
+   更換週期 1W/2W/4W → 每 4 週更換 4/2/1 次；4W 金額 = 契約單價 × 次數 × 數量 */
+const CYCLE_N={'1W':4,'2W':2,'4W':1};
+function fw4(it){
+  const p=PMAP[it.product];if(!p)return 0;
+  const n=CYCLE_N[it.cycle||p.cycle]||1;
+  const unit=(it.quoted!=null&&it.quoted!=='')?it.quoted:p.price;
+  return unit*n*(it.qty||1);
+}
+const sumFw4=items=>(items||[]).reduce((s,it)=>s+fw4(it),0);
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. MOCK DATA — 狀態、業務員、行政區
+   ═══════════════════════════════════════════════════════════════════ */
+const STATUS={UNVISITED:'未拜訪',FIRST:'初訪',REVISIT:'複訪',TRIAL:'試用中',QUOTE:'報價',CLOSING:'將成約',DEAL:'已成約',TRANSFER:'已轉交',REFUSE:'拒絕'};
+const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
+const SS={ '未拜訪':['--ss-gray-bg','--ss-gray-fg'], '初訪':['--ss-blue-bg','--ss-blue-fg'],
+  '複訪':['--ss-amber-bg','--ss-amber-fg'], '試用中':['--ss-blue-bg','--ss-blue-fg'],
+  '報價':['--ss-amber-bg','--ss-amber-fg'], '將成約':['--ss-purple-bg','--ss-purple-fg'],
+  '已成約':['--ss-green-bg','--ss-green-fg'], '已轉交':['--ss-green2-bg','--ss-green2-fg'],
+  '拒絕':['--ss-red-bg','--ss-red-fg'] };
+function sBadge(s,sm){const c=SS[s]||SS['未拜訪'];
+  return '<span class="badge'+(sm?' sm':'')+'" style="background:var('+c[0]+');color:var('+c[1]+')">'+esc(s)+'</span>';}
+/* 地圖圖釘顏色（同樣走 CSS 變數的實色版本） */
+const PIN={'未拜訪':'--text3','初訪':'--blue','複訪':'--amber','試用中':'--blue','報價':'--amber','將成約':'--purple-d','已成約':'--green','已轉交':'--green','拒絕':'--red'};
+
+/* 開發中 = 長官口中「正在開發的客人」；試用盤 = 主系統 STATUS_TRIAL_SET 口徑 */
+const ACTIVE_SET=[STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING];
+const TRIAL_SET=[STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING];
+
+const REPS=[
+  {id:'r1',name:'陳柏宇',area:'東區・北區',   color:'#2A6BB0',n:22},
+  {id:'r2',name:'林郁婷',area:'永康・仁德',   color:'#12A673',n:19},
+  {id:'r3',name:'黃志明',area:'安南・安平',   color:'#B5701A',n:16},
+  {id:'r4',name:'蔡孟儒',area:'中西區・南區', color:'#6B5FD1',n:13},
+  {id:'r5',name:'吳佩珊',area:'本月報到・受訓中',color:'#8F8F87',n:0},
+];
+const RMAP={};REPS.forEach(r=>RMAP[r.id]=r);
+
+const DISTRICTS=[
+  {name:'東區',  lat:22.9820,lng:120.2270},
+  {name:'北區',  lat:23.0080,lng:120.2100},
+  {name:'中西區',lat:22.9930,lng:120.1980},
+  {name:'南區',  lat:22.9600,lng:120.1900},
+  {name:'安平區',lat:22.9930,lng:120.1600},
+  {name:'安南區',lat:23.0470,lng:120.1800},
+  {name:'永康區',lat:23.0260,lng:120.2570},
+  {name:'仁德區',lat:22.9350,lng:120.2510},
+];
+const DMAP={};DISTRICTS.forEach(d=>DMAP[d.name]=d);
+const REP_DIST={r1:['東區','東區','北區','北區','中西區'],r2:['永康區','永康區','仁德區','仁德區','東區'],
+  r3:['安南區','安南區','安平區','安平區','北區'],r4:['中西區','中西區','南區','南區','安平區'],r5:[]};
+
+const NAME_A=['阿明','大灣','府城','金將','吉品','喜多','四海','新東','麗晶','鹽行','安平','老周','小樂','綠光','三好','品香','昌隆','海町','昇泰','日和','東寧','竹溪','鹿耳','慶安','正興'];
+/* 店名後綴自帶類別——「慶安咖啡」不該被標成「汽車」，假資料一眼被看穿會影響 demo 可信度 */
+const NAME_B=[['牛肉湯','小吃飲料'],['早餐店','餐飲'],['火鍋','餐飲'],['咖啡','小吃飲料'],
+  ['診所','診所'],['動物醫院','寵物'],['美髮沙龍','美容美甲'],['便利商店','零售店'],
+  ['眼鏡行','眼鏡行'],['汽車美容','汽車'],['補習班','補習班'],['事務所','辦公室'],
+  ['房屋','房仲'],['燒肉','餐飲'],['小吃部','小吃飲料'],['手搖飲','小吃飲料'],
+  ['麵包坊','零售店'],['藥局','零售店'],['健身房','其他'],['寵物旅館','寵物']];
+const ROADS=['中華東路','林森路','崇明路','中山路','民族路','小東路','中華西路','安中路','永大路','中正南路','西門路','慶中街','海佃路','文賢路','中華北路'];
+const NOTES=['老闆說要跟合夥人討論','現場丟了一支拖把試用，反應乾淨度不錯','價格卡在比同業高，需要做比較表','店裡剛裝修完，地墊需求明確','老闆娘很喜歡香味，芳香機有機會','要等下個月房租談完再說','已經有別家在做，合約到年底','窗口換人，要重新建立關係','試用回收時老闆主動問報價','店休沒遇到人，改約下週'];
+const INSIGHTS=['決策者是老闆娘不是老闆','怕清潔費用增加，要強調免採購','連鎖第二家店，做起來可帶第三家','','','對地墊防滑很在意（曾有客人跌倒）',''];
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. MOCK DATA — 客戶產生器
+   ═══════════════════════════════════════════════════════════════════ */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* 狀態配額（精確分配，非隨機抽樣）
+   ─ prototype 的目的是「每一種狀態都要能被看到」。n≈20 時純亂數常讓罕見狀態
+     （已轉交 4%、拒絕 5%）整段抽空，demo 就少掉要驗證的畫面。配額法保證每次開啟
+     都涵蓋九種狀態，且分佈固定可重現。 */
+const STATUS_MIX=[[STATUS.UNVISITED,10],[STATUS.FIRST,17],[STATUS.REVISIT,15],[STATUS.TRIAL,20],
+  [STATUS.QUOTE,8],[STATUS.CLOSING,6],[STATUS.DEAL,15],[STATUS.TRANSFER,4],[STATUS.REFUSE,5]];
+function quota(n,mix){
+  const tot=mix.reduce((s,p)=>s+p[1],0),out=[];
+  const rows=mix.map(p=>{const e=n*p[1]/tot;return{k:p[0],base:Math.floor(e),frac:e-Math.floor(e)};});
+  rows.forEach(r=>{for(let i=0;i<r.base;i++)out.push(r.k);});
+  rows.slice().sort((a,b)=>b.frac-a.frac).forEach(r=>{if(out.length<n)out.push(r.k);});
+  return shuffle(out);
+}
+/* 日期分佈：貼近真實外勤節奏 —— 多數客戶近兩週內拜訪過，少數才落到「久未拜訪」。
+   若讓最後拜訪日平均散在 1~40 天，會有近半數客戶觸發警示，關注清單就淪為雜訊。 */
+const lastDays =()=>wpick([[rint(0,6),46],[rint(7,14),25],[rint(15,21),12],[rint(22,34),12],[rint(35,60),5]]);
+const trialDays=()=>wpick([[rint(2,14),40],[rint(15,30),38],[rint(31,45),14],[rint(46,75),8]]);
+
+let _seq=0;
+function makeClient(rep,forced){
+  const status=(forced&&forced.status)||STATUS.FIRST;
+  const district=(forced&&forced.district)||pick(REP_DIST[rep.id]);
+  const suffix=pick(NAME_B);
+  const name=(forced&&forced.name)||(pick(NAME_A)+suffix[0]);
+  const d=DMAP[district];
+  const c={
+    id:'c'+(++_seq),repId:rep.id,name:name,status:status,district:district,
+    type:(forced&&forced.type)||suffix[1],
+    addr:'台南市'+district+pick(ROADS)+rint(1,3)+'段'+rint(1,399)+'號',
+    contact:pick(['王','李','陳','林','張','黃','吳','蔡','劉','許'])+pick(['先生','小姐','老闆','店長']),
+    phone:'06-'+rint(200,399)+rint(1000,9999),
+    trialItems:[],contractedItems:[],visits:[],
+    lat:null,lng:null,nextdate:'',trialDate:'',note:''
+  };
+  if(!(forced&&forced.noGeo)){
+    c.lat=+(d.lat+(rnd()-.5)*0.024).toFixed(6);
+    c.lng=+(d.lng+(rnd()-.5)*0.030).toFixed(6);
+  }
+  /* 試用起始日先算——拜訪日必須晚於（或等於）試用投放日才合理 */
+  let td=null;
+  if(TRIAL_SET.includes(status))td=(forced&&forced.trialDays!=null)?forced.trialDays:trialDays();
+  if(td!=null)c.trialDate=ago(td);
+  /* 拜訪紀錄 */
+  const nv=status===STATUS.UNVISITED?0:rint(1,5);
+  let last=(forced&&forced.lastVisitDays!=null)?forced.lastVisitDays:lastDays();
+  if(td!=null)last=Math.min(last,td);
+  /* 累加間距（非乘法）——乘法會讓相鄰兩次拜訪偶爾撞在同一兩天內，看起來就像壞資料 */
+  let cur=last;
+  for(let i=0;i<nv;i++){
+    c.visits.push({date:ago(cur),mood:rint(1,4),note:pick(NOTES),insight:pick(INSIGHTS)});
+    cur+=rint(9,26);
+  }
+  /* 試用／成約品項 */
+  if(TRIAL_SET.includes(status)&&!(forced&&forced.noItems)){
+    const big=(forced&&forced.big)||rnd()<0.12;
+    const n=big?rint(3,4):rint(1,3);
+    const pool=big?PRODUCTS.filter(p=>p.price>=280):PRODUCTS;
+    const used={};
+    for(let i=0;i<n;i++){
+      const p=pick(pool);if(used[p.code])continue;used[p.code]=1;
+      c.trialItems.push({product:p.code,qty:big?rint(3,8):rint(1,4),cycle:p.cycle,quoted:''});
+    }
+  }
+  if(status===STATUS.DEAL){
+    const n=rint(1,3),used={};
+    for(let i=0;i<n;i++){
+      const p=pick(PRODUCTS);if(used[p.code])continue;used[p.code]=1;
+      c.contractedItems.push({product:p.code,qty:rint(1,5),cycle:p.cycle,
+        quoted:rnd()<0.4?Math.round(p.price*0.9):'',contractDate:ago(rint(10,220))});
+    }
+  }
+  if(ACTIVE_SET.includes(status)&&rnd()<0.55)c.nextdate=iso(new Date(TODAY.getTime()+rint(-6,14)*DAY));
+  c.note=pick(NOTES);
+  return c;
+}
+
+const CLIENTS=[];
+REPS.forEach(rep=>{quota(rep.n,STATUS_MIX).forEach(st=>CLIENTS.push(makeClient(rep,{status:st})));});
+
+/* ── 刻意植入的 Edge Case 資料 ────────────────────────────────── */
+/* E1 試用嚴重停滯 + 高金額（Attention Feed 的頭號案子） */
+CLIENTS.push(makeClient(RMAP.r1,{name:'廣豐興餐飲集團中央廚房',status:STATUS.TRIAL,district:'東區',
+  type:'餐飲',big:true,trialDays:64,lastVisitDays:48}));
+/* E2 將成約卡很久 */
+CLIENTS.push(makeClient(RMAP.r2,{name:'永大路連鎖洗車廠',status:STATUS.CLOSING,district:'永康區',
+  type:'汽車',trialDays:52,lastVisitDays:31}));
+/* E3 試用中但沒登記品項 → 金額不能顯示 $0，要標「未登記品項」 */
+CLIENTS.push(makeClient(RMAP.r3,{name:'安中路日式拉麵',status:STATUS.TRIAL,district:'安南區',
+  type:'餐飲',noItems:true,trialDays:19,lastVisitDays:6}));
+/* E4 超長店名（截斷 + tooltip） */
+CLIENTS.push(makeClient(RMAP.r4,{name:'台南市中西區正興街文創複合式二十四小時不打烊早午餐專門店（本店）',
+  status:STATUS.QUOTE,district:'中西區',type:'餐飲',trialDays:12,lastVisitDays:4}));
+/* E5+E6 重複建檔（同名兩筆，需要提醒清理） */
+CLIENTS.push(makeClient(RMAP.r1,{name:'府城牛肉湯',status:STATUS.REVISIT,district:'東區',type:'小吃飲料',lastVisitDays:9}));
+CLIENTS.push(makeClient(RMAP.r1,{name:'府城牛肉湯',status:STATUS.FIRST,district:'東區',type:'餐飲',lastVisitDays:23}));
+/* E7 無座標 + 久未拜訪 */
+CLIENTS.push(makeClient(RMAP.r3,{name:'海佃路汽車保養廠',status:STATUS.REVISIT,district:'安南區',
+  type:'汽車',noGeo:true,lastVisitDays:37}));
+/* E8 高金額試用但進度正常（藍色關注，不是紅色） */
+CLIENTS.push(makeClient(RMAP.r2,{name:'仁德觀光工廠',status:STATUS.QUOTE,district:'仁德區',
+  type:'零售店',big:true,trialDays:11,lastVisitDays:3}));
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. 衍生計算：金額、關注規則、彙總
+   ═══════════════════════════════════════════════════════════════════ */
+const trialAmt=c=>TRIAL_SET.includes(c.status)?sumFw4(c.trialItems):0;
+const dealAmt =c=>c.status===STATUS.DEAL?sumFw4(c.contractedItems):0;
+const lastVisit=c=>(c.visits&&c.visits.length)?c.visits[0].date:'';
+
+/* 關注規則（severity 1=最急）。一家客戶可同時命中多條。 */
+const RULES=[
+  {key:'stall', sev:1,label:'試用停滯',  hint:'試用超過 30 天未推進',
+   test:c=>c.status===STATUS.TRIAL&&daysSince(c.trialDate)>30,
+   why:c=>'試用已 <b>'+daysSince(c.trialDate)+' 天</b>，仍停在「試用中」未報價'},
+  {key:'closing',sev:2,label:'將成約逾期',hint:'停在將成約超過 14 天',
+   test:c=>c.status===STATUS.CLOSING&&daysSince(lastVisit(c))>14,
+   why:c=>'停在「將成約」，已 <b>'+daysSince(lastVisit(c))+' 天</b>沒有新的拜訪紀錄'},
+  {key:'big',   sev:3,label:'高金額案',  hint:'試用 4W 金額 ≥ $10,000',
+   test:c=>trialAmt(c)>=10000,
+   why:c=>'試用 4W 金額 <b>'+money(trialAmt(c))+'</b>，成敗影響月度目標'},
+  {key:'cold',  sev:4,label:'久未拜訪',  hint:'開發中客戶超過 21 天未拜訪',
+   test:c=>ACTIVE_SET.includes(c.status)&&daysSince(lastVisit(c))>21,
+   why:c=>'開發中但已 <b>'+daysSince(lastVisit(c))+' 天</b>沒去了'},
+];
+function flagsOf(c){return RULES.filter(r=>{try{return r.test(c);}catch(e){return false;}});}
+
+/* 未定位客戶：固定約 12%（地址 geocode 失敗是主系統的日常）。
+   同樣不交給機率——地圖的「另有 N 家沒有座標」必須每次都能被驗證。 */
+shuffle(CLIENTS.filter(c=>c.lat!=null)).slice(0,Math.round(CLIENTS.length*0.12))
+  .forEach(c=>{c.lat=null;c.lng=null;});
+
+/* 重複建檔偵測（同業務同名） */
+const DUP=new Set();
+(function(){
+  const m={};
+  CLIENTS.forEach(c=>{const k=c.repId+'|'+c.name.trim();(m[k]=m[k]||[]).push(c.id);});
+  Object.values(m).forEach(ids=>{if(ids.length>1)ids.forEach(id=>DUP.add(id));});
+})();
+
+function metrics(list){
+  const m={total:list.length,active:0,trialShop:0,trialAmt:0,dealShop:0,dealAmt:0,noItem:0,conv:0};
+  list.forEach(c=>{
+    if(ACTIVE_SET.includes(c.status))m.active++;
+    if(TRIAL_SET.includes(c.status)){m.trialShop++;m.trialAmt+=trialAmt(c);if(!c.trialItems.length)m.noItem++;}
+    if(c.status===STATUS.DEAL){m.dealShop++;m.dealAmt+=dealAmt(c);}
+  });
+  const eng=m.trialShop+m.dealShop;
+  m.conv=eng?m.dealShop/eng:0;
+  return m;
+}
+
+/* 漏斗：九階段收斂成五段（長官看的是趨勢不是細節） */
+const FUNNEL=[
+  {label:'未接觸',statuses:[STATUS.UNVISITED],   color:'--text3'},
+  {label:'開發中',statuses:[STATUS.FIRST,STATUS.REVISIT],color:'--blue'},
+  {label:'試用中',statuses:[STATUS.TRIAL],       color:'--green'},
+  {label:'議價中',statuses:[STATUS.QUOTE,STATUS.CLOSING],color:'--amber'},
+  {label:'已成約',statuses:[STATUS.DEAL],        color:'--green-d'},
+];
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. 狀態機（scenario / view / filters / drawer）
+   ═══════════════════════════════════════════════════════════════════ */
+const S={
+  scenario:'normal',          // normal | loading | empty | partial | stale | newbie
+  view:'overview',            // overview | list | map
+  attKey:'all',               // Attention Feed 篩選
+  f:{rep:'',status:'',district:'',flag:'',q:''},
+  sort:{key:'trialAmt',dir:-1},
+  drawer:null,
+  focusId:null,
+};
+/* 部分失敗情境：這位業務的 Sheet 抓不到 */
+const FAIL_REP='r4';
+const FAIL_MSG='回應非 JSON（請確認 Apps Script 部署權限為「任何人」且網址正確）';
+
+function scenarioReps(){
+  if(S.scenario==='empty')return [];
+  if(S.scenario==='newbie')return REPS.map(r=>({...r,n:0}));
+  return REPS;
+}
+/* 目前情境下「拿得到資料」的客戶池 */
+function pool(){
+  if(S.scenario==='empty'||S.scenario==='newbie'||S.scenario==='loading')return [];
+  if(S.scenario==='partial')return CLIENTS.filter(c=>c.repId!==FAIL_REP);
+  return CLIENTS;
+}
+function repList(){
+  if(S.scenario==='empty')return [];
+  if(S.scenario==='newbie')return REPS.map(r=>({...r,error:null}));
+  return REPS.map(r=>({...r,error:(S.scenario==='partial'&&r.id===FAIL_REP)?FAIL_MSG:null}));
+}
+function syncedAt(){
+  if(S.scenario==='stale')return {txt:'2026-08-13 18:42',stale:true,hours:66};
+  return {txt:'2026-08-16 08:05',stale:false,hours:1};
+}
+
+/* 篩選後的客戶清單（清單頁 / 地圖頁共用同一個來源） */
+function filtered(){
+  const f=S.f,q=f.q.trim().toLowerCase();
+  return pool().filter(c=>{
+    if(f.rep&&c.repId!==f.rep)return false;
+    if(f.status){
+      if(f.status==='__active'){if(!ACTIVE_SET.includes(c.status))return false;}
+      else if(f.status==='__trial'){if(!TRIAL_SET.includes(c.status))return false;}
+      else if(c.status!==f.status)return false;
+    }
+    if(f.district&&c.district!==f.district)return false;
+    if(f.flag&&!flagsOf(c).some(r=>r.key===f.flag))return false;
+    if(q){
+      const hay=(c.name+' '+c.district+' '+c.addr+' '+RMAP[c.repId].name+' '+c.type).toLowerCase();
+      if(hay.indexOf(q)<0)return false;
+    }
+    return true;
+  });
+}
+const hasFilter=()=>!!(S.f.rep||S.f.status||S.f.district||S.f.flag||S.f.q);
+function clearFilters(){S.f={rep:'',status:'',district:'',flag:'',q:''};$('q').value='';render();}
+function gotoList(patch){S.f=Object.assign({rep:'',status:'',district:'',flag:'',q:''},patch||{});S.view='list';render();window.scrollTo({top:0,behavior:'smooth'});}
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. 渲染 — 外框
+   ═══════════════════════════════════════════════════════════════════ */
+function renderTabs(){
+  const n=pool().length,att=attentionItems().length;
+  const defs=[
+    ['overview','總覽',att?String(att):''],
+    ['list','客戶清單',n?String(n):''],
+    ['map','地圖',''],
+  ];
+  $('tabs').innerHTML=defs.map(([k,l,c])=>
+    '<button class="tab'+(S.view===k?' on':'')+'" data-view="'+k+'">'+esc(l)+
+    (c?'<span class="cnt">'+esc(c)+'</span>':'')+'</button>').join('');
+}
+function render(){
+  renderTabs();
+  const app=$('app');
+  if(S.scenario==='loading'){app.innerHTML=skeleton();return;}
+  if(S.view==='overview')app.innerHTML=viewOverview();
+  else if(S.view==='list')app.innerHTML=viewList();
+  else app.innerHTML=viewMap();
+  if(S.view==='map')mountMap();
+}
+
+/* ── 載入中骨架 ────────────────────────────────────────────── */
+function skeleton(){
+  const kpi='<div class="kpi"><div class="sk sk-line" style="width:52%"></div>'+
+    '<div class="sk" style="height:26px;width:72%;margin:8px 0 6px"></div>'+
+    '<div class="sk sk-line" style="width:40%"></div></div>';
+  const row='<div style="display:flex;gap:11px;padding:12px 16px;border-top:1px solid var(--border)">'+
+    '<div class="sk" style="width:3px;border-radius:2px"></div><div style="flex:1">'+
+    '<div class="sk sk-line" style="width:38%"></div><div class="sk sk-line" style="width:64%"></div></div>'+
+    '<div class="sk" style="width:62px;height:20px"></div></div>';
+  return '<div class="databar"><span class="dot warn"></span>正在向 '+REPS.length+' 位業務的雲端資料表取數…</div>'+
+    '<div class="kpis">'+kpi.repeat(5)+'</div>'+
+    '<div class="grid-main"><div class="stack"><div class="card">'+
+    '<div class="card-h"><div class="sk sk-line" style="width:120px"></div></div>'+row.repeat(5)+'</div></div>'+
+    '<div class="stack"><div class="card"><div class="card-h"><div class="sk sk-line" style="width:90px"></div></div>'+
+    row.repeat(4)+'</div></div></div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. L1 總覽
+   ═══════════════════════════════════════════════════════════════════ */
+function databar(){
+  const s=syncedAt(),reps=repList(),errs=reps.filter(r=>r.error);
+  if(S.scenario==='empty')
+    return '<div class="databar"><span class="dot warn"></span>尚未加入任何業務資料來源</div>';
+  if(errs.length)
+    return '<div class="databar err"><span class="dot err"></span>'+
+      '<b>'+errs.length+' 位業務的資料抓取失敗</b>，以下數字僅涵蓋其餘 '+(reps.length-errs.length)+' 位'+
+      '<span class="db-spacer"></span>最後更新 '+esc(s.txt)+
+      '<button class="linkbtn" data-act="reload">重新載入</button></div>';
+  if(s.stale)
+    return '<div class="databar warn"><span class="dot warn"></span>'+
+      '<b>資料為 '+esc(s.txt)+' 的快照（'+s.hours+' 小時前）</b>，不是即時數字'+
+      '<span class="db-spacer"></span><button class="linkbtn" data-act="reload">立即更新</button></div>';
+  return '<div class="databar"><span class="dot"></span>資料同步於 <b>'+esc(s.txt)+'</b>（'+
+    reps.filter(r=>!r.error).length+' 位業務）<span class="db-spacer"></span>'+
+    '<span class="muted">金額口徑：4 週（4W）租賃金額</span>'+
+    '<button class="linkbtn" data-act="reload">重新載入</button></div>';
+}
+
+function kpiRow(){
+  const m=metrics(pool());
+  const cards=[
+    {l:'開發中客戶',v:m.active,u:' 家',d:'初訪 → 將成約',go:{status:'__active'}},
+    {l:'試用中軒數',v:m.trialShop,u:' 家',d:m.noItem?('其中 '+m.noItem+' 家未登記品項'):'試用中／報價／將成約',go:{status:'__trial'}},
+    {l:'試用金額（4W）',v:money(m.trialAmt),d:'試用盤子總額',accent:1,go:{status:'__trial'}},
+    {l:'成約金額（4W）',v:money(m.dealAmt),d:m.dealShop+' 家已成約',accent:1,go:{status:STATUS.DEAL}},
+    {l:'成約轉換率',v:(m.conv*100).toFixed(1)+'%',d:'成約 ÷（試用＋成約）'},
+  ];
+  return '<div class="kpis">'+cards.map(c=>
+    '<button class="kpi'+(c.accent?' accent':'')+'"'+(c.go?' data-go=\''+esc(JSON.stringify(c.go))+'\'':'')+'>'+
+      '<div class="kpi-l">'+esc(c.l)+'</div>'+
+      '<div class="kpi-v num">'+esc(String(c.v))+(c.u?'<small>'+esc(c.u)+'</small>':'')+'</div>'+
+      '<div class="kpi-d">'+esc(c.d||'')+'</div>'+
+      (c.go?'<div class="go">點擊查看名單 →</div>':'')+
+    '</button>').join('')+'</div>';
+}
+
+/* ── ⚠ 需要關注（第一眼焦點） ───────────────────────────────── */
+function attentionItems(){
+  const out=[];
+  pool().forEach(c=>{
+    const fl=flagsOf(c);
+    if(fl.length)out.push({c:c,flags:fl,sev:Math.min.apply(null,fl.map(f=>f.sev))});
+  });
+  out.sort((a,b)=>a.sev-b.sev||(trialAmt(b.c)-trialAmt(a.c))||(a.c.name<b.c.name?-1:1));
+  return out;
+}
+function attentionCard(){
+  const all=attentionItems();
+  const counts={all:all.length};
+  RULES.forEach(r=>counts[r.key]=all.filter(i=>i.flags.some(f=>f.key===r.key)).length);
+  const shown=S.attKey==='all'?all:all.filter(i=>i.flags.some(f=>f.key===S.attKey));
+
+  const chips='<div class="att-filters">'+
+    '<button class="chip'+(S.attKey==='all'?' on':'')+'" data-att="all">全部<span class="n">'+counts.all+'</span></button>'+
+    RULES.map(r=>'<button class="chip'+(S.attKey===r.key?' on':'')+'" data-att="'+r.key+'" title="'+esc(r.hint)+'">'+
+      '<i class="sev-d sev-'+r.sev+'"></i>'+esc(r.label)+'<span class="n">'+counts[r.key]+'</span></button>').join('')+
+    '</div>';
+
+  let body;
+  if(!pool().length){
+    body=emptyBlock('🗂','還沒有任何客戶資料',
+      S.scenario==='empty'?'請先在「設定」加入業務的雲端資料表網址，儀表板才有東西可以看。'
+      :'目前所有業務都尚未建立客戶（例如全所都是新報到的同仁）。');
+  }else if(!shown.length){
+    body=emptyBlock('✅',S.attKey==='all'?'目前沒有需要介入的案子':'這一類目前沒有案子',
+      '所有開發中的案子都在正常推進中。可以切到「客戶清單」看完整盤面。');
+  }else{
+    /* 只顯示前 10 筆：這是「今天要處理什麼」的清單，不是完整報表 */
+    body='<div class="att-list">'+shown.slice(0,10).map(it=>{
+      const c=it.c,top=it.flags[0],rep=RMAP[c.repId];
+      const amt=trialAmt(c)||dealAmt(c);
+      const noItem=TRIAL_SET.includes(c.status)&&!c.trialItems.length;
+      return '<button class="att" data-open="'+c.id+'">'+
+        '<span class="att-bar s'+top.sev+'"></span>'+
+        '<span class="att-body">'+
+          '<span class="att-top">'+
+            '<span class="att-name trunc" title="'+esc(c.name)+'">'+esc(c.name)+'</span>'+
+            sBadge(c.status,1)+
+            (DUP.has(c.id)?'<span class="tag warn">重複建檔</span>':'')+
+          '</span>'+
+          '<span class="att-reason">'+top.why(c)+'</span>'+
+          '<span class="att-meta">'+
+            '<span>'+esc(rep.name)+'</span><span>'+esc(c.district)+'</span>'+
+            '<span>最後拜訪 '+esc(dLabel(lastVisit(c)))+'</span>'+
+            (it.flags.length>1?'<span class="muted">＋'+(it.flags.length-1)+' 項提醒</span>':'')+
+          '</span>'+
+        '</span>'+
+        '<span class="att-amt">'+(noItem
+          ? '<span class="tag warn">未登記品項</span>'
+          : amt
+            ? '<span class="a num">'+money(amt)+'</span><span class="l">4W '+(trialAmt(c)?'試用':'成約')+'金額</span>'
+            : '<span class="l">尚無金額</span>')+
+        '</span></button>';
+    }).join('')+'</div>'+
+    (shown.length>10?'<div style="padding:10px 16px;border-top:1px solid var(--border)">'+
+      '<button class="linkbtn" data-go=\''+esc(JSON.stringify({flag:S.attKey==='all'?'':S.attKey}))+'\'>'+
+      '查看全部 '+shown.length+' 筆 →</button></div>':'');
+  }
+  return '<div class="card"><div class="card-h">'+
+    '<span class="card-t">⚠ 需要關注</span>'+
+    '<span class="card-sub">依急迫度排序，點任一列看細節</span></div>'+
+    chips+body+'</div>';
+}
+
+/* ── 全所漏斗 ─────────────────────────────────────────────── */
+function funnelCard(){
+  const list=pool();
+  if(!list.length)return '';
+  const rows=FUNNEL.map(f=>{
+    const cs=list.filter(c=>f.statuses.includes(c.status));
+    const amt=cs.reduce((s,c)=>s+trialAmt(c)+dealAmt(c),0);
+    return {label:f.label,color:f.color,n:cs.length,amt:amt,statuses:f.statuses};
+  });
+  const max=Math.max.apply(null,rows.map(r=>r.n))||1;
+  const lost=list.filter(c=>c.status===STATUS.REFUSE).length;
+  const trans=list.filter(c=>c.status===STATUS.TRANSFER).length;
+  return '<div class="card"><div class="card-h"><span class="card-t">全所漏斗</span>'+
+    '<span class="card-sub">九階段收斂為五段</span></div><div class="card-b">'+
+    '<div class="fn">'+rows.map(r=>
+      '<div class="fn-row"><span class="fn-lab">'+esc(r.label)+'</span>'+
+      '<span class="fn-track"><i class="fn-fill" style="width:'+(r.n/max*100).toFixed(1)+'%;background:var('+r.color+')"></i></span>'+
+      '<span class="fn-num"><b>'+r.n+'</b> 家'+(r.amt?' · '+money(r.amt):'')+'</span></div>').join('')+
+    '</div><div class="fn-foot"><span>已轉交 <b>'+trans+'</b> 家</span><span>拒絕 <b>'+lost+'</b> 家</span>'+
+    '<span class="muted">此圖不含已轉交／拒絕</span></div></div></div>';
+}
+
+/* ── 業務員比較 ───────────────────────────────────────────── */
+function repsCard(){
+  const reps=repList();
+  if(!reps.length)return '';
+  const body=reps.map(r=>{
+    if(r.error){
+      return '<div style="padding:11px 14px;border-top:1px solid var(--border)"><div class="errcard">'+
+        '<div class="e-n">'+esc(r.name)+'（'+esc(r.area)+'）· 抓取失敗</div>'+esc(r.error)+
+        '<div class="e-u">https://script.google.com/macros/s/AKfy…'+esc(r.id)+'/exec</div></div></div>';
+    }
+    const list=pool().filter(c=>c.repId===r.id);
+    const m=metrics(list);
+    if(!list.length){
+      return '<button class="rep" data-go=\''+esc(JSON.stringify({rep:r.id}))+'\'>'+
+        '<span class="rep-top"><span class="avatar" style="background:'+esc(r.color)+'">'+esc(r.name.slice(1,2))+'</span>'+
+        '<span><span class="rep-name">'+esc(r.name)+'</span><br><span class="rep-area">'+esc(r.area)+'</span></span></span>'+
+        '<span class="rep-foot"><span class="muted">尚無客戶資料——新報到同仁，建檔後才會出現數字</span></span></button>';
+    }
+    const segs=FUNNEL.map(f=>({n:list.filter(c=>f.statuses.includes(c.status)).length,color:f.color}));
+    const att=list.filter(c=>flagsOf(c).length).length;
+    const lastAct=list.map(lastVisit).filter(Boolean).sort().slice(-1)[0]||'';
+    return '<button class="rep" data-go=\''+esc(JSON.stringify({rep:r.id}))+'\'>'+
+      '<span class="rep-top">'+
+        '<span class="avatar" style="background:'+esc(r.color)+'">'+esc(r.name.slice(1,2))+'</span>'+
+        '<span><span class="rep-name">'+esc(r.name)+'</span> <span class="rep-area">'+esc(r.area)+'</span>'+
+        '<br><span class="rep-area">'+list.length+' 家客戶 · 轉換率 '+(m.conv*100).toFixed(0)+'%</span></span>'+
+        '<span class="rep-nums"><span class="a num">'+money(m.trialAmt)+'</span><br><span class="l">試用 4W</span></span>'+
+      '</span>'+
+      '<span class="mini">'+segs.map(s=>s.n?'<i style="flex:'+s.n+';background:var('+s.color+')"></i>':'').join('')+'</span>'+
+      '<span class="rep-foot">'+
+        '<span>試用 <b>'+m.trialShop+'</b></span><span>成約 <b>'+m.dealShop+'</b> · '+money(m.dealAmt)+'</span>'+
+        (att?'<span style="color:var(--red)">待處理 <b>'+att+'</b></span>':'')+
+        '<span class="muted">最後活動 '+esc(dLabel(lastAct))+'</span>'+
+      '</span></button>';
+  }).join('');
+  return '<div class="card"><div class="card-h"><span class="card-t">業務員</span>'+
+    '<span class="card-sub">點選看該業務的客戶</span></div>'+body+'</div>';
+}
+
+/* ── 地區分佈 ─────────────────────────────────────────────── */
+function districtCard(){
+  const list=pool();
+  if(!list.length)return '';
+  const rows=DISTRICTS.map(d=>{
+    const cs=list.filter(c=>c.district===d.name);
+    return {name:d.name,n:cs.length,
+      trial:cs.filter(c=>TRIAL_SET.includes(c.status)).length,
+      deal:cs.filter(c=>c.status===STATUS.DEAL).length,
+      amt:cs.reduce((s,c)=>s+trialAmt(c),0)};
+  }).filter(r=>r.n>0).sort((a,b)=>b.n-a.n);
+  const max=Math.max.apply(null,rows.map(r=>r.n))||1;
+  const zero=DISTRICTS.filter(d=>!list.some(c=>c.district===d.name)).map(d=>d.name);
+  return '<div class="card"><div class="card-h"><span class="card-t">地區分佈</span>'+
+    '<span class="card-sub">依客戶數</span></div><div class="card-b tight">'+
+    rows.map(r=>'<button class="dist" data-go=\''+esc(JSON.stringify({district:r.name}))+'\'>'+
+      '<span class="dist-lab">'+esc(r.name)+'</span>'+
+      '<span class="dist-track">'+
+        '<i style="flex:'+r.deal+';background:var(--green-d)"></i>'+
+        '<i style="flex:'+r.trial+';background:var(--green)"></i>'+
+        '<i style="flex:'+Math.max(0,r.n-r.deal-r.trial)+';background:var(--border2)"></i>'+
+        '<i style="flex:'+Math.max(0,max-r.n)+';background:transparent"></i>'+
+      '</span>'+
+      '<span class="dist-num"><b>'+r.n+'</b> 家<br>'+money(r.amt)+'</span></button>').join('')+
+    '</div>'+
+    '<div class="legend" style="border-top:1px solid var(--border)">'+
+      '<span><i style="background:var(--green-d)"></i>已成約</span>'+
+      '<span><i style="background:var(--green)"></i>試用盤</span>'+
+      '<span><i style="background:var(--border2)"></i>其他</span>'+
+      (zero.length?'<span class="muted">尚未開發：'+esc(zero.join('、'))+'</span>':'')+
+    '</div></div>';
+}
+
+function emptyBlock(ico,t,d,action){
+  return '<div class="empty"><div class="e-ico">'+ico+'</div><div class="e-t">'+esc(t)+'</div>'+
+    '<div class="e-d">'+esc(d)+'</div>'+(action||'')+'</div>';
+}
+
+function viewOverview(){
+  if(S.scenario==='empty'){
+    return databar()+'<div class="card">'+emptyBlock('🔌','尚未連接任何業務資料',
+      '正式版會在「設定」貼上每位業務的雲端資料表網址；此原型用下方「模擬狀態」列切換即可。',
+      '<div class="e-a"><button class="btn btn-primary" data-scn="normal">載入示範資料</button></div>')+'</div>';
+  }
+  return databar()+kpiRow()+
+    '<div class="grid-main">'+
+      '<div class="stack">'+attentionCard()+funnelCard()+'</div>'+
+      '<div class="stack">'+repsCard()+districtCard()+'</div>'+
+    '</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   8. L2 客戶清單
+   ═══════════════════════════════════════════════════════════════════ */
+function filterBar(n){
+  const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(cur===v?' selected':'')+'>'+esc(l)+'</option>';
+  const reps=repList().filter(r=>!r.error);
+  return '<div class="fbar">'+
+    '<span class="fbar-lab">篩選</span>'+
+    '<select data-f="rep">'+opt('','全部業務',S.f.rep)+reps.map(r=>opt(r.id,r.name,S.f.rep)).join('')+'</select>'+
+    '<select data-f="status">'+opt('','全部狀態',S.f.status)+opt('__active','開發中（初訪→將成約）',S.f.status)+
+      opt('__trial','試用盤（試用/報價/將成約）',S.f.status)+SO.map(s=>opt(s,s,S.f.status)).join('')+'</select>'+
+    '<select data-f="district">'+opt('','全部地區',S.f.district)+DISTRICTS.map(d=>opt(d.name,d.name,S.f.district)).join('')+'</select>'+
+    '<select data-f="flag">'+opt('','全部（含無提醒）',S.f.flag)+RULES.map(r=>opt(r.key,'⚠ '+r.label,S.f.flag)).join('')+'</select>'+
+    (hasFilter()?'<button class="linkbtn" data-act="clear">清除篩選</button>':'')+
+    '<span class="res">共 <b>'+n+'</b> 家</span>'+
+  '</div>';
+}
+const SORTS={
+  name:c=>c.name, status:c=>SO.indexOf(c.status), rep:c=>RMAP[c.repId].name,
+  district:c=>c.district, trialAmt:c=>trialAmt(c), dealAmt:c=>dealAmt(c),
+  lastVisit:c=>lastVisit(c)||'0000-00-00', flag:c=>{const f=flagsOf(c);return f.length?-(5-f[0].sev):0;}
+};
+function viewList(){
+  const list=filtered().slice();
+  const g=SORTS[S.sort.key]||SORTS.trialAmt;
+  list.sort((a,b)=>{const x=g(a),y=g(b);return (x<y?-1:x>y?1:0)*S.sort.dir;});
+  const th=(k,l,r)=>'<th class="sortable'+(S.sort.key===k?' act':'')+(r?' r':'')+'" data-sort="'+k+'">'+esc(l)+
+    ' <span class="ar">'+(S.sort.key===k?(S.sort.dir>0?'▲':'▼'):'▲')+'</span></th>';
+
+  let body;
+  if(!pool().length){
+    body='<div class="card">'+emptyBlock('🗂','沒有客戶資料',
+      S.scenario==='empty'?'尚未加入任何業務資料來源。':'目前所有業務都尚未建立客戶。')+'</div>';
+  }else if(!list.length){
+    body='<div class="card">'+emptyBlock('🔍','找不到符合條件的客戶',
+      '目前的篩選組合沒有任何結果，放寬條件或直接清除篩選。',
+      '<div class="e-a"><button class="btn" data-act="clear">清除篩選</button></div>')+'</div>';
+  }else{
+    body='<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr>'+
+      th('name','客戶')+th('status','狀態')+th('rep','業務')+th('district','地區')+
+      th('trialAmt','試用 4W',1)+th('dealAmt','成約 4W',1)+th('lastVisit','最後拜訪',1)+th('flag','提醒')+
+      '</tr></thead><tbody>'+list.map(c=>{
+        const fl=flagsOf(c),noItem=TRIAL_SET.includes(c.status)&&!c.trialItems.length;
+        return '<tr data-open="'+c.id+'">'+
+          '<td class="cname"><div class="trunc" title="'+esc(c.name)+'">'+esc(c.name)+
+            (DUP.has(c.id)?' <span class="tag warn">重複</span>':'')+'</div>'+
+            '<div class="csub trunc">'+esc(c.type)+' · '+esc(c.addr)+'</div></td>'+
+          '<td>'+sBadge(c.status,1)+'</td>'+
+          '<td>'+esc(RMAP[c.repId].name)+'</td>'+
+          '<td>'+esc(c.district)+(c.lat==null?' <span class="tag">未定位</span>':'')+'</td>'+
+          '<td class="r">'+(noItem?'<span class="tag warn">未登記</span>':(trialAmt(c)?money(trialAmt(c)):'<span class="muted">—</span>'))+'</td>'+
+          '<td class="r">'+(dealAmt(c)?money(dealAmt(c)):'<span class="muted">—</span>')+'</td>'+
+          '<td class="r"><span'+(daysSince(lastVisit(c))>21?' style="color:var(--red)"':'')+'>'+esc(dLabel(lastVisit(c)))+'</span></td>'+
+          '<td>'+(fl.length?fl.map(f=>'<span class="tag'+(f.sev<=2?' err':' warn')+'" title="'+esc(f.hint)+'">'+esc(f.label)+'</span>').join(' ')
+            :'<span class="muted">—</span>')+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table></div></div>';
+  }
+  return databar()+filterBar(list.length)+body;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   9. L2 地圖
+   ═══════════════════════════════════════════════════════════════════ */
+let _map=null,_layer=null,_marks={};
+function viewMap(){
+  const list=filtered();
+  const geo=list.filter(c=>c.lat!=null);
+  const nogeo=list.length-geo.length;
+  const side='<div class="card map-side"><div class="card-h"><span class="card-t">清單</span>'+
+    '<span class="card-sub">'+geo.length+' 個點位</span></div>'+
+    (geo.length?geo.slice(0,120).map(c=>
+      '<button class="mlist" data-open="'+c.id+'" data-focus="'+c.id+'">'+
+        '<span class="pin" style="background:var('+(PIN[c.status]||'--text3')+')"></span>'+
+        '<span class="mn"><span class="trunc" title="'+esc(c.name)+'">'+esc(c.name)+'</span>'+
+        '<span class="ms">'+esc(c.district)+' · '+esc(RMAP[c.repId].name)+' · '+esc(c.status)+'</span></span>'+
+        '<span class="ma">'+(trialAmt(c)?money(trialAmt(c)):'—')+'</span></button>').join('')
+      :emptyBlock('📍','這個篩選下沒有可定位的客戶','放寬篩選條件，或檢查客戶是否尚未定位。'))+
+    (nogeo?'<div class="map-note">⚠ 另有 <b>'+nogeo+'</b> 家沒有座標，不會出現在地圖上'+
+      '<button class="linkbtn" data-act="nogeo" style="margin-left:auto">看名單</button></div>':'')+
+    '</div>';
+  const mapBox=(typeof L==='undefined')
+    ? '<div class="map-fallback"><div><div style="font-size:26px;opacity:.5">🗺</div>'+
+      '<div style="font-weight:700;color:var(--text2);margin-top:8px">地圖元件未能載入</div>'+
+      '<div style="margin-top:5px;font-size:12.5px">Leaflet 需要連線。離線時左側清單與「地區分佈」仍可正常使用。</div></div></div>'
+    : '<div id="map"></div>';
+  const legend='<div class="card" style="margin-top:10px"><div class="legend">'+
+    ['未拜訪','初訪','試用中','報價','將成約','已成約','拒絕'].map(s=>
+      '<span><i style="background:var('+PIN[s]+')"></i>'+esc(s)+'</span>').join('')+
+    '<span class="muted">圓越大＝試用金額越高</span></div></div>';
+  return databar()+filterBar(list.length)+
+    '<div class="map-layout">'+side+'<div>'+mapBox+legend+'</div></div>';
+}
+function mountMap(){
+  if(typeof L==='undefined')return;
+  const el=$('map');if(!el)return;
+  _marks={};
+  _map=L.map(el,{scrollWheelZoom:false}).setView([22.995,120.205],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_map);
+  _layer=L.layerGroup().addTo(_map);
+  const geo=filtered().filter(c=>c.lat!=null);
+  const cs=getComputedStyle(document.documentElement);
+  geo.forEach(c=>{
+    const amt=trialAmt(c)||dealAmt(c);
+    const r=6+Math.min(11,Math.sqrt(amt)/16);
+    const col=(cs.getPropertyValue(PIN[c.status]||'--text3')||'#888').trim();
+    const m=L.circleMarker([c.lat,c.lng],{radius:r,color:col,weight:2,fillColor:col,fillOpacity:.42});
+    m.bindPopup('<div class="pop-n">'+esc(c.name)+'</div>'+
+      '<div class="pop-r">'+esc(c.status)+' · '+esc(RMAP[c.repId].name)+' · '+esc(c.district)+'<br>'+
+      (amt?'4W 金額 '+money(amt):'尚未登記品項')+'</div>'+
+      '<button class="pop-b" data-open="'+c.id+'">看客戶詳情</button>');
+    m.addTo(_layer);_marks[c.id]=m;
+  });
+  if(geo.length)_map.fitBounds(L.latLngBounds(geo.map(c=>[c.lat,c.lng])).pad(.12));
+  if(S.focusId&&_marks[S.focusId]){_map.setView(_marks[S.focusId].getLatLng(),16);_marks[S.focusId].openPopup();S.focusId=null;}
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   10. L3 客戶詳情 Drawer
+   ═══════════════════════════════════════════════════════════════════ */
+const MOOD=['','差','普','好','優'];
+function itemRows(items,label){
+  if(!items||!items.length)
+    return '<div class="muted" style="font-size:12.5px">尚未登記'+esc(label)+'品項</div>';
+  return '<table class="itbl"><thead><tr><th>商品</th><th class="r">數量</th><th class="r">週期</th><th class="r">4W 金額</th></tr></thead><tbody>'+
+    items.map(it=>{const p=PMAP[it.product];
+      return '<tr><td>'+esc(it.product)+'<div class="muted" style="font-size:10.5px">'+esc(p?p.desc:'（未知商品）')+'</div></td>'+
+        '<td class="r">'+esc(String(it.qty||1))+'</td><td class="r">'+esc(it.cycle||(p?p.cycle:''))+'</td>'+
+        '<td class="r">'+money(fw4(it))+'</td></tr>';}).join('')+
+    '<tr><td colspan="3" style="font-weight:700">合計</td><td class="r" style="font-weight:800">'+money(sumFw4(items))+'</td></tr>'+
+    '</tbody></table>';
+}
+function openDrawer(id){
+  const c=pool().find(x=>x.id===id);if(!c)return;
+  S.drawer=id;
+  const rep=RMAP[c.repId],fl=flagsOf(c);
+  const noItem=TRIAL_SET.includes(c.status)&&!c.trialItems.length;
+  const html=
+  '<div class="dr-h"><div class="dr-top">'+
+    '<div class="dr-name" id="dr-name">'+esc(c.name)+'</div>'+
+    '<button class="dr-close" data-act="close" aria-label="關閉">✕</button></div>'+
+    '<div class="dr-sub">'+sBadge(c.status)+
+      '<span>'+esc(rep.name)+'</span><span>'+esc(c.district)+'</span><span>'+esc(c.type)+'</span>'+
+      (DUP.has(c.id)?'<span class="tag warn">同名重複建檔</span>':'')+
+      (c.lat==null?'<span class="tag">未定位</span>':'')+
+    '</div></div>'+
+  '<div class="dr-b">'+
+    (fl.length?'<div class="dr-sec" style="background:var(--bg2)">'+
+      '<div class="dr-sec-t">需要關注</div>'+
+      fl.map(f=>'<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">'+
+        '<i class="sev-d sev-'+f.sev+'" style="margin-top:6px"></i>'+
+        '<div><b style="font-size:12.5px">'+esc(f.label)+'</b>'+
+        '<div style="font-size:12.5px;color:var(--text2)">'+f.why(c)+'</div></div></div>').join('')+
+      '</div>':'')+
+    '<div class="dr-sec"><div class="dr-money">'+
+      '<div><div class="l">試用金額（4W）</div><div class="v'+(trialAmt(c)?' g':'')+'">'+
+        (noItem?'<span style="font-size:13px;color:var(--amber-d)">未登記品項</span>':money(trialAmt(c)))+'</div></div>'+
+      '<div><div class="l">成約金額（4W）</div><div class="v'+(dealAmt(c)?' g':'')+'">'+money(dealAmt(c))+'</div></div>'+
+    '</div></div>'+
+    '<div class="dr-sec"><div class="dr-sec-t">試用品項'+(c.trialDate?'（自 '+esc(c.trialDate)+'，已 '+daysSince(c.trialDate)+' 天）':'')+'</div>'+
+      itemRows(c.trialItems,'試用')+'</div>'+
+    (c.contractedItems.length?'<div class="dr-sec"><div class="dr-sec-t">成約品項</div>'+itemRows(c.contractedItems,'成約')+'</div>':'')+
+    '<div class="dr-sec"><div class="dr-sec-t">拜訪紀錄（'+c.visits.length+'）</div>'+
+      (c.visits.length?'<div class="tl">'+c.visits.map(v=>
+        '<div class="tl-i"><span class="tl-d"></span><div class="tl-c">'+
+        '<div class="tl-t"><span>'+esc(v.date)+'</span><span>'+esc(dLabel(v.date))+'</span>'+
+        '<span class="tag">心情 '+esc(MOOD[v.mood]||'—')+'</span></div>'+
+        '<div class="tl-n">'+esc(v.note)+(v.insight?'\n💡 '+esc(v.insight):'')+'</div>'+
+        '</div></div>').join('')+'</div>'
+        :'<div class="muted" style="font-size:12.5px">尚無拜訪紀錄</div>')+'</div>'+
+    '<div class="dr-sec" style="border-bottom:0"><div class="dr-sec-t">基本資料</div>'+
+      '<dl class="kv">'+
+        '<dt>地址</dt><dd>'+esc(c.addr)+'</dd>'+
+        '<dt>窗口</dt><dd>'+esc(c.contact)+'　'+esc(c.phone)+'</dd>'+
+        '<dt>負責業務</dt><dd>'+esc(rep.name)+'（'+esc(rep.area)+'）</dd>'+
+        '<dt>下次拜訪</dt><dd>'+(c.nextdate?esc(c.nextdate)+'（'+esc(dLabel(c.nextdate))+'）':'<span class="muted">未排定</span>')+'</dd>'+
+        '<dt>備註</dt><dd>'+esc(c.note||'—')+'</dd>'+
+      '</dl></div>'+
+  '</div>'+
+  '<div class="dr-f">'+
+    '<button class="btn btn-primary grow" data-act="copy" data-id="'+c.id+'">複製摘要給業務</button>'+
+    (c.lat!=null?'<button class="btn" data-act="locate" data-id="'+c.id+'">在地圖上顯示</button>':'')+
+  '</div>';
+  const d=$('drawer');
+  d.innerHTML=html;d.classList.add('on');$('scrim').classList.add('on');
+  d.focus();
+}
+function closeDrawer(){S.drawer=null;$('drawer').classList.remove('on');$('scrim').classList.remove('on');}
+
+function summaryText(c){
+  const rep=RMAP[c.repId],fl=flagsOf(c);
+  const lines=[
+    '【'+c.name+'】'+c.status+'（'+rep.name+'／'+c.district+'）',
+    '試用 4W：'+(c.trialItems.length?money(trialAmt(c)):'未登記品項'),
+    c.trialItems.length?('　'+c.trialItems.map(it=>it.product+'×'+(it.qty||1)).join('、')):'',
+    c.contractedItems.length?('成約 4W：'+money(dealAmt(c))):'',
+    '最後拜訪：'+(lastVisit(c)||'無')+'（'+dLabel(lastVisit(c))+'）',
+    c.nextdate?('下次拜訪：'+c.nextdate):'下次拜訪：未排定',
+    fl.length?('提醒：'+fl.map(f=>f.label).join('、')):'',
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   11. 搜尋建議
+   ═══════════════════════════════════════════════════════════════════ */
+function renderSugg(){
+  const q=$('q').value.trim().toLowerCase(),box=$('sugg');
+  if(!q){box.classList.remove('on');box.innerHTML='';return;}
+  const hits=pool().filter(c=>(c.name+' '+c.district+' '+RMAP[c.repId].name+' '+c.addr).toLowerCase().indexOf(q)>=0).slice(0,8);
+  box.innerHTML=hits.length
+    ? hits.map(c=>'<div class="sugg-item" data-open="'+c.id+'" role="option">'+
+        '<div class="trunc">'+esc(c.name)+' '+sBadge(c.status,1)+'</div>'+
+        '<div class="s-sub">'+esc(RMAP[c.repId].name)+' · '+esc(c.district)+' · '+
+        (trialAmt(c)?money(trialAmt(c)):'—')+'</div></div>').join('')
+      +'<div class="sugg-item" data-act="searchall"><b>在客戶清單搜尋「'+esc($('q').value.trim())+'」</b></div>'
+    : '<div class="sugg-empty">找不到「'+esc($('q').value.trim())+'」<br>試試店名、地區或業務姓名</div>';
+  box.classList.add('on');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   12. 事件（單一委派）
+   ═══════════════════════════════════════════════════════════════════ */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-view],[data-scn],[data-att],[data-go],[data-open],[data-sort],[data-f],[data-act]');
+  if(!t)return;
+  /* 視角切換 */
+  if(t.dataset.view){S.view=t.dataset.view;S.drawer&&closeDrawer();render();return;}
+  /* 原型狀態切換 */
+  if(t.dataset.scn){
+    S.scenario=t.dataset.scn;S.attKey='all';clearFiltersSilent();closeDrawer();
+    document.querySelectorAll('.dev-b').forEach(b=>b.classList.toggle('on',b.dataset.scn===S.scenario));
+    if(S.scenario==='loading'){render();setTimeout(()=>{if(S.scenario==='loading'){S.scenario='normal';
+      document.querySelectorAll('.dev-b').forEach(b=>b.classList.toggle('on',b.dataset.scn==='normal'));render();
+      toast('載入完成');}},2200);return;}
+    render();return;
+  }
+  /* Attention Feed 分類 */
+  if(t.dataset.att){S.attKey=t.dataset.att;render();return;}
+  /* 帶篩選跳到清單 */
+  if(t.dataset.go){try{gotoList(JSON.parse(t.dataset.go));}catch(err){}return;}
+  /* 開客戶 Drawer */
+  if(t.dataset.open){
+    if(t.dataset.focus&&_map&&_marks[t.dataset.focus]){
+      _map.setView(_marks[t.dataset.focus].getLatLng(),16);
+      document.querySelectorAll('.mlist').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+    }
+    $('sugg').classList.remove('on');
+    openDrawer(t.dataset.open);return;
+  }
+  /* 排序 */
+  if(t.dataset.sort){
+    const k=t.dataset.sort;
+    if(S.sort.key===k)S.sort.dir*=-1;
+    else S.sort={key:k,dir:(k==='name'||k==='rep'||k==='district')?1:-1};
+    render();return;
+  }
+  /* 動作 */
+  const a=t.dataset.act;
+  if(a==='close'){closeDrawer();return;}
+  if(a==='clear'){clearFilters();return;}
+  if(a==='reload'){
+    const back=S.scenario;S.scenario='loading';render();
+    setTimeout(()=>{S.scenario=back==='stale'?'normal':back;
+      document.querySelectorAll('.dev-b').forEach(b=>b.classList.toggle('on',b.dataset.scn===S.scenario));
+      render();toast('已更新');},1400);return;
+  }
+  if(a==='nogeo'){toast('原型示意：正式版會跳到「未定位客戶」清單供批次修正');return;}
+  if(a==='searchall'){S.f.q=$('q').value.trim();S.view='list';$('sugg').classList.remove('on');render();return;}
+  if(a==='copy'){
+    const c=CLIENTS.find(x=>x.id===t.dataset.id);if(!c)return;
+    const txt=summaryText(c);
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(txt).then(()=>toast('摘要已複製，可直接貼到 LINE')).catch(()=>toast('複製失敗，請手動選取'));
+    else toast('此瀏覽器不支援自動複製');
+    return;
+  }
+  if(a==='locate'){
+    const c=CLIENTS.find(x=>x.id===t.dataset.id);if(!c)return;
+    S.focusId=c.id;S.view='map';closeDrawer();render();return;
+  }
+});
+function clearFiltersSilent(){S.f={rep:'',status:'',district:'',flag:'',q:''};const q=$('q');if(q)q.value='';}
+
+document.addEventListener('change',e=>{
+  const f=e.target.dataset&&e.target.dataset.f;
+  if(!f)return;
+  S.f[f]=e.target.value;render();
+});
+$('scrim').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if($('sugg').classList.contains('on')){$('sugg').classList.remove('on');return;}
+    if(S.drawer)closeDrawer();
+  }
+  if(e.key==='/'&&document.activeElement!==$('q')){e.preventDefault();$('q').focus();}
+});
+$('q').addEventListener('input',renderSugg);
+$('q').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){S.f.q=$('q').value.trim();S.view='list';$('sugg').classList.remove('on');render();}
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))$('sugg').classList.remove('on');});
+
+/* 深淺色切換：自動 → 淺 → 深 */
+let _theme=0;const THEMES=[['','自動'],['light','淺色'],['dark','深色']];
+$('theme-btn').addEventListener('click',()=>{
+  _theme=(_theme+1)%3;
+  const[v,l]=THEMES[_theme];
+  if(v)document.documentElement.setAttribute('data-theme',v);
+  else document.documentElement.removeAttribute('data-theme');
+  $('theme-lab').textContent=l;
+  if(S.view==='map')render();
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   13. 啟動
+   ═══════════════════════════════════════════════════════════════════ */
+document.querySelectorAll('.dev-b').forEach(b=>b.classList.toggle('on',b.dataset.scn===S.scenario));
+render();
+</script>
+</body>
+</html>
