@@ -1494,9 +1494,9 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.08.14-z1';
-const REQUIRED_BACKEND_VER=2; // 低於此版本的後端會在測試連線時提示重新部署
-const APPS_SCRIPT_CODE=`const BACKEND_VER=2;   // 前端以 ping 比對，過舊會提示重新部署
+const APP_VERSION='v2026.08.18-z1';
+const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
+const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1535,6 +1535,7 @@ function handleRequest(e){
       case 'getSnapshot':   result=getSnapshot();break;
       case 'ping':          result={ok:true,ver:BACKEND_VER};break;
       case 'geocode':       result=geocodeAddr(body.addr);break;
+      case 'geocodeBatch':  result=geocodeBatchAddrs(body.addrs);break;
       default:              result={error:'Unknown action'};
     }
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
@@ -1568,6 +1569,13 @@ function geocodeAddr(addr){
   }catch(err){
     return{ok:false,status:'ERROR',message:String(err)};
   }
+}
+
+// 批次地址轉座標：一趟請求查多筆，省去每筆一次網路往返（既有客戶名單上圖用）。
+// 唯讀、不佔鎖。上限 40 筆／次（每筆約 0.2 秒，遠低於執行時間上限）；逐筆回 geocodeAddr 結果。
+function geocodeBatchAddrs(addrs){
+  var list=Array.isArray(addrs)?addrs.slice(0,40):[];
+  return{ok:true,results:list.map(function(a){return geocodeAddr(a);})};
 }
 
 function getSheet(){
@@ -3908,29 +3916,51 @@ let SHOPS_GEO_WORKING=false;
 function shopsGeoStatus(txt){const el=document.getElementById('map-shops-geo');if(el)el.textContent=txt||'';}
 async function ensureShopsGeo(){
   if(SHOPS_GEO_WORKING)return;
-  const todo=SHOPS.filter(s=>{
+  const need=s=>{
     const k=shopGeoKey(s);if(!k)return false;
     const g=SHOPS_GEO[k];
     return !g||(g.failed&&Date.now()-(g.at||0)>86400000);
-  });
+  };
+  let todo=SHOPS.filter(need);
   if(!todo.length)return;
   SHOPS_GEO_WORKING=true;
+  const total=todo.length;
+  const save=()=>{try{localStorage.setItem('duskin_shops_geo',JSON.stringify(SHOPS_GEO));}catch(e){}};
+  const paint=()=>{if(MAP_STATE.view==='map'&&MAP_STATE.layers.shops)renderMapMarkers();};
+  const tick=()=>{const left=SHOPS.filter(need).length;shopsGeoStatus('既有客戶定位中 '+(total-left)+'/'+total+'…');};
+  tick();
+  // ① 批次走後端 Google（BACKEND_VER≥3）：一趟往返查 40 筆——網路來回次數才是慢的主因
+  let batchOk=true;
+  while(batchOk&&todo.length&&MAP_STATE.layers.shops){
+    const batch=todo.slice(0,40);
+    try{
+      const res=await api({action:'geocodeBatch',addrs:batch.map(s=>normalizeAddr(ensureCityPrefix(s.addr)))});
+      if(!res||!res.ok||!Array.isArray(res.results))throw new Error('unsupported');
+      batch.forEach((s,i)=>{
+        const r=res.results[i];
+        if(r&&r.ok&&typeof r.lat==='number'&&typeof r.lng==='number')
+          SHOPS_GEO[shopGeoKey(s)]={lat:r.lat,lng:r.lng,at:Date.now()};
+        // Google 查無 → 先不標 failed，留給下面的單筆 Nominatim 撿
+      });
+      todo=todo.slice(batch.length);
+      save();paint();tick();
+    }catch(e){batchOk=false;} // 後端太舊／離線 → 剩下的改走單筆
+  }
+  // ② 單筆補漏：批次不可用時的全部、或 Google 查無的少數（Nominatim 需 ≤1 req/sec）
+  todo=SHOPS.filter(need);
   let done=0;
   for(const s of todo){
     if(!MAP_STATE.layers.shops)break; // 圖層被關掉就停，下次再開續跑
     let coord=null,viaGoogle=false;
-    try{coord=await googleGeocode(s.addr);if(coord)viaGoogle=true;}catch(e){}
+    if(!batchOk){try{coord=await googleGeocode(s.addr);if(coord)viaGoogle=true;}catch(e){}}
     if(!coord){try{coord=await nominatimGeocode(s.addr);}catch(e){}}
     SHOPS_GEO[shopGeoKey(s)]=coord?{lat:coord.lat,lng:coord.lng,at:Date.now()}:{failed:1,at:Date.now()};
     done++;
-    shopsGeoStatus('既有客戶定位中 '+done+'/'+todo.length+'…');
-    if(done%10===0||done===todo.length){
-      try{localStorage.setItem('duskin_shops_geo',JSON.stringify(SHOPS_GEO));}catch(e){}
-      if(MAP_STATE.view==='map'&&MAP_STATE.layers.shops)renderMapMarkers();
-    }
+    tick();
+    if(done%10===0||done===todo.length){save();paint();}
     if(done<todo.length)await new Promise(r=>setTimeout(r,viaGoogle?150:1100));
   }
-  try{localStorage.setItem('duskin_shops_geo',JSON.stringify(SHOPS_GEO));}catch(e){}
+  save();
   SHOPS_GEO_WORKING=false;
   shopsGeoStatus('');
   if(MAP_STATE.view==='map')renderMapMarkers();

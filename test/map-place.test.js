@@ -130,12 +130,25 @@ const w = dom.window;
   w.mainConvertSite('sA'); await wait(50);
   assert('工地轉成正規客戶（座標沿用 manual）', w.eval('DB.clients.some(c=>c.srcSiteId==="sA"&&c.geocodeSource==="manual")'));
   assert('轉檔後工地點從圖上消失', w.eval('MAP_STATE.markers.length') === 1);
-  // 名單多了一家沒定位過的 → ensureShopsGeo 走 Nominatim（stub fetch）補定位並快取
+  // 名單多了一家沒定位過的、後端太舊（fetch 回非批次格式）→ 退回單筆 Nominatim 補定位並快取
   w.fetch = async () => ({ ok: true, json: async () => [{ lat: '22.97', lon: '120.20' }] });
   w.eval(`SHOPS.push({name:'新開的店',phone:'',addr:'臺南市南區新興路5號',owner:'',revenue:''})`);
   await w.ensureShopsGeo(); await wait(50);
-  assert('新地址定位成功並寫入快取', JSON.parse(store['duskin_shops_geo'] || '{}')[w.eval('shopGeoKey(SHOPS[1])')].lat === 22.97);
+  assert('後端太舊 → 退回單筆定位並寫入快取', JSON.parse(store['duskin_shops_geo'] || '{}')[w.eval('shopGeoKey(SHOPS[1])')].lat === 22.97);
   assert('新店家出現在圖上', w.eval('MAP_STATE.markers.length') === 2);
+
+  console.log('P1 — 批次定位（後端 BACKEND_VER≥3，一趟往返查一批）');
+  w.fetch = async (u, o) => {
+    const b = o && o.body ? JSON.parse(o.body) : {};
+    if (b.action === 'geocodeBatch') return { ok: true, json: async () => ({ ok: true, results: b.addrs.map(() => ({ ok: true, status: 'OK', lat: 22.96, lng: 120.19 })) }) };
+    throw new Error('unexpected ' + b.action);
+  };
+  w.eval(`SHOPS.push({name:'批次店1',addr:'臺南市北區公園路10號'},{name:'批次店2',addr:'臺南市中西區民族路20號'})`);
+  await w.ensureShopsGeo(); await wait(30);
+  const geo = JSON.parse(store['duskin_shops_geo']);
+  assert('兩家一趟批次定位完成並快取', geo[w.eval('shopGeoKey(SHOPS[2])')].lat === 22.96 && geo[w.eval('shopGeoKey(SHOPS[3])')].lat === 22.96);
+  assert('圖上跟著多兩點', w.eval('MAP_STATE.markers.length') === 4);
+  assert('已定位過的不再重查（need 過濾）', (await w.ensureShopsGeo(), w.eval('MAP_STATE.markers.length')) === 4);
 
   console.log(failed ? 'P1 FAILED ✗ (' + failed + ')' : 'P1 PASSED ✅');
   process.exit(failed ? 1 : 0);
