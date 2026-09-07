@@ -54,7 +54,7 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('HPL 週期 2W', T.catalogInfo('HPL').cycle, '2W');
   eq('不存在代號 → null', T.catalogInfo('NOPE-XYZ'), null);
   const keep = dome.price; dome.price = 0;
-  eq('主系統定價 0 → 退回合約商品庫 DOME 200', T.catalogInfo('DOME').price, 200);
+  eq('主系統定價 0 → 退回合約商品庫 DOME 220', T.catalogInfo('DOME').price, 220);
   dome.price = 999;
   eq('改主系統價 → 報價跟著變（單一來源）', T.catalogInfo('DOME').price, 999);
   dome.price = keep;
@@ -130,6 +130,46 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   sel.value = '2W'; sel.dispatchEvent(new w.Event('change', { bubbles: true }));
   await wait(20);
   eq('手填單價換週期 → 保留 250', Number(w.document.querySelectorAll('#cmw-items .cm-item input[type=number]')[1].value), 250);
+
+  console.log('C5 — 地墊 4W：不預設打折、只顯示建議 8 折；DOME 正名');
+  eq('displayFw4 地墊 4W ＝ 2W價×2（340，不再自動 8 折）', w.displayFw4('DECSR', 1, '4W'), 340);
+  eq('displayFw4 地墊 2W ＝ 340', w.displayFw4('DECSR', 1, '2W'), 340);
+  eq('refRate 地墊 4W → 0.8', w.refRate('DECSR', '4W'), 0.8);
+  eq('refRate 地墊 2W → 0.9', w.refRate('DECSR', '2W'), 0.9);
+  eq('refRate 非地墊 → 0.9', w.refRate('DOME', '4W'), 0.9);
+  eq('refQuote 地墊 4W 兩片 = 680×0.8', w.refQuote('DECSR', 2, '4W'), 544);
+  eq('mat4WSuggest 地墊 4W 建議單價 272', T.mat4WSuggest('DECSR', '4W'), 272);
+  eq('mat4WSuggest 地墊 2W → null', T.mat4WSuggest('DECSR', '2W'), null);
+  eq('mat4WSuggest DOME → null', T.mat4WSuggest('DOME', '4W'), null);
+  eq('DOME 品名＝網狀尿石去除劑 40g', dome.desc, '網狀尿石去除劑 40g');
+  eq('DOME 價格 220', dome.price, 220);
+  eq('合約內建庫 DOME 也是 220', T.CATALOG.products.DOME.price, 220);
+  // 合約精靈：地墊 4W 列顯示建議 8 折提示、單價欄仍是原價 340（不預設帶折扣）
+  DB.clients.push({ id: 'cm-mat', name: '地墊店', status: '試用中', trialItems: [{ product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 }, { product: 'DOME', qty: 1, cycle: '2W', quoted: 0 }], todos: [], visits: [], updatedAt: 1 });
+  S.curIdx = DB.clients.length - 1;
+  w.ContractMaker.openContract();
+  w.document.getElementById('cmw-next-btn').click();
+  await wait(50);
+  const matRows = w.document.querySelectorAll('#cmw-items .cm-item');
+  eq('地墊 4W 單價欄＝340（原價）', Number(matRows[0].querySelectorAll('input[type=number]')[1].value), 340);
+  assert('地墊 4W 列有建議 8 折提示', /建議契約單價 \$272/.test(matRows[0].textContent), matRows[0].textContent);
+  assert('DOME 列沒有 8 折提示', !/8折/.test(matRows[1].textContent));
+  // 客戶卡：報價欄 placeholder＝建議價、標示「建議8折」
+  w.openCD(S.curIdx); w.openCDItems();   // 客戶卡 → 編輯品項 modal（試用品項列在這裡）
+  await wait(50);
+  const cardTxt = w.document.getElementById('cdm-items').textContent || '';
+  assert('客戶卡地墊 4W 顯示 建議8折 $272', /建議8折 \$272/.test(cardTxt), cardTxt.slice(0, 200));
+
+  console.log('C5 — migration v9：舊資料的 DOME 品名自動正名並同步上雲');
+  const oldProducts = JSON.parse(JSON.stringify(w.eval('DEFAULT_PRODUCTS')));
+  oldProducts.find(p => p.code === 'DOME').desc = '大型香水芳香劑 300ml';
+  const w2 = boot({ duskin_v2: JSON.stringify({ clients: [], inventory: [], products: oldProducts, gtodos: [], sheetUrl: 'https://script.google.com/macros/s/x/exec' }), migration_v: '8' });   // 有設雲端才會入列推送
+  await wait(300);
+  const dome2 = w2.getProd('DOME');
+  eq('v9 後 DOME 品名正名', dome2.desc, '網狀尿石去除劑 40g');
+  eq('v9 後 DOME 價格不動', dome2.price, 220);
+  const outbox2 = JSON.parse(w2.localStorage.getItem('duskin_outbox') || '[]');
+  assert('商品庫變更進待推送佇列（saveProducts）', outbox2.some(o => o.action === 'saveProducts'), JSON.stringify(outbox2).slice(0, 120));
 
   console.log('C5 — 工業區對話框要疊在全域底部導覽之上（nav.js z-index:120）');
   const iz = fs.readFileSync(path.join(ROOT, 'izcrm.html'), 'utf8');
