@@ -182,9 +182,19 @@ Item:    { name(=product code), stock, std(標準配備數), cat }
 
 `BUNDLE_MAP` 定義主商品自動附帶的免費配件（如 S-20 → SHB 拖把頭）與芳香機口味選擇規則。
 
-### 金額算法（唯一入口 `displayFw4`）
+### 金額算法（商品價格邏輯）
 
-更換週期 1/2/4 週 → 每 4 週更換 4/2/1 次；**4W 金額＝契約單價 × 次數 × 數量**；遺失賠償費單價＝每件 4W 金額 × 5。
+**`Product.price` 是該商品「自身週期」（`Product.cycle`）下的每次更換單價（含稅）**：地墊／拖把多為 2W 價、芳香（DOME、AFDW…）為 4W 價。
+定價來源以 App「商品」頁（`DB.products`，同步到 Sheet `products` 分頁）為準；ContractMaker 內建的 `CM_CATALOG` 只補品名／分類／不在主系統的品項（HPL/HPS 訂做地墊）與後援價。
+
+| 場景 | 入口 | 規則 |
+|------|------|------|
+| 客戶卡試用／成約品項、報表 | `displayFw4(code, qty, cycle)` → `itemFW4` → `calcFW4` | 4W 金額＝price × 次數(商品週期) × 數量；`quoted`（整列 4W 議價）優先。**地墊選 4W 換：price×2×0.8**（僅此處有 0.8 折）。4W 推進表 `calcReportAmt` 一律以 2W 原價計 |
+| 報價精靈／合約精靈的每次更換單價 | `cmCatalogInfo(code)` → `cmCatalogUnit(price, prodCycle, cycle)` | 換得比商品週期更久（2W 商品選 4W）→ price × 倍數；換得一樣或更勤（4W 商品選 4W、2W 商品選 1W）→ price 不變。客戶卡帶入時 4W 商品一律 4W（`cmItemCycle`，客戶卡只讓地墊選週期） |
+| 每 4 週金額 | `CM_engine.expandItem`／`cmwBuildContractData` | 更換週期 1/2/4 週 → 每 4 週更換 4/2/1 次（`cmChangesPer4W`）；**4W 金額＝每次更換單價 × 次數 × 數量**（只在這裡乘一次）；遺失賠償費單價＝每件 4W 金額 × 5 |
+| 客戶卡有議價 `quoted` | `clientToCMConfig`／`cmwInit` | 每次更換單價＝quoted ÷（次數 × 數量）；不標 `_unitAuto`，換週期不重算 |
+
+自動帶入的單價標 `_unitAuto`，換週期時依上表重算；手填過就保留。
 
 ---
 
