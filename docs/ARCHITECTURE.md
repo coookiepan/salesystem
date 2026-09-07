@@ -447,6 +447,19 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 
 ## 工地地圖 子系統（sitemap.html）
 
+### 快拍（draft）與定位追蹤
+
+- **快拍**：`quickSnap()` 同時 `getFix()`（追蹤中的最近定位 ≤20 s 直接用，否則 `locateMe`）與開相機；
+  `onSnapPhoto` → `readPhoto`（壓到 ≤46KB，與表單共用）→ `createSnapSite(photo, fix)` 直接存
+  `{draft:true, stage:'施工中', type:'不確定', openDate:+30d, name:'快拍 MM/DD HH:mm'}`，不開表單；
+  沒定位時放地圖中心並標 `src:'map'`。行政區以 `getDistrict` 背景補上再 push。
+- **待補**：`drafts()`／`renderDraftBar()`（`renderMarkers` 尾端一併更新）／篩選 `draft`／`nextDraft()` 開最舊一筆；
+  `openForm` 對 draft 標題「補快拍資料」、店名留空讓自動命名接手；`saveSite` 重建物件時不帶 `draft` 即完成。
+- **調整位置**：`movePosition()` 記 `placeForId` → 放點模式 → `confirmPlace()` 以 `openForm(id, latlng)` 回同一筆；`src:'drag'`。
+- **定位追蹤**：`setMe(pos)` 唯一入口（藍點 `meMarker`＋精度圈 `meCircle`＋`meFix`）；啟動先 `locateMe` 一次再 `startWatch()`
+  （`watchPosition`），`visibilitychange` 背景停／前景續；◎＝`toggleFollow()`（`followMe` 時 `panTo`，`dragstart` 取消）。
+  主系統客戶地圖同模式：`ME`／`meUpdate`／`meStart`／`meStop`，`setClientView('map')` 開、離開或背景停。
+
 登記「正在施工裝修的店面」（未來新店＝潛在客戶）。與 izcrm 同樣是**單檔子系統＋柔性接點**：
 
 1. 查詢頁／設定頁入口按鈕（`<a href="sitemap.html">`）；sitemap 設定頁有「回主系統」連結。

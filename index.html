@@ -411,6 +411,7 @@ tbody tr:hover{background:var(--surface-hover)}
 .cv-sw.on{background:var(--bg);color:var(--text);box-shadow:var(--shadow-sm)}
 .cv-sw svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #leaflet-map{width:100%;height:calc(100vh - 280px);min-height:420px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);z-index:1}
+.me-dot{width:16px;height:16px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 2px rgba(42,107,176,.35),0 2px 5px rgba(0,0,0,.3)}
 .leaflet-container{font-family:inherit!important;font-size:13px}
 .leaflet-popup-content-wrapper{border-radius:var(--r-sm)!important;box-shadow:var(--shadow-md)!important;padding:0;background:var(--bg);color:var(--text)}
 .leaflet-popup-content{margin:14px 16px!important;line-height:1.5}
@@ -1494,7 +1495,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.09.07-c1';
+const APP_VERSION='v2026.09.07-m1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -3891,14 +3892,33 @@ function initMap(){
   new LocateCtrl({position:'topright'}).addTo(MAP_STATE.map);
 }
 
+// ── 我的位置：地圖開著時持續追蹤（藍點＋精度圈）；關地圖或切到背景就停，省電 ──
+const ME={marker:null,circle:null,watchId:null,fix:null};
+function meUpdate(pos){
+  ME.fix={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:Math.round(pos.coords.accuracy),ts:Date.now()};
+  if(!MAP_STATE.map) return;
+  const ll=[ME.fix.lat,ME.fix.lng];
+  if(!ME.marker){
+    let blue='#2A6BB0'; try{blue=getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()||blue;}catch(e){}
+    ME.circle=L.circle(ll,{radius:ME.fix.acc,color:blue,weight:1,fillColor:blue,fillOpacity:.12,interactive:false}).addTo(MAP_STATE.map);
+    ME.marker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,zIndexOffset:-100}).addTo(MAP_STATE.map);
+  }else{ME.marker.setLatLng(ll);ME.circle.setLatLng(ll);ME.circle.setRadius(ME.fix.acc);}
+}
+function meStart(){
+  if(ME.watchId!=null||!navigator.geolocation||!navigator.geolocation.watchPosition)return;
+  ME.watchId=navigator.geolocation.watchPosition(meUpdate,()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+}
+function meStop(){if(ME.watchId!=null&&navigator.geolocation){navigator.geolocation.clearWatch(ME.watchId);ME.watchId=null;}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(MAP_STATE.view==='map')meStart();}else meStop();});
 function goToMyLocation(){
   if(!navigator.geolocation){showToast('此瀏覽器不支援定位');return;}
+  const go=()=>{if(MAP_STATE.map)MAP_STATE.map.setView([ME.fix.lat,ME.fix.lng],Math.max(MAP_STATE.map.getZoom(),16));};
+  if(ME.fix&&Date.now()-ME.fix.ts<15000){go();return;}   // 追蹤中的最近一筆夠新，不用再等
   showToast('定位中…');
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const {latitude,longitude}=pos.coords;
-    if(MAP_STATE.map) MAP_STATE.map.setView([latitude,longitude],15);
-  },err=>appAlert('無法取得位置：'+err.message+'\n請確認已允許定位權限。'),
+  navigator.geolocation.getCurrentPosition(pos=>{meUpdate(pos);go();},
+  err=>appAlert('無法取得位置：'+err.message+'\n請確認已允許定位權限。'),
   {enableHighAccuracy:true,timeout:10000,maximumAge:30000});
+  meStart();
 }
 
 // ── Render markers ────────────────────────────────────────
@@ -4270,9 +4290,11 @@ function setClientView(v){
   MAP_STATE.view=v;
   document.getElementById('view-list').style.display=v==='list'?'block':'none';
   document.getElementById('view-map').style.display=v==='map'?'block':'none';
+  if(v!=='map') meStop();
   if(v==='map'){
     // Lazy init map on first open
     initMap();
+    meStart();
     // 觸發 size 重新計算（hidden → shown 時 Leaflet 需要 invalidateSize）
     setTimeout(()=>{
       if(MAP_STATE.map) MAP_STATE.map.invalidateSize();
@@ -5225,8 +5247,9 @@ function rptVisitsInRange(c,from,to){
 
 // 大客戶門檻：4W ≥ 3000
 const RPT_VIP_THRESHOLD=3000;
-// 單筆 visit 對應日報動作代號：初/複/報/試/約
+// 單筆 visit 對應日報動作代號：初/複/報/試/約/拒
 function rptVisitAction(sc){
+  if(sc===STATUS.REFUSE) return '拒';
   if(sc===STATUS.FIRST) return '初';
   if(sc===STATUS.REVISIT) return '複';
   if(sc===STATUS.QUOTE) return '報';
@@ -5329,7 +5352,7 @@ function genReport(){
   //   縱向逐筆：每次拜訪一列
   //   起始週：以 from 那天往前推到當週週一（涵蓋整週週一~週日）
   //   欄位：NO / 客戶名稱 / 日期 / 提案商品 / 狀態 / 備註 / 預估 4W
-  //   預估 4W：僅 [試] 動作有值（用 calcReportAmt(c)，為合計試用額用）
+  //   預估 4W：僅 [試] 動作有值（用 calcReportAmt(c)，為合計試用額用）；[拒] 一律空
   // ═════════════════════════════════════════════
   const fromD=new Date(from+'T00:00:00');
   const dowOffset=(fromD.getDay()+6)%7; // 週一=0
@@ -5340,10 +5363,10 @@ function genReport(){
     weekDates.push(rptFmt(d));
   }
   const weekSet=new Set(weekDates);
-  // 攤平：每次拜訪一筆（拒絕的客戶整筆排除）
+  // 攤平：每次拜訪一筆。被拒絕的店家也要記（跑過就是跑過；動作代號「拒」），
+  // 只是推進表／未來兩週不再列它（那兩份看的是還有機會的店）
   const visitRows=[];
   DB.clients.forEach(c=>{
-    if(c.status===STATUS.REFUSE) return;
     (c.visits||[]).forEach(v=>{
       if(v&&v.date&&weekSet.has(v.date)){
         visitRows.push({c,v});

@@ -36,6 +36,7 @@ function makeL(w) {
     map: () => new LMap(),
     tileLayer: () => ({ addTo: () => ({}) }),
     marker: (ll, opt) => new Marker(ll, opt),
+    circle: (ll, opt) => new Marker(ll, opt),
     divIcon: o => o,
     latLng: (a, b) => ({ lat: a, lng: b }),
     Control: { extend: def => function () { this.addTo = () => ({}); Object.assign(this, def); } },
