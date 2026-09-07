@@ -28,6 +28,7 @@ DUSKIN 銷售系統是單檔 PWA，幾乎所有程式都在 `index.html`（內�
 | `GUIDE.md` | 非技術使用者 | 從零設定教學、功能說明、FAQ |
 | `CHANGELOG.md` | 使用者 | 版本更新紀錄（白話「你會感覺到什麼」） |
 | `docs/ARCHITECTURE.md` | 開發者 | 資料模型、同步機制、程式區段地圖、發版流程 |
+| `docs/ROLLOUT.md` | 維護者／決策者 | 跨區推廣體檢：寫死台南的位置清單、多人導入差異、分階段路線、待確認問題 |
 | `test/README.md` | 開發者 | 各測試檔職責、寫新測試的慣例 |
 | `CLAUDE.md` | Claude／維護者 | 本檔：慣例與紅線 |
 
