@@ -150,6 +150,14 @@ const w = dom.window;
   assert('圖上跟著多兩點', w.eval('MAP_STATE.markers.length') === 4);
   assert('已定位過的不再重查（need 過濾）', (await w.ensureShopsGeo(), w.eval('MAP_STATE.markers.length')) === 4);
 
+  console.log('P1 — 既有客戶聚合（markercluster；stub 前的斷言即「套件沒載到退回直畫」路徑）');
+  w.L.markerClusterGroup = o => ({ _n: 0, options: o, addLayer(m) { this._n++; return this; } });
+  w.renderMapMarkers();
+  assert('4 家店進聚合群組（不再逐點掛地圖）', w.eval('MAP_STATE.shopCluster&&MAP_STATE.shopCluster._n') === 4);
+  assert('點數統計含聚合內店家', w.document.getElementById('map-count').textContent === String(w.eval('MAP_STATE.markers.length') + 4));
+  w.toggleMapLayer('shops', w.document.getElementById('map-layer-shops')); await wait(30);
+  assert('關掉圖層 → 聚合群組移除', w.eval('MAP_STATE.shopCluster') === null);
+
   console.log(failed ? 'P1 FAILED ✗ (' + failed + ')' : 'P1 PASSED ✅');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('  ✗ exception:', e); process.exit(1); });

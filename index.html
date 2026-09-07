@@ -21,6 +21,10 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 </script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- 既有客戶圖層聚合（Leaflet.markercluster 1.5.3，自架於 vendor/ → 同源快取、離線可用） -->
+<link rel="stylesheet" href="vendor/MarkerCluster.css"/>
+<link rel="stylesheet" href="vendor/MarkerCluster.Default.css"/>
+<script src="vendor/leaflet.markercluster.js"></script>
 <link rel="stylesheet" href="tokens.css">
 <script src="nav.js" data-page="clients" defer></script>
 <style>
@@ -454,6 +458,9 @@ tbody tr:hover{background:var(--surface-hover)}
 .seg-ic{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-1px;color:var(--text3)}
 .duskin-marker.geo-approx{border-style:dashed;opacity:.85} /* 模糊定位（路段/概略）→ 虛線框提示可修正 */
 .duskin-marker.sq{border-radius:4px} /* 方形＝工地圖層（與客戶圓點區分） */
+/* 既有客戶聚合泡泡：覆蓋 MarkerCluster.Default.css 的黃綠預設，統一用既有客戶綠 */
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(47,125,109,.25)}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:rgba(47,125,109,.85);color:#fff;font-weight:600}
 /* 工地地圖模式：地圖上直接建檔（FAB＋確認列覆蓋於地圖之上，z>1 即可蓋過 #leaflet-map） */
 #map-stage{position:relative}
 #map-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;background:var(--green);color:#fff;border:none;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;font-family:inherit;box-shadow:var(--shadow-md);cursor:pointer;display:flex;align-items:center;gap:6px}
@@ -1494,7 +1501,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.08.18-z1';
+const APP_VERSION='v2026.09.07-z1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -3604,7 +3611,7 @@ const BASEMAPS=[
   {key:'osm',   name:'OSM 街道圖',          url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom:19, attr:'&copy; OpenStreetMap'}
 ];
 let MAP_STATE={view:'list', map:null, markers:[], pinDropFor:null, pinDropHandler:null, filter:'all', markersById:{}, basemap:null, baseLayer:null, dragMarker:null,
-  layers:{dev:true,shops:false,sites:false}};
+  layers:{dev:true,shops:false,sites:false}, shopCluster:null};
 try{const sv=JSON.parse(localStorage.getItem('duskin_map_layers')||'null');if(sv)MAP_STATE.layers=Object.assign(MAP_STATE.layers,sv);}catch(e){}
 function syncMapLayerBar(){
   ['dev','shops','sites'].forEach(k=>{
@@ -4017,15 +4024,24 @@ function renderMapMarkers(){
     if(c.id) MAP_STATE.markersById[c.id]=marker;
     bounds.push([c.lat,c.lng]);
   });
+  if(MAP_STATE.shopCluster){MAP_STATE.map.removeLayer(MAP_STATE.shopCluster);MAP_STATE.shopCluster=null;}
+  let shopCount=0;
   if(MAP_STATE.layers.shops){
+    // 聚合群組：幾百點縮小時合併成數字泡泡（拖動只搬群組不搬幾百個 DOM）；
+    // 套件沒載到（極舊快取）退回逐點直畫，功能不減只是多點會卡。
+    const cluster=(typeof L.markerClusterGroup==='function')
+      ?L.markerClusterGroup({maxClusterRadius:60,disableClusteringAtZoom:17,showCoverageOnHover:false})
+      :null;
     SHOPS.forEach(s=>{
       const g=SHOPS_GEO[shopGeoKey(s)];
       if(!g||g.failed)return;
       const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker" style="background:#2F7D6D"></div>',iconSize:[16,16],iconAnchor:[8,8]});
-      const m=L.marker([g.lat,g.lng],{icon}).addTo(MAP_STATE.map);
+      const m=L.marker([g.lat,g.lng],{icon});
       m.bindPopup(buildShopPopup(s),{maxWidth:280});
-      MAP_STATE.markers.push(m);bounds.push([g.lat,g.lng]);
+      if(cluster)cluster.addLayer(m);else{m.addTo(MAP_STATE.map);MAP_STATE.markers.push(m);}
+      bounds.push([g.lat,g.lng]);shopCount++;
     });
+    if(cluster){MAP_STATE.map.addLayer(cluster);MAP_STATE.shopCluster=cluster;}
   }
   if(MAP_STATE.layers.sites){
     mapSites().forEach(s=>{
@@ -4036,7 +4052,7 @@ function renderMapMarkers(){
     });
   }
   const cnt=document.getElementById('map-count');
-  if(cnt) cnt.textContent=MAP_STATE.markers.length;
+  if(cnt) cnt.textContent=MAP_STATE.markers.length+(MAP_STATE.shopCluster?shopCount:0);
   if(bounds.length&&!MAP_STATE._boundsFitted){
     MAP_STATE.map.fitBounds(bounds,{padding:[40,40],maxZoom:15});
     MAP_STATE._boundsFitted=true;
