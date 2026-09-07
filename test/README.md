@@ -29,6 +29,8 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 | `sitemap.test.js` | S1/S2 | 工地地圖：語法（含 GAS_CODE）、登記/60m 重複/離線佇列/LWW/tombstone/XSS、📇 建檔交接端對端（工地→主系統、冪等） |
 | `home.test.js` | H3 | 首頁樞紐：接點靜態檢查（start_url/sw/🏠 鈕/#place）、三系統數字鏡射正確性、空狀態、深連結（#daily/#trip/#new） |
 | `map-place.test.js` | P1 | 主系統工地地圖模式：FAB→GPS 抓點→拖圖釘→建檔表單→manual 座標入庫；取消路徑與暫存座標不外洩 |
+| `field-ops.test.js` | F2 | 外勤：工地快拍（存 draft／待補提示條與篩選／補資料清旗標／調整位置）、定位追蹤（藍點更新、跟隨、拖地圖取消）、日報納入拒絕（動作「拒」、4W 空） |
+| `contract-pricing.test.js` | C5 | 商品價格邏輯：`cmCatalogUnit`／`cmCatalogInfo`（主系統商品庫優先）／`cmItemCycle`、DOME 等 4W 商品不加倍、客戶卡帶入報價與合約精靈一致；合約精靈輸入單價不失焦；工業區對話框疊在底部導覽之上 |
 | `fusion.test.js` | F1 | 深度融合：segment 遷移/視角、自訂類別選項、統一行程（工地/工業區的今天）、主系統端轉為客戶＋回執信箱、首頁融合數字 |
 
 ## 寫新測試的慣例
