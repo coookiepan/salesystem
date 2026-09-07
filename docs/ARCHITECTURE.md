@@ -471,8 +471,10 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 4. **主系統地圖的工地圖層**：客戶地圖有可複選圖層列（開發客戶／既有客戶／工地，選擇存
    `duskin_map_layers`）。工地層以 `fusionSm()` 唯讀鏡射 sitemap 的點（方形標記、排除已刪除
    與已轉客戶者），彈窗可一鍵 `mainConvertSite()` 轉為客戶。既有客戶層畫的是公司名單
-   `SHOPS`（查詢頁那份）：名單只有地址，開圖層時批次定位（Google 經後端、退回 Nominatim），
-   座標以正規化地址為 key 快取在 `duskin_shops_geo`，重載名單只補新地址。
+   `SHOPS`（查詢頁那份）：名單只有地址，開圖層時批次定位（後端 `geocodeBatch` 一趟 40 筆、
+   太舊退回單筆 Google→Nominatim），座標以正規化地址為 key 快取在 `duskin_shops_geo`，
+   重載名單只補新地址。多點以 Leaflet.markercluster 聚合（自架於 `vendor/`、進 SW SHELL
+   預快取；套件沒載到時退回逐點直畫）。
    **座標沿用**：工地點是 GPS／拖曳定位 → 建入主系統時 `geocodeSource='manual'`，
    不會被 geocode 蓋掉；`nextdate`＝預計可拜訪日，到期自然進行程規劃。
 
