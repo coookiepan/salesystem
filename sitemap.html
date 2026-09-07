@@ -39,6 +39,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .leaflet-container{font-family:inherit}
 .pin{width:26px;height:26px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700}
 .pin.dim{opacity:.45}
+.pin.draft{border-style:dashed}
 .me-dot{width:16px;height:16px;border-radius:50%;background:#3C8DD9;border:3px solid #fff;box-shadow:0 0 0 2px rgba(60,141,217,.4),0 2px 5px rgba(0,0,0,.3)}
 
 /* ── 上方列 ── */
@@ -50,10 +51,16 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 #basemap-btn{position:absolute;right:10px;top:calc(96px + env(safe-area-inset-top));z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;box-shadow:var(--shadow);cursor:pointer;font-family:inherit}
 #locate-btn{position:absolute;right:10px;top:calc(142px + env(safe-area-inset-top));z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--border2);border-radius:var(--radius-sm);width:40px;height:40px;font-size:18px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center}
 
-/* ── FAB ── */
-#fab{position:absolute;right:14px;bottom:calc(80px + var(--safe-b));z-index:650;background:var(--green);color:#fff;border:none;border-radius:28px;height:56px;padding:0 22px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(29,158,117,.5);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px}
-#fab:active{transform:scale(.96)}
-#fab.busy{background:var(--text3);box-shadow:none}
+/* ── FAB 列：快拍（主）＋詳細登記（次） ── */
+#fabs{position:absolute;right:14px;bottom:calc(80px + var(--safe-b));z-index:650;display:flex;gap:8px;align-items:center}
+.fab{background:var(--green);color:#fff;border:none;border-radius:28px;height:56px;padding:0 20px;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(29,158,117,.5);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px}
+.fab:active{transform:scale(.96)}
+.fab.busy{background:var(--text3);box-shadow:none}
+.fab.alt{background:var(--bg);color:var(--text);border:1px solid var(--border2);box-shadow:var(--shadow-md);font-size:15px;padding:0 16px}
+.fab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#draft-bar{display:none;pointer-events:auto;margin-top:6px;align-items:center;justify-content:space-between;gap:8px;background:var(--amber-l);color:var(--amber-d);border:1px solid var(--amber-b);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;box-shadow:var(--shadow);cursor:pointer}
+#draft-bar b{font-size:15px}
+#locate-btn.on{border-color:var(--green);color:var(--green);box-shadow:var(--ring)}
 
 /* ── 放置模式提示條 ── */
 #place-bar{position:absolute;left:10px;right:10px;bottom:calc(80px + var(--safe-b));z-index:660;background:var(--bg);border-radius:var(--radius);box-shadow:0 4px 18px rgba(0,0,0,.25);padding:12px 14px;display:none}
@@ -126,11 +133,15 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 <div id="syncbar"></div>
 <div id="map"></div>
 
-<div id="topbar"><div id="filters"></div></div>
+<div id="topbar"><div id="filters"></div><div id="draft-bar" onclick="nextDraft()"></div></div>
 <button id="basemap-btn" onclick="cycleBasemap()">電子地圖</button>
-<button id="locate-btn" onclick="locateMe()">◎</button>
+<button id="locate-btn" onclick="toggleFollow()" title="我的位置（再按一次取消跟隨）">◎</button>
 
-<button id="fab" onclick="startPlaceGPS()"><span style="font-size:20px">＋</span>在這裡登記</button>
+<div id="fabs">
+  <button id="fab" class="fab alt" onclick="startPlaceGPS()"><span style="font-size:20px">＋</span>詳細登記</button>
+  <button id="snap-fab" class="fab" onclick="quickSnap()" title="拍一張就存，資料回頭再補"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>快拍</button>
+</div>
+<input type="file" id="snap-photo" accept="image/*" capture="environment" style="display:none" onchange="onSnapPhoto(this)">
 
 <div id="place-bar">
   <div id="place-msg"></div>
@@ -241,7 +252,10 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 <div class="modal-bg" id="form-modal">
   <div class="modal">
     <div class="modal-title" id="fm-title">登記工地</div>
-    <div class="modal-sub" id="fm-sub"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div class="modal-sub" id="fm-sub" style="flex:1;margin-bottom:0"></div>
+      <button class="btn btn-outline btn-xs" id="fm-move" style="display:none;flex-shrink:0" onclick="movePosition()">調整位置</button>
+    </div>
     <div id="fm-warn"></div>
 
     <div class="f">
@@ -304,7 +318,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
    底圖：內政部國土測繪中心 臺灣通用電子地圖 / 航照，皆免費免金鑰
    ══════════════════════════════════════════════════════════ */
 
-const APP_VER='v2026.07.28-s5';
+const APP_VER='v2026.09.07-s6';
 
 /* ── Apps Script 後端程式碼（設定頁可一鍵複製） ── */
 const GAS_CODE=[
@@ -413,6 +427,7 @@ const TYPES=['不確定','餐廳','飲料店','診所','補習班','美容美甲
 const DEFAULT_TOWNS=['永康區','東區','仁德區','新化區','善化區','新市區'];
 const FILTERS=[
   {k:'all',   n:'全部'},
+  {k:'draft', n:'待補資料'},
   {k:'todo',  n:'待開幕'},
   {k:'open',  n:'已開幕'},
   {k:'mine',  n:'我登記的'},
@@ -426,6 +441,8 @@ let CFG={url:'',me:'',towns:DEFAULT_TOWNS.slice(),basemap:0};
 let SYNC={state:'off',last:0,queue:[]};
 let filter='all';
 let map, markers={}, meMarker=null, meLatLng=null, tempMarker=null, placeMode=null;
+let meFix=null, meCircle=null, meWatchId=null, followMe=false;   // 持續定位（藍點＋精度圈）
+let placeForId=null;                                              // 「調整位置」中的工地 id
 let editId=null, formLatLng=null, formPhoto='', formStage='施工中', formType='不確定', formAcc=null, formSrc='gps';
 let baseLayers=[], baseIdx=0;
 const BASEMAPS=[
@@ -494,6 +511,7 @@ function initMap(){
   });
   document.getElementById('basemap-btn').textContent=BASEMAPS[baseIdx].n;
   map.on('click', e=>{ if(placeMode==='map') moveTemp(e.latlng); });
+  map.on('dragstart', ()=>{ if(followMe) setFollow(false); });   // 手動拖地圖＝不要再跟著我
   setTimeout(()=>map.invalidateSize(),200);
 }
 function cycleBasemap(){
@@ -503,17 +521,18 @@ function cycleBasemap(){
   CFG.basemap=baseIdx; save();
   document.getElementById('basemap-btn').textContent=BASEMAPS[baseIdx].n;
 }
-function pinIcon(st,dim){
+function pinIcon(st,dim,draft){
   const s=stageOf(st);
   return L.divIcon({
     className:'',
-    html:'<div class="pin'+(dim?' dim':'')+'" style="background:'+s.c+'">'+s.t+'</div>',
+    html:'<div class="pin'+(dim?' dim':'')+(draft?' draft':'')+'" style="background:'+s.c+'">'+(draft?'拍':s.t)+'</div>',
     iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-13]
   });
 }
 function visible(s){
   if(s.deleted) return false;
   if(filter==='all') return true;
+  if(filter==='draft') return !!s.draft;
   if(filter==='todo') return ['施工中','裝潢收尾','完工待開幕'].indexOf(s.stage)>=0;
   if(filter==='open') return s.stage==='已開幕';
   if(filter==='mine') return CFG.me && s.by===CFG.me;
@@ -524,10 +543,11 @@ function visible(s){
 function renderMarkers(){
   Object.keys(markers).forEach(id=>{ map.removeLayer(markers[id]); delete markers[id]; });
   DB.sites.filter(visible).forEach(s=>{
-    const m=L.marker([s.lat,s.lng],{icon:pinIcon(s.stage)}).addTo(map);
+    const m=L.marker([s.lat,s.lng],{icon:pinIcon(s.stage,false,s.draft)}).addTo(map);
     m.bindPopup(popupHtml(s));
     markers[s.id]=m;
   });
+  renderDraftBar();
 }
 function popupHtml(s){
   const st=stageOf(s.stage);
@@ -535,6 +555,7 @@ function popupHtml(s){
   return '<div class="pop-name">'+esc(s.name||'(未命名)')+'</div>'+
     '<div class="pop-sub">'+
       '<span class="badge" style="background:'+st.c+'">'+s.stage+'</span>'+
+      (s.draft?'<span class="badge" style="background:var(--amber)">待補資料</span>':'')+
       (s.type&&s.type!=='不確定'?'<span class="badge gray">'+esc(s.type)+'</span>':'')+
       '<br>'+esc([s.town,s.addr].filter(Boolean).join(' '))+
       (s.openDate?'<br>可拜訪：'+s.openDate:'')+
@@ -544,7 +565,7 @@ function popupHtml(s){
     (s.photo&&/^data:image\//.test(s.photo)?'<img src="'+s.photo+'" style="width:100%;border-radius:8px;margin-bottom:8px">':'')+
     '<div class="pop-actions">'+
       '<button class="btn btn-primary btn-xs" onclick="navTo(\''+s.id+'\')">導航</button>'+
-      '<button class="btn btn-outline btn-xs" onclick="editSite(\''+s.id+'\')">編輯</button>'+
+      '<button class="btn btn-outline btn-xs" onclick="editSite(\''+s.id+'\')">'+(s.draft?'補資料':'編輯')+'</button>'+
       (s.main&&s.main.clientId
         ?'<button class="btn btn-outline btn-xs" disabled>✓ 已建檔</button>'
         :'<button class="btn btn-outline btn-xs" onclick="toClient(\''+s.id+'\')">建檔到主系統</button>')+
@@ -573,19 +594,51 @@ function navTo(id){
   window.open('https://www.google.com/maps/dir/?api=1&destination='+s.lat+','+s.lng,'_blank');
 }
 
-/* ══════ 定位 ══════ */
+/* ══════ 定位：藍點＋精度圈持續更新，◎ 可切「跟著我」 ══════ */
+function cssColor(name,fallback){ try{ return getComputedStyle(document.documentElement).getPropertyValue(name).trim()||fallback; }catch(e){ return fallback; } }
+// 每次拿到定位都經這裡：更新我的位置、藍點與精度圈；跟隨模式時地圖跟著移
+function setMe(p){
+  meLatLng={lat:p.coords.latitude,lng:p.coords.longitude};
+  meFix={ll:meLatLng,acc:Math.round(p.coords.accuracy),ts:Date.now()};
+  if(!map) return;
+  const ll=[meLatLng.lat,meLatLng.lng];
+  if(!meMarker){
+    const blue=cssColor('--blue','#2A6BB0');
+    meCircle=L.circle(ll,{radius:meFix.acc,color:blue,weight:1,fillColor:blue,fillOpacity:.12,interactive:false}).addTo(map);
+    meMarker=L.marker(ll,{
+      icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]}),
+      zIndexOffset:-100, interactive:false
+    }).addTo(map);
+  }else{ meMarker.setLatLng(ll); meCircle.setLatLng(ll); meCircle.setRadius(meFix.acc); }
+  if(followMe) map.panTo(ll);
+}
+function startWatch(){
+  if(meWatchId!=null||!navigator.geolocation||!navigator.geolocation.watchPosition) return;
+  meWatchId=navigator.geolocation.watchPosition(setMe,()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+}
+function stopWatch(){ if(meWatchId!=null&&navigator.geolocation){ navigator.geolocation.clearWatch(meWatchId); meWatchId=null; } }
+function setFollow(on){
+  followMe=!!on;
+  document.getElementById('locate-btn').classList.toggle('on',followMe);
+}
+function toggleFollow(){
+  if(followMe){ setFollow(false); return; }
+  setFollow(true); startWatch();
+  if(meFix){ map.setView([meFix.ll.lat,meFix.ll.lng],Math.max(map.getZoom(),17)); }
+  else locateMe(ll=>{ if(ll&&followMe) map.setView([ll.lat,ll.lng],Math.max(map.getZoom(),17)); });
+}
+// 要一個夠新的定位：追蹤中的最近一筆（maxAge 毫秒內）直接用，不用再等；否則現抓一次
+function getFix(cb,maxAge){
+  if(meFix&&Date.now()-meFix.ts<(maxAge||20000)){ cb(meFix.ll,meFix.acc); return; }
+  locateMe(cb);
+}
 function locateMe(cb){
-  if(!navigator.geolocation){ toast('這台裝置不支援定位'); return; }
+  if(!navigator.geolocation){ toast('這台裝置不支援定位'); if(cb) cb(null,null); return; }
   toast('定位中…');
   navigator.geolocation.getCurrentPosition(
     p=>{
-      meLatLng={lat:p.coords.latitude,lng:p.coords.longitude};
-      const acc=Math.round(p.coords.accuracy);
-      if(meMarker) map.removeLayer(meMarker);
-      meMarker=L.marker([meLatLng.lat,meLatLng.lng],{
-        icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]}),
-        zIndexOffset:-100
-      }).addTo(map);
+      setMe(p);
+      const acc=meFix.acc;
       if(cb) cb(meLatLng,acc);
       else { map.setView([meLatLng.lat,meLatLng.lng], Math.max(map.getZoom(),17)); toast('定位精度約 '+acc+' 公尺'); }
     },
@@ -604,8 +657,8 @@ function locateMe(cb){
 function startPlaceGPS(){
   const fab=document.getElementById('fab');
   fab.classList.add('busy'); fab.textContent='定位中…';
-  locateMe((ll,acc)=>{
-    fab.classList.remove('busy'); fab.innerHTML='<span style="font-size:20px">＋</span>在這裡登記';
+  getFix((ll,acc)=>{
+    fab.classList.remove('busy'); fab.innerHTML='<span style="font-size:20px">＋</span>詳細登記';
     if(!ll){ startPlaceMap(); return; }
     formSrc='gps'; formAcc=acc;
     map.setView([ll.lat,ll.lng],18);
@@ -623,7 +676,7 @@ function openPlaceBar(msg){
   placeMode='map';
   document.getElementById('place-msg').innerHTML=msg;
   document.getElementById('place-bar').classList.add('on');
-  document.getElementById('fab').style.display='none';
+  document.getElementById('fabs').style.display='none';
 }
 function moveTemp(latlng){
   if(tempMarker){ tempMarker.setLatLng(latlng); return; }
@@ -635,16 +688,80 @@ function moveTemp(latlng){
   tempMarker.on('dragend',()=>{ formSrc='drag'; });
 }
 function cancelPlace(){
-  placeMode=null;
+  placeMode=null; placeForId=null;
   if(tempMarker){ map.removeLayer(tempMarker); tempMarker=null; }
   document.getElementById('place-bar').classList.remove('on');
-  document.getElementById('fab').style.display='flex';
+  document.getElementById('fabs').style.display='flex';
 }
 function confirmPlace(){
   if(!tempMarker) return;
-  const ll=tempMarker.getLatLng();
+  const ll=tempMarker.getLatLng(), id=placeForId;
   cancelPlace();
-  openForm(null, ll);
+  openForm(id, ll);   // id 有值＝既有工地換位置（快拍常見：從車上拍的，圖釘要拉到店門口）
+}
+// 表單裡「調整位置」：關表單→地圖放點模式（圖釘從原位開始）→確認後回到同一筆的表單
+function movePosition(){
+  const s=editId?DB.sites.find(x=>x.id===editId):null; if(!s) return;
+  placeForId=s.id; closeForm(); showPanel('map');
+  formSrc='drag'; formAcc=null;
+  map.setView([s.lat,s.lng],18);
+  moveTemp(L.latLng(s.lat,s.lng));
+  openPlaceBar('把圖釘<b>拖到店門口</b>（或在地圖上點一下），再按「位置就是這裡」。');
+}
+
+/* ══════ 快拍：停紅燈時一鍵拍照就存，資料回頭再補 ══════
+   按下去同時做兩件事：開相機、抓定位（追蹤中就直接用最近一筆，不用等）。
+   拍完立刻存成「待補資料」的工地（施工中／不確定／30 天後可拜訪），不開表單。
+   之後從地圖上方的提示條或「待補資料」篩選一筆筆補；補完 draft 旗標清掉。 */
+let snapFix=null, snapFixDone=false;
+function quickSnap(){
+  snapFix=null; snapFixDone=false;
+  getFix((ll,acc)=>{ snapFix=ll?{ll:ll,acc:acc}:null; snapFixDone=true; },20000);
+  document.getElementById('snap-photo').click();
+}
+function onSnapPhoto(input){
+  const f=input.files&&input.files[0]; input.value=''; if(!f) return;
+  readPhoto(f, photo=>{
+    const t0=Date.now();
+    (function waitFix(){   // 定位最多再等 8 秒；等不到先放地圖中心，補資料時用「調整位置」拉過去
+      if(snapFixDone||Date.now()-t0>8000){ createSnapSite(photo, snapFix); return; }
+      setTimeout(waitFix,200);
+    })();
+  });
+}
+function createSnapSite(photo, fix){
+  const now=Date.now(), d=new Date(now), p2=n=>String(n).padStart(2,'0');
+  const ll=fix?fix.ll:map.getCenter();
+  const s={
+    id:uid(),
+    name:'快拍 '+p2(d.getMonth()+1)+'/'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes()),
+    addr:'', town:'',
+    lat:+ll.lat.toFixed(6), lng:+ll.lng.toFixed(6),
+    acc:fix?fix.acc:null, src:fix?'gps':'map',
+    type:'不確定', stage:'施工中', openDate:plusDays(30), note:'',
+    photo:photo||'', by:CFG.me||'', created:now, updated:now, deleted:false,
+    draft:true
+  };
+  DB.sites.push(s);
+  save(); renderMarkers(); renderList();
+  push(s);
+  toast(fix?'✓ 快拍已存（定位約 '+fix.acc+' 公尺），回頭再補資料':'✓ 快拍已存（沒抓到定位，先放在地圖中心），補資料時記得「調整位置」',3400);
+  // 行政區背景判定，判到再補上（不擋存檔）
+  getDistrict(s.lng,s.lat).then(r=>{
+    if(r&&r.townName&&!s.town&&!s.deleted){ s.town=r.townName; s.updated=Date.now(); save(); renderList(); push(s); }
+  }).catch(()=>{});
+  return s;
+}
+function drafts(){ return DB.sites.filter(s=>!s.deleted&&s.draft); }
+function renderDraftBar(){
+  const el=document.getElementById('draft-bar'); if(!el) return;
+  const n=drafts().length;
+  el.style.display=n?'flex':'none';
+  if(n) el.innerHTML='<span>有 <b>'+n+'</b> 筆快拍還沒補資料</span><span>補資料 →</span>';
+}
+function nextDraft(){
+  const d=drafts().sort((a,b)=>(a.created||0)-(b.created||0))[0];
+  if(d) editSite(d.id);
 }
 
 /* ══════ 表單 ══════ */
@@ -664,11 +781,15 @@ function openForm(id, latlng){
   formLatLng = latlng || (s?L.latLng(s.lat,s.lng):null);
   if(!formLatLng) return;
 
-  document.getElementById('fm-title').textContent = s ? '編輯工地' : '登記工地';
+  const isDraft = !!(s && s.draft);
+  document.getElementById('fm-title').textContent = isDraft ? '補快拍資料' : s ? '編輯工地' : '登記工地';
   document.getElementById('fm-sub').textContent =
     formLatLng.lat.toFixed(5)+', '+formLatLng.lng.toFixed(5) +
-    (formAcc?'　（GPS 精度約 '+formAcc+' 公尺）':'');
-  document.getElementById('fm-name').value = s?s.name||'':'';
+    (formAcc?'　（GPS 精度約 '+formAcc+' 公尺）':'') +
+    (isDraft?'　·　'+s.name:'');
+  document.getElementById('fm-move').style.display = s ? 'inline-flex' : 'none';
+  // 快拍的名稱是暫時的時間戳，補資料時留空讓自動命名（或使用者填店名）接手
+  document.getElementById('fm-name').value = isDraft ? '' : (s?s.name||'':'');
   document.getElementById('fm-addr').value = s?s.addr||'':'';
   document.getElementById('fm-open').value = s?(s.openDate||''):plusDays(30);
   document.getElementById('fm-town').value = s?(s.town||''):'';
@@ -700,7 +821,7 @@ function openForm(id, latlng){
 function editSite(id){
   const s=DB.sites.find(x=>x.id===id); if(!s) return;
   if(map.closePopup) map.closePopup();
-  formAcc=null;
+  formAcc=null; formSrc=s.src||'gps';   // 純編輯不改座標來源
   openForm(id,null);
 }
 function closeForm(){ document.getElementById('form-modal').classList.remove('on'); editId=null; }
@@ -738,22 +859,25 @@ function checkTerritory(town){
 }
 
 /* ── 照片壓縮 ── */
-function onPhoto(input){
-  const f=input.files&&input.files[0]; if(!f) return;
+// 讀檔 → 壓到試算表一格放得下（≤ 46KB）；表單與快拍共用
+function readPhoto(f,cb){
   const img=new Image();
   const rd=new FileReader();
   rd.onload=e=>{
     img.onload=()=>{
-      formPhoto=squash(img,480,0.55);
-      if(formPhoto.length>42000) formPhoto=squash(img,340,0.45);
-      if(formPhoto.length>42000) formPhoto=squash(img,260,0.4);
-      if(formPhoto.length>46000){ formPhoto=''; toast('照片太大存不進試算表，已略過'); }
-      showPhoto();
+      let p=squash(img,480,0.55);
+      if(p.length>42000) p=squash(img,340,0.45);
+      if(p.length>42000) p=squash(img,260,0.4);
+      if(p.length>46000){ p=''; toast('照片太大存不進試算表，已略過'); }
+      cb(p);
     };
     img.src=e.target.result;
   };
   rd.readAsDataURL(f);
-  input.value='';
+}
+function onPhoto(input){
+  const f=input.files&&input.files[0]; input.value=''; if(!f) return;
+  readPhoto(f, p=>{ formPhoto=p; showPhoto(); });
 }
 function squash(img,maxW,q){
   const sc=Math.min(1,maxW/img.width);
@@ -830,6 +954,7 @@ function renderList(){
         '<div class="site-sub">'+esc([s.town,s.addr].filter(Boolean).join(' ')||'—')+
           (s.openDate?'　·　可拜訪 '+s.openDate:'')+'</div>'+
         '<div><span class="badge" style="background:'+st.c+'">'+s.stage+'</span>'+
+          (s.draft?'<span class="badge" style="background:var(--amber)">待補資料</span>':'')+
           (s.type&&s.type!=='不確定'?'<span class="badge gray">'+esc(s.type)+'</span>':'')+
           (s.by?'<span class="badge gray">'+esc(s.by)+'</span>':'')+'</div>'+
       '</div>'+
@@ -855,7 +980,7 @@ function showPanel(p){
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));
   document.getElementById('nav-'+p).classList.add('on');
-  const mapUI=['topbar','basemap-btn','locate-btn','fab'];
+  const mapUI=['topbar','basemap-btn','locate-btn','fabs'];
   if(p==='map'){
     mapUI.forEach(id=>document.getElementById(id).style.display='');
     document.getElementById('fab').style.display = placeMode?'none':'flex';
@@ -1073,8 +1198,9 @@ if(location.hash!=='#place'){
 // 開場：先拉雲端，再定位到自己
 if(CFG.url){ pullAll(true).then(()=>flushQueue()); }
 setTimeout(()=>{
-  locateMe((ll)=>{ if(ll){ map.setView([ll.lat,ll.lng],16); renderList(); } });
+  locateMe((ll)=>{ if(ll){ map.setView([ll.lat,ll.lng],16); renderList(); } startWatch(); });
 },600);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') startWatch(); else stopWatch(); });
 window.addEventListener('online',()=>{ flushQueue(); pullAll(true); });
 setInterval(()=>{ if(CFG.url&&navigator.onLine) pullAll(true); },180000);
 

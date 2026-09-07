@@ -191,7 +191,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
    duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
    只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
    ══════════════════════════════════════════════════════════ */
-const HOME_VERSION='v2026.08.11-h1';
+const HOME_VERSION='v2026.09.07-h1';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readJSON(key,fallback){
@@ -327,7 +327,8 @@ if(sites.length){
   const openSoon=sites.filter(s=>['施工中','裝潢收尾','完工待開幕'].indexOf(s.stage)>=0).length;
   const in7=ymd(new Date(now.getTime()+7*864e5));
   const visitable=sites.filter(s=>s.openDate&&s.openDate>=TODAY&&s.openDate<=in7&&['已拜訪','不適合'].indexOf(s.stage)<0).length;
-  document.getElementById('a-site').textContent='待開幕 '+openSoon+(visitable?' · 本週可拜訪 '+visitable:'');
+  const drafts=sites.filter(s=>s.draft).length;
+  document.getElementById('a-site').textContent='待開幕 '+openSoon+(visitable?' · 本週可拜訪 '+visitable:'')+(drafts?' · 快拍待補 '+drafts:'');
 }else if(sm){
   document.getElementById('a-site').textContent='還沒有登記的工地';
 }

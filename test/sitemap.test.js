@@ -31,13 +31,14 @@ function makeL(w) {
     addTo(m) { if (m && m._markers) m._markers.push(this); return this; }
     bindPopup(h) { this._popup = h; return this; }
     setLatLng(ll) { this._ll = ll.lat !== undefined ? ll : { lat: ll[0], lng: ll[1] }; return this; }
+    setRadius(r) { this._r = r; return this; }
     getLatLng() { return this._ll; }
     on(ev, fn) { this._ev[ev] = fn; return this; }
     off(ev) { delete this._ev[ev]; }
   }
   class LMap {
     constructor() { this._markers = []; this._h = {}; }
-    setView() { return this; } getZoom() { return 16; } getCenter() { return { lat: 23.02, lng: 120.25 }; }
+    setView() { return this; } panTo() { return this; } getZoom() { return 16; } getCenter() { return { lat: 23.02, lng: 120.25 }; }
     addLayer() {} removeLayer(l) { const i = this._markers.indexOf(l); if (i >= 0) this._markers.splice(i, 1); }
     closePopup() {} invalidateSize() {} on(ev, fn) { this._h[ev] = fn; } off(ev) { delete this._h[ev]; }
   }
@@ -45,6 +46,7 @@ function makeL(w) {
     map: () => new LMap(),
     tileLayer: () => ({ addTo: () => ({}) }),
     marker: (ll, opt) => new Marker(ll, opt),
+    circle: (ll, opt) => new Marker(ll, opt),
     divIcon: o => o,
     latLng: (a, b) => (a && a.lat !== undefined ? a : { lat: a, lng: b }),
     control: { attribution: () => ({ addTo: () => ({}) }) }
