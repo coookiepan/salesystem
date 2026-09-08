@@ -161,6 +161,10 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .ti-top{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .ti-bot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ti-label{font-size:11px;color:var(--text2);white-space:nowrap}
+.ti-tiers{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px}
+.tier{font-family:inherit;font-size:11.5px;line-height:1.4;padding:4px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tier:active{transform:scale(.97)}
+.tier.on{border-color:var(--green);color:var(--green-d);background:var(--green-l);font-weight:600}
 .price-inp{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text);padding:6px 9px;font-size:13px;width:90px;text-align:right;font-family:inherit;outline:none;transition:border-color .12s var(--ease),box-shadow .12s var(--ease);font-variant-numeric:tabular-nums}
 .price-inp:focus{border-color:var(--green);box-shadow:var(--ring)}
 .price-inp.low{border-color:var(--yellow-b);color:var(--yellow)}
@@ -740,7 +744,7 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="card">
       <div class="form-section">已成約品項</div>
       <div id="cf-contracted-list" style="margin-bottom:12px"></div>
-      <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3);letter-spacing:0;text-transform:none">4W原價・報價折數・黃=低於建議折數（地墊4W換建議8折）</span></div>
+      <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3);letter-spacing:0;text-transform:none">4W原價・點建議折數一鍵帶入・黃=低於最低建議</span></div>
       <div id="cf-items"></div>
       <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
@@ -1358,13 +1362,14 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="g2">
       <div class="f"><label class="lbl">單價（元）</label><input id="pm-price" type="number" min="0" placeholder="0 = 配件/免費"></div>
       <div class="f"><label class="lbl">計費週期</label>
-        <select id="pm-cycle">
+        <select id="pm-cycle" onchange="document.getElementById('pm-4w-wrap').style.display=this.value==='2W'?'':'none'">
           <option value="2W">2W（雙週）</option>
           <option value="4W">4W（四週）</option>
           <option value="">無（配件）</option>
         </select>
       </div>
     </div>
+    <div class="f" id="pm-4w-wrap"><label class="lbl">4 週換單價（選填）</label><input id="pm-price4w" type="number" min="0" placeholder="留空＝2W單價×2（地墊）；拖把照價格表填，例 NSAC 200"></div>
     <div class="f"><label class="lbl">備註</label><input id="pm-note" placeholder="尺寸、顏色等補充說明"></div>
     <div class="f" style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="pm-active" style="width:18px;height:18px;accent-color:var(--green)" checked>
@@ -1502,7 +1507,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.09.07-m2';
+const APP_VERSION='v2026.09.08-p1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -1771,22 +1776,20 @@ function getProspects(){
 // ═══════════════════════════════════════════════════════════
 const DEFAULT_PRODUCTS=[
   // 拖把
-  {code:'S-20',cat:'拖把',desc:'業務用握把式抹布',price:100,cycle:'2W',note:'',active:true},
-  {code:'SHH',cat:'拖把',desc:'家庭用握把式抹布',price:140,cycle:'4W',note:'',active:true},
+  {code:'S-20',cat:'拖把',desc:'業務用握把式抹布',price:100,price4w:160,cycle:'2W',note:'',active:true},
+  {code:'SHH',cat:'拖把',desc:'家庭用握把式抹布',price:140,price4w:140,cycle:'2W',note:'2週換與4週換同價',active:true},
   {code:'SHB',cat:'拖把',desc:'握把式抹布把手',price:0,cycle:'',note:'配件',active:false},
-  {code:'NFM-DS',cat:'拖把',desc:'紫色除塵抹布(舊碼)',price:120,cycle:'2W',note:'舊代號，仍保留供舊資料相容',active:true},
-  {code:'NH-S',cat:'拖把',desc:'紫色除塵抹布',price:120,cycle:'2W',note:'',active:true},
-  {code:'NH-S-4W',cat:'拖把',desc:'紫色除塵抹布 (4W)',price:140,cycle:'4W',note:'',active:true},
+  {code:'NH-S',cat:'拖把',desc:'紫色除塵抹布',price:120,price4w:140,cycle:'2W',note:'',active:true},
   {code:'NHS-B',cat:'拖把',desc:'紫色除塵抹布桿',price:0,cycle:'',note:'配件',active:false},
-  {code:'SSS-R',cat:'拖把',desc:'SHUSHU抹布',price:170,cycle:'2W',note:'',active:true},
+  {code:'SSS-R',cat:'拖把',desc:'SHUSHU抹布',price:170,price4w:272,cycle:'2W',note:'',active:true},
   {code:'SSS-DR',cat:'拖把',desc:'SHUSHU把手',price:0,cycle:'',note:'配件',active:false},
-  {code:'LALA-R',cat:'拖把',desc:'LALA拖把',price:190,cycle:'2W',note:'',active:true},
+  {code:'LALA-R',cat:'拖把',desc:'LALA拖把',price:190,price4w:304,cycle:'2W',note:'',active:true},
   {code:'LA-PR',cat:'拖把',desc:'LALA桿子',price:0,cycle:'',note:'配件',active:false},
   {code:'LA-HR',cat:'拖把',desc:'LALA托架',price:0,cycle:'',note:'配件',active:false},
-  {code:'N-AC',cat:'拖把',desc:'業務用除塵大拖把',price:210,cycle:'2W',note:'',active:true},
-  {code:'M-90',cat:'拖把',desc:'業務用除塵特大拖把',price:220,cycle:'2W',note:'',active:true},
-  {code:'M-120',cat:'拖把',desc:'業務用除塵超大拖把',price:280,cycle:'2W',note:'',active:true},
-  {code:'NSAC',cat:'拖把',desc:'業務用除塵拖把',price:190,cycle:'2W',note:'',active:true},
+  {code:'N-AC',cat:'拖把',desc:'業務用除塵大拖把',price:210,price4w:336,cycle:'2W',note:'',active:true},
+  {code:'M-90',cat:'拖把',desc:'業務用除塵特大拖把',price:220,price4w:352,cycle:'2W',note:'',active:true},
+  {code:'M-120',cat:'拖把',desc:'業務用除塵超大拖把',price:280,price4w:448,cycle:'2W',note:'',active:true},
+  {code:'NSAC',cat:'拖把',desc:'業務用除塵拖把',price:190,price4w:200,cycle:'2W',note:'4週換特價 200',active:true},
   {code:'M90-H',cat:'拖把',desc:'大拖把托架',price:0,cycle:'',note:'配件',active:false},
   {code:'M120-H',cat:'拖把',desc:'超大拖把托架',price:0,cycle:'',note:'配件',active:false},
   {code:'BS-H',cat:'拖把',desc:'拖把托架S',price:0,cycle:'',note:'配件',active:false},
@@ -1794,96 +1797,102 @@ const DEFAULT_PRODUCTS=[
   {code:'P-B',cat:'拖把',desc:'除塵拖把桿',price:0,cycle:'',note:'配件',active:false},
   {code:'M-PA',cat:'拖把',desc:'拖把桿',price:0,cycle:'',note:'配件',active:false},
   // 地墊
-  {code:'DECSR',cat:'地墊',desc:'中英歡迎地墊 S 71x85',price:170,cycle:'2W',note:'',active:true},
-  {code:'DECSLR',cat:'地墊',desc:'中英歡迎地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
-  {code:'DECLR',cat:'地墊',desc:'中英歡迎地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
-  {code:'DECLLR',cat:'地墊',desc:'中英歡迎地墊 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'DECSR',cat:'地墊',desc:'中英歡迎地墊 S 75x90',price:170,cycle:'2W',note:'',active:true},
+  {code:'DECSLR',cat:'地墊',desc:'中英歡迎地墊 SL 90x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'DECLR',cat:'地墊',desc:'中英歡迎地墊 L 90x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'DECLLR',cat:'地墊',desc:'中英歡迎地墊 LL 120x180',price:420,cycle:'2W',note:'',active:true},
   {code:'DECTR',cat:'地墊',desc:'中英歡迎地墊 T 150x240',price:720,cycle:'2W',note:'',active:true},
-  {code:'TJSR',cat:'地墊',desc:'豪華地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
-  {code:'TJSH',cat:'地墊',desc:'豪華地墊 S（灰）',price:170,cycle:'2W',note:'',active:true},
-  {code:'2SN2',cat:'地墊',desc:'豪華地墊 S（咖啡）',price:170,cycle:'2W',note:'',active:true},
-  {code:'TJSLH',cat:'地墊',desc:'豪華地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
-  {code:'TJLH',cat:'地墊',desc:'豪華地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
-  {code:'TJSLR',cat:'地墊',desc:'豪華地墊紅 SL 85x120',price:220,cycle:'2W',note:'',active:true},
-  {code:'2SLN2',cat:'地墊',desc:'豪華地墊咖啡 SL 85x120',price:220,cycle:'2W',note:'',active:true},
-  {code:'TJLR',cat:'地墊',desc:'豪華地墊紅 L 85x150',price:280,cycle:'2W',note:'',active:true},
-  {code:'2LN2',cat:'地墊',desc:'豪華地墊咖啡 L 85x150',price:280,cycle:'2W',note:'',active:true},
-  {code:'TJMH',cat:'地墊',desc:'豪華地墊灰 M 115x180',price:420,cycle:'2W',note:'',active:true},
-  {code:'TJMR',cat:'地墊',desc:'豪華地墊紅 M 115x180',price:420,cycle:'2W',note:'',active:true},
-  {code:'2MN2',cat:'地墊',desc:'豪華地墊咖啡 M 115x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'TJSR',cat:'地墊',desc:'豪華地墊紅 S 75x90',price:170,cycle:'2W',note:'',active:true},
+  {code:'TJSH',cat:'地墊',desc:'豪華地墊灰 S 75x90',price:170,cycle:'2W',note:'',active:true},
+  {code:'2SN2',cat:'地墊',desc:'豪華地墊咖啡 S 75x90',price:170,cycle:'2W',note:'',active:true},
+  {code:'TJSLH',cat:'地墊',desc:'豪華地墊灰 SL 90x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'TJLH',cat:'地墊',desc:'豪華地墊灰 L 90x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'TJSLR',cat:'地墊',desc:'豪華地墊紅 SL 90x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'2SLN2',cat:'地墊',desc:'豪華地墊咖啡 SL 90x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'TJLR',cat:'地墊',desc:'豪華地墊紅 L 90x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'2LN2',cat:'地墊',desc:'豪華地墊咖啡 L 90x150',price:280,cycle:'2W',note:'',active:true},
+  {code:'TJMH',cat:'地墊',desc:'豪華地墊灰 M 120x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'TJMR',cat:'地墊',desc:'豪華地墊紅 M 120x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'2MN2',cat:'地墊',desc:'豪華地墊咖啡 M 120x180',price:420,cycle:'2W',note:'',active:true},
   {code:'TJTH',cat:'地墊',desc:'豪華地墊灰 T 150x240',price:720,cycle:'2W',note:'',active:true},
   {code:'TJTR',cat:'地墊',desc:'豪華地墊紅 T 150x240',price:720,cycle:'2W',note:'',active:true},
-  {code:'TJXH',cat:'地墊',desc:'豪華地墊灰 X 115x240',price:550,cycle:'2W',note:'',active:true},
-  {code:'TJXR',cat:'地墊',desc:'豪華地墊紅 X 115x240',price:550,cycle:'2W',note:'',active:true},
-  {code:'TJ3H',cat:'地墊',desc:'豪華地墊灰 3M 85x300',price:610,cycle:'2W',note:'',active:true},
-  {code:'TJ3R',cat:'地墊',desc:'豪華地墊紅 3M 85x300',price:610,cycle:'2W',note:'',active:true},
-  {code:'TJ5H',cat:'地墊',desc:'豪華地墊灰 5M 85x500',price:880,cycle:'2W',note:'',active:true},
-  {code:'TJ5R',cat:'地墊',desc:'豪華地墊紅 5M 85x500',price:880,cycle:'2W',note:'',active:true},
-  {code:'DWSH',cat:'地墊',desc:'吸塵吸水地墊 S（灰）',price:200,cycle:'2W',note:'',active:true},
-  {code:'DWSR',cat:'地墊',desc:'吸塵吸水地墊 S（紅）',price:200,cycle:'2W',note:'',active:true},
-  {code:'DWSSH',cat:'地墊',desc:'吸塵吸水地墊 SS',price:200,cycle:'2W',note:'',active:true},
-  {code:'DWSLH',cat:'地墊',desc:'吸塵吸水地墊 SL',price:310,cycle:'2W',note:'',active:true},
-  {code:'DWLH',cat:'地墊',desc:'吸塵吸水地墊 L',price:390,cycle:'2W',note:'',active:true},
-  {code:'DWLLH',cat:'地墊',desc:'吸塵吸水地墊 M 120x180',price:530,cycle:'2W',note:'',active:true},
-  {code:'DW3MH',cat:'地墊',desc:'吸塵吸水地墊 3M 90x300',price:680,cycle:'2W',note:'',active:true},
+  {code:'TJXH',cat:'地墊',desc:'豪華地墊灰 X 120x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'TJXR',cat:'地墊',desc:'豪華地墊紅 X 120x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'TJ3H',cat:'地墊',desc:'豪華地墊灰 3M 90x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'TJ3R',cat:'地墊',desc:'豪華地墊紅 3M 90x300',price:610,cycle:'2W',note:'',active:true},
+  {code:'TJ5H',cat:'地墊',desc:'豪華地墊灰 5M 90x500',price:880,cycle:'2W',note:'',active:true},
+  {code:'TJ5R',cat:'地墊',desc:'豪華地墊紅 5M 90x500',price:880,cycle:'2W',note:'',active:true},
+  {code:'DWSH',cat:'地墊',desc:'吸塵吸水地墊灰 S 75x90',price:200,cycle:'2W',note:'',active:true},
+  {code:'DWSR',cat:'地墊',desc:'吸塵吸水地墊紅 S 75x90',price:200,cycle:'2W',note:'',active:true},
+  {code:'DWSSH',cat:'地墊',desc:'吸塵吸水地墊灰 SS 65x80',price:170,cycle:'2W',note:'',active:true},
+  {code:'DWSLH',cat:'地墊',desc:'吸塵吸水地墊灰 SL 90x120',price:310,cycle:'2W',note:'',active:true},
+  {code:'DWLH',cat:'地墊',desc:'吸塵吸水地墊灰 L 90x150',price:390,cycle:'2W',note:'',active:true},
+  {code:'DWLLH',cat:'地墊',desc:'吸塵吸水地墊灰 LL 120x180',price:530,cycle:'2W',note:'',active:true},
+  {code:'DW3MH',cat:'地墊',desc:'吸塵吸水地墊灰 3M 90x300',price:680,cycle:'2W',note:'',active:true},
   {code:'DWSLR',cat:'地墊',desc:'吸塵吸水地墊紅 SL 90x120',price:310,cycle:'2W',note:'',active:true},
-  {code:'DWTH',cat:'地墊',desc:'吸塵吸水地墊 T 150x240',price:940,cycle:'2W',note:'',active:true},
-  {code:'DW4MH',cat:'地墊',desc:'吸塵吸水地墊 4M 90x400',price:830,cycle:'2W',note:'',active:true},
-  {code:'DW5MH',cat:'地墊',desc:'吸塵吸水地墊 5M 90x500',price:1050,cycle:'2W',note:'',active:true},
+  {code:'DWTH',cat:'地墊',desc:'吸塵吸水地墊灰 T 150x240',price:940,cycle:'2W',note:'',active:true},
+  {code:'DW4MH',cat:'地墊',desc:'吸塵吸水地墊灰 4M 90x400',price:830,cycle:'2W',note:'',active:true},
+  {code:'DW5MH',cat:'地墊',desc:'吸塵吸水地墊灰 5M 90x500',price:1050,cycle:'2W',note:'',active:true},
+  {code:'DWXH',cat:'地墊',desc:'吸塵吸水地墊灰 X 120x240',price:690,cycle:'2W',note:'',active:true},
+  {code:'DWSSR',cat:'地墊',desc:'吸塵吸水地墊紅 SS 65x80',price:170,cycle:'2W',note:'',active:true},
+  {code:'DWLR',cat:'地墊',desc:'吸塵吸水地墊紅 L 90x150',price:390,cycle:'2W',note:'',active:true},
+  {code:'DWLLR',cat:'地墊',desc:'吸塵吸水地墊紅 LL 120x180',price:530,cycle:'2W',note:'',active:true},
+  {code:'DWXR',cat:'地墊',desc:'吸塵吸水地墊紅 X 120x240',price:690,cycle:'2W',note:'',active:true},
+  {code:'DWTR',cat:'地墊',desc:'吸塵吸水地墊紅 T 150x240',price:940,cycle:'2W',note:'',active:true},
+  {code:'DW3MR',cat:'地墊',desc:'吸塵吸水地墊紅 3M 90x300',price:680,cycle:'2W',note:'',active:true},
+  {code:'DW4MR',cat:'地墊',desc:'吸塵吸水地墊紅 4M 90x400',price:830,cycle:'2W',note:'',active:true},
+  {code:'DW5MR',cat:'地墊',desc:'吸塵吸水地墊紅 5M 90x500',price:1050,cycle:'2W',note:'',active:true},
   {code:'FSSK',cat:'地墊',desc:'FOREVER地墊 SS 60x85',price:140,cycle:'2W',note:'',active:true},
-  {code:'FFSK',cat:'地墊',desc:'FOREVER地墊 S 71x85',price:170,cycle:'2W',note:'',active:true},
+  {code:'FFSK',cat:'地墊',desc:'FOREVER地墊 S 75x85',price:170,cycle:'2W',note:'',active:true},
   {code:'FFSLK',cat:'地墊',desc:'FOREVER地墊 SL 85x120',price:220,cycle:'2W',note:'',active:true},
   {code:'FFLK',cat:'地墊',desc:'FOREVER地墊 L 85x150',price:280,cycle:'2W',note:'',active:true},
-  {code:'FSSR',cat:'地墊',desc:'FOREVER地墊紅 SS 60x85',price:140,cycle:'2W',note:'',active:true},
-  {code:'FFSR',cat:'地墊',desc:'FOREVER地墊紅 S 71x85',price:170,cycle:'2W',note:'',active:true},
-  {code:'FFSLR',cat:'地墊',desc:'FOREVER地墊紅 SL 85x120',price:220,cycle:'2W',note:'',active:true},
-  {code:'FFLR',cat:'地墊',desc:'FOREVER地墊紅 L 85x150',price:280,cycle:'2W',note:'',active:true},
   {code:'FFMK',cat:'地墊',desc:'FOREVER地墊 M 115x180',price:420,cycle:'2W',note:'',active:true},
-  {code:'FFMR',cat:'地墊',desc:'FOREVER地墊紅 M 115x180',price:420,cycle:'2W',note:'',active:true},
   {code:'FFTK',cat:'地墊',desc:'FOREVER地墊 T 150x240',price:720,cycle:'2W',note:'',active:true},
   {code:'FFXK',cat:'地墊',desc:'FOREVER地墊 X 115x240',price:550,cycle:'2W',note:'',active:true},
   {code:'FF3MK',cat:'地墊',desc:'FOREVER地墊 3M 85x300',price:610,cycle:'2W',note:'',active:true},
   {code:'FF5MK',cat:'地墊',desc:'FOREVER地墊 5M 85x500',price:880,cycle:'2W',note:'',active:true},
-  {code:'BSH',cat:'地墊',desc:'BASIC地墊 S（灰）',price:170,cycle:'2W',note:'',active:true},
-  {code:'BSR',cat:'地墊',desc:'BASIC地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
-  {code:'BSLH',cat:'地墊',desc:'BASIC地墊 SL（灰）',price:220,cycle:'2W',note:'',active:true},
-  {code:'BSLR',cat:'地墊',desc:'BASIC地墊 SL（紅）',price:220,cycle:'2W',note:'',active:true},
+  {code:'BSH',cat:'地墊',desc:'BASIC地墊灰 S 75x90',price:170,cycle:'2W',note:'',active:true},
+  {code:'BSR',cat:'地墊',desc:'BASIC地墊紅 S 75x90',price:170,cycle:'2W',note:'',active:true},
+  {code:'BSLH',cat:'地墊',desc:'BASIC地墊灰 SL 90x120',price:220,cycle:'2W',note:'',active:true},
+  {code:'BSLR',cat:'地墊',desc:'BASIC地墊紅 SL 90x120',price:220,cycle:'2W',note:'',active:true},
   {code:'BLH',cat:'地墊',desc:'BASIC地墊灰 L 90x150',price:280,cycle:'2W',note:'',active:true},
   {code:'BLR',cat:'地墊',desc:'BASIC地墊紅 L 90x150',price:280,cycle:'2W',note:'',active:true},
-  {code:'BLLH',cat:'地墊',desc:'BASIC地墊灰 M 120x180',price:420,cycle:'2W',note:'',active:true},
-  {code:'BLLR',cat:'地墊',desc:'BASIC地墊紅 M 120x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'BLLH',cat:'地墊',desc:'BASIC地墊灰 LL 120x180',price:420,cycle:'2W',note:'',active:true},
+  {code:'BLLR',cat:'地墊',desc:'BASIC地墊紅 LL 120x180',price:420,cycle:'2W',note:'',active:true},
   {code:'BTH',cat:'地墊',desc:'BASIC地墊灰 T 150x240',price:720,cycle:'2W',note:'',active:true},
   {code:'BTR',cat:'地墊',desc:'BASIC地墊紅 T 150x240',price:720,cycle:'2W',note:'',active:true},
   {code:'B3MH',cat:'地墊',desc:'BASIC地墊灰 3M 90x300',price:610,cycle:'2W',note:'',active:true},
   {code:'B3MR',cat:'地墊',desc:'BASIC地墊紅 3M 90x300',price:610,cycle:'2W',note:'',active:true},
   {code:'B5MH',cat:'地墊',desc:'BASIC地墊灰 5M 90x500',price:880,cycle:'2W',note:'',active:true},
   {code:'B5MR',cat:'地墊',desc:'BASIC地墊紅 5M 90x500',price:880,cycle:'2W',note:'',active:true},
-  {code:'GSH',cat:'地墊',desc:'雅緻地墊 S（灰）',price:190,cycle:'2W',note:'',active:true},
-  {code:'GSB',cat:'地墊',desc:'雅緻地墊 S（棕）',price:190,cycle:'2W',note:'',active:true},
-  {code:'GLH',cat:'地墊',desc:'雅緻地墊 L',price:360,cycle:'2W',note:'',active:true},
+  {code:'BXH',cat:'地墊',desc:'BASIC地墊灰 X 120x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'BXR',cat:'地墊',desc:'BASIC地墊紅 X 120x240',price:550,cycle:'2W',note:'',active:true},
+  {code:'GSH',cat:'地墊',desc:'雅緻地墊灰 S 75x90',price:190,cycle:'2W',note:'',active:true},
+  {code:'GSB',cat:'地墊',desc:'雅緻地墊棕 S 75x90',price:190,cycle:'2W',note:'',active:true},
+  {code:'GLH',cat:'地墊',desc:'雅緻地墊灰 L 90x150',price:360,cycle:'2W',note:'',active:true},
   {code:'GLB',cat:'地墊',desc:'雅緻地墊棕 L 90x150',price:360,cycle:'2W',note:'',active:true},
-  {code:'GLLH',cat:'地墊',desc:'雅緻地墊灰 M 120x180',price:500,cycle:'2W',note:'',active:true},
-  {code:'GLLB',cat:'地墊',desc:'雅緻地墊棕 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'GLLH',cat:'地墊',desc:'雅緻地墊灰 LL 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'GLLB',cat:'地墊',desc:'雅緻地墊棕 LL 120x180',price:500,cycle:'2W',note:'',active:true},
   {code:'GTH',cat:'地墊',desc:'雅緻地墊灰 T 150x240',price:900,cycle:'2W',note:'',active:true},
   {code:'GTB',cat:'地墊',desc:'雅緻地墊棕 T 150x240',price:900,cycle:'2W',note:'',active:true},
-  {code:'EXSH',cat:'地墊',desc:'強力刮沙地墊 S',price:190,cycle:'2W',note:'',active:true},
-  {code:'EXSLH',cat:'地墊',desc:'強力刮沙地墊 SL',price:280,cycle:'2W',note:'',active:true},
-  {code:'EXLH',cat:'地墊',desc:'強力刮沙地墊 L',price:360,cycle:'2W',note:'',active:true},
-  {code:'ELLH',cat:'地墊',desc:'強力刮沙地墊 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'EXSH',cat:'地墊',desc:'強力刮沙地墊 S 75x90',price:190,cycle:'2W',note:'',active:true},
+  {code:'EXSLH',cat:'地墊',desc:'強力刮沙地墊 SL 90x120',price:280,cycle:'2W',note:'',active:true},
+  {code:'EXLH',cat:'地墊',desc:'強力刮沙地墊 L 90x150',price:360,cycle:'2W',note:'',active:true},
+  {code:'ELLH',cat:'地墊',desc:'強力刮沙地墊 LL 120x180',price:500,cycle:'2W',note:'',active:true},
   {code:'EXTH',cat:'地墊',desc:'強力刮沙地墊 T 150x240',price:900,cycle:'2W',note:'',active:true},
-  {code:'UQSH',cat:'地墊',desc:'薄型吸塵地墊 S',price:190,cycle:'2W',note:'',active:true},
-  {code:'UQSLH',cat:'地墊',desc:'薄型吸塵地墊 SL',price:280,cycle:'2W',note:'',active:true},
-  {code:'UQLH',cat:'地墊',desc:'薄型吸塵地墊 L',price:360,cycle:'2W',note:'',active:true},
-  {code:'UQLLH',cat:'地墊',desc:'薄型吸塵地墊 M 120x180',price:500,cycle:'2W',note:'',active:true},
+  {code:'UQSH',cat:'地墊',desc:'薄型吸塵地墊 S 75x90',price:190,cycle:'2W',note:'',active:true},
+  {code:'UQSLH',cat:'地墊',desc:'薄型吸塵地墊 SL 90x120',price:280,cycle:'2W',note:'',active:true},
+  {code:'UQLH',cat:'地墊',desc:'薄型吸塵地墊 L 90x150',price:360,cycle:'2W',note:'',active:true},
+  {code:'UQLLH',cat:'地墊',desc:'薄型吸塵地墊 LL 120x180',price:500,cycle:'2W',note:'',active:true},
   {code:'UQTH',cat:'地墊',desc:'薄型吸塵地墊 T 150x240',price:900,cycle:'2W',note:'',active:true},
   {code:'UQ3MH',cat:'地墊',desc:'薄型吸塵地墊 3M 90x300',price:580,cycle:'2W',note:'',active:true},
   {code:'UQ4MH',cat:'地墊',desc:'薄型吸塵地墊 4M 90x400',price:730,cycle:'2W',note:'',active:true},
   {code:'UQ5MH',cat:'地墊',desc:'薄型吸塵地墊 5M 90x500',price:910,cycle:'2W',note:'',active:true},
-  {code:'KKSN',cat:'地墊',desc:'KK地墊 S',price:170,cycle:'2W',note:'',active:true},
-  {code:'KKSLN',cat:'地墊',desc:'KK地墊 SL',price:220,cycle:'2W',note:'',active:true},
-  {code:'KKLN',cat:'地墊',desc:'KK地墊 L',price:280,cycle:'2W',note:'',active:true},
-  {code:'MANSB',cat:'地墊',desc:'男女辨識地墊 S（藍）',price:170,cycle:'2W',note:'',active:true},
-  {code:'MWOSR',cat:'地墊',desc:'男女辨識地墊 S（紅）',price:170,cycle:'2W',note:'',active:true},
+  {code:'KKSN',cat:'地墊',desc:'KK鐵屑油污地墊 S 75x90',price:200,cycle:'2W',note:'',active:true},
+  {code:'KKSLN',cat:'地墊',desc:'KK鐵屑油污地墊 SL 90x120',price:310,cycle:'2W',note:'',active:true},
+  {code:'KKLN',cat:'地墊',desc:'KK鐵屑油污地墊 L 90x150',price:390,cycle:'2W',note:'',active:true},
+  {code:'MANSB',cat:'地墊',desc:'男女辨識地墊藍 S 71x85',price:170,cycle:'2W',note:'',active:true},
+  {code:'MWOSR',cat:'地墊',desc:'男女辨識地墊紅 S 71x85',price:170,cycle:'2W',note:'',active:true},
   // 芳香
   {code:'DOME',cat:'芳香',desc:'網狀尿石去除劑 40g',price:220,cycle:'4W',note:'小便斗',active:true},
   {code:'AF-BP',cat:'芳香',desc:'藍罌粟 (AFDW口味)',price:0,cycle:'',note:'口味',active:false},
@@ -1955,12 +1964,12 @@ const INV_SORT_ORDER=[
   'AMDW','AMMK','AMWT','AMOB',
   'BT3','BT1','BT4',
   // 拖把：拖把布 → 握把 → 配件
-  'SHH','NSAC','N-AC','M-90','M-120','NFM-DS',
+  'SHH','NSAC','N-AC','M-90','M-120','NH-S',
   'SHB','M90-H','M120-H','BS-H','BM-H','P-B','M-PA',
   'S-20',
 ];
 
-const INV_INIT=[{name:'S-20',stock:5,std:5},{name:'SHH',stock:10,std:10},{name:'NFM-DS',stock:2,std:2},{name:'N-AC',stock:2,std:2},{name:'M-120',stock:2,std:2},{name:'M120-H',stock:2,std:2},{name:'M-90',stock:2,std:2},{name:'NSAC',stock:2,std:2},{name:'SHB',stock:15,std:15},{name:'BS-H',stock:2,std:2},{name:'BM-H',stock:2,std:2},{name:'P-B',stock:4,std:4},{name:'M90-H',stock:2,std:2},{name:'M-PA',stock:4,std:4},{name:'TJSR',stock:1,std:1},{name:'TJSH',stock:1,std:1},{name:'TJLH',stock:1,std:1},{name:'2SN2',stock:1,std:1},{name:'GSH',stock:1,std:1},{name:'GSB',stock:1,std:1},{name:'EXSLH',stock:1,std:1},{name:'GLH',stock:1,std:1},{name:'EXLH',stock:1,std:1},{name:'EXSH',stock:1,std:1},{name:'MANSB',stock:1,std:1},{name:'MWOSR',stock:1,std:1},{name:'FFSK',stock:2,std:2},{name:'FFSLK',stock:1,std:1},{name:'FFLK',stock:1,std:1},{name:'TJSLH',stock:1,std:1},{name:'DWSR',stock:1,std:1},{name:'DWSH',stock:2,std:2},{name:'DWSLH',stock:2,std:2},{name:'DWLH',stock:1,std:1},{name:'DWLLH',stock:1,std:1},{name:'DW3MH',stock:1,std:1},{name:'BSH',stock:2,std:2},{name:'BSR',stock:1,std:1},{name:'BSLH',stock:1,std:1},{name:'BSLR',stock:1,std:1},{name:'FSSK',stock:1,std:1},{name:'UQSH',stock:1,std:1},{name:'UQSLH',stock:1,std:1},{name:'UQLH',stock:1,std:1},{name:'DECSR',stock:2,std:2},{name:'DECSLR',stock:2,std:2},{name:'DECLR',stock:2,std:2},{name:'DECLLR',stock:1,std:1},{name:'DECTR',stock:1,std:1},{name:'DWSSH',stock:2,std:2},{name:'KKSN',stock:1,std:1},{name:'KKSLN',stock:1,std:1},{name:'KKLN',stock:1,std:1},{name:'DOME',stock:30,std:30},{name:'FNWT',stock:2,std:2},{name:'FNBK',stock:2,std:2},{name:'FNPS2-K',stock:4,std:4},{name:'BT3',stock:24,std:24},{name:'BFDW',stock:4,std:4},{name:'BF-W',stock:4,std:4},{name:'AFDW',stock:2,std:2},{name:'BT1',stock:4,std:4},{name:'BF-PC',stock:4,std:4},{name:'AF-BP',stock:2,std:2},{name:'AF-IT',stock:2,std:2},{name:'AMDW',stock:4,std:4},{name:'AMMK',stock:2,std:2},{name:'AMWT',stock:2,std:2},{name:'AMOB',stock:2,std:2},{name:'BT4',stock:16,std:16}];
+const INV_INIT=[{name:'S-20',stock:5,std:5},{name:'SHH',stock:10,std:10},{name:'NH-S',stock:2,std:2},{name:'N-AC',stock:2,std:2},{name:'M-120',stock:2,std:2},{name:'M120-H',stock:2,std:2},{name:'M-90',stock:2,std:2},{name:'NSAC',stock:2,std:2},{name:'SHB',stock:15,std:15},{name:'BS-H',stock:2,std:2},{name:'BM-H',stock:2,std:2},{name:'P-B',stock:4,std:4},{name:'M90-H',stock:2,std:2},{name:'M-PA',stock:4,std:4},{name:'TJSR',stock:1,std:1},{name:'TJSH',stock:1,std:1},{name:'TJLH',stock:1,std:1},{name:'2SN2',stock:1,std:1},{name:'GSH',stock:1,std:1},{name:'GSB',stock:1,std:1},{name:'EXSLH',stock:1,std:1},{name:'GLH',stock:1,std:1},{name:'EXLH',stock:1,std:1},{name:'EXSH',stock:1,std:1},{name:'MANSB',stock:1,std:1},{name:'MWOSR',stock:1,std:1},{name:'FFSK',stock:2,std:2},{name:'FFSLK',stock:1,std:1},{name:'FFLK',stock:1,std:1},{name:'TJSLH',stock:1,std:1},{name:'DWSR',stock:1,std:1},{name:'DWSH',stock:2,std:2},{name:'DWSLH',stock:2,std:2},{name:'DWLH',stock:1,std:1},{name:'DWLLH',stock:1,std:1},{name:'DW3MH',stock:1,std:1},{name:'BSH',stock:2,std:2},{name:'BSR',stock:1,std:1},{name:'BSLH',stock:1,std:1},{name:'BSLR',stock:1,std:1},{name:'FSSK',stock:1,std:1},{name:'UQSH',stock:1,std:1},{name:'UQSLH',stock:1,std:1},{name:'UQLH',stock:1,std:1},{name:'DECSR',stock:2,std:2},{name:'DECSLR',stock:2,std:2},{name:'DECLR',stock:2,std:2},{name:'DECLLR',stock:1,std:1},{name:'DECTR',stock:1,std:1},{name:'DWSSH',stock:2,std:2},{name:'KKSN',stock:1,std:1},{name:'KKSLN',stock:1,std:1},{name:'KKLN',stock:1,std:1},{name:'DOME',stock:30,std:30},{name:'FNWT',stock:2,std:2},{name:'FNBK',stock:2,std:2},{name:'FNPS2-K',stock:4,std:4},{name:'BT3',stock:24,std:24},{name:'BFDW',stock:4,std:4},{name:'BF-W',stock:4,std:4},{name:'AFDW',stock:2,std:2},{name:'BT1',stock:4,std:4},{name:'BF-PC',stock:4,std:4},{name:'AF-BP',stock:2,std:2},{name:'AF-IT',stock:2,std:2},{name:'AMDW',stock:4,std:4},{name:'AMMK',stock:2,std:2},{name:'AMWT',stock:2,std:2},{name:'AMOB',stock:2,std:2},{name:'BT4',stock:16,std:16}];
 
 // ── SEED CLIENTS（範例資料，首次開啟時顯示）──────────────
 const SEED=[
@@ -2196,9 +2205,7 @@ const BUNDLE_MAP={
   // 拖把類：固定配件，無口味
   'S-20':   {accs:[{code:'SHB',qty:1}]},
   'SHH':    {accs:[{code:'SHB',qty:1}]},
-  'NFM-DS':  {accs:[{code:'NHS-B',qty:1}]},
   'NH-S':    {accs:[{code:'NHS-B',qty:1}]},
-  'NH-S-4W': {accs:[{code:'NHS-B',qty:1}]},
   'SSS-R':   {accs:[{code:'SSS-DR',qty:1}]},
   'LALA-R':  {accs:[{code:'LA-PR',qty:1},{code:'LA-HR',qty:1}]},
   'NSAC':   {accs:[{code:'P-B',qty:1},{code:'BS-H',qty:1}]},
@@ -2295,17 +2302,29 @@ function activeProducts(){return DB.products.filter(p=>p.active&&p.price>0&&!isF
 // 根據代號查商品
 function getProd(code){return DB.products.find(p=>p.code===code)||null;}
 
-// 4W 原價（唯一入口）：price＝商品自身週期的每次更換單價 → 4W 金額＝price × 每4週更換次數 × 數量。
-// 地墊選 4W 換＝2W 價 ×2（一次更換涵蓋兩期），不預設打折——折扣是業務逐案決定，只以建議價提示（refRate）。
+// ═══ 商品價格邏輯（全系統唯一入口；報價／合約精靈經 HOST.unitAt 共用）═══
+// price   ＝商品「自身週期」（cycle）的每次更換單價，含稅。地墊／拖把是 2W 價，芳香、DOME 是 4W 價。
+// price4w ＝2W 商品的「4 週換單價」（價格表拖把欄，例：NSAC 190→200、S-20 100→160）；
+//           沒有 price4w 的 2W 商品選 4W → 2W 價 ×2（地墊：4W 原價，不預設打折，折扣用建議檔提示）。
+// 4W 商品（cycle='4W'）不看所選週期；選 1W 單價不變（每次更換各收一次）。
+// 每 4 週金額＝每次更換單價 × 每 4 週更換次數（1W→4、2W→2、4W→1）× 數量。
+function effCycle(p,cycle){return p&&p.cycle==='4W'?'4W':(cycle==='1W'||cycle==='4W'?cycle:'2W');}
+function unitPriceAt(p,cycle){
+  if(!p||!(p.price>0))return 0;
+  const c=effCycle(p,cycle);
+  if(c==='4W'&&p.cycle!=='4W')return p.price4w>0?p.price4w:p.price*2;
+  return p.price;
+}
 function displayFw4(code,qty=1,cycle='2W'){
   const p=getProd(code);if(!p||!p.price)return 0;
-  if(p.cat==='地墊'&&cycle==='4W')return p.price*2*qty;
-  return p.price*(p.cycle==='2W'?2:1)*qty;
+  const c=effCycle(p,cycle);
+  return unitPriceAt(p,c)*(c==='1W'?4:c==='2W'?2:1)*qty;
 }
-// 建議折數：地墊 4W 換可給到 8 折（業務可打更少或不打），其他一律 9 折參考
-function refRate(code,cycle='2W'){const p=getProd(code);return p&&p.cat==='地墊'&&cycle==='4W'?0.8:0.9;}
-// 建議報價（整列 4W 金額 × 建議折數）
-function refQuote(code,qty=1,cycle='2W'){return Math.round(displayFw4(code,qty,cycle)*refRate(code,cycle));}
+// 建議折數檔（價格表）：地墊 4W 換三檔 九折／八五折／八折；其他兩檔 九折／八五折。只提示、一鍵帶入，不預設。
+function refTiers(code,cycle='2W'){const p=getProd(code);return p&&p.cat==='地墊'&&effCycle(p,cycle)==='4W'?[0.9,0.85,0.8]:[0.9,0.85];}
+function tierLabel(rt){const n=Math.round(rt*100);return (n%10===0?n/10:n)+'折';}
+// 建議報價（整列 4W 金額 × 折數；未指定折數用第一檔九折）
+function refQuote(code,qty=1,cycle='2W',rate){return Math.round(displayFw4(code,qty,cycle)*(rate||refTiers(code,cycle)[0]));}
 // 提案商品自動帶入
 function autoProd(items){
   const cats=new Set((items||[]).filter(it=>it.product&&!it.bundledTo&&getProd(it.product)).map(it=>getProd(it.product).cat));
@@ -3156,7 +3175,7 @@ function renderProducts(){
           <div class="prod-desc">${escHtml(p.desc)}${p.note?` <span style="color:var(--text3)">${escHtml(p.note)}</span>`:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${escHtml(p.cycle||'-')}</div>`:'<div class="prod-cycle">配件/機台</div>'}
+          ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${escHtml(p.cycle||'-')}${p.price4w?` · 4W $${p.price4w}`:''}</div>`:'<div class="prod-cycle">配件/機台</div>'}
         </div>
         ${!p.active?'<span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:10px;flex-shrink:0">停用</span>':''}
       </div>`).join('');
@@ -3176,6 +3195,8 @@ function openProdModal(idx){
   document.getElementById('pm-desc').value=p?.desc||'';
   document.getElementById('pm-price').value=p?.price??'';
   document.getElementById('pm-cycle').value=p?.cycle??'2W';
+  document.getElementById('pm-price4w').value=p?.price4w||'';
+  document.getElementById('pm-4w-wrap').style.display=(p?.cycle??'2W')==='2W'?'':'none';
   document.getElementById('pm-note').value=p?.note||'';
   document.getElementById('pm-active').checked=p?.active!==false;
   document.getElementById('pm-del-btn').style.display=idx>=0?'':'none';
@@ -3197,6 +3218,8 @@ function saveProd(){
     note:document.getElementById('pm-note').value.trim(),
     active:document.getElementById('pm-active').checked,
   };
+  const p4=+document.getElementById('pm-price4w').value||0;
+  if(prod.cycle==='2W'&&p4>0)prod.price4w=p4;
   if(prodEditIdx>=0)DB.products[prodEditIdx]=prod;
   else DB.products.push(prod);
   saveLocal();
@@ -4549,9 +4572,10 @@ function renderItems(){
       </div>`;
     }
     // ── 主商品 row ──
-    const p=getProd(it.product);const isMat=p?.cat==='地墊';
-    const f=displayFw4(it.product,it.qty,it.cycle||'2W');const r=refQuote(it.product,it.qty,it.cycle||'2W');const rl=Math.round(refRate(it.product,it.cycle||'2W')*10);
-    const isLow=it.quoted>0&&r>0&&it.quoted<r;
+    const p=getProd(it.product);const canCycle=p?.cycle==='2W';   // 2W 商品（地墊、拖把）可選 2W／4W 換
+    const f=displayFw4(it.product,it.qty,it.cycle||'2W');const r=refQuote(it.product,it.qty,it.cycle||'2W');
+    const tiers=(p&&f>0)?refTiers(it.product,it.cycle||'2W').map(rt=>({rt,v:Math.round(f*rt)})):[];
+    const isLow=it.quoted>0&&tiers.length>0&&it.quoted<tiers[tiers.length-1].v;   // 黃＝低於最低建議檔
     // 計算實際折數（quoted / 4W原價 * 10，一位小數）
     const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
     const discountLow=discount!==null&&discount<9;
@@ -4561,7 +4585,7 @@ function renderItems(){
           <option value=""${!it.product?' selected':''}>選擇商品</option>${buildOpts(it.product)}
         </select>
         <input type="number" min="1" value="${it.qty||1}" style="width:52px;text-align:center;font-size:14px" oninput="setMainQty(${i},this.value);updCfTotal()" onblur="renderItems()">
-        ${isMat?`<select class="csel" onchange="S.cfItems[${i}].cycle=this.value;renderItems()">
+        ${canCycle?`<select class="csel" onchange="S.cfItems[${i}].cycle=this.value;renderItems()">
           <option value="2W"${(it.cycle||'2W')==='2W'?' selected':''}>2W換</option>
           <option value="4W"${it.cycle==='4W'?' selected':''}>4W換</option>
         </select>`:''}
@@ -4575,8 +4599,9 @@ function renderItems(){
           oninput="S.cfItems[${i}].quoted=Math.max(0,+this.value||0)" onblur="renderItems()">
         ${discount!==null
           ?`<span style="font-size:11px;color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`
-          :r>0?`<span style="font-size:11px;color:var(--text3)">建議${rl}折 $${r}</span>`:''}
+          :''}
       </div>
+      ${tiers.length?`<div class="ti-tiers"><span class="ti-label">建議</span>${tiers.map(t=>`<button type="button" class="tier${it.quoted===t.v?' on':''}" onclick="S.cfItems[${i}].quoted=${t.v};renderItems()" title="帶入${tierLabel(t.rt)}報價">${tierLabel(t.rt)} $${t.v.toLocaleString()}</button>`).join('')}</div>`:''}
     </div>`;
   }).join('');
   updCfTotal();
@@ -6780,7 +6805,39 @@ const MIGRATIONS=[
   {v:8, desc:'add client segment', fn:function(){(DB.clients||[]).forEach(c=>{if(c&&!c.segment)c.segment=(c.type==='工廠'?'工廠':'街邊店');});}},
   // DOME 品名寫錯（大型香水芳香劑）→ 正名網狀尿石去除劑；價格 220 不動。改到商品庫要同步上雲
   {v:9, desc:'fix DOME desc', fn:function(){const p=getProd('DOME');if(p&&p.desc==='大型香水芳香劑 300ml'){p.desc='網狀尿石去除劑 40g';p.note=p.note||'小便斗';saveLocal();autoSync('saveProducts',{products:DB.products});}}},
+  // 2026-09 確認價格表：商品庫同代號覆蓋價格／4週換單價／品名（尺寸）／週期，補上表上新增的代號；
+  // 舊碼與停售款移除（NFM-DS、NH-S-4W → NH-S；FOREVER 紅色款 → 同尺寸黑款），客戶品項與庫存一併改碼。
+  // 使用者自己加的商品不動；停用旗標不動。改完商品庫／庫存／客戶都上雲。
+  {v:10, desc:'apply 2026-09 price sheet', fn:applyPriceSheet2026},
 ];
+function applyPriceSheet2026(){
+  const REMAP={'NFM-DS':'NH-S','NH-S-4W':'NH-S','FSSR':'FSSK','FFSR':'FFSK','FFSLR':'FFSLK','FFLR':'FFLK','FFMR':'FFMK'};
+  const byCode={};DEFAULT_PRODUCTS.forEach(d=>byCode[d.code]=d);
+  DB.products=(DB.products||[]).filter(p=>p&&!REMAP[p.code]);
+  DB.products.forEach(p=>{
+    const d=byCode[p.code];if(!d)return;
+    p.cat=d.cat;p.desc=d.desc;p.price=d.price;p.cycle=d.cycle;
+    if(d.price4w>0)p.price4w=d.price4w;else delete p.price4w;
+  });
+  DEFAULT_PRODUCTS.forEach(d=>{if(!DB.products.find(p=>p.code===d.code))DB.products.push(JSON.parse(JSON.stringify(d)));});
+  const changed=[];
+  (DB.clients||[]).forEach(c=>{
+    if(!c)return;let ch=false;
+    ['trialItems','contractedItems'].forEach(k=>(c[k]||[]).forEach(it=>{
+      if(!it)return;
+      if(REMAP[it.product]){if(it.product==='NH-S-4W')it.cycle='4W';it.product=REMAP[it.product];ch=true;}
+      if(it.bundledTo&&REMAP[it.bundledTo]){it.bundledTo=REMAP[it.bundledTo];ch=true;}
+    }));
+    if(ch){c.updatedAt=Date.now();changed.push(c);}
+  });
+  let invChanged=false;
+  (DB.inventory||[]).forEach(it=>{if(it&&REMAP[it.name]){it.name=REMAP[it.name];invChanged=true;}});
+  if(invChanged){const merged={};DB.inventory.forEach(it=>{const m=merged[it.name];if(m){m.stock=(m.stock||0)+(it.stock||0);m.std=(m.std||0)+(it.std||0);}else merged[it.name]=it;});DB.inventory=Object.values(merged);}
+  saveLocal();
+  autoSync('saveProducts',{products:DB.products});
+  if(invChanged)autoSync('saveInventory',{inventory:DB.inventory});
+  changed.forEach(c=>autoSync('save',{client:c}));
+}
 (function runMigrations(){
   let cur=Number(localStorage.getItem('migration_v')||0);
   // 相容舊 flag：如果已跑過 backfilled_visits_v1 但 migration_v < 1，視為 v1 已完成
@@ -6843,7 +6900,8 @@ const HOST = {
   sync: () => {},
   onChange: () => {},                                       // 拜訪紀錄更新後重繪（= renderVisits）
   escapeHtml: (s) => String(s==null?'':s),
-  getProfile: () => CM_DEFAULT_PROFILE                      // 業務個人資料（由主程式注入；未注入時用模組預設）
+  getProfile: () => CM_DEFAULT_PROFILE,                     // 業務個人資料（由主程式注入；未注入時用模組預設）
+  unitAt: () => null                                        // (商品定價{price,cycle,price4w}, 所選週期) → 每次更換單價（主程式 unitPriceAt）
 };
 // 模組內預設業務資料（＝主程式 DEFAULT_PROFILE 的鏡像，供 ?test=1 或未注入時 docx 仍可產生）
 const CM_DEFAULT_PROFILE={ office:'樂清服務股份有限公司 台南營業所', dept:'台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', email:'', address:'台南市永康區中正路 337 巷 106 號', salesId:'', title:'', seal:'' };
@@ -6854,7 +6912,7 @@ function cmCurClient(){
 }
 
 // 商品庫（內嵌自 contractmaker/catalog.json）
-const CM_CATALOG ={"categories":{"mat_welcome":"迎賓系列","mat_elegant":"雅緻系列","mat_basic":"Basic 系列","mat_forever":"Forever 系列","mat_dust":"吸塵吸水系列","mat_thin":"薄型吸塵吸水系列","mat_luxury":"豪華系列","mat_luxury_2tone":"豪華系列(2色)","mat_strong":"強力刮砂系列","mat_metal":"鐵屑油污系列","mat_gender":"男女辨識系列","mat_custom":"訂做系列","fragrance":"芳香劑","urinal":"小便斗清潔","mop":"拖把/抹布"},"products":{"LYSR":{"name":"高級迎賓地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"LYLR":{"name":"高級迎賓地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DECSR":{"name":"歡迎光臨地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"DECSLR":{"name":"歡迎光臨地墊SL紅","category":"mat_welcome","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"DECLR":{"name":"歡迎光臨地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"DECLLR":{"name":"歡迎光臨地墊LL紅","category":"mat_welcome","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"DECTR":{"name":"歡迎光臨地墊T紅","category":"mat_welcome","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"GSH":{"name":"雅緻地墊S灰","category":"mat_elegant","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"GSB":{"name":"雅緻地墊S棕","category":"mat_elegant","size":"S","color":"棕","cycle":"2W","price":190,"discountable":true},"GLH":{"name":"雅緻地墊L灰","category":"mat_elegant","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"GLB":{"name":"雅緻地墊L棕","category":"mat_elegant","size":"L","color":"棕","cycle":"2W","price":360,"discountable":true},"GLLH":{"name":"雅緻地墊LL灰","category":"mat_elegant","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"GLLB":{"name":"雅緻地墊LL棕","category":"mat_elegant","size":"LL","color":"棕","cycle":"2W","price":500,"discountable":true},"GTH":{"name":"雅緻地墊T灰","category":"mat_elegant","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"GTB":{"name":"雅緻地墊T棕","category":"mat_elegant","size":"T","color":"棕","cycle":"2W","price":900,"discountable":true},"BSH":{"name":"Basic地墊S灰","category":"mat_basic","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"BSR":{"name":"Basic地墊S紅","category":"mat_basic","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"BSLH":{"name":"Basic地墊SL灰","category":"mat_basic","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"BSLR":{"name":"Basic地墊SL紅","category":"mat_basic","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"BLH":{"name":"Basic地墊L灰","category":"mat_basic","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"BLR":{"name":"Basic地墊L紅","category":"mat_basic","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"BLLH":{"name":"Basic地墊LL灰","category":"mat_basic","size":"LL","color":"灰","cycle":"2W","price":420,"discountable":true},"BLLR":{"name":"Basic地墊LL紅","category":"mat_basic","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true},"BXH":{"name":"Basic地墊X灰","category":"mat_basic","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"BXR":{"name":"Basic地墊X紅","category":"mat_basic","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"BTH":{"name":"Basic地墊T灰","category":"mat_basic","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"BTR":{"name":"Basic地墊T紅","category":"mat_basic","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"B3H":{"name":"Basic地墊3M灰","category":"mat_basic","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"B3R":{"name":"Basic地墊3M紅","category":"mat_basic","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"B5H":{"name":"Basic地墊5M灰","category":"mat_basic","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"B5R":{"name":"Basic地墊5M紅","category":"mat_basic","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"FFSSK":{"name":"Forever地墊SS黑灰","category":"mat_forever","size":"SS","color":"黑灰","cycle":"2W","price":140,"discountable":true},"FFSSR":{"name":"Forever地墊SS紅","category":"mat_forever","size":"SS","color":"紅","cycle":"2W","price":140,"discountable":true},"FFSK":{"name":"Forever地墊S黑灰","category":"mat_forever","size":"S","color":"黑灰","cycle":"2W","price":170,"discountable":true},"FFSR":{"name":"Forever地墊S紅","category":"mat_forever","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"FFSLK":{"name":"Forever地墊SL黑灰","category":"mat_forever","size":"SL","color":"黑灰","cycle":"2W","price":220,"discountable":true},"FFSLR":{"name":"Forever地墊SL紅","category":"mat_forever","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"FFLK":{"name":"Forever地墊L黑灰","category":"mat_forever","size":"L","color":"黑灰","cycle":"2W","price":280,"discountable":true},"FFLR":{"name":"Forever地墊L紅","category":"mat_forever","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"FFMK":{"name":"Forever地墊M黑灰","category":"mat_forever","size":"M","color":"黑灰","cycle":"2W","price":420,"discountable":true},"FFMR":{"name":"Forever地墊M紅","category":"mat_forever","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"FFXK":{"name":"Forever地墊X黑灰","category":"mat_forever","size":"X","color":"黑灰","cycle":"2W","price":550,"discountable":true},"FFTK":{"name":"Forever地墊T黑灰","category":"mat_forever","size":"T","color":"黑灰","cycle":"2W","price":720,"discountable":true},"FF3MK":{"name":"Forever地墊3M黑灰","category":"mat_forever","size":"3M","color":"黑灰","cycle":"2W","price":610,"discountable":true},"FF5MK":{"name":"Forever地墊5M黑灰","category":"mat_forever","size":"5M","color":"黑灰","cycle":"2W","price":880,"discountable":true},"FF5MR":{"name":"Forever地墊5M紅","category":"mat_forever","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"DWSSH":{"name":"吸塵吸水地墊SS灰","category":"mat_dust","size":"SS","color":"灰","cycle":"2W","price":170,"discountable":true},"DWSSR":{"name":"吸塵吸水地墊SS紅","category":"mat_dust","size":"SS","color":"紅","cycle":"2W","price":170,"discountable":true},"DWSH":{"name":"吸塵吸水地墊S灰","category":"mat_dust","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"DWSR":{"name":"吸塵吸水地墊S紅","category":"mat_dust","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true},"DWSLH":{"name":"吸塵吸水地墊SL灰","category":"mat_dust","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"DWSLR":{"name":"吸塵吸水地墊SL紅","category":"mat_dust","size":"SL","color":"紅","cycle":"2W","price":310,"discountable":true},"DWLH":{"name":"吸塵吸水地墊L灰","category":"mat_dust","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"DWLR":{"name":"吸塵吸水地墊L紅","category":"mat_dust","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true},"DWLLH":{"name":"吸塵吸水地墊LL灰","category":"mat_dust","size":"LL","color":"灰","cycle":"2W","price":530,"discountable":true},"DWLLR":{"name":"吸塵吸水地墊LL紅","category":"mat_dust","size":"LL","color":"紅","cycle":"2W","price":530,"discountable":true},"DWXH":{"name":"吸塵吸水地墊X灰","category":"mat_dust","size":"X","color":"灰","cycle":"2W","price":690,"discountable":true},"DWXR":{"name":"吸塵吸水地墊X紅","category":"mat_dust","size":"X","color":"紅","cycle":"2W","price":690,"discountable":true},"DWTH":{"name":"吸塵吸水地墊T灰","category":"mat_dust","size":"T","color":"灰","cycle":"2W","price":940,"discountable":true},"DWTR":{"name":"吸塵吸水地墊T紅","category":"mat_dust","size":"T","color":"紅","cycle":"2W","price":940,"discountable":true},"DW3MH":{"name":"吸塵吸水地墊3M灰","category":"mat_dust","size":"3M","color":"灰","cycle":"2W","price":680,"discountable":true},"DW3MR":{"name":"吸塵吸水地墊3M紅","category":"mat_dust","size":"3M","color":"紅","cycle":"2W","price":680,"discountable":true},"DW4MH":{"name":"吸塵吸水地墊4M灰","category":"mat_dust","size":"4M","color":"灰","cycle":"2W","price":830,"discountable":true},"DW4MR":{"name":"吸塵吸水地墊4M紅","category":"mat_dust","size":"4M","color":"紅","cycle":"2W","price":830,"discountable":true},"DW5MH":{"name":"吸塵吸水地墊5M灰","category":"mat_dust","size":"5M","color":"灰","cycle":"2W","price":1050,"discountable":true},"DW5MR":{"name":"吸塵吸水地墊5M紅","category":"mat_dust","size":"5M","color":"紅","cycle":"2W","price":1050,"discountable":true},"UQSH":{"name":"薄型吸塵吸水地墊S灰","category":"mat_thin","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"UQSLH":{"name":"薄型吸塵吸水地墊SL灰","category":"mat_thin","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"UQLH":{"name":"薄型吸塵吸水地墊L灰","category":"mat_thin","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"UQLLH":{"name":"薄型吸塵吸水地墊LL灰","category":"mat_thin","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"UQTH":{"name":"薄型吸塵吸水地墊T灰","category":"mat_thin","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"UQ4MH":{"name":"薄型吸塵吸水地墊4M灰","category":"mat_thin","size":"4M","color":"灰","cycle":"2W","price":730,"discountable":true},"UQ5MH":{"name":"薄型吸塵吸水地墊5M灰","category":"mat_thin","size":"5M","color":"灰","cycle":"2W","price":910,"discountable":true},"TJSR":{"name":"豪華地墊S紅","category":"mat_luxury","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"TJSH":{"name":"豪華地墊S灰","category":"mat_luxury","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true},"TJSLR":{"name":"豪華地墊SL紅","category":"mat_luxury","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true},"TJSLH":{"name":"豪華地墊SL灰","category":"mat_luxury","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true},"TJLR":{"name":"豪華地墊L紅","category":"mat_luxury","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true},"TJLH":{"name":"豪華地墊L灰","category":"mat_luxury","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true},"TJMR":{"name":"豪華地墊M紅","category":"mat_luxury","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true},"TJMH":{"name":"豪華地墊M灰","category":"mat_luxury","size":"M","color":"灰","cycle":"2W","price":420,"discountable":true},"TJXR":{"name":"豪華地墊X紅","category":"mat_luxury","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true},"TJXH":{"name":"豪華地墊X灰","category":"mat_luxury","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true},"TJTR":{"name":"豪華地墊T紅","category":"mat_luxury","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true},"TJTH":{"name":"豪華地墊T灰","category":"mat_luxury","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true},"TJ3MR":{"name":"豪華地墊3M紅","category":"mat_luxury","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true},"TJ3MH":{"name":"豪華地墊3M灰","category":"mat_luxury","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true},"TJ5MR":{"name":"豪華地墊5M紅","category":"mat_luxury","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true},"TJ5MH":{"name":"豪華地墊5M灰","category":"mat_luxury","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true},"2SN2":{"name":"豪華地墊S紅(2色)","category":"mat_luxury_2tone","size":"S","color":"紅(2色)","cycle":"2W","price":170,"discountable":true},"2SLN2":{"name":"豪華地墊SL紅(2色)","category":"mat_luxury_2tone","size":"SL","color":"紅(2色)","cycle":"2W","price":220,"discountable":true},"2LN2":{"name":"豪華地墊L紅(2色)","category":"mat_luxury_2tone","size":"L","color":"紅(2色)","cycle":"2W","price":280,"discountable":true},"2MN2":{"name":"豪華地墊M紅(2色)","category":"mat_luxury_2tone","size":"M","color":"紅(2色)","cycle":"2W","price":420,"discountable":true},"2TN2":{"name":"豪華地墊T紅(2色)","category":"mat_luxury_2tone","size":"T","color":"紅(2色)","cycle":"2W","price":720,"discountable":true},"EXSG":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSH":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true},"EXSLG":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXSLH":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true},"EXLG":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"EXLH":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true},"ELLG":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"ELLH":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true},"EXTG":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"EXTH":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true},"KKSG":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSH":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true},"KKSLG":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKSLH":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true},"KKLG":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"KKLH":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true},"MANSB":{"name":"男女辨識地墊(男)S棕","category":"mat_gender","size":"S","color":"棕","cycle":"2W","price":170,"discountable":true},"MWOSR":{"name":"男女辨識地墊(女)S紅","category":"mat_gender","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true},"AMWT":{"name":"小型擴香芳香系列-白茶","category":"fragrance","size":"120ml","cycle":"4W","price":500,"discountable":false},"BF-L":{"name":"BF複方精油芳香系列-檸檬馬鞭草","category":"fragrance","size":"240ml","cycle":"4W","price":200,"discountable":false},"DOME":{"name":"網狀尿石去除劑","category":"urinal","size":"40g","cycle":"4W","price":220,"discountable":false},"NSAC":{"name":"業務用除塵拖把","category":"mop","size":null,"cycle":"4W","price":200,"discountable":true},"M-90":{"name":"業務用除塵特大拖把","category":"mop","size":"34×120","cycle":"4W","price":null,"discountable":true},"S-20":{"name":"業務用握把式抹布","category":"mop","size":"18×32","cycle":"4W","price":null,"discountable":true},"HPL":{"name":"訂做地墊2色L","category":"mat_custom","size":"L","color":"2色","cycle":"2W","price":360,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"},"HPS":{"name":"訂做地墊2色S","category":"mat_custom","size":"S","color":"2色","cycle":"2W","price":230,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"}}};
+const CM_CATALOG ={"categories":{"mat_welcome":"迎賓系列","mat_elegant":"雅緻系列","mat_basic":"Basic 系列","mat_forever":"Forever 系列","mat_dust":"吸塵吸水系列","mat_thin":"薄型吸塵吸水系列","mat_luxury":"豪華系列","mat_luxury_2tone":"豪華系列(2色)","mat_strong":"強力刮砂系列","mat_metal":"鐵屑油污系列","mat_gender":"男女辨識系列","mat_custom":"訂做系列","fragrance":"芳香劑","urinal":"小便斗清潔","mop":"拖把/抹布"},"products":{"LYSR":{"name":"高級迎賓地墊S紅","category":"mat_welcome","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true,"dim":"75x90"},"LYLR":{"name":"高級迎賓地墊L紅","category":"mat_welcome","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true,"dim":"90x150"},"DECSR":{"name":"中英歡迎地墊 S 75x90","category":"mat_welcome","size":"S","color":null,"cycle":"2W","price":170,"discountable":true,"dim":"75x90"},"DECSLR":{"name":"中英歡迎地墊 SL 90x120","category":"mat_welcome","size":"SL","color":null,"cycle":"2W","price":220,"discountable":true,"dim":"90x120"},"DECLR":{"name":"中英歡迎地墊 L 90x150","category":"mat_welcome","size":"L","color":null,"cycle":"2W","price":280,"discountable":true,"dim":"90x150"},"DECLLR":{"name":"中英歡迎地墊 LL 120x180","category":"mat_welcome","size":"LL","color":null,"cycle":"2W","price":420,"discountable":true,"dim":"120x180"},"DECTR":{"name":"中英歡迎地墊 T 150x240","category":"mat_welcome","size":"T","color":null,"cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"GSH":{"name":"雅緻地墊灰 S 75x90","category":"mat_elegant","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true,"dim":"75x90"},"GSB":{"name":"雅緻地墊棕 S 75x90","category":"mat_elegant","size":"S","color":"棕","cycle":"2W","price":190,"discountable":true,"dim":"75x90"},"GLH":{"name":"雅緻地墊灰 L 90x150","category":"mat_elegant","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true,"dim":"90x150"},"GLB":{"name":"雅緻地墊棕 L 90x150","category":"mat_elegant","size":"L","color":"棕","cycle":"2W","price":360,"discountable":true,"dim":"90x150"},"GLLH":{"name":"雅緻地墊灰 LL 120x180","category":"mat_elegant","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true,"dim":"120x180"},"GLLB":{"name":"雅緻地墊棕 LL 120x180","category":"mat_elegant","size":"LL","color":"棕","cycle":"2W","price":500,"discountable":true,"dim":"120x180"},"GTH":{"name":"雅緻地墊灰 T 150x240","category":"mat_elegant","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true,"dim":"150x240"},"GTB":{"name":"雅緻地墊棕 T 150x240","category":"mat_elegant","size":"T","color":"棕","cycle":"2W","price":900,"discountable":true,"dim":"150x240"},"BSH":{"name":"BASIC地墊灰 S 75x90","category":"mat_basic","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true,"dim":"75x90"},"BSR":{"name":"BASIC地墊紅 S 75x90","category":"mat_basic","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true,"dim":"75x90"},"BSLH":{"name":"BASIC地墊灰 SL 90x120","category":"mat_basic","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true,"dim":"90x120"},"BSLR":{"name":"BASIC地墊紅 SL 90x120","category":"mat_basic","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true,"dim":"90x120"},"BLH":{"name":"BASIC地墊灰 L 90x150","category":"mat_basic","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true,"dim":"90x150"},"BLR":{"name":"BASIC地墊紅 L 90x150","category":"mat_basic","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true,"dim":"90x150"},"BLLH":{"name":"BASIC地墊灰 LL 120x180","category":"mat_basic","size":"LL","color":"灰","cycle":"2W","price":420,"discountable":true,"dim":"120x180"},"BLLR":{"name":"BASIC地墊紅 LL 120x180","category":"mat_basic","size":"LL","color":"紅","cycle":"2W","price":420,"discountable":true,"dim":"120x180"},"BXH":{"name":"BASIC地墊灰 X 120x240","category":"mat_basic","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true,"dim":"120x240"},"BXR":{"name":"BASIC地墊紅 X 120x240","category":"mat_basic","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true,"dim":"120x240"},"BTH":{"name":"BASIC地墊灰 T 150x240","category":"mat_basic","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"BTR":{"name":"BASIC地墊紅 T 150x240","category":"mat_basic","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"FFSK":{"name":"FOREVER地墊 S 75x85","category":"mat_forever","size":"S","color":null,"cycle":"2W","price":170,"discountable":true,"dim":"75x85"},"FFSLK":{"name":"FOREVER地墊 SL 85x120","category":"mat_forever","size":"SL","color":null,"cycle":"2W","price":220,"discountable":true,"dim":"85x120"},"FFLK":{"name":"FOREVER地墊 L 85x150","category":"mat_forever","size":"L","color":null,"cycle":"2W","price":280,"discountable":true,"dim":"85x150"},"FFMK":{"name":"FOREVER地墊 M 115x180","category":"mat_forever","size":"M","color":null,"cycle":"2W","price":420,"discountable":true,"dim":"115x180"},"FFXK":{"name":"FOREVER地墊 X 115x240","category":"mat_forever","size":"X","color":null,"cycle":"2W","price":550,"discountable":true,"dim":"115x240"},"FFTK":{"name":"FOREVER地墊 T 150x240","category":"mat_forever","size":"T","color":null,"cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"FF3MK":{"name":"FOREVER地墊 3M 85x300","category":"mat_forever","size":"3M","color":null,"cycle":"2W","price":610,"discountable":true,"dim":"85x300"},"FF5MK":{"name":"FOREVER地墊 5M 85x500","category":"mat_forever","size":"5M","color":null,"cycle":"2W","price":880,"discountable":true,"dim":"85x500"},"DWSSH":{"name":"吸塵吸水地墊灰 SS 65x80","category":"mat_dust","size":"SS","color":"灰","cycle":"2W","price":170,"discountable":true,"dim":"65x80"},"DWSSR":{"name":"吸塵吸水地墊紅 SS 65x80","category":"mat_dust","size":"SS","color":"紅","cycle":"2W","price":170,"discountable":true,"dim":"65x80"},"DWSH":{"name":"吸塵吸水地墊灰 S 75x90","category":"mat_dust","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true,"dim":"75x90"},"DWSR":{"name":"吸塵吸水地墊紅 S 75x90","category":"mat_dust","size":"S","color":"紅","cycle":"2W","price":200,"discountable":true,"dim":"75x90"},"DWSLH":{"name":"吸塵吸水地墊灰 SL 90x120","category":"mat_dust","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true,"dim":"90x120"},"DWSLR":{"name":"吸塵吸水地墊紅 SL 90x120","category":"mat_dust","size":"SL","color":"紅","cycle":"2W","price":310,"discountable":true,"dim":"90x120"},"DWLH":{"name":"吸塵吸水地墊灰 L 90x150","category":"mat_dust","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true,"dim":"90x150"},"DWLR":{"name":"吸塵吸水地墊紅 L 90x150","category":"mat_dust","size":"L","color":"紅","cycle":"2W","price":390,"discountable":true,"dim":"90x150"},"DWLLH":{"name":"吸塵吸水地墊灰 LL 120x180","category":"mat_dust","size":"LL","color":"灰","cycle":"2W","price":530,"discountable":true,"dim":"120x180"},"DWLLR":{"name":"吸塵吸水地墊紅 LL 120x180","category":"mat_dust","size":"LL","color":"紅","cycle":"2W","price":530,"discountable":true,"dim":"120x180"},"DWXH":{"name":"吸塵吸水地墊灰 X 120x240","category":"mat_dust","size":"X","color":"灰","cycle":"2W","price":690,"discountable":true,"dim":"120x240"},"DWXR":{"name":"吸塵吸水地墊紅 X 120x240","category":"mat_dust","size":"X","color":"紅","cycle":"2W","price":690,"discountable":true,"dim":"120x240"},"DWTH":{"name":"吸塵吸水地墊灰 T 150x240","category":"mat_dust","size":"T","color":"灰","cycle":"2W","price":940,"discountable":true,"dim":"150x240"},"DWTR":{"name":"吸塵吸水地墊紅 T 150x240","category":"mat_dust","size":"T","color":"紅","cycle":"2W","price":940,"discountable":true,"dim":"150x240"},"DW3MH":{"name":"吸塵吸水地墊灰 3M 90x300","category":"mat_dust","size":"3M","color":"灰","cycle":"2W","price":680,"discountable":true,"dim":"90x300"},"DW3MR":{"name":"吸塵吸水地墊紅 3M 90x300","category":"mat_dust","size":"3M","color":"紅","cycle":"2W","price":680,"discountable":true,"dim":"90x300"},"DW4MH":{"name":"吸塵吸水地墊灰 4M 90x400","category":"mat_dust","size":"4M","color":"灰","cycle":"2W","price":830,"discountable":true,"dim":"90x400"},"DW4MR":{"name":"吸塵吸水地墊紅 4M 90x400","category":"mat_dust","size":"4M","color":"紅","cycle":"2W","price":830,"discountable":true,"dim":"90x400"},"DW5MH":{"name":"吸塵吸水地墊灰 5M 90x500","category":"mat_dust","size":"5M","color":"灰","cycle":"2W","price":1050,"discountable":true,"dim":"90x500"},"DW5MR":{"name":"吸塵吸水地墊紅 5M 90x500","category":"mat_dust","size":"5M","color":"紅","cycle":"2W","price":1050,"discountable":true,"dim":"90x500"},"UQSH":{"name":"薄型吸塵地墊 S 75x90","category":"mat_thin","size":"S","color":null,"cycle":"2W","price":190,"discountable":true,"dim":"75x90"},"UQSLH":{"name":"薄型吸塵地墊 SL 90x120","category":"mat_thin","size":"SL","color":null,"cycle":"2W","price":280,"discountable":true,"dim":"90x120"},"UQLH":{"name":"薄型吸塵地墊 L 90x150","category":"mat_thin","size":"L","color":null,"cycle":"2W","price":360,"discountable":true,"dim":"90x150"},"UQLLH":{"name":"薄型吸塵地墊 LL 120x180","category":"mat_thin","size":"LL","color":null,"cycle":"2W","price":500,"discountable":true,"dim":"120x180"},"UQTH":{"name":"薄型吸塵地墊 T 150x240","category":"mat_thin","size":"T","color":null,"cycle":"2W","price":900,"discountable":true,"dim":"150x240"},"UQ4MH":{"name":"薄型吸塵地墊 4M 90x400","category":"mat_thin","size":"4M","color":null,"cycle":"2W","price":730,"discountable":true,"dim":"90x400"},"UQ5MH":{"name":"薄型吸塵地墊 5M 90x500","category":"mat_thin","size":"5M","color":null,"cycle":"2W","price":910,"discountable":true,"dim":"90x500"},"TJSR":{"name":"豪華地墊紅 S 75x90","category":"mat_luxury","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true,"dim":"75x90"},"TJSH":{"name":"豪華地墊灰 S 75x90","category":"mat_luxury","size":"S","color":"灰","cycle":"2W","price":170,"discountable":true,"dim":"75x90"},"TJSLR":{"name":"豪華地墊紅 SL 90x120","category":"mat_luxury","size":"SL","color":"紅","cycle":"2W","price":220,"discountable":true,"dim":"90x120"},"TJSLH":{"name":"豪華地墊灰 SL 90x120","category":"mat_luxury","size":"SL","color":"灰","cycle":"2W","price":220,"discountable":true,"dim":"90x120"},"TJLR":{"name":"豪華地墊紅 L 90x150","category":"mat_luxury","size":"L","color":"紅","cycle":"2W","price":280,"discountable":true,"dim":"90x150"},"TJLH":{"name":"豪華地墊灰 L 90x150","category":"mat_luxury","size":"L","color":"灰","cycle":"2W","price":280,"discountable":true,"dim":"90x150"},"TJMR":{"name":"豪華地墊紅 M 120x180","category":"mat_luxury","size":"M","color":"紅","cycle":"2W","price":420,"discountable":true,"dim":"120x180"},"TJMH":{"name":"豪華地墊灰 M 120x180","category":"mat_luxury","size":"M","color":"灰","cycle":"2W","price":420,"discountable":true,"dim":"120x180"},"TJXR":{"name":"豪華地墊紅 X 120x240","category":"mat_luxury","size":"X","color":"紅","cycle":"2W","price":550,"discountable":true,"dim":"120x240"},"TJXH":{"name":"豪華地墊灰 X 120x240","category":"mat_luxury","size":"X","color":"灰","cycle":"2W","price":550,"discountable":true,"dim":"120x240"},"TJTR":{"name":"豪華地墊紅 T 150x240","category":"mat_luxury","size":"T","color":"紅","cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"TJTH":{"name":"豪華地墊灰 T 150x240","category":"mat_luxury","size":"T","color":"灰","cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"2SN2":{"name":"豪華地墊咖啡 S 75x90","category":"mat_luxury_2tone","size":"S","color":"咖啡","cycle":"2W","price":170,"discountable":true,"dim":"75x90"},"2SLN2":{"name":"豪華地墊咖啡 SL 90x120","category":"mat_luxury_2tone","size":"SL","color":"咖啡","cycle":"2W","price":220,"discountable":true,"dim":"90x120"},"2LN2":{"name":"豪華地墊咖啡 L 90x150","category":"mat_luxury_2tone","size":"L","color":"咖啡","cycle":"2W","price":280,"discountable":true,"dim":"90x150"},"2MN2":{"name":"豪華地墊咖啡 M 120x180","category":"mat_luxury_2tone","size":"M","color":"咖啡","cycle":"2W","price":420,"discountable":true,"dim":"120x180"},"2TN2":{"name":"豪華地墊咖啡 T 150x240","category":"mat_luxury_2tone","size":"T","color":"紅(2色)","cycle":"2W","price":720,"discountable":true,"dim":"150x240"},"EXSG":{"name":"強力刮砂地墊S灰","category":"mat_strong","size":"S","color":"灰","cycle":"2W","price":190,"discountable":true,"dim":"75x90"},"EXSH":{"name":"強力刮沙地墊 S 75x90","category":"mat_strong","size":"S","color":null,"cycle":"2W","price":190,"discountable":true,"dim":"75x90"},"EXSLG":{"name":"強力刮砂地墊SL灰","category":"mat_strong","size":"SL","color":"灰","cycle":"2W","price":280,"discountable":true,"dim":"90x120"},"EXSLH":{"name":"強力刮沙地墊 SL 90x120","category":"mat_strong","size":"SL","color":null,"cycle":"2W","price":280,"discountable":true,"dim":"90x120"},"EXLG":{"name":"強力刮砂地墊L灰","category":"mat_strong","size":"L","color":"灰","cycle":"2W","price":360,"discountable":true,"dim":"90x150"},"EXLH":{"name":"強力刮沙地墊 L 90x150","category":"mat_strong","size":"L","color":null,"cycle":"2W","price":360,"discountable":true,"dim":"90x150"},"ELLG":{"name":"強力刮砂地墊LL灰","category":"mat_strong","size":"LL","color":"灰","cycle":"2W","price":500,"discountable":true,"dim":"120x180"},"ELLH":{"name":"強力刮沙地墊 LL 120x180","category":"mat_strong","size":"LL","color":null,"cycle":"2W","price":500,"discountable":true,"dim":"120x180"},"EXTG":{"name":"強力刮砂地墊T灰","category":"mat_strong","size":"T","color":"灰","cycle":"2W","price":900,"discountable":true,"dim":"150x240"},"EXTH":{"name":"強力刮沙地墊 T 150x240","category":"mat_strong","size":"T","color":null,"cycle":"2W","price":900,"discountable":true,"dim":"150x240"},"KKSG":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true,"dim":"75x90"},"KKSH":{"name":"鐵屑油污地墊S灰","category":"mat_metal","size":"S","color":"灰","cycle":"2W","price":200,"discountable":true,"dim":"75x90"},"KKSLG":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true,"dim":"90x120"},"KKSLH":{"name":"鐵屑油污地墊SL灰","category":"mat_metal","size":"SL","color":"灰","cycle":"2W","price":310,"discountable":true,"dim":"90x120"},"KKLG":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true,"dim":"90x150"},"KKLH":{"name":"鐵屑油污地墊L灰","category":"mat_metal","size":"L","color":"灰","cycle":"2W","price":390,"discountable":true,"dim":"90x150"},"MANSB":{"name":"男女辨識地墊藍 S 71x85","category":"mat_gender","size":"S","color":"藍","cycle":"2W","price":170,"discountable":true,"dim":"71x85"},"MWOSR":{"name":"男女辨識地墊紅 S 71x85","category":"mat_gender","size":"S","color":"紅","cycle":"2W","price":170,"discountable":true,"dim":"71x85"},"AMWT":{"name":"小型擴香芳香系列-白茶","category":"fragrance","size":"120ml","cycle":"4W","price":500,"discountable":false},"BF-L":{"name":"BF複方精油芳香系列-檸檬馬鞭草","category":"fragrance","size":"240ml","cycle":"4W","price":200,"discountable":false},"DOME":{"name":"網狀尿石去除劑","category":"urinal","size":"40g","cycle":"4W","price":220,"discountable":false},"NSAC":{"name":"業務用除塵拖把","category":"mop","size":null,"cycle":"2W","price":190,"discountable":true,"price4w":200},"M-90":{"name":"業務用除塵特大拖把","category":"mop","size":"34×120","cycle":"2W","price":220,"discountable":true,"price4w":352},"S-20":{"name":"業務用握把式抹布","category":"mop","size":"18×32","cycle":"2W","price":100,"discountable":true,"price4w":160},"HPL":{"name":"訂做地墊2色L","category":"mat_custom","size":"L","color":"2色","cycle":"2W","price":360,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"},"HPS":{"name":"訂做地墊2色S","category":"mat_custom","size":"S","color":"2色","cycle":"2W","price":230,"discountable":false,"contractYears":4,"note":"訂製品，合約期間為 4 年"},"TJ3H":{"name":"豪華地墊灰 3M 90x300","category":"mat_luxury","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true,"dim":"90x300"},"TJ3R":{"name":"豪華地墊紅 3M 90x300","category":"mat_luxury","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true,"dim":"90x300"},"TJ5H":{"name":"豪華地墊灰 5M 90x500","category":"mat_luxury","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true,"dim":"90x500"},"TJ5R":{"name":"豪華地墊紅 5M 90x500","category":"mat_luxury","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true,"dim":"90x500"},"B3MH":{"name":"BASIC地墊灰 3M 90x300","category":"mat_basic","size":"3M","color":"灰","cycle":"2W","price":610,"discountable":true,"dim":"90x300"},"B3MR":{"name":"BASIC地墊紅 3M 90x300","category":"mat_basic","size":"3M","color":"紅","cycle":"2W","price":610,"discountable":true,"dim":"90x300"},"B5MH":{"name":"BASIC地墊灰 5M 90x500","category":"mat_basic","size":"5M","color":"灰","cycle":"2W","price":880,"discountable":true,"dim":"90x500"},"B5MR":{"name":"BASIC地墊紅 5M 90x500","category":"mat_basic","size":"5M","color":"紅","cycle":"2W","price":880,"discountable":true,"dim":"90x500"},"FSSK":{"name":"FOREVER地墊 SS 60x85","category":"mat_forever","size":"SS","color":null,"cycle":"2W","price":140,"discountable":true,"dim":"60x85"},"UQ3MH":{"name":"薄型吸塵地墊 3M 90x300","category":"mat_thin","size":"3M","dim":"90x300","color":null,"cycle":"2W","price":580,"discountable":true},"KKSN":{"name":"KK鐵屑油污地墊 S 75x90","category":"mat_metal","size":"S","dim":"75x90","color":null,"cycle":"2W","price":200,"discountable":true},"KKSLN":{"name":"KK鐵屑油污地墊 SL 90x120","category":"mat_metal","size":"SL","dim":"90x120","color":null,"cycle":"2W","price":310,"discountable":true},"KKLN":{"name":"KK鐵屑油污地墊 L 90x150","category":"mat_metal","size":"L","dim":"90x150","color":null,"cycle":"2W","price":390,"discountable":true},"SHH":{"name":"家庭用握把式抹布","category":"mop","size":null,"cycle":"2W","price":140,"price4w":140,"discountable":true},"NH-S":{"name":"紫色除塵抹布","category":"mop","size":null,"cycle":"2W","price":120,"price4w":140,"discountable":true},"SSS-R":{"name":"SHUSHU抹布","category":"mop","size":null,"cycle":"2W","price":170,"price4w":272,"discountable":true},"LALA-R":{"name":"LALA拖把","category":"mop","size":null,"cycle":"2W","price":190,"price4w":304,"discountable":true},"N-AC":{"name":"業務用除塵大拖把","category":"mop","size":null,"cycle":"2W","price":210,"price4w":336,"discountable":true},"M-120":{"name":"業務用除塵超大拖把","category":"mop","size":null,"cycle":"2W","price":280,"price4w":448,"discountable":true},"BFDW":{"name":"BF複方精油芳香機台 240ml","category":"fragrance","size":null,"cycle":"4W","price":200,"discountable":false},"AFDW":{"name":"大型香水芳香機台 300ml","category":"fragrance","size":null,"cycle":"4W","price":400,"discountable":false},"AL-360":{"name":"香氛擴香機 400ml","category":"fragrance","size":null,"cycle":"4W","price":2200,"discountable":false},"FNWT":{"name":"Prime D氛香機 白 80ml","category":"fragrance","size":null,"cycle":"4W","price":350,"discountable":false},"FNBK":{"name":"Prime D氛香機 黑 80ml","category":"fragrance","size":null,"cycle":"4W","price":350,"discountable":false},"FNBN":{"name":"Prime D氛香機 咖啡 80ml","category":"fragrance","size":null,"cycle":"4W","price":350,"discountable":false},"AMDW":{"name":"小型擴香機台","category":"fragrance","size":null,"cycle":"4W","price":500,"discountable":false},"WA350":{"name":"自動酒精（補充包350ml+機台+立架）","category":"fragrance","size":null,"cycle":"4W","price":300,"discountable":false}}};
 
 // ─── 合約共用工具（報價與合約共用的小算法） ───
 // 每 4 週更換次數：1週→4、2週→2、4週→1
@@ -6925,7 +6983,7 @@ const CM_engine = (function(catalog){
     const changes = cmChangesPer4W(cycle);   // 1週→4、2週→2、4週→1
     // 單價＝每次更換單價：優先用 item.unit（使用者手填／已換算）；否則由商品定價依商品週期→所選週期換算
     const unitPrice = (unit != null && unit !== '') ? Number(unit)
-                     : (info ? cmCatalogUnit(info.price, info.cycle, cycle) : null);
+                     : (info ? cmCatalogUnit(info, cycle) : null);
     const name = nameOverride || (product && product.name) || code;
     if(!product){
       if(unitPrice == null) throw new Error('代號「'+code+'」不在商品庫，請填單價');
@@ -7443,30 +7501,43 @@ function cmContractAttachedTerms(type){
   return L;
 }
 
-// ─── 商品價格邏輯（報價精靈與合約精靈唯一入口）───
-// 商品庫 price＝該商品「自身週期」下的每次更換單價（含稅）：地墊／拖把多為 2W 價，芳香、DOME 等為 4W 價。
-// 換算成所選週期的每次更換單價：
-//   - 換得比商品週期更久（2W 商品選 4W）→ 一次更換涵蓋多期，單價 × 倍數（2W 價 ×2）
-//   - 換得跟商品週期一樣或更勤（4W 商品選 4W、2W 商品選 1W）→ 單價不變（每次更換各收一次）
-// 每 4 週金額＝單價 × 每 4 週更換次數 × 數量（乘法只在 expandItem／cmwBuildContractData 各做一次）
-function cmCatalogUnit(price, prodCycle, cycle){
-  if(price == null) return null;
-  const ratio = cmChangesPer4W(prodCycle || '2W') / cmChangesPer4W(cycle || prodCycle || '2W');
-  return ratio > 1 ? price * ratio : price;
+// ─── 商品價格邏輯：與主系統共用同一個換算（HOST.unitAt＝unitPriceAt），這裡只負責找定價 ───
+// 每次更換單價＝unitAt({price,cycle,price4w}, 所選週期)；每 4 週金額＝單價 × 次數 × 數量（乘法只在 expandItem／cmwBuildContractData 各做一次）
+function cmCatalogUnit(info, cycle){
+  if(!info || info.price == null) return null;
+  const u = HOST.unitAt(info, cycle);
+  return u > 0 ? u : null;
 }
 // 定價來源：主系統商品庫（業務在 App 維護、同步到 Sheet products 分頁）優先；
-// 不在主系統或無定價才退回合約商品庫 CM_CATALOG。price 與 cycle 必須成對取用（價格語意依附週期）。
+// 不在主系統或無定價才退回合約商品庫 CM_CATALOG。price／cycle／price4w 成對取用（價格語意依附週期）。
 function cmCatalogInfo(code){
   const sp = HOST.getProduct(code);
-  if(sp && sp.price > 0) return { price: sp.price, cycle: sp.cycle === '4W' ? '4W' : '2W', isMat: sp.cat === '地墊' };
+  if(sp && sp.price > 0) return { price: sp.price, cycle: sp.cycle === '4W' ? '4W' : '2W', price4w: sp.price4w > 0 ? sp.price4w : undefined, isMat: sp.cat === '地墊' };
   const p = CM_CATALOG.products[code];
-  if(p && p.price != null) return { price: p.price, cycle: p.cycle || '2W', isMat: /^mat_/.test(p.category || '') };
+  if(p && p.price != null) return { price: p.price, cycle: p.cycle || '2W', price4w: p.price4w > 0 ? p.price4w : undefined, isMat: /^mat_/.test(p.category || '') };
   return null;
 }
-// 地墊選 4W 換的建議 8 折單價（只提示、不預設帶入；折多少由業務逐案決定）。非地墊或非 4W → null
-function cmMat4WSuggest(code, cycle){
-  const info = cmCatalogInfo(code);
-  return (info && info.isMat && cycle === '4W') ? Math.round(cmCatalogUnit(info.price, info.cycle, '4W') * 0.8) : null;
+// 建議折數檔（價格表）：地墊 4W 換三檔（九折／八五折／八折），其他兩檔（九折／八五折）；以所選週期的每次更換單價計
+function cmTiers(code, cycle){
+  const info = cmCatalogInfo(code); if(!info) return [];
+  const unit = cmCatalogUnit(info, cycle); if(!unit) return [];
+  const eff = info.cycle === '4W' ? '4W' : (cycle || '2W');
+  const rates = (info.isMat && eff === '4W') ? [0.9, 0.85, 0.8] : [0.9, 0.85];
+  return rates.map(rate => ({ rate, unit: Math.round(unit * rate) }));
+}
+function cmTierLabel(rt){ const n = Math.round(rt * 100); return (n % 10 === 0 ? n / 10 : n) + '折'; }
+// 建議折數列（一鍵帶入單價）：與客戶卡同一套樣式（.ti-tiers／.tier）
+function cmTierChips(code, cycle, current, onPick){
+  const tiers = cmTiers(code, cycle); if(!tiers.length) return null;
+  const row = document.createElement('div'); row.className = 'ti-tiers';
+  const lab = document.createElement('span'); lab.className = 'ti-label'; lab.textContent = '建議'; row.appendChild(lab);
+  tiers.forEach(t => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tier' + (Number(current) === t.unit ? ' on' : '');
+    b.textContent = cmTierLabel(t.rate) + ' $' + t.unit.toLocaleString(); b.title = '帶入' + cmTierLabel(t.rate) + '單價';
+    b.onclick = () => onPick(t.unit);
+    row.appendChild(b);
+  });
+  return row;
 }
 // 客戶卡品項的有效週期：客戶卡只讓地墊選週期，芳香等 4W 商品存的 cycle 是無意義的預設值 → 4W 商品一律 4W
 function cmItemCycle(it, info){
@@ -7501,7 +7572,7 @@ function clientToCMConfig(c){
     if(it.quoted && it.quoted > 0 && qty > 0 && changes > 0){
       out.unit = Math.round(it.quoted / (changes * qty));
     } else if(info){
-      out.unit = cmCatalogUnit(info.price, info.cycle, cycle); out._unitAuto = true;
+      out.unit = cmCatalogUnit(info, cycle); out._unitAuto = true;
     }
     if(it.loc) out.loc = it.loc;
     // 不在合約商品庫的代號 → 從主程式商品庫補品名
@@ -7696,7 +7767,7 @@ function cmRenderItems(){
     sel.onchange = () => {
       it.cycle = sel.value;
       // 自動帶入的單價隨週期重算（商品週期→所選週期）；手動改過的單價保留
-      if(it._unitAuto){ const ci = cmCatalogInfo(it.code); if(ci) it.unit = cmCatalogUnit(ci.price, ci.cycle, it.cycle); }
+      if(it._unitAuto){ const ci = cmCatalogInfo(it.code); if(ci) it.unit = cmCatalogUnit(ci, it.cycle); }
       cmRenderItems();
     };
     cw.appendChild(sel); fields.appendChild(cw);
@@ -7725,8 +7796,8 @@ function cmRenderItems(){
     // 每4週金額初始顯示（元素已於上方建立）
     cmRecalcRow();
     div.appendChild(money);
-    const sug = cmMat4WSuggest(it.code, it.cycle);
-    if(sug != null){ const h = document.createElement('div'); h.className = 'cm-hint'; h.style.cssText = 'font-size:11px;color:var(--text3);text-align:right'; h.textContent = '地墊4週換可打8折：建議單價 $' + sug.toLocaleString() + '（要不要打折、打幾折自行決定）'; div.appendChild(h); }
+    const chips = cmTierChips(it.code, it.cycle || '2W', it.unit, v => { it.unit = v; it._unitAuto = false; cmRenderItems(); });
+    if(chips){ chips.style.justifyContent = 'flex-end'; div.appendChild(chips); }
 
     cont.appendChild(div);
   });
@@ -7807,7 +7878,7 @@ function cmRenderProdList(){
           // 從商品庫選取 → 帶入預設品名／週期／單價（週期＝商品自身週期，單價＝該週期每次更換單價）
           delete it.name;
           it.cycle = info ? info.cycle : (p.cycle || it.cycle || '2W');
-          it.unit = info ? cmCatalogUnit(info.price, info.cycle, it.cycle) : '';
+          it.unit = info ? cmCatalogUnit(info, it.cycle) : '';
           it._unitAuto = !!info;
           cmRenderItems();
         }
@@ -8220,7 +8291,7 @@ function cmwInit(c){
     // 契約單價＝每次更換單價：有議價 quoted（整列每4週總額）→ quoted /（次數 × 數量）；否則商品定價換算到所選週期
     let contractUnit = '', unitAuto = false;
     if(it.quoted && it.quoted > 0) contractUnit = Math.round(it.quoted / (n * qty));
-    else if(info){ contractUnit = cmCatalogUnit(info.price, info.cycle, cycle); unitAuto = true; }
+    else if(info){ contractUnit = cmCatalogUnit(info, cycle); unitAuto = true; }
     return {
       code: it.product,
       name: p ? p.name : (sp && sp.desc ? sp.desc : it.product),
@@ -8305,7 +8376,7 @@ function cmwSetItemProduct(idx, code){
   // 選了商品 → 週期＝商品自身週期、契約單價＝該週期每次更換單價（自動帶入，換週期時跟著重算）
   const info = cmCatalogInfo(code);
   it.cycle = info ? info.cycle : ((p && p.cycle) || it.cycle || '2W');
-  it.contractUnit = info ? cmCatalogUnit(info.price, info.cycle, it.cycle) : '';
+  it.contractUnit = info ? cmCatalogUnit(info, it.cycle) : '';
   it._unitAuto = !!info;
   cmwAutoType();
   cmwRenderItems();
@@ -8349,7 +8420,7 @@ function cmwRenderItems(){
     sel.onchange = () => {
       it.cycle = sel.value;
       // 自動帶入的契約單價隨週期重算（商品週期→所選週期）；手動改過的保留。select 改完重繪整列沒有游標問題
-      if(it._unitAuto){ const ci = cmCatalogInfo(it.code); if(ci) it.contractUnit = cmCatalogUnit(ci.price, ci.cycle, it.cycle); }
+      if(it._unitAuto){ const ci = cmCatalogInfo(it.code); if(ci) it.contractUnit = cmCatalogUnit(ci, it.cycle); }
       cmwRenderItems();
     };
     cw.appendChild(sel); fields.appendChild(cw);
@@ -8366,8 +8437,8 @@ function cmwRenderItems(){
     div.appendChild(fields);
     recalc();
     div.appendChild(info);
-    const sug = cmMat4WSuggest(it.code, it.cycle);
-    if(sug != null){ const h = document.createElement('div'); h.className = 'cm-hint'; h.style.cssText = 'font-size:11px;color:var(--text3)'; h.textContent = '地墊4週換可打8折：建議契約單價 $' + sug.toLocaleString() + '（要不要打折、打幾折自行決定）'; div.appendChild(h); }
+    const chips = cmTierChips(it.code, it.cycle, it.contractUnit, v => { it.contractUnit = v; it._unitAuto = false; cmwRenderItems(); });
+    if(chips) div.appendChild(chips);
     cont.appendChild(div);
   });
   if(CM_wiz.items.length === 0) cont.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3)">尚無商品，請按下方「＋ 從商品庫新增」。</div>';
@@ -8603,7 +8674,7 @@ return {
     changesPer4W: cmChangesPer4W,
     catalogUnit: cmCatalogUnit,
     catalogInfo: cmCatalogInfo,
-    mat4WSuggest: cmMat4WSuggest,
+    tiers: cmTiers,
     itemCycle: cmItemCycle,
     wizInit(c){ cmwInit(c); return CM_wiz; },
     wizSetItemProduct(idx, code){ cmwSetItemProduct(idx, code); return CM_wiz; },
@@ -8625,7 +8696,8 @@ ContractMaker.init({
   sync: (action, payload) => { if(typeof autoSync === 'function') autoSync(action, payload); },
   onChange: () => { if(typeof renderVisits === 'function') renderVisits(); },
   escapeHtml: (s) => (typeof escHtml === 'function' ? escHtml(s) : String(s==null?'':s)),
-  getProfile: () => (typeof getProfile === 'function' ? getProfile() : null)
+  getProfile: () => (typeof getProfile === 'function' ? getProfile() : null),
+  unitAt: (p, cycle) => unitPriceAt(p, cycle)
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -8647,11 +8719,30 @@ if(location.search.includes('test=1')){
   // 地墊 DECSR: price=170, cycle=2W → 2W換: 170*2=340; 4W換: 170*2*0.8=272
   assert('displayFw4 地墊 DECSR 2W', displayFw4('DECSR',1,'2W'), 340);
   assert('displayFw4 地墊 DECSR 4W = 2W價×2（不預設打折）', displayFw4('DECSR',1,'4W'), 340);
-  assert('refRate 地墊 4W → 建議 8 折', refRate('DECSR','4W'), 0.8);
-  assert('refRate 地墊 2W → 9 折', refRate('DECSR','2W'), 0.9);
-  assert('refRate 非地墊 → 9 折', refRate('DOME','4W'), 0.9);
-  assert('refQuote 地墊 4W = 340×0.8', refQuote('DECSR',1,'4W'), 272);
-  assert('refQuote 地墊 2W = 340×0.9', refQuote('DECSR',1,'2W'), 306);
+  assert('refTiers 地墊 4W → 三檔 9/85/8', refTiers('DECSR','4W').join(','), '0.9,0.85,0.8');
+  assert('refTiers 地墊 2W → 兩檔', refTiers('DECSR','2W').join(','), '0.9,0.85');
+  assert('refTiers 非地墊 → 兩檔', refTiers('DOME','4W').join(','), '0.9,0.85');
+  assert('refQuote 地墊 4W 八折 = 340×0.8', refQuote('DECSR',1,'4W',0.8), 272);
+  assert('refQuote 地墊 2W 預設九折 = 340×0.9', refQuote('DECSR',1,'2W'), 306);
+  assert('tierLabel 0.85 → 85折', tierLabel(0.85), '85折');
+  // 2026-09 價格表：拖把 4 週換單價照表（price4w），地墊 4W＝2W×2
+  assert('unitPriceAt NSAC 2W = 190', unitPriceAt(getProd('NSAC'),'2W'), 190);
+  assert('unitPriceAt NSAC 4W = 特價 200', unitPriceAt(getProd('NSAC'),'4W'), 200);
+  assert('displayFw4 NSAC 4W 換 = 200', displayFw4('NSAC',1,'4W'), 200);
+  assert('unitPriceAt S-20 4W = 160', unitPriceAt(getProd('S-20'),'4W'), 160);
+  assert('unitPriceAt SHH 2W = 4W = 140', unitPriceAt(getProd('SHH'),'2W')+'/'+unitPriceAt(getProd('SHH'),'4W'), '140/140');
+  assert('unitPriceAt NH-S 4W = 140', unitPriceAt(getProd('NH-S'),'4W'), 140);
+  assert('unitPriceAt M-120 4W = 448', unitPriceAt(getProd('M-120'),'4W'), 448);
+  assert('unitPriceAt 地墊 DECSR 4W = 340', unitPriceAt(getProd('DECSR'),'4W'), 340);
+  assert('unitPriceAt 4W 商品忽略所選週期', unitPriceAt(getProd('DOME'),'2W'), 220);
+  assert('DWSSH 價格改 170', getProd('DWSSH').price, 170);
+  assert('KKSN 鐵屑油污 200', getProd('KKSN').price, 200);
+  assert('BXH 新增 550', getProd('BXH').price, 550);
+  assert('DWXR 紅款比照灰款 690', getProd('DWXR').price, 690);
+  assert('豪華 SL 尺寸 90x120', getProd('TJSLH').desc, '豪華地墊灰 SL 90x120');
+  assert('DECLLR 規格 LL 120x180', getProd('DECLLR').desc, '中英歡迎地墊 LL 120x180');
+  assert('NFM-DS 舊碼已移除', getProd('NFM-DS'), null);
+  assert('FOREVER 紅款已移除', getProd('FFSR'), null);
   assert('DOME 正名 網狀尿石去除劑', getProd('DOME').desc, '網狀尿石去除劑 40g');
   assert('DOME 價格 220', getProd('DOME').price, 220);
   // 不存在的商品
@@ -8963,15 +9054,18 @@ if(location.search.includes('test=1')){
   const cmDomeInfo=CMt.catalogInfo('DOME');
   assert('catalogInfo DOME 取主系統商品庫（cycle 4W）',cmDomeInfo.cycle,'4W');
   assert('catalogInfo DOME 價格＝主系統商品庫 price',cmDomeInfo.price,getProd('DOME').price);
-  assert('catalogUnit 4W 商品選 4W → 單價不變',CMt.catalogUnit(200,'4W','4W'),200);
-  assert('catalogUnit 4W 商品選 2W → 單價不變（每次更換各收）',CMt.catalogUnit(200,'4W','2W'),200);
-  assert('catalogUnit 2W 商品選 4W → ×2',CMt.catalogUnit(170,'2W','4W'),340);
-  assert('catalogUnit 2W 商品選 2W → 不變',CMt.catalogUnit(170,'2W','2W'),170);
-  assert('catalogUnit 2W 商品選 1W → 不變（考題 GLH 1週 360×4）',CMt.catalogUnit(360,'2W','1W'),360);
-  assert('catalogUnit 無定價 → null',CMt.catalogUnit(null,'2W','4W'),null);
-  assert('mat4WSuggest 地墊 4W → 340×0.8=272',CMt.mat4WSuggest('DECSR','4W'),272);
-  assert('mat4WSuggest 地墊 2W → 無',CMt.mat4WSuggest('DECSR','2W'),null);
-  assert('mat4WSuggest 非地墊 → 無',CMt.mat4WSuggest('DOME','4W'),null);
+  assert('catalogUnit 4W 商品選 4W → 單價不變',CMt.catalogUnit({price:200,cycle:'4W'},'4W'),200);
+  assert('catalogUnit 4W 商品選 2W → 單價不變（每次更換各收）',CMt.catalogUnit({price:200,cycle:'4W'},'2W'),200);
+  assert('catalogUnit 2W 商品選 4W → ×2',CMt.catalogUnit({price:170,cycle:'2W'},'4W'),340);
+  assert('catalogUnit 2W 商品選 2W → 不變',CMt.catalogUnit({price:170,cycle:'2W'},'2W'),170);
+  assert('catalogUnit 2W 商品選 1W → 不變（考題 GLH 1週 360×4）',CMt.catalogUnit({price:360,cycle:'2W'},'1W'),360);
+  assert('catalogUnit 有 price4w 選 4W → 用表定 4 週換單價',CMt.catalogUnit({price:190,cycle:'2W',price4w:200},'4W'),200);
+  assert('catalogUnit 無定價 → null',CMt.catalogUnit(null,'4W'),null);
+  assert('catalogInfo NSAC 帶 price4w 200',CMt.catalogInfo('NSAC').price4w,200);
+  assert('tiers 地墊 4W → 三檔 306/289/272',CMt.tiers('DECSR','4W').map(t=>t.unit).join(','),'306,289,272');
+  assert('tiers 地墊 2W → 兩檔 153/145',CMt.tiers('DECSR','2W').map(t=>t.unit).join(','),'153,145');
+  assert('tiers DOME → 兩檔 198/187',CMt.tiers('DOME','4W').map(t=>t.unit).join(','),'198,187');
+  assert('tiers 無定價 → 空',CMt.tiers('NOPE','4W').length,0);
   assert('itemCycle 4W 商品忽略客戶卡 2W 預設',CMt.itemCycle({cycle:'2W'},{price:200,cycle:'4W'}),'4W');
   assert('itemCycle 2W 商品尊重客戶卡 4W 選擇',CMt.itemCycle({cycle:'4W'},{price:170,cycle:'2W'}),'4W');
   assert('itemCycle 無週期 → 商品週期',CMt.itemCycle({},{price:170,cycle:'2W'}),'2W');
@@ -9026,7 +9120,7 @@ if(location.search.includes('test=1')){
   const cmPv=CM_engine.previewText(cmBuildConfig());
   assert('previewText 不含代號 DECSR',cmPv.includes('DECSR'),false);
   assert('previewText 週期顯示中文 2週',cmPv.includes('2週'),true);
-  assert('previewText 含品名',cmPv.includes('歡迎光臨地墊S紅'),true);
+  assert('previewText 含品名（含規格尺寸）',cmPv.includes('中英歡迎地墊 S 75x90'),true);
   assert('previewText 含每次更換單價 170',cmPv.includes('單價 170'),true);
   CM_state=null;
 
@@ -9047,7 +9141,7 @@ if(location.search.includes('test=1')){
   assert('既有商品 nameOverride 不影響金額',cmRenameQ.grandTotal,340);
 
   // cmBuildConfig 對 it.name 的轉換、cycle/unit 帶出、位置與驗證
-  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,name:'歡迎光臨地墊S紅'}]};  // 與 catalog 同名
+  CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,name:'中英歡迎地墊 S 75x90'}]};  // 與 catalog 同名
   assert('cmBuildConfig 同 catalog 名 → 不傳 nameOverride',cmBuildConfig().items[0].nameOverride,undefined);
   CM_state={client:'X',date:'2026/05/07',items:[{code:'DECSR',qty:1,cycle:'2W',unit:170,name:'我的客製名稱'}]};
   assert('cmBuildConfig 不同名 → 傳 nameOverride',cmBuildConfig().items[0].nameOverride,'我的客製名稱');
@@ -9064,8 +9158,8 @@ if(location.search.includes('test=1')){
   assert('cmBuildConfig 缺客戶名稱 → 丟錯',threw,true);
   // 主系統與合約商品庫都無定價：M-90 合約商品庫 price=null，暫時把主系統定價清成 0 再驗
   threw=false; CM_state={client:'X',date:'2026/05/07',items:[{code:'M-90',qty:1,cycle:'2W'}]};
-  (function(){ const sp=getProd('M-90'); const keep=sp?sp.price:null; if(sp)sp.price=0;
-    try{ cmBuildConfig(); }catch(e){ threw=true; } if(sp)sp.price=keep; })();
+  (function(){ const sp=getProd('M-90'), cp=CM_CATALOG.products['M-90']; const keep=sp?sp.price:null, keepC=cp.price; if(sp)sp.price=0; cp.price=null;
+    try{ cmBuildConfig(); }catch(e){ threw=true; } if(sp)sp.price=keep; cp.price=keepC; })();
   assert('cmBuildConfig 兩邊商品庫都無定價未填單價 → 丟錯',threw,true);
   CM_state={client:'X',date:'2026/05/07',items:[{code:'M-90',qty:1,cycle:'2W'}]};
   assert('cmBuildConfig 合約商品庫無價但主系統有價 → 不丟錯（引擎自行帶入）',cmBuildConfig().items.length,1);

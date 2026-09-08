@@ -103,7 +103,8 @@ salesystem/
 ├── CLAUDE.md               開發慣例（版本號規則、發版三件事、測試要求）
 │
 ├── docs/
-│   └── ARCHITECTURE.md     技術架構：資料模型、同步協定、程式區段地圖
+│   ├── ARCHITECTURE.md     技術架構：資料模型、同步協定、程式區段地圖
+│   └── ROLLOUT.md          跨區推廣體檢：寫死台南的位置、多人導入差異、推廣路線
 │
 ├── test/                   測試（Node + JSDOM，免瀏覽器）
 │   ├── README.md           各測試層說明
