@@ -154,9 +154,10 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
   id,                    // UUID（crypto.randomUUID，雲端 upsert 的 key）
   name, addr, type, status,        // status ∈ STATUS 常數表（未拜訪…拒絕）
   contact, phone, regNo,           // regNo＝統一編號（工業區名單身分鍵）
-  nextdate, trialDate, env, note,
+  nextdate, env, note,
   lat, lng, geocodeSource,         // 地圖定位（manual / geocode_ok / failed）
-  trialItems:      [{product, qty, cycle, quoted, bundledTo?, bundleRole?}],
+  trials: [{ n, start, due, items:[{product, qty, cycle, quoted, bundledTo?, bundleRole?}],
+             open, recovered, result }],   // 每次試用一筆，見下方「試用」
   contractedItems: [{…同上, contractDate}],
   visits: [{date, mood(1-4), note, insight, statusChange, nextdate}],
   todos:  [Todo],
@@ -164,6 +165,27 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
   srvAt                  // 雲端已確認版本的時間戳（同步基準）
 }
 ```
+
+### 試用（每次試用一筆：`c.trials`）
+
+公司規則：每次試用有固定回收日（開始＋14 天，可改）、每家最多 3 次（超過只提醒不擋）。
+
+```js
+trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, recovered:'', result:'' }
+//  result ∈ '' | '成約' | '報價中' | '再試用' | '拒絕'
+```
+
+| 入口 | 語意 |
+|------|------|
+| `openTrials(c)`／`openTrialItems(c)` | 進行中（未回收）——**推進表、長官儀表板、首頁試用總額只算這些**（`calcReportAmt`） |
+| `currentTrial(c)`／`trialItemsOf(c)` | 進行中優先，否則最近一次——客戶卡 4W 估算、提案商品、報價／合約匯入（`HOST.trialItems`） |
+| `trialXInfo(c)` | 以進行中那次的 `due` 分級：到回收日 X、之後每 7 天多一個 X |
+| `autoAddRecycleTodos()` | 每次進行中的試用開始＋7 天後各自加「回收試用品（第 N 次）」，到期＝回收日，`todo.trialN` 對應 |
+| `startTrial()`／`cfStartTrial()` | 新一次試用：**品項從空的開始**、開始日今天、回收日＋14；狀態自動試用中；還有進行中或已達 3 次會先確認 |
+| `finishRecover(result)` | 回收結果四選一：成約（品項含配件轉 `contractedItems`、狀態已成約）／報價中（狀態報價＋`quote-followup` 待辦一週後由 `checkQuoteFollowups` 問是否改拒絕，每週再問）／再試用（複製同品項開下一次）／拒絕。每次回收補一筆拜訪紀錄 |
+| `packTrials(c)` | 舊格式 `trialDate`＋`trialItems` → 第 1 次（試用中＝進行中、其餘＝已回收、回收日不明）。migration v11 與所有資料進入點（雲端拉取、備份匯入、長官快照）都呼叫，其他裝置未升級時雲端仍可能是舊格式 |
+
+編輯客戶表單只編「進行中的那次」（沒有就提供「開始第 N 次試用」）；過去的試用一律從詳情頁的試用卡進出（`openCDItems(n)`，可改日期、品項、刪除整筆）。
 
 ### Todo（待辦）
 

@@ -330,6 +330,29 @@ tbody tr:hover{background:var(--surface-hover)}
 .pflag.p2{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
 .pflag.p3{background:var(--ss-blue-bg,var(--blue-l));color:var(--ss-blue-fg)}
 /* 試用逾期回收 X 分級（公司規則：>7天X、>14天XX、>21天XXX、>28天XXXX 業助提醒） */
+.trial-card{background:var(--bg2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--border2)}
+.trial-card.open{border-left-color:var(--green)}
+.trial-card.over{border-left-color:var(--red)}
+.trial-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.trial-head b{font-size:14px}
+.trial-state{font-size:12px;color:var(--text2)}
+.trial-dates{font-size:12.5px;color:var(--text2);margin:4px 0 6px;font-variant-numeric:tabular-nums}
+.trial-dates b{color:var(--text)}
+.trial-items{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.trial-chip{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.trial-actions{display:flex;gap:6px;flex-wrap:wrap}
+details.trial-card summary{cursor:pointer;font-size:13px;color:var(--text2);list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+details.trial-card summary::-webkit-details-marker{display:none}
+details.trial-card summary::before{content:'›';display:inline-block;transition:transform .15s var(--ease);color:var(--text3)}
+details.trial-card[open] summary::before{transform:rotate(90deg)}
+details.trial-card summary b{color:var(--text)}
+details.trial-card .trial-body{margin-top:8px}
+.trial-count{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
+.trial-count.max{color:var(--amber-d);font-weight:600}
+.rc-opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--bg);font-family:inherit;cursor:pointer;color:var(--text)}
+.rc-opt:active{transform:scale(.99)}
+.rc-opt b{font-size:14px;min-width:52px}
+.rc-opt span{font-size:12px;color:var(--text2);line-height:1.4}
 .xbadge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;padding:1.5px 7px;border-radius:4px;margin-left:6px;vertical-align:1px;font-variant-numeric:tabular-nums}
 .xbadge.x1{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
 .xbadge.x2{background:var(--ss-red-bg);color:var(--ss-red-fg)}
@@ -732,7 +755,6 @@ tbody tr:hover{background:var(--surface-hover)}
         <div class="f"><label class="lbl">狀態</label>
           <select id="cf-status"><option>未拜訪</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已轉交</option><option>拒絕</option></select>
         </div>
-        <div class="f"><label class="lbl">試用日</label><input id="cf-trialdate" type="date"></div>
         <div class="f"><label class="lbl">下次拜訪日</label><input id="cf-nextdate" type="date"></div>
       </div>
       <div class="f"><label class="lbl">提案商品（自動帶入）</label><input id="cf-product" readonly style="background:var(--bg2);color:var(--text2)"></div>
@@ -744,12 +766,22 @@ tbody tr:hover{background:var(--surface-hover)}
     <div class="card">
       <div class="form-section">已成約品項</div>
       <div id="cf-contracted-list" style="margin-bottom:12px"></div>
-      <div class="form-section">試用品項 <span style="font-weight:400;font-size:11px;color:var(--text3);letter-spacing:0;text-transform:none">4W原價・點建議折數一鍵帶入・黃=低於最低建議</span></div>
-      <div id="cf-items"></div>
-      <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
-        <span style="color:var(--text2)">4W 原價合計</span>
-        <span style="font-size:16px;font-weight:700;color:var(--green-d)" id="cf-total">$0</span>
+      <div class="form-section" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span id="cf-trial-title">試用</span>
+        <button type="button" class="btn btn-outline btn-xs" id="cf-trial-start-btn" onclick="cfStartTrial()">＋ 開始第 1 次試用</button>
+      </div>
+      <div id="cf-trial-box" style="display:none">
+        <div class="g2">
+          <div class="f"><label class="lbl">開始日</label><input id="cf-trial-start" type="date" onchange="cfTrialStartChanged()"></div>
+          <div class="f"><label class="lbl">回收日（開始＋14 天，可改）</label><input id="cf-trial-due" type="date"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin:-2px 0 8px">試用品項：4W原價・點建議折數一鍵帶入・黃=低於最低建議</div>
+        <div id="cf-items"></div>
+        <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
+          <span style="color:var(--text2)">4W 原價合計</span>
+          <span style="font-size:16px;font-weight:700;color:var(--green-d)" id="cf-total">$0</span>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -795,7 +827,13 @@ tbody tr:hover{background:var(--surface-hover)}
       <div id="cd-phone-w" style="display:none"><div class="detail-label">電話</div><div class="detail-val" id="cd-phone"></div></div>
       <div id="cd-env-w" style="display:none"><div class="detail-label">環境觀察</div><div class="detail-val" id="cd-env"></div></div>
       <div id="cd-note-w" style="display:none"><div class="detail-label">備註</div><div class="detail-val" id="cd-note"></div></div>
-      <div id="cd-tri-w"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="detail-label" style="margin-bottom:0">試用 / 成約品項</div><button class="btn btn-outline btn-xs" onclick="openCDItems()">編輯品項</button></div><div id="cd-tri" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div></div>
+      <div id="cd-tri-w">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px">
+          <div class="detail-label" style="margin-bottom:0;display:flex;align-items:center;gap:8px">試用 <span id="cd-trial-count" class="trial-count"></span></div>
+          <button class="btn btn-primary btn-xs" onclick="startTrial()">＋ 新一次試用</button>
+        </div>
+        <div id="cd-tri" style="margin-bottom:10px"></div>
+      </div>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1405,19 +1443,41 @@ tbody tr:hover{background:var(--surface-hover)}
   <div class="modal" style="max-width:560px;max-height:90vh;display:flex;flex-direction:column">
     <div class="modal-title" id="cdm-title">編輯品項</div>
     <div style="overflow-y:auto;flex:1;padding-right:4px">
-      <div class="form-section">試用品項</div>
-      <div id="cdm-items"></div>
-      <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin:6px 0 10px 0">+ 新增品項</button>
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text2);margin-bottom:14px">
-        <span>試用合計 4W 原價：</span><span id="cdm-total" style="font-weight:600;color:var(--green-d)">$0</span>
+      <div id="cdm-trial-box">
+        <div class="g2">
+          <div class="f"><label class="lbl">開始日</label><input id="cdm-trial-start" type="date" onchange="cdmTrialStartChanged()"></div>
+          <div class="f"><label class="lbl">回收日（開始＋14 天，可改）</label><input id="cdm-trial-due" type="date"></div>
+        </div>
+        <div class="form-section">試用品項</div>
+        <div id="cdm-items"></div>
+        <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin:6px 0 10px 0">+ 新增品項</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text2);margin-bottom:14px">
+          <span>試用合計 4W 原價：</span><span id="cdm-total" style="font-weight:600;color:var(--green-d)">$0</span>
+        </div>
       </div>
+      <div id="cdm-no-trial" style="display:none;font-size:13px;color:var(--text3);margin-bottom:14px">這家還沒有試用紀錄。要開始試用請關閉後按「＋ 新一次試用」。</div>
       <div class="form-section">成約品項</div>
       <div id="cdm-contracted"></div>
     </div>
     <div class="modal-actions" style="margin-top:12px">
       <button class="btn btn-primary" onclick="saveCDItems()">儲存</button>
       <button class="btn btn-outline" onclick="closeCDItems()">取消</button>
+      <button class="btn btn-danger btn-sm" id="cdm-del-trial" style="margin-left:auto;display:none" onclick="deleteCDTrial()">刪除這次試用</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ 試用回收結果 ═══ -->
+<div class="modal-bg" id="trial-recover-modal" onclick="if(event.target===this)closeRecoverModal()">
+  <div class="modal" role="dialog" aria-labelledby="tr-title">
+    <div class="modal-title" id="tr-title">試用回收</div>
+    <div class="f"><label class="lbl">回收日</label><input id="tr-date" type="date"></div>
+    <div class="lbl" style="margin-bottom:8px">回收結果</div>
+    <button class="rc-opt" onclick="finishRecover('成約')"><b>成約</b><span>這次的品項轉成成約品項，狀態改為「已成約」</span></button>
+    <button class="rc-opt" onclick="finishRecover('報價中')"><b>報價中</b><span>狀態改為「報價」，一週後提醒你：還沒回覆要不要改成拒絕</span></button>
+    <button class="rc-opt" onclick="finishRecover('再試用')"><b>再試用</b><span>用一模一樣的品項再開一次試用（回收日重新算）</span></button>
+    <button class="rc-opt" onclick="finishRecover('拒絕')"><b>拒絕</b><span>狀態改為「拒絕」</span></button>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeRecoverModal()">取消</button></div>
   </div>
 </div>
 
@@ -1507,7 +1567,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.09.08-p1';
+const APP_VERSION='v2026.09.08-t1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -1973,12 +2033,12 @@ const INV_INIT=[{name:'S-20',stock:5,std:5},{name:'SHH',stock:10,std:10},{name:'
 
 // ── SEED CLIENTS（範例資料，首次開啟時顯示）──────────────
 const SEED=[
-  {name:'範例-陽光餐廳',addr:'中正區忠孝東路100號',type:'餐廳',status:'試用中',contact:'王老闆',nextdate:'2026-05-01',fw4:1620,env:'門口菜口飲料機',note:'範例客戶：試用中的餐廳',trialItems:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],todos:[{text:'追蹤試用狀況',dueDate:'2026-05-01',done:false}],visits:[{date:'2026-04-15',mood:3,note:'老闆對地墊有興趣',insight:'試用DWLH DOME',statusChange:'試用中',nextdate:'2026-05-01'}],updatedAt:1712476800000},
-  {name:'範例-快樂補習班',addr:'大安區和平東路50號',type:'補習班',status:'試用中',contact:'李主任',nextdate:'2026-04-28',fw4:480,env:'門口無，教室約十人大小',note:'範例客戶：補習班試用中',trialItems:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],todos:[],visits:[{date:'2026-04-10',mood:4,note:'主任很滿意試用效果',insight:'試用SHH',statusChange:'試用中',nextdate:'2026-04-28'}],updatedAt:1743562800000},
-  {name:'範例-美美沙龍',addr:'信義區松仁路88號',type:'美容美甲',status:'已成約',contact:'陳小姐',nextdate:'2026-05-10',fw4:280,env:'門口無，店內裝潢精美',note:'範例客戶：已成約的美容店',trialItems:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],todos:[{text:'準備合約書',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-05',mood:4,note:'老闆決定簽約',insight:'成約FSSK',statusChange:'已成約',nextdate:'2026-05-10'}],updatedAt:1741783108000},
-  {name:'範例-永和早餐店',addr:'永和區中正路200號',type:'餐廳',status:'未拜訪',contact:'',nextdate:'',fw4:0,env:'',note:'範例客戶：尚未拜訪',trialItems:[],todos:[],visits:[],updatedAt:1712476000000},
-  {name:'範例-大樓管委會',addr:'板橋區文化路300號',type:'接待中心',status:'複訪',contact:'張經理',nextdate:'2026-04-20',fw4:0,env:'門口有舊地墊',note:'範例客戶：需要複訪',trialItems:[],todos:[{text:'帶DM再去拜訪',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-01',mood:2,note:'經理在忙，下次再來',insight:'',statusChange:'複訪',nextdate:'2026-04-20'}],updatedAt:1743476400000},
-  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trialItems:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'拒絕',nextdate:null}],updatedAt:1741478143000},
+  {name:'範例-陽光餐廳',addr:'中正區忠孝東路100號',type:'餐廳',status:'試用中',contact:'王老闆',nextdate:'2026-05-01',fw4:1620,env:'門口菜口飲料機',note:'範例客戶：試用中的餐廳',trials:[{n:1,start:'2026-04-15',due:'2026-04-29',items:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],open:true,recovered:'',result:''}],todos:[{text:'追蹤試用狀況',dueDate:'2026-05-01',done:false}],visits:[{date:'2026-04-15',mood:3,note:'老闆對地墊有興趣',insight:'試用DWLH DOME',statusChange:'試用中',nextdate:'2026-05-01'}],updatedAt:1712476800000},
+  {name:'範例-快樂補習班',addr:'大安區和平東路50號',type:'補習班',status:'試用中',contact:'李主任',nextdate:'2026-04-28',fw4:480,env:'門口無，教室約十人大小',note:'範例客戶：補習班試用中',trials:[{n:1,start:'2026-04-10',due:'2026-04-24',items:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],open:true,recovered:'',result:''}],todos:[],visits:[{date:'2026-04-10',mood:4,note:'主任很滿意試用效果',insight:'試用SHH',statusChange:'試用中',nextdate:'2026-04-28'}],updatedAt:1743562800000},
+  {name:'範例-美美沙龍',addr:'信義區松仁路88號',type:'美容美甲',status:'已成約',contact:'陳小姐',nextdate:'2026-05-10',fw4:280,env:'門口無，店內裝潢精美',note:'範例客戶：已成約的美容店',trials:[{n:1,start:'2026-03-20',due:'2026-04-03',items:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],open:false,recovered:'2026-04-05',result:'成約'}],todos:[{text:'準備合約書',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-05',mood:4,note:'老闆決定簽約',insight:'成約FSSK',statusChange:'已成約',nextdate:'2026-05-10'}],updatedAt:1741783108000},
+  {name:'範例-永和早餐店',addr:'永和區中正路200號',type:'餐廳',status:'未拜訪',contact:'',nextdate:'',fw4:0,env:'',note:'範例客戶：尚未拜訪',trials:[],todos:[],visits:[],updatedAt:1712476000000},
+  {name:'範例-大樓管委會',addr:'板橋區文化路300號',type:'接待中心',status:'複訪',contact:'張經理',nextdate:'2026-04-20',fw4:0,env:'門口有舊地墊',note:'範例客戶：需要複訪',trials:[],todos:[{text:'帶DM再去拜訪',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-01',mood:2,note:'經理在忙，下次再來',insight:'',statusChange:'複訪',nextdate:'2026-04-20'}],updatedAt:1743476400000},
+  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trials:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'拒絕',nextdate:null}],updatedAt:1741478143000},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -2398,6 +2458,7 @@ async function syncFromSheet(silent){
     }else{
       DB.clients=(res.clients||[]).map(c=>{if(c)c.srvAt=c.updatedAt;return c;});  // M3 標記雲端版本
     }
+    packAllTrials(DB.clients);   // 其他裝置還沒升級時雲端仍是舊格式（trialItems）→ 邊界打包
     validateClients(); // 雲端可能仍有 migration 前的舊列（如已結案）→ 在資料邊界正規化
     const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
@@ -2536,6 +2597,7 @@ function importJSON(input){
       if(!Array.isArray(data.clients))throw new Error('格式不正確（缺少 clients 陣列）');
       if(!await appConfirm('匯入 '+data.clients.length+' 筆資料？\n\n這會覆蓋目前本機的所有資料。',{title:'匯入備份',okText:'匯入',danger:true}))return;
       DB.clients=data.clients;
+      packAllTrials(DB.clients);
       validateClients(); // 匯入的備份可能含舊格式列 → 正規化
       if(data.inventory)DB.inventory=data.inventory;
       if(data.products)DB.products=data.products;
@@ -2805,7 +2867,7 @@ function pickMergeKeeper(clients){
 }
 // 比對一組 clients 的純量欄位衝突（非空且值不同才算衝突）
 // 回傳 {field, values:[{idx,value}]} 陣列；陣列空 = 無衝突可自動合併
-const DEDUP_SCALAR_FIELDS=['contact','addr','type','status','nextdate','env','note','trialDate'];
+const DEDUP_SCALAR_FIELDS=['contact','addr','type','status','nextdate','env','note'];
 function detectScalarConflicts(clients){
   const conflicts=[];
   DEDUP_SCALAR_FIELDS.forEach(f=>{
@@ -2831,6 +2893,14 @@ function mergeVisits(clients){
   return out;
 }
 // 合併 items (trial/contracted)：(product + bundledTo + contractDate) 做 key 去重
+// 試用紀錄合併：全部收集、依開始日排序、重新編號（同一次試用不會在兩筆重複，直接串接）
+function mergeTrials(clients){
+  const out=[];
+  clients.forEach(x=>trialsOf(x.client).forEach(t=>out.push(JSON.parse(JSON.stringify(t)))));
+  out.sort((a,b)=>(a.start||'')<(b.start||'')?-1:(a.start||'')>(b.start||'')?1:0);
+  out.forEach((t,i)=>t.n=i+1);
+  return out;
+}
 function mergeItems(clients,field){
   const seen=new Set();const out=[];
   clients.forEach(x=>{
@@ -2878,7 +2948,7 @@ function mergeClientGroup(group,resolutions){
     for(const x of all){if(x.client.lat){merged.lat=x.client.lat;merged.lng=x.client.lng;merged.geocodeSource=x.client.geocodeSource;merged.geocodedAt=x.client.geocodedAt;break;}}
   }
   merged.visits=mergeVisits(all);
-  merged.trialItems=mergeItems(all,'trialItems');
+  merged.trials=mergeTrials(all);
   merged.contractedItems=mergeItems(all,'contractedItems');
   merged.todos=mergeTodos(all);
   merged.updatedAt=Date.now();
@@ -3347,7 +3417,7 @@ function collectRegions(){
   const regions=new Set();
   DB.clients.forEach(c=>{
     if((c.visits||[]).length>0)return;
-    const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    const mains=trialItemsOf(c).filter(it=>it.product&&!it.bundledTo);
     if(mains.length>0)return;
     if(c.status===STATUS.REFUSE)return;
     const r=parseRegion(c.addr);
@@ -3418,17 +3488,18 @@ function itemFW4(it){
 function calcFW4(c){
   const k=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
   if(k>0)return k;
-  return (c.trialItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+  return trialItemsOf(c).reduce((s,it)=>s+itemFW4(it),0);
 }
 // 4W 推進表專用：一律回傳「現有試用品項以 2W 預設換週為基準的 4W 原價加總」。
 // 公司預設顧客是 2 週換一次（4W 推進表是給長官看的潛在業績，未成約前不可預設 4W）：
 // - 一律以 cycle='2W' 餵 displayFw4，地墊也用 2W 原價（不套 4W 0.8 折）
 // - 忽略 quoted 報價、忽略 contractedItems、忽略日期區間
+// - 只算「正在進行、尚未回收」的試用（回收後的不再是潛在試用額）
 function calcReportAmt(c){
   if(!c) return 0;
   // 拒絕視為已無試用商品，保留歷史紀錄但不計入報表金額
   if(c.status===STATUS.REFUSE) return 0;
-  return (c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
+  return openTrialItems(c).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
 function rptAmountMonth(c,from,to){
@@ -3443,18 +3514,51 @@ function rptAmountMonth(c,from,to){
   return null;
 }
 // 試用→成約：把第 i 筆主項（含其 bundled 配件）從 cfItems 搬到 cfContracted
-// 試用日：優先使用者手動設的 c.trialDate，否則依 visits / SERVE note 推算
-// 試用日來源與可信度：trialDate／狀態變更為試用的拜訪／SERVE 註記＝真試用日（real:true）；
-// 退回「第一次拜訪日」只是近似值（real:false）——卡片上會標成「首次」而非「試用日」，
-// 避免複訪/未成交客戶被標成有試用日（誤導）。優先序與舊版 trialStartDate 一致。
-function trialDateInfo(c){
-  if(c.trialDate)return{date:c.trialDate,real:true};
-  const vs=(c.visits||[]).filter(v=>v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
+// ═══ 試用（每次試用一筆：c.trials）═══
+// trial = { n, start, due(回收日＝開始＋14 天，可改), items:[…與成約品項同格式], open, recovered:'YYYY-MM-DD', result:''|'成約'|'報價中'|'再試用'|'拒絕' }
+// 公司規定每家最多 TRIAL_MAX 次，超過只提醒不擋。所有「試用品項」都從這裡取，不再有 c.trialItems／c.trialDate。
+const TRIAL_MAX=3;
+const TRIAL_DEFAULT_DAYS=14;
+function addDays(ymd,n){const d=new Date(String(ymd||'')+'T00:00:00');if(isNaN(d.getTime()))return '';d.setDate(d.getDate()+n);return fmtDate(d);}
+function trialsOf(c){return (c&&Array.isArray(c.trials))?c.trials.filter(Boolean):[];}
+function openTrials(c){return trialsOf(c).filter(t=>t.open);}
+function latestTrial(c){const ts=trialsOf(c);return ts.length?ts[ts.length-1]:null;}
+function currentTrial(c){const o=openTrials(c);return o.length?o[o.length-1]:latestTrial(c);}   // 進行中優先，否則最近一次
+// 進行中（尚未回收）的品項：推進表／長官儀表板／首頁「試用總額」只算這些
+function openTrialItems(c){return openTrials(c).flatMap(t=>t.items||[]);}
+// 客戶卡 4W 估算、提案商品、報價／合約匯入：進行中優先；沒有進行中就用最近一次（報價中的客戶仍看得到提案內容）
+function trialItemsOf(c){const o=openTrials(c);const src=o.length?o:(latestTrial(c)?[latestTrial(c)]:[]);return src.flatMap(t=>t.items||[]);}
+function newTrial(c,items,start){const s=start||today();return {n:trialsOf(c).length+1,start:s,due:addDays(s,TRIAL_DEFAULT_DAYS),items:JSON.parse(JSON.stringify(items||[])),open:true,recovered:'',result:''};}
+// 舊格式（trialDate＋trialItems）→ trials（打包成第 1 次；狀態仍是試用中的視為進行中，其餘視為已回收、回收日不明）。
+// 冪等；用在 migration v11 與所有資料進入點（雲端拉取、備份匯入、長官快照），回傳是否含舊試用資料（要不要重推上雲）。
+function packTrials(c){
+  if(!c||Array.isArray(c.trials))return false;
+  const items=Array.isArray(c.trialItems)?c.trialItems.filter(Boolean):[];
+  const start=c.trialDate||legacyTrialStart(c);
+  const had=!!(items.length||c.trialDate);
+  c.trials=had?[{n:1,start:start||'',due:start?addDays(start,TRIAL_DEFAULT_DAYS):'',items,open:c.status===STATUS.TRIAL,recovered:'',result:''}]:[];
+  delete c.trialItems;delete c.trialDate;
+  return had;
+}
+function packAllTrials(list){let n=0;(list||[]).forEach(c=>{if(packTrials(c))n++;});return n;}
+// 沒有試用紀錄的舊客戶：依「狀態變為試用的拜訪 → SERVE 註記」推算真試用日；都沒有回 ''
+function legacyTrialStart(c){
+  const vs=(c.visits||[]).filter(v=>v&&v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
   const trial=vs.find(v=>v.statusChange===STATUS.TRIAL);
-  if(trial)return{date:trial.date,real:true};
-  if(vs.length)return{date:vs[0].date,real:false};
+  if(trial)return trial.date;
   const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-  if(m)return{date:m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0'),real:true};
+  if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  return '';
+}
+// 試用日來源與可信度：進行中／最近一次試用的開始日＝真試用日（real:true）；沒有試用紀錄退回推算，
+// 「第一次拜訪日」只是近似值（real:false）——卡片上會標成「首次」而非「試用日」
+function trialDateInfo(c){
+  const t=currentTrial(c);
+  if(t&&t.start)return{date:t.start,real:true};
+  const real=legacyTrialStart(c);
+  if(real)return{date:real,real:true};
+  const vs=(c.visits||[]).filter(v=>v&&v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(vs.length)return{date:vs[0].date,real:false};
   return{date:'',real:false};
 }
 function trialStartDate(c){return trialDateInfo(c).date;}
@@ -3464,21 +3568,21 @@ function dealDate(c){
   (c.contractedItems||[]).forEach(it=>{if(it&&it.contractDate&&it.contractDate>d)d=it.contractDate;});
   return d;
 }
-// 公司逾期回收分級：試用預設 14 天，超過試用期後每 7 天記一個 X——
-// 第 14 天=X、第 21 天=XX、第 28 天=XXX、第 35 天=XXXX（會被業助提醒，極力避免）。
-// 例：6/1 開始試用 → 6/15 記 X、6/22 記 XX，依此類推。
-const TRIAL_DEFAULT_DAYS=14;
+// 公司逾期回收分級：以「這次試用的回收日」為準，到回收日記 X、之後每 7 天多一個 X——
+// X、XX、XXX、XXXX（會被業助提醒，極力避免）。回收日預設＝開始＋14 天：6/1 開始 → 6/15 記 X、6/22 記 XX。
 function trialXInfo(c,base){
   if(!c||c.status!==STATUS.TRIAL)return null;
-  const ts=trialStartDate(c);
-  if(!ts||typeof ts!=='string'||ts.length<10)return null;
-  const d=new Date(ts+'T00:00:00');
+  const t=currentTrial(c);
+  if(!t||!t.open||!t.start)return null;
+  const d=new Date(t.start+'T00:00:00');
   if(isNaN(d.getTime()))return null;
-  const days=Math.floor((new Date((base||today())+'T00:00:00')-d)/86400000);
+  const now=new Date((base||today())+'T00:00:00');
+  const days=Math.floor((now-d)/86400000);
   if(days<0)return null;
-  const level=days>=TRIAL_DEFAULT_DAYS?Math.min(4,Math.floor((days-TRIAL_DEFAULT_DAYS)/7)+1):0;
-  const marks='X'.repeat(level);
-  return {days,marks,level};
+  const due=t.due||addDays(t.start,TRIAL_DEFAULT_DAYS);
+  const over=Math.floor((now-new Date(due+'T00:00:00'))/86400000);   // ≥0＝到回收日了
+  const level=over>=0?Math.min(4,Math.floor(over/7)+1):0;
+  return {days,marks:'X'.repeat(level),level,due,left:-over,n:t.n};
 }
 // 客戶卡/詳情用的 X 徽章 HTML：未超過預設試用期（14 天）不標
 function trialXBadge(c){
@@ -3486,40 +3590,53 @@ function trialXBadge(c){
   if(!info||info.level<1)return '';
   return `<span class="xbadge x${info.level}" title="試用第 ${info.days} 天，公司逾期等級 ${info.marks}">${info.marks}</span>`;
 }
-// 自動產生回收待辦：試用中客戶，試用起始日 +7 天後自動新增「回收試用品」todo
+// 自動產生回收待辦：每一次進行中的試用，開始 +7 天後自動新增「回收試用品（第 N 次）」，到期日＝回收日
 // 防禦式：整段包 try/catch，任何單筆客戶出錯不影響其他客戶、也不影響 app 啟動
 function autoAddRecycleTodos(){
   try{
     const todayObj=new Date();
-    const todayStr=today();
     const DAY=86400000;
     let added=0;
     (DB.clients||[]).forEach(c=>{
       try{
         if(!c||c.status!==STATUS.TRIAL)return;
-        const ts=trialStartDate(c);
-        if(!ts||typeof ts!=='string'||ts.length<10)return;
-        const tsDate=new Date(ts);
-        if(isNaN(tsDate.getTime()))return;
-        const daysSince=(todayObj-tsDate)/DAY;
-        if(daysSince<7)return;
-        if((c.todos||[]).some(t=>t&&(t.source==='auto-recycle'||(t.text&&t.text.indexOf('回收')>=0))))return;
-        const dueDate=new Date(tsDate.getTime()+14*DAY);
-        if(isNaN(dueDate.getTime()))return;
-        const due=fmtDate(dueDate);
-        c.todos=c.todos||[];
-        c.todos.push({text:'回收試用品',dueDate:due,done:false,source:'auto-recycle'});
-        added++;
-      }catch(inner){
-        // 單筆客戶失敗，略過不中斷
-      }
+        openTrials(c).forEach(t=>{
+          if(!t.start)return;
+          const tsDate=new Date(t.start);
+          if(isNaN(tsDate.getTime()))return;
+          if((todayObj-tsDate)/DAY<7)return;
+          if((c.todos||[]).some(x=>x&&x.source==='auto-recycle'&&(x.trialN||1)===t.n))return;   // 已產生過（含已完成）
+          if(t.n===1&&(c.todos||[]).some(x=>x&&!x.done&&!x.source&&x.text&&x.text.indexOf('回收')>=0))return;   // 使用者自己寫的回收待辦
+          c.todos=c.todos||[];
+          c.todos.push({text:'回收試用品（第 '+t.n+' 次）',dueDate:t.due||addDays(t.start,TRIAL_DEFAULT_DAYS),done:false,source:'auto-recycle',trialN:t.n});
+          added++;
+        });
+      }catch(inner){}
     });
     if(added>0)saveLocal();
     return added;
   }catch(e){
-    // 整個函式失敗也不影響 app 啟動
     return 0;
   }
+}
+// 回收結果「報價中」：一週後提醒問要不要改成拒絕（每週問一次，直到改狀態或選拒絕）
+async function checkQuoteFollowups(){
+  const t=today();
+  let touched=false;
+  for(const c of (DB.clients||[])){
+    if(!c||c.status!==STATUS.QUOTE)continue;
+    const td=(c.todos||[]).find(x=>x&&!x.done&&x.source==='quote-followup'&&x.dueDate&&x.dueDate<=t);
+    if(!td)continue;
+    const refuse=await appConfirm('「'+c.name+'」報價已經一週沒有回覆。要改成「拒絕」嗎？',{title:'報價追蹤',okText:'改成拒絕',cancelText:'再等一週',danger:true});
+    if(refuse){
+      c.status=STATUS.REFUSE;td.done=true;
+      (c.visits=c.visits||[]).push({date:t,mood:0,note:'',insight:'報價一週未回覆，改為拒絕',statusChange:STATUS.REFUSE,nextdate:null});
+    }else{
+      td.dueDate=addDays(t,7);
+    }
+    c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});touched=true;
+  }
+  if(touched)renderClients();
 }
 // 狀態開關 — 哪些 status 要顯示在列表中
 // key 是 status 字串，value 是 true/false
@@ -3579,7 +3696,7 @@ async function resetStatusFilter(){
 // 供列表過濾與藥丸數量共用
 function matchCategoryFor(c,cat){
   const visitsN=(c.visits||[]).length;
-  const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+  const mains=trialItemsOf(c).filter(it=>it.product&&!it.bundledTo);
   const contractedN=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;
   const isRefused=c.status===STATUS.REFUSE;
   switch(cat){
@@ -4450,7 +4567,7 @@ function renderClients(){
     const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
     const pTodos=(c.todos||[]).filter(t=>!t.done).length;
-    const prod=autoProd(c.trialItems)||'';
+    const prod=autoProd(trialItemsOf(c))||'';
     const tdInfo=trialDateInfo(c);
     const td=tdInfo.date;
     const xinfo=activeCat==='試用回收'?trialXInfo(c):null;
@@ -4471,7 +4588,7 @@ function renderClients(){
         ${xinfo?`<span style="color:${xinfo.level>=2?'var(--red)':xinfo.level>=1?'var(--amber)':'var(--text3)'}">試用第 ${xinfo.days} 天</span>`:''}
         ${dd?`<span>成約日：${dd}</span>`:''}
         ${td?`<span>${tdInfo.real?'試用日':'首次'}：${td}</span>`:''}
-        ${(() => {const t=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo).length;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'試用 '+t:''}</span>`:'';})()}
+        ${(() => {const ct=currentTrial(c);const t=ct?(ct.items||[]).filter(it=>it.product&&!it.bundledTo).length:0;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;const n=trialsOf(c).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'第 '+ct.n+' 次試用 '+t+' 品項':''}${n>1?'（共 '+n+' 次）':''}</span>`:'';})()}
         ${prod?`<span>提案：${escHtml(prod)}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
@@ -4494,10 +4611,13 @@ function openCF(idx){
   S.itemsTarget='cf-items';S.contractedTarget='cf-contracted-list';
   S.cdmActive=false;S.cdmStatusOverride=null;
   S.editIdx=idx;S.cfItems=[];S.cfTodos=[];
-  // 記住舊的試用品項，存檔時比對新增的品項扣庫存
-  S._prevTrialItems=idx>=0?JSON.parse(JSON.stringify(DB.clients[idx]?.trialItems||[])):[];
   document.getElementById('form-title').textContent=idx>=0?'編輯客戶':'新增客戶';
   const c=idx>=0?DB.clients[idx]:null;
+  // 表單只編輯「進行中的那次試用」；沒有進行中的就提供「開始第 N 次試用」
+  const ot=c?openTrials(c):[];
+  S.cfTrial=ot.length?JSON.parse(JSON.stringify(ot[ot.length-1])):null;
+  S._prevTrialItems=S.cfTrial?JSON.parse(JSON.stringify(S.cfTrial.items||[])):[];
+  renderCFTrialBox(c);
   document.getElementById('cf-name').value=c?.name||'';
   document.getElementById('cf-contact').value=c?.contact||'';
   document.getElementById('cf-phone').value=c?.phone||'';
@@ -4506,17 +4626,43 @@ function openCF(idx){
   fillTypeOpts(c?.type||'');
   setCFSegment(c?segOf(c):'街邊店');
   document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.UNVISITED;
-  // 試用日：優先用存的 c.trialDate，否則 fallback 自動推算
-  document.getElementById('cf-trialdate').value=c?.trialDate||(c?trialStartDate(c):'')||'';
   document.getElementById('cf-nextdate').value=c?.nextdate||'';
   document.getElementById('cf-env').value=c?.env||'';
   document.getElementById('cf-note').value=c?.note||'';
-  S.cfItems=JSON.parse(JSON.stringify(c?.trialItems||[]));
+  S.cfItems=S.cfTrial?JSON.parse(JSON.stringify(S.cfTrial.items||[])):[];
   S.cfContracted=JSON.parse(JSON.stringify(c?.contractedItems||[]));
   rebuildAllBundles();
   S.cfTodos=JSON.parse(JSON.stringify(c?.todos||[]));
   renderItems();renderContracted();renderTodoFields();updProd();
   showView('view-form');
+}
+// 表單的試用區塊：有進行中試用 → 顯示日期＋品項；沒有 → 只剩「開始第 N 次試用」鈕
+function renderCFTrialBox(c){
+  const box=document.getElementById('cf-trial-box'),btn=document.getElementById('cf-trial-start-btn'),title=document.getElementById('cf-trial-title');
+  const n=trialsOf(c||{}).length;
+  if(S.cfTrial){
+    box.style.display='block';btn.style.display='none';
+    title.textContent='第 '+S.cfTrial.n+' 次試用'+(S.cfTrial.open?'（進行中）':'');
+    document.getElementById('cf-trial-start').value=S.cfTrial.start||'';
+    document.getElementById('cf-trial-due').value=S.cfTrial.due||'';
+  }else{
+    box.style.display='none';btn.style.display='';
+    title.textContent=n?'試用（已 '+n+' 次，目前沒有進行中）':'試用';
+    btn.textContent='＋ 開始第 '+(n+1)+' 次試用';
+  }
+}
+async function cfStartTrial(){
+  const c=S.editIdx>=0?DB.clients[S.editIdx]:null;
+  const n=trialsOf(c||{}).length;
+  if(n>=TRIAL_MAX&&!await appConfirm('公司規定每家最多 '+TRIAL_MAX+' 次試用，這家已經 '+n+' 次。仍要開第 '+(n+1)+' 次？',{title:'試用次數提醒',okText:'仍要開始',danger:true}))return;
+  S.cfTrial=newTrial(c||{},[]);S.cfItems=[];S._prevTrialItems=[];
+  renderCFTrialBox(c);renderItems();updProd();
+  const st=document.getElementById('cf-status');
+  if(st&&[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.QUOTE,STATUS.CLOSING,STATUS.REFUSE].includes(st.value))st.value=STATUS.TRIAL;
+}
+function cfTrialStartChanged(){
+  const s=document.getElementById('cf-trial-start').value;
+  if(s)document.getElementById('cf-trial-due').value=addDays(s,TRIAL_DEFAULT_DAYS);
 }
 function closeForm(){PLACE_COORDS=null;showView('view-list');} // 未存檔離開 → 丟棄暫存座標
 function updProd(){const el=document.getElementById('cf-product');if(el)el.value=autoProd(S.cfItems);}
@@ -4782,13 +4928,20 @@ async function saveClient(){
       nextdate:document.getElementById('cf-nextdate').value,
       env:document.getElementById('cf-env').value,
       note:document.getElementById('cf-note').value,
-      trialItems:JSON.parse(JSON.stringify(S.cfItems)),
+      trials:JSON.parse(JSON.stringify(S.editIdx>=0?trialsOf(DB.clients[S.editIdx]):[])),
       contractedItems:JSON.parse(JSON.stringify(S.cfContracted||[])),
       todos:JSON.parse(JSON.stringify(S.cfTodos)),
       updatedAt:Date.now(),
     };
-    const tdVal=document.getElementById('cf-trialdate').value;
-    if(tdVal)c.trialDate=tdVal;
+    // 本次試用（進行中那筆或剛開始的新一次）：日期＋品項寫回同一筆
+    if(S.cfTrial){
+      const t=JSON.parse(JSON.stringify(S.cfTrial));
+      t.start=document.getElementById('cf-trial-start').value||t.start||today();
+      t.due=document.getElementById('cf-trial-due').value||addDays(t.start,TRIAL_DEFAULT_DAYS);
+      t.items=JSON.parse(JSON.stringify(S.cfItems));
+      const at=c.trials.findIndex(x=>x&&x.n===t.n);
+      if(at>=0)c.trials[at]=t;else c.trials.push(t);
+    }
     // L2 輸入檢查：彙整成一則提示，非阻擋（允許快速建檔），讓使用者自行決定
     const warns=validateClient(c);
     if(warns.length){
@@ -4841,9 +4994,9 @@ async function saveClient(){
     saveLocal();autoSync('save',{client:c});
     // 無座標且有地址 → 排入 geocode queue 背景處理
     if(c.addr&&!c.lat){enqueueGeocode(c);processGeoQueue();}
-    // 自動扣庫存：比對新舊試用品項，新增的品項詢問是否扣減
+    // 自動扣庫存：比對本次試用新舊品項，新增的品項詢問是否扣減
     const oldTrialItems=isEdit?(S._prevTrialItems||[]):[];
-    const pendingDiffs=getInventoryDiffs(oldTrialItems,c.trialItems);
+    const pendingDiffs=S.cfTrial?getInventoryDiffs(oldTrialItems,S.cfItems):[];
     if(pendingDiffs.length){
       const msg='新增試用品項：\n'+pendingDiffs.map(d=>d.code+' ×'+d.qty).join('\n');
       // 用 setTimeout 避免阻塞 saveClient 流程
@@ -4867,10 +5020,10 @@ async function saveClient(){
 // ═══════════════════════════════════════════════════════════
 function openCD(i){
   S.curIdx=i;const c=DB.clients[i];
-  const fw=calcFW4(c);const prod=autoProd(c.trialItems)||'-';
+  const fw=calcFW4(c);const prod=autoProd(trialItemsOf(c))||'-';
   // 預估 4W 的來源：若成約合計 > 0 走成約，否則走試用
   const fwContractSum=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
-  const fwSrc=fwContractSum>0?'（來自成約）':(c.trialItems||[]).length?'（來自試用）':'';
+  const fwSrc=fwContractSum>0?'（來自成約）':trialItemsOf(c).length?'（來自試用）':'';
   // 顯示/隱藏「在地圖上查看」按鈕
   const cdMapBtn=document.getElementById('cd-map-btn');
   if(cdMapBtn) cdMapBtn.style.display=(c.lat&&c.lng&&mapShouldShow(c))?'inline-flex':'none';
@@ -4898,63 +5051,154 @@ function openCD(i){
   if(pw){if(c.phone){pw.style.display='block';document.getElementById('cd-phone').innerHTML='<a href="tel:'+escHtml(String(c.phone).replace(/[^\d+]/g,''))+'" style="color:var(--green)">'+escHtml(c.phone)+'</a>';}else{pw.style.display='none';}}
   const ew=document.getElementById('cd-env-w');c.env?(ew.style.display='block',document.getElementById('cd-env').textContent=c.env):ew.style.display='none';
   const nw=document.getElementById('cd-note-w');c.note?(nw.style.display='block',document.getElementById('cd-note').textContent=c.note):nw.style.display='none';
-  const tw=document.getElementById('cd-tri-w');
-  tw.style.display='block';
-  const triEl=document.getElementById('cd-tri');
-  const mainsTri=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
-  const mainsCon=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo);
-  if(!mainsTri.length&&!mainsCon.length){
-    triEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">尚無試用 / 成約品項</div>';
-  }else{
-    const conHtml=mainsCon.map(it=>{
-      const f=itemFW4(it);
-      const accs=(c.contractedItems||[]).filter(x=>x.bundledTo===it.product&&x.product);
-      const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
-      return`<div style="background:#E1F5EE;border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
-        <span style="color:#085041;font-weight:600">成約</span>
-        <b>${escHtml(it.product)}</b> ×${it.qty||1}
-        <span style="color:#085041;font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
-        ${accTxt}
-      </div>`;
-    }).join('');
-    const triHtml=mainsTri.map(it=>{
-      const f=displayFw4(it.product,it.qty||1,it.cycle||'2W');
-      const p=getProd(it.product);const isMat=p?.cat==='地墊';
-      const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
-      const discountLow=discount!==null&&discount<9;
-      const accs=c.trialItems.filter(x=>x.bundledTo===it.product&&x.product);
-      const accTxt=accs.length?' <span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>a.product+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
-      return`<div style="background:var(--bg2);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
-        <b>${escHtml(it.product)}</b> ×${it.qty} ${isMat?`<span style="color:var(--text3)">${escHtml(it.cycle||'2W')}換</span>`:''}
-        <span style="color:var(--text2);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>
-        ${it.quoted>0?`<span style="color:var(--text2);font-variant-numeric:tabular-nums">報價 $${it.quoted.toLocaleString()}</span><span style="color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`:''}
-        ${accTxt}
-      </div>`;
-    }).join('');
-    triEl.innerHTML=conHtml+triHtml;
-  }
+  renderCDTrials(c);
   document.getElementById('vl-form').style.display='none';
   renderCDTodos();renderVisits();showView('view-detail');
 }
 function closeDetail(){showView('view-list');}
 function editCur(){if(S.curIdx<0)return;const i=S.curIdx;closeDetail();openCF(i);}
 
+// ── 詳情頁：試用卡（每次試用一張；進行中展開、過去收合）＋成約品項 ──
+function trialItemChips(items){
+  const mains=(items||[]).filter(it=>it&&it.product&&!it.bundledTo);
+  return mains.map(it=>{
+    const f=displayFw4(it.product,it.qty||1,it.cycle||'2W');
+    const p=getProd(it.product);const canCycle=p?.cycle==='2W';
+    const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
+    const accs=(items||[]).filter(x=>x&&x.bundledTo===it.product&&x.product);
+    const accTxt=accs.length?'<span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>escHtml(a.product)+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
+    return`<span class="trial-chip"><b>${escHtml(it.product)}</b> ×${it.qty||1}${canCycle?` <span style="color:var(--text3)">${escHtml(it.cycle||'2W')}換</span>`:''}<span style="color:var(--text2);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>${it.quoted>0?`<span style="color:var(--text2);font-variant-numeric:tabular-nums">報價 $${it.quoted.toLocaleString()}</span><span style="color:${discount<9?'var(--yellow)':'var(--text3)'}">${discount.toFixed(1)}折</span>`:''}${accTxt}</span>`;
+  }).join('')||'<span style="font-size:12px;color:var(--text3)">尚無品項</span>';
+}
+function fmtMD(ymd){return ymd?String(ymd).slice(5).replace('-','/'):'—';}
+function renderCDTrials(c){
+  const el=document.getElementById('cd-tri');const cnt=document.getElementById('cd-trial-count');
+  const ts=trialsOf(c);
+  cnt.textContent=ts.length?ts.length+'／'+TRIAL_MAX+' 次'+(ts.length>TRIAL_MAX?'（已超過）':ts.length===TRIAL_MAX?'（已達上限）':''):'尚未試用（上限 '+TRIAL_MAX+' 次）';
+  cnt.className='trial-count'+(ts.length>=TRIAL_MAX?' max':'');
+  let html='';
+  const mainsCon=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo);
+  if(mainsCon.length){
+    html+='<div class="trial-items" style="margin-bottom:10px">'+mainsCon.map(it=>{
+      const f=itemFW4(it);
+      const accs=(c.contractedItems||[]).filter(x=>x.bundledTo===it.product&&x.product);
+      return`<span class="trial-chip" style="background:var(--ss-green-bg);border-color:var(--green-b)"><span style="color:var(--ss-green-fg);font-weight:600">成約</span><b>${escHtml(it.product)}</b> ×${it.qty||1}<span style="color:var(--ss-green-fg);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>${accs.length?'<span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>escHtml(a.product)).join('、')+')</span>':''}</span>`;
+    }).join('')+`<button class="btn btn-outline btn-xs" onclick="openCDItems(${currentTrial(c)?currentTrial(c).n:0})">編輯成約</button></div>`;
+  }
+  const x=trialXInfo(c);
+  ts.slice().reverse().forEach(t=>{
+    if(t.open){
+      const info=(x&&x.n===t.n)?x:null;
+      const days=t.start?Math.floor((new Date(today()+'T00:00:00')-new Date(t.start+'T00:00:00'))/86400000):null;
+      const due=t.due||addDays(t.start,TRIAL_DEFAULT_DAYS);
+      const left=due?Math.floor((new Date(due+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000):null;
+      const leftTxt=left==null?'':left>0?`（還 ${left} 天）`:left===0?'（今天回收）':`<span style="color:var(--red)">（逾期 ${-left} 天）</span>`;
+      html+=`<div class="trial-card open${info&&info.level>=1?' over':''}">
+        <div class="trial-head"><b>第 ${t.n} 次試用</b><span class="trial-state">進行中${days!=null&&days>=0?' · 試用第 '+days+' 天':''}</span>${info&&info.level>=1?`<span class="xbadge x${info.level}">${info.marks}</span>`:''}</div>
+        <div class="trial-dates">${fmtMD(t.start)} 開始 → <b>${fmtMD(due)} 回收</b> ${leftTxt}</div>
+        <div class="trial-items">${trialItemChips(t.items)}</div>
+        <div class="trial-actions"><button class="btn btn-outline btn-xs" onclick="openCDItems(${t.n})">編輯品項</button><button class="btn btn-primary btn-xs" onclick="openRecoverModal(${t.n})">回收完成</button></div>
+      </div>`;
+    }else{
+      const k=(t.items||[]).filter(it=>it&&it.product&&!it.bundledTo).length;
+      html+=`<details class="trial-card"><summary><b>第 ${t.n} 次</b><span>${fmtMD(t.start)} → ${fmtMD(t.due)}</span><span>已回收${t.recovered?' '+fmtMD(t.recovered):''}</span>${t.result?`<span>· ${escHtml(t.result)}</span>`:''}<span>· ${k} 品項</span></summary>
+        <div class="trial-body"><div class="trial-items">${trialItemChips(t.items)}</div><div class="trial-actions"><button class="btn btn-outline btn-xs" onclick="openCDItems(${t.n})">編輯這次</button></div></div>
+      </details>`;
+    }
+  });
+  if(!ts.length&&!mainsCon.length)html='<div style="font-size:12px;color:var(--text3);padding:4px 0">尚無試用 / 成約品項。按「＋ 新一次試用」開始。</div>';
+  el.innerHTML=html;
+  document.getElementById('vl-form').style.display='none';
+  renderCDTodos();renderVisits();showView('view-detail');
+}
+// ＋ 新一次試用：品項從空的開始；超過 3 次或還有進行中的都會先提醒
+async function startTrial(){
+  if(S.curIdx<0)return;
+  const c=DB.clients[S.curIdx];if(!c)return;
+  const cnt=trialsOf(c).length;
+  const cur=currentTrial(c);
+  if(cur&&cur.open&&!await appConfirm('第 '+cur.n+' 次試用還沒回收。通常先按「回收完成」再開新的。仍要直接開第 '+(cnt+1)+' 次？',{title:'還有進行中的試用',okText:'仍要新增'}))return;
+  if(cnt>=TRIAL_MAX&&!await appConfirm('公司規定每家最多 '+TRIAL_MAX+' 次試用，這家已經 '+cnt+' 次。仍要開第 '+(cnt+1)+' 次？',{title:'試用次數提醒',okText:'仍要新增',danger:true}))return;
+  const t=newTrial(c,[]);
+  (c.trials=c.trials||[]).push(t);
+  if([STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.QUOTE,STATUS.CLOSING,STATUS.REFUSE].includes(c.status||STATUS.UNVISITED)){
+    c.status=STATUS.TRIAL;
+    (c.visits=c.visits||[]).push({date:t.start,mood:0,note:'',insight:'開始第 '+t.n+' 次試用',statusChange:STATUS.TRIAL,nextdate:c.nextdate||null});
+  }
+  c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  renderClients();openCD(S.curIdx);
+  openCDItems(t.n);
+}
+// 回收完成 → 選結果
+let RECOVER={ci:-1,n:0};
+function openRecoverModal(n){
+  RECOVER={ci:S.curIdx,n};
+  document.getElementById('tr-title').textContent='第 '+n+' 次試用回收';
+  document.getElementById('tr-date').value=today();
+  document.getElementById('trial-recover-modal').classList.add('on');
+}
+function closeRecoverModal(){document.getElementById('trial-recover-modal').classList.remove('on');}
+function finishRecover(result){
+  const c=DB.clients[RECOVER.ci];const t=c?trialsOf(c).find(x=>x.n===RECOVER.n):null;
+  if(!c||!t){closeRecoverModal();return;}
+  const date=document.getElementById('tr-date').value||today();
+  t.open=false;t.recovered=date;t.result=result;
+  (c.todos||[]).forEach(x=>{if(x&&x.source==='auto-recycle'&&(x.trialN||1)===t.n)x.done=true;});
+  if(result==='成約'){
+    (t.items||[]).forEach(it=>{if(it&&it.product){const k=JSON.parse(JSON.stringify(it));k.contractDate=date;(c.contractedItems=c.contractedItems||[]).push(k);}});
+    c.status=STATUS.DEAL;
+  }else if(result==='報價中'){
+    c.status=STATUS.QUOTE;
+    (c.todos=c.todos||[]).push({text:'報價追蹤（第 '+t.n+' 次試用回收後一週未回覆，問是否改拒絕）',dueDate:addDays(date,7),done:false,source:'quote-followup',trialN:t.n});
+  }else if(result==='再試用'){
+    c.trials.push(newTrial(c,t.items,date));
+    c.status=STATUS.TRIAL;
+  }else if(result==='拒絕'){
+    c.status=STATUS.REFUSE;
+  }
+  (c.visits=c.visits||[]).push({date,mood:0,note:'',insight:'第 '+t.n+' 次試用回收：'+result,statusChange:c.status,nextdate:c.nextdate||null});
+  c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  closeRecoverModal();renderClients();openCD(RECOVER.ci);
+  const n=trialsOf(c).length;
+  if(result==='再試用'&&n>TRIAL_MAX)showToast('提醒：這家已經第 '+n+' 次試用，超過公司規定的 '+TRIAL_MAX+' 次');
+  else showToast('✓ 第 '+t.n+' 次試用已回收：'+result);
+}
+
 // 客戶卡 → 編輯品項 modal（共用編輯表單的 renderItems/renderContracted 邏輯）
-function openCDItems(){
+function openCDItems(n){
   if(S.curIdx<0)return;
   const c=DB.clients[S.curIdx];
   if(!c)return;
+  const t=n?trialsOf(c).find(x=>x.n===n):currentTrial(c);
   S.cdmActive=true;
   S.cdmStatusOverride=null;
-  S._cdmPrevTrial=JSON.parse(JSON.stringify(c.trialItems||[]));
-  S.cfItems=JSON.parse(JSON.stringify(c.trialItems||[]));
+  S.cdmTrialN=t?t.n:null;
+  S._cdmPrevTrial=JSON.parse(JSON.stringify(t?(t.items||[]):[]));
+  S.cfItems=JSON.parse(JSON.stringify(t?(t.items||[]):[]));
   S.cfContracted=JSON.parse(JSON.stringify(c.contractedItems||[]));
   S.itemsTarget='cdm-items';
   S.contractedTarget='cdm-contracted';
+  document.getElementById('cdm-trial-box').style.display=t?'':'none';
+  document.getElementById('cdm-no-trial').style.display=t?'none':'';
+  document.getElementById('cdm-del-trial').style.display=t?'':'none';
+  if(t){document.getElementById('cdm-trial-start').value=t.start||'';document.getElementById('cdm-trial-due').value=t.due||'';}
   rebuildAllBundles();
   renderItems();renderContracted();
-  document.getElementById('cdm-title').textContent='編輯品項｜'+c.name;
+  document.getElementById('cdm-title').textContent=(t?'第 '+t.n+' 次試用'+(t.open?'':'（已回收）'):'成約品項')+'｜'+c.name;
   document.getElementById('cd-items-modal').classList.add('on');
+}
+function cdmTrialStartChanged(){
+  const s=document.getElementById('cdm-trial-start').value;
+  if(s)document.getElementById('cdm-trial-due').value=addDays(s,TRIAL_DEFAULT_DAYS);
+}
+async function deleteCDTrial(){
+  const c=DB.clients[S.curIdx];const n=S.cdmTrialN;
+  if(!c||!n)return;
+  if(!await appConfirm('刪除第 '+n+' 次試用的整筆紀錄（含品項）？之後的次數會往前補。',{title:'刪除這次試用',okText:'刪除',danger:true}))return;
+  c.trials=trialsOf(c).filter(t=>t.n!==n);c.trials.forEach((t,i)=>t.n=i+1);
+  (c.todos||[]).forEach(x=>{if(x&&x.source==='auto-recycle'&&(x.trialN||1)===n)x.done=true;});
+  c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  closeCDItems();renderClients();openCD(S.curIdx);
 }
 function closeCDItems(){
   document.getElementById('cd-items-modal').classList.remove('on');
@@ -4970,14 +5214,19 @@ function saveCDItems(){
   const c=DB.clients[S.curIdx];
   if(!c){closeCDItems();return;}
   try{
-    c.trialItems=JSON.parse(JSON.stringify(S.cfItems||[]));
+    const t=S.cdmTrialN?trialsOf(c).find(x=>x.n===S.cdmTrialN):null;
+    if(t){
+      t.items=JSON.parse(JSON.stringify(S.cfItems||[]));
+      t.start=document.getElementById('cdm-trial-start').value||t.start;
+      t.due=document.getElementById('cdm-trial-due').value||addDays(t.start,TRIAL_DEFAULT_DAYS);
+    }
     c.contractedItems=JSON.parse(JSON.stringify(S.cfContracted||[]));
     if(S.cdmStatusOverride)c.status=S.cdmStatusOverride;
     c.updatedAt=Date.now();
     saveLocal();
     autoSync('save',{client:c});
     // 庫存扣減
-    const pendingDiffs=getInventoryDiffs(S._cdmPrevTrial||[],c.trialItems);
+    const pendingDiffs=t?getInventoryDiffs(S._cdmPrevTrial||[],t.items):[];
     closeCDItems();
     renderClients();openCD(S.curIdx);
     if(pendingDiffs.length){
@@ -5319,7 +5568,7 @@ function genReport(){
     // 拒絕的客戶視為已無試用品，不出現在推進表
     if(c.status===STATUS.REFUSE) return false;
     const a=STATUS_A.has(c.status);
-    const mains=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    const mains=openTrialItems(c).filter(it=>it.product&&!it.bundledTo);   // 未回收的試用才算「有試用品項」
     const hasMain=mains.length>0;
     if(a) return true;
     const b=rptVisitsInRange(c,from,to).length>0;
@@ -5335,7 +5584,7 @@ function genReport(){
   const vip4w=[];
   picked.forEach((c,i)=>{
     const fw=calcReportAmt(c);
-    const prod=rptProd(c.trialItems);
+    const prod=rptProd(openTrialItems(c));
     const mon=rptAmountMonth(c,from,to);
     // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
     // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於 status=試用中/報價/將成約
@@ -5375,7 +5624,7 @@ function genReport(){
   const vipPlan=[];
   planList.forEach((c,i)=>{
     const fw=calcReportAmt(c);
-    const prod=rptProd(c.trialItems);
+    const prod=rptProd(trialItemsOf(c));
     const note=(c.note||'').replace(/[\t\n\r]/g,' ');
     // 14 欄：NO, name, '', '', '', prod, '', note, '', '', '', '', '', fw
     const cols=[String(i+1), c.name, '', '', '', prod, '',
@@ -5423,7 +5672,7 @@ function genReport(){
   const vipDaily=[];
   visitRows.forEach((r,i)=>{
     const c=r.c, v=r.v;
-    const prod=rptProd(c.trialItems);
+    const prod=rptProd(trialItemsOf(c));
     const action=rptVisitAction(v.statusChange);
     const isTrial=action==='試';
     const fwClient=calcReportAmt(c);
@@ -5664,11 +5913,11 @@ function gtTrialSection(){
     .sort((a,b)=>b.info.days-a.info.days);
   if(!list.length)return '';
   const rows=list.map(({c,ci,info})=>{
-    const items=(c.trialItems||[]).filter(it=>it.product&&!it.bundledTo);
+    const items=openTrialItems(c).filter(it=>it.product&&!it.bundledTo);
     return`<div class="todo-row gt-trial-row" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
       <div style="flex:1">
         <div>${escHtml(c.name)}<span class="xbadge x${info.level}">${info.marks}</span></div>
-        <div style="font-size:11px;color:${info.level>=3?'var(--red)':'var(--text3)'}">試用第 ${info.days} 天${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・已達業助提醒等級':''}</div>
+        <div style="font-size:11px;color:${info.level>=3?'var(--red)':'var(--text3)'}">第 ${info.n} 次試用・回收日 ${info.due}${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・已達業助提醒等級':''}</div>
       </div>
       <span style="color:var(--text3);font-size:16px;flex-shrink:0">›</span>
     </div>`;
@@ -6049,7 +6298,7 @@ function calcAdminMetrics(clients){
     if(STATUS_TRIAL_SET.includes(c.status)){
       trialShop++;
       // 4W 推進表口徑：試用品項以 2W 預設原價加總
-      trialAmount+=(c.trialItems||[]).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
+      trialAmount+=openTrialItems(c).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
     }else if(c.status==='已成約'){
       contractShop++;
       // 成約金額：成約品項以 itemFW4 加總（quoted 優先，否則原價）
@@ -6087,6 +6336,7 @@ async function loadAdminSnapshot(){
         }
         snap={ok:true,clients:fb.clients,sheetName:'業務'+(i+1)+'（請更新 Apps Script 以顯示姓名）'};
       }
+      packAllTrials(snap.clients);   // 業務員的雲端可能還是舊格式（trialItems）
       results[i]={sheetName:snap.sheetName||('業務'+(i+1)),clients:snap.clients,generatedAt:snap.generatedAt,url};
     }catch(e){
       results[i]={sheetName:'(URL'+(i+1)+')',clients:[],error:e.message||String(e),url};
@@ -6250,7 +6500,7 @@ function filterAdminRepList(){
       </thead>
       <tbody>
         ${filtered.map(({c,i})=>{
-          const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
+          const trialAmt=openTrialItems(c).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
           const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
           const visitCnt=(c.visits||[]).filter(v=>v.date).length;
           return `<tr onclick="adminSelectClient(${i})" style="cursor:pointer;border-bottom:1px solid var(--border)">
@@ -6270,7 +6520,7 @@ function filterAdminRepList(){
 }
 function renderAdminClientDetailHTML(s,idx){
   const c=s.clients[idx];if(!c)return '<div>找不到客戶</div>';
-  const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
+  const trialAmt=openTrialItems(c).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
   const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
   const visits=(c.visits||[]).slice().sort((a,b)=>(a.date||'')<(b.date||'')?1:-1);
   const moods=['','差','普','好','優'];
@@ -6291,7 +6541,7 @@ function renderAdminClientDetailHTML(s,idx){
     const qStr=it.quoted>0?` <span style="color:var(--green-d)">報價 $${it.quoted}</span>`:'';
     return `<div style="font-size:12px;padding:3px 6px">${acc}${escHtml(it.product)} ×${it.qty||1}${it.cycle?` <span style="color:var(--text3)">${escHtml(it.cycle)}</span>`:''}${qStr}${it.contractDate?` <span style="color:var(--text3)">[${it.contractDate}]</span>`:''}</div>`;
   };
-  const trialHtml=(c.trialItems||[]).length?(c.trialItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
+  const trialHtml=trialsOf(c).length?trialsOf(c).map(t=>`<div style="font-size:12px;padding:3px 6px;color:var(--text2)">第 ${t.n} 次 ${escHtml(t.start||'')}→${escHtml(t.due||'')}${t.open?' <b>進行中</b>':'（已回收'+(t.recovered?' '+escHtml(t.recovered):'')+(t.result?'・'+escHtml(t.result):'')+'）'}</div>`+(t.items||[]).map(fmtItem).join('')).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
   const dealHtml=(c.contractedItems||[]).length?(c.contractedItems||[]).map(fmtItem).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
   const todosHtml=(c.todos||[]).length?(c.todos||[]).map(t=>`<div style="font-size:12px;padding:3px 6px;${t.done?'color:var(--text3);text-decoration:line-through':''}">• ${escHtml(t.text||'')}${t.dueDate?` <span style="color:var(--text3)">${t.dueDate}</span>`:''}</div>`).join(''):'<div style="color:var(--text3);font-size:12px">（無）</div>';
   return `
@@ -6340,11 +6590,11 @@ function exportAdminRepCSV(){
   const headers=['店家名稱','狀態','聯絡人','地址','類型','試用金額(2W)','成約金額','拜訪次數','未完成待辦','上次拜訪','下次拜訪','試用品項','成約品項','備註'];
   const rows=[headers];
   (s.clients||[]).forEach(c=>{
-    const trialAmt=(c.trialItems||[]).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
+    const trialAmt=openTrialItems(c).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
     const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
     const visits=(c.visits||[]).filter(v=>v.date);
     const lastVisit=visits.map(v=>v.date).sort().reverse()[0]||'';
-    const trialSummary=(c.trialItems||[]).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；');
+    const trialSummary=trialItemsOf(c).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；')+(trialsOf(c).length?'（第 '+trialsOf(c).length+' 次）':'');
     const dealSummary=(c.contractedItems||[]).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；');
     rows.push([
       c.name||'',c.status||'',c.contact||'',c.addr||'',c.type||'',
@@ -6647,7 +6897,7 @@ function consumeIzHandoff(){
     // 從 izcrm 建檔的客戶已電訪過 → 狀態＝初訪，並補一筆拜訪紀錄滿足不變式（status≠未拜訪 ⇒ 有 visit）
     const c={id:h.id,name:String(h.name),contact:String(h.contact||''),phone:String(h.phone||''),
       addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.FIRST,regNo:'',nextdate:'',env:'',
-      note:String(h.note||''),trialItems:[],contractedItems:[],todos:[],
+      note:String(h.note||''),trials:[],contractedItems:[],todos:[],
       visits:[{date:today(),mood:0,note:'',insight:'(工業區CRM 轉入)',statusChange:STATUS.FIRST,nextdate:null}],
       lat:null,lng:null,geocodeSource:null,updatedAt:Date.now()};
     DB.clients.push(c);n++;
@@ -6677,7 +6927,7 @@ function consumeSiteHandoff(){
     const c={id:h.id,name:String(h.name||h.addr),contact:'',phone:'',
       addr:String(h.addr||''),type:String(h.type||''),segment:'街邊店',srcSiteId:String(h.siteId||''),status:STATUS.UNVISITED,regNo:'',
       nextdate:String(h.nextdate||''),env:'',note:String(h.note||''),
-      trialItems:[],contractedItems:[],todos:[],visits:[],
+      trials:[],contractedItems:[],todos:[],visits:[],
       lat:hasGeo?h.lat:null,lng:hasGeo?h.lng:null,
       geocodeSource:hasGeo?'manual':null,geocodedAt:hasGeo?Date.now():null,
       updatedAt:Date.now()};
@@ -6751,7 +7001,7 @@ function mainConvertSite(siteId){
     addr,type:(s.type&&s.type!=='不確定')?s.type:'',segment:'街邊店',srcSiteId:siteId,
     status:STATUS.UNVISITED,regNo:'',nextdate:s.openDate||'',env:'',
     note:['（工地地圖轉入）',s.stage||'',s.note||''].filter(Boolean).join('　'),
-    trialItems:[],contractedItems:[],todos:[],visits:[],
+    trials:[],contractedItems:[],todos:[],visits:[],
     lat:hasGeo?s.lat:null,lng:hasGeo?s.lng:null,
     geocodeSource:hasGeo?'manual':null,geocodedAt:hasGeo?Date.now():null,
     updatedAt:Date.now()};
@@ -6809,6 +7059,11 @@ const MIGRATIONS=[
   // 舊碼與停售款移除（NFM-DS、NH-S-4W → NH-S；FOREVER 紅色款 → 同尺寸黑款），客戶品項與庫存一併改碼。
   // 使用者自己加的商品不動；停用旗標不動。改完商品庫／庫存／客戶都上雲。
   {v:10, desc:'apply 2026-09 price sheet', fn:applyPriceSheet2026},
+  // 每次試用一筆：舊的 trialDate＋trialItems 打包成第 1 次（試用中＝進行中，其餘＝已回收）；有試用資料的客戶重推上雲
+  {v:11, desc:'trials per attempt', fn:function(){
+    let n=0;(DB.clients||[]).forEach(c=>{if(packTrials(c)){c.updatedAt=Date.now();n++;autoSync('save',{client:c});}});
+    if(n)saveLocal();
+  }},
 ];
 function applyPriceSheet2026(){
   const REMAP={'NFM-DS':'NH-S','NH-S-4W':'NH-S','FSSR':'FSSK','FFSR':'FFSK','FFSLR':'FFSLK','FFLR':'FFLK','FFMR':'FFMK'};
@@ -6855,6 +7110,8 @@ function applyPriceSheet2026(){
   }
 })();
 autoAddRecycleTodos();validateClients();consumeIzHandoff();consumeSiteHandoff();renderClients();
+setTimeout(()=>{checkQuoteFollowups().catch(()=>{});},800);   // 報價一週未回覆的提醒（等畫面先出來）
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkQuoteFollowups().catch(()=>{});});
 // ═══ 首頁深連結（home.html 樞紐 → index.html#daily / #trip / #new …）═══
 (function(){
   let h=(location.hash||'').replace('#','');
@@ -6901,7 +7158,8 @@ const HOST = {
   onChange: () => {},                                       // 拜訪紀錄更新後重繪（= renderVisits）
   escapeHtml: (s) => String(s==null?'':s),
   getProfile: () => CM_DEFAULT_PROFILE,                     // 業務個人資料（由主程式注入；未注入時用模組預設）
-  unitAt: () => null                                        // (商品定價{price,cycle,price4w}, 所選週期) → 每次更換單價（主程式 unitPriceAt）
+  unitAt: () => null,                                       // (商品定價{price,cycle,price4w}, 所選週期) → 每次更換單價（主程式 unitPriceAt）
+  trialItems: () => []                                      // 客戶 → 試用品項（主程式 trialItemsOf：進行中優先，否則最近一次）                                        // (商品定價{price,cycle,price4w}, 所選週期) → 每次更換單價（主程式 unitPriceAt）
 };
 // 模組內預設業務資料（＝主程式 DEFAULT_PROFILE 的鏡像，供 ?test=1 或未注入時 docx 仍可產生）
 const CM_DEFAULT_PROFILE={ office:'樂清服務股份有限公司 台南營業所', dept:'台南營業所', contact:'潘秉均', mobile:'0928-374-141', phone:'06-253-1522', fax:'06-253-1533', email:'', address:'台南市永康區中正路 337 巷 106 號', salesId:'', title:'', seal:'' };
@@ -7555,7 +7813,7 @@ function cmItemCycle(it, info){
 function clientToCMConfig(c){
   c = c || {};
   const useContracted = !!(c.contractedItems && c.contractedItems.length);
-  const src = useContracted ? c.contractedItems : (c.trialItems || []);
+  const src = useContracted ? c.contractedItems : HOST.trialItems(c);
   // 排除 bundled 配件與空品項
   const usable = src.filter(it => it && it.product && !it.bundledTo);
   const autoCustomCodes = [];
@@ -8279,7 +8537,7 @@ function cmMount(){
 function cmwInit(c){
   c = c || {};
   const useContracted = !!(c.contractedItems && c.contractedItems.length);
-  const src = useContracted ? c.contractedItems : (c.trialItems || []);
+  const src = useContracted ? c.contractedItems : HOST.trialItems(c);
   const usable = (src || []).filter(it => it && it.product && !it.bundledTo);
   const items = usable.map(it => {
     const qty = it.qty || 1;
@@ -8697,7 +8955,8 @@ ContractMaker.init({
   onChange: () => { if(typeof renderVisits === 'function') renderVisits(); },
   escapeHtml: (s) => (typeof escHtml === 'function' ? escHtml(s) : String(s==null?'':s)),
   getProfile: () => (typeof getProfile === 'function' ? getProfile() : null),
-  unitAt: (p, cycle) => unitPriceAt(p, cycle)
+  unitAt: (p, cycle) => unitPriceAt(p, cycle),
+  trialItems: (c) => trialItemsOf(c)
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -8761,33 +9020,52 @@ if(location.search.includes('test=1')){
   assert('itemFW4 null', itemFW4(null), 0);
   assert('itemFW4 無 product', itemFW4({qty:1}), 0);
 
-  // --- calcReportAmt（4W 推進表專用：只看試用品項 4W 原價）---
-  // 一律忽略成約、忽略 quoted，只回傳 trialItems 的 displayFw4 合計
+  // --- calcReportAmt（4W 推進表專用：只看「進行中未回收」試用品項 4W 原價）---
+  // 一律忽略成約、忽略 quoted、忽略已回收的試用
+  const T=(items,open=true)=>[{n:1,start:'2026-04-01',due:'2026-04-15',items,open,recovered:open?'':'2026-04-15',result:''}];
   const rc1={contractedItems:[
     {product:'S-20',qty:1,quoted:300,cycle:'2W',contractDate:'2026-04-10'}
-  ],trialItems:[]};
+  ],trials:[]};
   assert('calcReportAmt 無試用 → 0（不看成約）', calcReportAmt(rc1), 0);
-  const rc2={trialItems:[
+  const rc2={trials:T([
     {product:'S-20',qty:2,cycle:'2W',quoted:100}  // quoted 應被忽略
-  ]};
+  ])};
   assert('calcReportAmt 忽略 quoted', calcReportAmt(rc2), 400);
-  const rc3={trialItems:[
+  const rc3={trials:T([
     {product:'S-20',qty:1,cycle:'2W'},
     {product:'DECSR',qty:1,cycle:'4W'}  // 試用品項即使勾 4W，推進表也以 2W 預設算 → 340
-  ]};
+  ])};
   assert('calcReportAmt 主項+地墊（強制 2W）', calcReportAmt(rc3), 200+340);
   // 地墊不論 cycle 一律算 2W 原價（公司預設客戶 2W 換）
-  const rc4={trialItems:[{product:'DECSR',qty:2,cycle:'4W'}]};
+  const rc4={trials:T([{product:'DECSR',qty:2,cycle:'4W'}])};
   assert('calcReportAmt 地墊強制 2W 不打折', calcReportAmt(rc4), 340*2);
+  assert('calcReportAmt 已回收的試用不算', calcReportAmt({status:'報價',trials:T([{product:'S-20',qty:1,cycle:'2W'}],false)}), 0);
+  assert('trialItemsOf 已回收仍回最近一次（客戶卡估算用）', trialItemsOf({trials:T([{product:'S-20',qty:1,cycle:'2W'}],false)}).length, 1);
+  assert('openTrialItems 只回進行中', openTrialItems({trials:T([{product:'S-20',qty:1}],false)}).length, 0);
+  assert('currentTrial 進行中優先', currentTrial({trials:[{n:1,open:false,items:[]},{n:2,open:true,items:[]}]}).n, 2);
+  assert('newTrial 編號＋回收日＝開始＋14', JSON.stringify((t=>[t.n,t.due,t.items.length])(newTrial({trials:[{n:1}]},[],'2026-06-01'))), '[2,"2026-06-15",0]');
+  // packTrials：舊格式 → 第 1 次；試用中＝進行中，其他＝已回收
+  (function(){
+    const a={status:'試用中',trialDate:'2026-05-01',trialItems:[{product:'S-20',qty:1}]};
+    assert('packTrials 舊資料有試用 → true', packTrials(a), true);
+    assert('packTrials 試用中 → 進行中、回收日+14', a.trials[0].open&&a.trials[0].due==='2026-05-15', true);
+    assert('packTrials 刪掉舊欄位', ('trialItems' in a)||('trialDate' in a), false);
+    const b={status:'報價',trialItems:[{product:'S-20',qty:1}],visits:[{date:'2026-03-03',statusChange:'試用中'}]};
+    packTrials(b);
+    assert('packTrials 非試用中 → 已回收、開始日取狀態變試用的拜訪', !b.trials[0].open&&b.trials[0].start==='2026-03-03', true);
+    const c={status:'未拜訪'};
+    assert('packTrials 沒試用資料 → false 且 trials=[]', packTrials(c)===false&&Array.isArray(c.trials)&&c.trials.length===0, true);
+    assert('packTrials 已是新格式 → 不動', packTrials(a), false);
+  })();
 
   // --- calcAdminMetrics ---
   const adminClients=[
-    {status:'試用中',trialItems:[{product:'S-20',qty:1,cycle:'2W'}],contractedItems:[]},   // 試用 200
-    {status:'報價',trialItems:[{product:'DECSR',qty:1,cycle:'4W'}],contractedItems:[]},     // 試用 340
-    {status:'已成約',trialItems:[],contractedItems:[{product:'S-20',qty:1,quoted:500}]},     // 成約 500
-    {status:'已成約',trialItems:[],contractedItems:[{product:'S-20',qty:2,quoted:0}]},       // 成約 fallback 200*2=400
-    {status:'未拜訪',trialItems:[],contractedItems:[]},                                       // 不算
-    {status:'拒絕',trialItems:[{product:'S-20',qty:5}],contractedItems:[]}                   // 不算
+    {status:'試用中',trials:T([{product:'S-20',qty:1,cycle:'2W'}]),contractedItems:[]},   // 試用 200
+    {status:'報價',trials:T([{product:'DECSR',qty:1,cycle:'4W'}]),contractedItems:[]},     // 試用 340（進行中）
+    {status:'已成約',trials:[],contractedItems:[{product:'S-20',qty:1,quoted:500}]},     // 成約 500
+    {status:'已成約',trials:[],contractedItems:[{product:'S-20',qty:2,quoted:0}]},       // 成約 fallback 200*2=400
+    {status:'未拜訪',trials:[],contractedItems:[]},                                       // 不算
+    {status:'拒絕',trials:T([{product:'S-20',qty:5}]),contractedItems:[]}                   // 不算
   ];
   const m=calcAdminMetrics(adminClients);
   assert('calcAdminMetrics 試用軒數', m.trialShop, 2);
@@ -8913,35 +9191,35 @@ if(location.search.includes('test=1')){
   assert('displayStatus 試用中→試用中', displayStatus(STATUS.TRIAL), STATUS.TRIAL);
 
   // --- trialStartDate ---
-  assert('trialStartDate 有 trialDate', trialStartDate({trialDate:'2026-01-15'}), '2026-01-15');
+  assert('trialStartDate 有進行中試用 → 其開始日', trialStartDate({trials:[{n:1,start:'2026-01-15',open:true,items:[]}]}), '2026-01-15');
   assert('trialStartDate visits statusChange', trialStartDate({visits:[{date:'2026-02-01',statusChange:STATUS.TRIAL},{date:'2026-01-10'}]}), '2026-02-01');
   assert('trialStartDate visits 無 statusChange', trialStartDate({visits:[{date:'2026-03-05'}]}), '2026-03-05');
   assert('trialStartDate SERVE note', trialStartDate({note:'SERVE 2026/1/8'}), '2026-01-08');
   assert('trialStartDate 全空', trialStartDate({}), '');
 
   // --- calcFW4（純計算，不依賴 c.fw4） ---
-  const cfClient1={trialItems:[{product:'S-20',quoted:200,qty:1}],contractedItems:[]};
+  const cfClient1={trials:T([{product:'S-20',quoted:200,qty:1}]),contractedItems:[]};
   assert('calcFW4 只有試用', calcFW4(cfClient1), 200);
-  const cfClient2={trialItems:[{product:'S-20',quoted:200,qty:1}],contractedItems:[{product:'DECSR',quoted:300,qty:1}]};
+  const cfClient2={trials:T([{product:'S-20',quoted:200,qty:1}]),contractedItems:[{product:'DECSR',quoted:300,qty:1}]};
   assert('calcFW4 有成約→用成約', calcFW4(cfClient2), 300);
-  const cfClient3={trialItems:[],contractedItems:[],fw4:999};
+  const cfClient3={trials:[],contractedItems:[],fw4:999};
   assert('calcFW4 忽略 c.fw4', calcFW4(cfClient3), 0);
 
   // --- calcReportAmt 第二組（新語意：只看 trialItems displayFw4）---
-  const testClient1={contractedItems:[{product:'S-20',quoted:300,qty:1,contractDate:'2026-03-15'}],trialItems:[]};
+  const testClient1={contractedItems:[{product:'S-20',quoted:300,qty:1,contractDate:'2026-03-15'}],trials:[]};
   assert('calcReportAmt 只看試用 - 試用空', calcReportAmt(testClient1), 0);
-  const testClient2={trialItems:[{product:'S-20',quoted:250,qty:1}]};
+  const testClient2={trials:T([{product:'S-20',quoted:250,qty:1}])};
   assert('calcReportAmt 只看試用 - 忽略 quoted', calcReportAmt(testClient2), 200);
-  const testClient3={trialItems:[],fw4:500};
+  const testClient3={trials:[],fw4:500};
   assert('calcReportAmt 只看試用 - 不用 c.fw4', calcReportAmt(testClient3), 0);
-  const testClient4={status:STATUS.REFUSE,trialItems:[{product:'S-20',qty:1}]};
+  const testClient4={status:STATUS.REFUSE,trials:T([{product:'S-20',qty:1}])};
   assert('calcReportAmt 拒絕→0（不算試用）', calcReportAmt(testClient4), 0);
 
   // --- matchCategory ---
-  const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trialItems:[{product:'S-20',qty:1,quoted:0}],contractedItems:[]};
-  const mcUnvisited={status:STATUS.UNVISITED,visits:[],trialItems:[],contractedItems:[]};
-  const mcDeal={status:STATUS.DEAL,visits:[{date:'2026-01-01'}],trialItems:[],contractedItems:[{product:'S-20',qty:1}]};
-  const mcRefuse={status:STATUS.REFUSE,visits:[{date:'2026-01-01'}],trialItems:[],contractedItems:[]};
+  const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trials:T([{product:'S-20',qty:1,quoted:0}]),contractedItems:[]};
+  const mcUnvisited={status:STATUS.UNVISITED,visits:[],trials:[],contractedItems:[]};
+  const mcDeal={status:STATUS.DEAL,visits:[{date:'2026-01-01'}],trials:[],contractedItems:[{product:'S-20',qty:1}]};
+  const mcRefuse={status:STATUS.REFUSE,visits:[{date:'2026-01-01'}],trials:[],contractedItems:[]};
   const origCat=activeCat;const origRegion=activeRegion;const origSub=activeStatusSub;
   activeCat='試用回收';activeStatusSub='';
   assert('matchCategory 試用回收-是(試用中)',matchCategory(mcTrial),true);
@@ -9007,21 +9285,21 @@ if(location.search.includes('test=1')){
   assert('CM_CATALOG 包含 DECSR',!!CM_CATALOG.products.DECSR,true);
 
   // clientToCMConfig: 新模型只留 client/date/items（無 customerInfo/displayCycle 等）
-  const cmC1=clientToCMConfig({name:'某某店',contact:'王老闆',addr:'永康區中山路1號',contractedItems:[],trialItems:[]});
+  const cmC1=clientToCMConfig({name:'某某店',contact:'王老闆',addr:'永康區中山路1號',contractedItems:[],trials:[]});
   assert('clientToCMConfig client 名稱',cmC1.client,'某某店');
   assert('clientToCMConfig 預設無品項長度',cmC1.items.length,0);
   assert('clientToCMConfig date 為 / 格式',/^\d{4}\/\d{2}\/\d{2}$/.test(cmC1.date),true);
   // 成約品項優先；帶入週期；無議價→unit=商品庫定價（DECSR price=170＝每次更換單價）
   const cmC2=clientToCMConfig({name:'A店',
     contractedItems:[{product:'DECSR',qty:2,quoted:0,cycle:'2W'}],
-    trialItems:[{product:'DECSR',qty:9,quoted:0}]});
+    trials:T([{product:'DECSR',qty:9,quoted:0}])});
   assert('clientToCMConfig 優先用成約品項',cmC2.items.length,1);
   assert('clientToCMConfig 成約 qty 帶入',cmC2.items[0].qty,2);
   assert('clientToCMConfig srcIsContracted',cmC2._meta.srcIsContracted,true);
   assert('clientToCMConfig 帶入週期',cmC2.items[0].cycle,'2W');
   assert('clientToCMConfig 無議價→unit=商品庫定價',cmC2.items[0].unit,170);
   // 沒成約 → 用試用
-  const cmC3=clientToCMConfig({name:'B店',trialItems:[{product:'DECSR',qty:1,cycle:'2W'}]});
+  const cmC3=clientToCMConfig({name:'B店',trials:T([{product:'DECSR',qty:1,cycle:'2W'}])});
   assert('clientToCMConfig 退回試用',cmC3.items.length,1);
   assert('clientToCMConfig srcIsContracted=false',cmC3._meta.srcIsContracted,false);
   // 過濾 bundledTo (配件)
@@ -9069,13 +9347,13 @@ if(location.search.includes('test=1')){
   assert('itemCycle 4W 商品忽略客戶卡 2W 預設',CMt.itemCycle({cycle:'2W'},{price:200,cycle:'4W'}),'4W');
   assert('itemCycle 2W 商品尊重客戶卡 4W 選擇',CMt.itemCycle({cycle:'4W'},{price:170,cycle:'2W'}),'4W');
   assert('itemCycle 無週期 → 商品週期',CMt.itemCycle({},{price:170,cycle:'2W'}),'2W');
-  const cmDomeC=clientToCMConfig({name:'D',trialItems:[{product:'DOME',qty:2,cycle:'2W',quoted:0}]});
+  const cmDomeC=clientToCMConfig({name:'D',trials:T([{product:'DOME',qty:2,cycle:'2W',quoted:0}])});
   assert('clientToCMConfig DOME 週期＝4W',cmDomeC.items[0].cycle,'4W');
   assert('clientToCMConfig DOME 單價＝商品價（不加倍）',cmDomeC.items[0].unit,getProd('DOME').price);
   assert('expandItem DOME 4週 每4週＝price×1×qty',CM_engine.expandItem({code:'DOME',qty:2,cycle:'4W'}).monthly,getProd('DOME').price*2);
   assert('expandItem DOME 單價＝price（舊版錯成 ×2）',CM_engine.expandItem({code:'DOME',qty:1,cycle:'4W'}).unitPrice,getProd('DOME').price);
   // 合約精靈同一套：cmwInit 帶入 DOME 契約單價＝price、AFDW（僅主系統商品庫）也能帶價
-  const cmWz=CMt.wizInit({name:'W',trialItems:[{product:'DOME',qty:1,cycle:'2W',quoted:0},{product:'AFDW',qty:1,cycle:'2W',quoted:0},{product:'DECSR',qty:1,cycle:'4W',quoted:0},{product:'DECLR',qty:2,cycle:'2W',quoted:1000}]});
+  const cmWz=CMt.wizInit({name:'W',trials:T([{product:'DOME',qty:1,cycle:'2W',quoted:0},{product:'AFDW',qty:1,cycle:'2W',quoted:0},{product:'DECSR',qty:1,cycle:'4W',quoted:0},{product:'DECLR',qty:2,cycle:'2W',quoted:1000}])});
   assert('cmwInit DOME 契約單價＝price',cmWz.items[0].contractUnit,getProd('DOME').price);
   assert('cmwInit DOME 週期 4W',cmWz.items[0].cycle,'4W');
   assert('cmwInit AFDW（不在合約商品庫）由主系統帶價',cmWz.items[1].contractUnit,getProd('AFDW').price);
