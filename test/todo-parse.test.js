@@ -82,7 +82,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   // 試用逾期 X 分級（公司規則：試用預設 14 天，超過後每 7 天一個 X——
   // 第 14 天=X、21=XX、28=XXX、35=XXXX；例：6/1 開始 → 6/15 X、6/22 XX）
   console.log('T1 — 試用逾期 X 分級');
-  const xc = { status: '試用中', trialDate: '2026-06-01' };
+  const xc = { status: '試用中', trials: [{ n: 1, start: '2026-06-01', due: '2026-06-15', items: [], open: true, recovered: '', result: '' }] };   // 回收日＝開始＋14
   const xi = (base) => w.trialXInfo(xc, base);
   assert('第 7 天（試用期內）→ 無標記', xi('2026-06-08').marks === '');
   assert('第 13 天（試用期內）→ 無標記', xi('2026-06-14').marks === '');
@@ -92,7 +92,8 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('滿 28 天 → XXX', xi('2026-06-29').marks === 'XXX');
   assert('滿 35 天 → XXXX（業助提醒等級）', xi('2026-07-06').marks === 'XXXX');
   assert('超過 35 天封頂 XXXX', xi('2026-08-01').marks === 'XXXX');
-  assert('非試用中狀態 → null', w.trialXInfo({ status: '已成約', trialDate: '2026-06-01' }, '2026-06-29') === null);
+  assert('非試用中狀態 → null', w.trialXInfo({ status: '已成約', trials: xc.trials }, '2026-06-29') === null);
+  assert('已回收的試用 → null', w.trialXInfo({ status: '試用中', trials: [{ n: 1, start: '2026-06-01', due: '2026-06-15', items: [], open: false, recovered: '2026-06-15', result: '' }] }, '2026-06-29') === null);
   assert('無試用日 → null', w.trialXInfo({ status: '試用中' }, '2026-06-29') === null);
 
   console.log(failed ? `T1 FAILED (${failed})` : 'T1 PASSED ✅');

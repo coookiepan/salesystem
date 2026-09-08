@@ -191,7 +191,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
    duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
    只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
    ══════════════════════════════════════════════════════════ */
-const HOME_VERSION='v2026.09.07-h1';
+const HOME_VERSION='v2026.09.08-h1';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readJSON(key,fallback){
@@ -294,11 +294,13 @@ document.getElementById('s-od').textContent=overdue.length;
 })();
 
 /* ── 試用該收 / 今日待辦 ── */
-const trialDue=clients.filter(c=>{
-  if(c.status!=='試用中'||!c.trialDate)return false;
-  const days=Math.floor((now-new Date(c.trialDate))/864e5);
-  return days>=14;
-});
+// 試用該收：進行中的試用到了回收日（主系統還沒開過新版時舊格式只有 trialDate，視為開始＋14 天）
+function openTrialsOf(c){
+  if(Array.isArray(c.trials))return c.trials.filter(t=>t&&t.open);
+  if(c.status==='試用中'&&c.trialDate){const d=new Date(c.trialDate);d.setDate(d.getDate()+14);return [{start:c.trialDate,due:ymd(d),open:true}];}
+  return [];
+}
+const trialDue=clients.filter(c=>c.status==='試用中'&&openTrialsOf(c).some(t=>t.due&&t.due<=TODAY));
 document.getElementById('s-trial').textContent=trialDue.length;
 let todoN=0;
 clients.forEach(c=>(c.todos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate&&t.dueDate<=TODAY)todoN++;}));
@@ -311,7 +313,8 @@ let wVisits=0,wDeals=0,wTrials=0;
 clients.forEach(c=>{
   (c.visits||[]).forEach(v=>{if(v&&v.date&&v.date>=W0&&v.date<=W1)wVisits++;});
   if((c.contractedItems||[]).some(it=>it&&it.contractDate&&it.contractDate>=W0&&it.contractDate<=W1))wDeals++;
-  if(c.trialDate&&c.trialDate>=W0&&c.trialDate<=W1)wTrials++;
+  const starts=Array.isArray(c.trials)?c.trials.filter(Boolean).map(t=>t.start):(c.trialDate?[c.trialDate]:[]);
+  if(starts.some(d=>d&&d>=W0&&d<=W1))wTrials++;
 });
 document.getElementById('w-visits').textContent=wVisits;
 document.getElementById('w-deals').textContent=wDeals;

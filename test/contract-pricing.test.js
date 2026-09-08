@@ -73,12 +73,13 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
 
   console.log('C5 — 報價精靈：客戶卡帶入與引擎');
   DB.products.push({ code: 'MY-X', cat: '地墊', desc: '自訂地墊', price: 500, cycle: '2W', note: '', active: true });   // 只在主系統的商品
-  const q = T.clientToConfig({ name: '店', trialItems: [
+  const TR = items => [{ n: 1, start: '2026-09-01', due: '2026-09-15', items, open: true, recovered: '', result: '' }];
+  const q = T.clientToConfig({ name: '店', trials: TR([
     { product: 'DOME', qty: 2, cycle: '2W', quoted: 0 },
     { product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 },
     { product: 'DECLR', qty: 2, cycle: '2W', quoted: 1000 },
     { product: 'MY-X', qty: 1, cycle: '2W', quoted: 0 }
-  ] });
+  ]) });
   eq('DOME 週期 4W', q.items[0].cycle, '4W');
   eq('DOME 單價＝主系統價（不加倍）', q.items[0].unit, dome.price);
   eq('DOME 標自動帶入', q.items[0]._unitAuto, true);
@@ -98,11 +99,11 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('引擎 手填單價不換算', T.engine.expandItem({ code: 'DOME', qty: 1, cycle: '4W', unit: 180 }).monthly, 180);
 
   console.log('C5 — 合約精靈：同一套單價邏輯');
-  const wz = T.wizInit({ name: 'W', trialItems: [
+  const wz = T.wizInit({ name: 'W', trials: TR([
     { product: 'DOME', qty: 1, cycle: '2W', quoted: 0 },
     { product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 },
     { product: 'DECLR', qty: 2, cycle: '2W', quoted: 1000 }
-  ] });
+  ]) });
   eq('DOME 契約單價＝price', wz.items[0].contractUnit, dome.price);
   eq('DOME 週期 4W', wz.items[0].cycle, '4W');
   eq('地墊 4W 契約單價 340', wz.items[1].contractUnit, 340);
@@ -114,7 +115,7 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('換商品 → 標自動帶入', wz2.items[0]._unitAuto, true);
 
   console.log('C5 — 合約精靈 UI：打數量／單價不失焦、金額就地更新');
-  DB.clients.push({ id: 'cm-focus', name: '失焦測試店', status: '試用中', trialItems: [{ product: 'DOME', qty: 1, cycle: '2W', quoted: 0 }], todos: [], visits: [], updatedAt: 1 });
+  DB.clients.push({ id: 'cm-focus', name: '失焦測試店', status: '試用中', trials: TR([{ product: 'DOME', qty: 1, cycle: '2W', quoted: 0 }]), todos: [], visits: [], updatedAt: 1 });
   S.curIdx = DB.clients.length - 1;
   w.ContractMaker.openContract();
   w.document.getElementById('cmw-next-btn').click();   // 步驟 2 商品明細
@@ -153,7 +154,7 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('DOME 價格 220', dome.price, 220);
   eq('合約內建庫 DOME 也是 220', T.CATALOG.products.DOME.price, 220);
   // 合約精靈：地墊 4W 列顯示建議 8 折提示、單價欄仍是原價 340（不預設帶折扣）
-  DB.clients.push({ id: 'cm-mat', name: '地墊店', status: '試用中', trialItems: [{ product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 }, { product: 'DOME', qty: 1, cycle: '2W', quoted: 0 }], todos: [], visits: [], updatedAt: 1 });
+  DB.clients.push({ id: 'cm-mat', name: '地墊店', status: '試用中', trials: TR([{ product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 }, { product: 'DOME', qty: 1, cycle: '2W', quoted: 0 }]), todos: [], visits: [], updatedAt: 1 });
   S.curIdx = DB.clients.length - 1;
   w.ContractMaker.openContract();
   w.document.getElementById('cmw-next-btn').click();
@@ -206,8 +207,8 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('FOREVER 紅款移除', w3.getProd('FFSR'), null);
   eq('使用者自己加的商品不動', w3.getProd('MY-OWN').price, 999);
   const c1 = w3.eval('DB.clients')[0];
-  eq('客戶品項 NH-S-4W → NH-S 且週期 4W', c1.trialItems[0].product + '/' + c1.trialItems[0].cycle, 'NH-S/4W');
-  eq('客戶品項 FFSR → FFSK', c1.trialItems[1].product, 'FFSK');
+  eq('客戶品項 NH-S-4W → NH-S 且週期 4W（v10 改碼後 v11 打包成第 1 次）', c1.trials[0].items[0].product + '/' + c1.trials[0].items[0].cycle, 'NH-S/4W');
+  eq('客戶品項 FFSR → FFSK', c1.trials[0].items[1].product, 'FFSK');
   eq('客戶品項改碼後 4W 金額仍算得出（FFSK 兩片 2W = 680）', w3.displayFw4('FFSK', 2, '2W'), 680);
   eq('庫存 NFM-DS → NH-S', w3.eval('DB.inventory').find(i => i.name === 'NH-S').stock, 2);
   const outbox3 = JSON.parse(w3.localStorage.getItem('duskin_outbox') || '[]');
