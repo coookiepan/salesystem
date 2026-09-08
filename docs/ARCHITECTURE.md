@@ -176,7 +176,8 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 ### Product／Inventory
 
 ```js
-Product: { code, cat:'拖把'|'地墊'|'芳香', desc, price, cycle:'2W'|'4W', note, active }
+Product: { code, cat:'拖把'|'地墊'|'芳香', desc, price, price4w?, cycle:'2W'|'4W', note, active }
+//  price＝自身週期的每次更換單價；price4w＝2W 商品表定的 4 週換單價（拖把用），沒有則 4W＝price×2（地墊）
 Item:    { name(=product code), stock, std(標準配備數), cat }
 ```
 
@@ -185,13 +186,15 @@ Item:    { name(=product code), stock, std(標準配備數), cat }
 ### 金額算法（商品價格邏輯）
 
 **`Product.price` 是該商品「自身週期」（`Product.cycle`）下的每次更換單價（含稅）**：地墊／拖把多為 2W 價、芳香（DOME、AFDW…）為 4W 價。
+**`Product.price4w`（選填）是 2W 商品表定的 4 週換單價**：拖把照 2026-09 價格表（S-20 160、SHH 140、NH-S 140、SSS-R 272、LALA-R 304、NSAC 200 特價、N-AC 336、M-90 352、M-120 448）；地墊沒有此欄，4W 原價＝2W 價 ×2。
+唯一換算入口 `unitPriceAt(p, cycle)`（主系統）＝ `HOST.unitAt`（報價／合約精靈），`effCycle` 把 4W 商品的所選週期一律視為 4W。
 定價來源以 App「商品」頁（`DB.products`，同步到 Sheet `products` 分頁）為準；ContractMaker 內建的 `CM_CATALOG` 只補品名／分類／不在主系統的品項（HPL/HPS 訂做地墊）與後援價。
 
 | 場景 | 入口 | 規則 |
 |------|------|------|
 | 客戶卡試用／成約品項、報表 | `displayFw4(code, qty, cycle)` → `itemFW4` → `calcFW4` | 4W 金額＝price × 次數(商品週期) × 數量；`quoted`（整列 4W 議價）優先。地墊選 4W 換＝2W 價 ×2，**不預設打折**。4W 推進表 `calcReportAmt` 一律以 2W 原價計 |
-| 建議折數（只提示不帶入） | `refRate`／`refQuote`（客戶卡）、`cmMat4WSuggest`（兩精靈） | 地墊 4W 換可給到 8 折，其他 9 折參考；折多少由業務逐案決定，`quoted`／手填單價才是實際價 |
-| 報價精靈／合約精靈的每次更換單價 | `cmCatalogInfo(code)` → `cmCatalogUnit(price, prodCycle, cycle)` | 換得比商品週期更久（2W 商品選 4W）→ price × 倍數；換得一樣或更勤（4W 商品選 4W、2W 商品選 1W）→ price 不變。客戶卡帶入時 4W 商品一律 4W（`cmItemCycle`，客戶卡只讓地墊選週期） |
+| 建議折數檔（一鍵帶入、不預設） | `refTiers`／`refQuote`／`tierLabel`（客戶卡 `.ti-tiers`）、`cmTiers`／`cmTierChips`（兩精靈） | 價格表：地墊 4W 換三檔 九折／八五折／八折（以 4W 原價計），其他兩檔 九折／八五折（以所選週期單價計）。點一下帶入 `quoted`／單價；黃＝低於最低建議檔 |
+| 報價精靈／合約精靈的每次更換單價 | `cmCatalogInfo(code)` → `cmCatalogUnit(info, cycle)`＝`HOST.unitAt` | 與主系統同一套：選 4W 且有 `price4w` → 用它；否則 2W 商品選 4W → ×2；4W 商品不看所選週期；選 1W 單價不變。客戶卡帶入時 4W 商品一律 4W（`cmItemCycle`；客戶卡讓所有 2W 商品選 2W／4W 換） |
 | 每 4 週金額 | `CM_engine.expandItem`／`cmwBuildContractData` | 更換週期 1/2/4 週 → 每 4 週更換 4/2/1 次（`cmChangesPer4W`）；**4W 金額＝每次更換單價 × 次數 × 數量**（只在這裡乘一次）；遺失賠償費單價＝每件 4W 金額 × 5 |
 | 客戶卡有議價 `quoted` | `clientToCMConfig`／`cmwInit` | 每次更換單價＝quoted ÷（次數 × 數量）；不標 `_unitAuto`，換週期不重算 |
 
