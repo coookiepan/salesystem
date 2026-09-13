@@ -166,6 +166,22 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 }
 ```
 
+### 商品主檔（唯一來源：`DB.products`）
+
+**全系統只有一份商品清單**：主系統客戶卡、報價精靈、合約精靈、庫存、工業區CRM 的品名與價格都來自 `DB.products`
+（同步到 Sheet `products` 分頁）。`ContractMaker` 舊有的第二份 `CM_CATALOG` 已移除——模組經
+`HOST.getProduct()`／`HOST.listProducts()` 讀主檔，`cmProduct()`／`cmSellable()` 是模組內僅有的兩個存取器
+（`cmSellable`＝`active && price>0 && note∉{配件,口味}`，即商品選擇器可選的品項）。
+
+`DEFAULT_PRODUCTS` 是**公司價格表基準**（2026-09 確認版），不是「首次安裝的初值」而是**不變式**：
+
+- `ensureProductBaseline()` 補回缺少的基準代號（不覆蓋使用者改過的價格；順便補 `series`／`size`／`contractYears`），
+  在**每個資料進入點**呼叫：`loadLocal()`、`syncFromSheet()` 的 `getProducts` 之後、JSON 備份匯入、migration v12。
+- **為什麼需要**：商品是整包 push／pull（雲端沒有逐筆版本），`getProducts` 會整包覆蓋 `DB.products`。
+  雲端那份較舊時會把主檔洗掉，代號整個消失後該商品在任何地方都報不了價，而 migration 是一次性的不會再跑。
+  自癒後若有補到東西會再 `saveProducts` 推回雲端，把雲端那份也修好。
+- `isBaselineProduct(code)` 為真的商品**不可刪除**（刪了會被補回來），要隱藏請取消「啟用」；使用者自訂商品可自由刪除。
+
 ### 試用（每次試用一筆：`c.trials`）
 
 公司規則：每次試用有固定回收日（開始＋14 天，可改）、每家最多 3 次（超過只提醒不擋）。
@@ -198,8 +214,11 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 ### Product／Inventory
 
 ```js
-Product: { code, cat:'拖把'|'地墊'|'芳香', desc, price, price4w?, cycle:'2W'|'4W', note, active }
+Product: { code, cat:'拖把'|'地墊'|'芳香', series, desc, size, price, price4w?, cycle:'2W'|'4W',
+           note, active, contractYears? }
 //  price＝自身週期的每次更換單價；price4w＝2W 商品表定的 4 週換單價（拖把用），沒有則 4W＝price×2（地墊）
+//  series＝價格表的系列（報價／合約商品選擇器的分組）；size＝規格（S/SL/L/T…）
+//  contractYears＝訂製品合約年數（HPL/HPS=4）→ 合約自動判為 B 型
 Item:    { name(=product code), stock, std(標準配備數), cat }
 ```
 
