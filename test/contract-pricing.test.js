@@ -50,20 +50,21 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('主系統 unitPriceAt 與精靈同一套：S-20 4W = 160', w.unitPriceAt(prod('S-20'), '4W'), 160);
   eq('主系統 unitPriceAt SHH 兩週四週同價 140', w.unitPriceAt(prod('SHH'), '4W'), 140);
 
-  console.log('C5 — cmCatalogInfo：主系統商品庫優先，合約商品庫後援');
+  console.log('C5 — cmCatalogInfo：唯一來源＝商品主檔 DB.products');
   const dome = prod('DOME');
-  eq('DOME 取主系統價', T.catalogInfo('DOME').price, dome.price);
+  eq('DOME 取主檔價', T.catalogInfo('DOME').price, dome.price);
   eq('DOME 週期 4W', T.catalogInfo('DOME').cycle, '4W');
-  eq('AFDW 主系統與合約庫同價 400', T.catalogInfo('AFDW').price, 400);
-  eq('HPL（只在合約商品庫）退回合約庫價', T.catalogInfo('HPL').price, 360);
-  eq('HPL 週期 2W', T.catalogInfo('HPL').cycle, '2W');
+  eq('AFDW 取主檔價 400', T.catalogInfo('AFDW').price, 400);
+  eq('訂製品 HPL 也在主檔（360／2W）', T.catalogInfo('HPL').price + '/' + T.catalogInfo('HPL').cycle, '360/2W');
   eq('不存在代號 → null', T.catalogInfo('NOPE-XYZ'), null);
   const keep = dome.price; dome.price = 0;
-  eq('主系統定價 0 → 退回合約商品庫 DOME 220', T.catalogInfo('DOME').price, 220);
+  eq('主檔定價 0 → null（沒有第二份清單可退）', T.catalogInfo('DOME'), null);
   eq('catalogInfo 帶 price4w（NSAC 200）', T.catalogInfo('NSAC').price4w, 200);
   dome.price = 999;
-  eq('改主系統價 → 報價跟著變（單一來源）', T.catalogInfo('DOME').price, 999);
+  eq('改主檔價 → 報價跟著變（單一來源）', T.catalogInfo('DOME').price, 999);
   dome.price = keep;
+  eq('精靈商品庫就是主檔的物件（不是複本）', T.sellable().every(x => prod(x.code) === x), true);
+  eq('精靈商品庫排除配件 SHB', T.sellable().some(x => x.code === 'SHB'), false);
 
   console.log('C5 — cmItemCycle：客戶卡只讓地墊選週期，4W 商品的 2W 預設值無意義');
   eq('4W 商品 + 客戶卡 2W → 4W', T.itemCycle({ cycle: '2W' }, { price: 200, cycle: '4W' }), '4W');
@@ -72,13 +73,14 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('無定價 + 客戶卡 1W → 1W', T.itemCycle({ cycle: '1W' }, null), '1W');
 
   console.log('C5 — 報價精靈：客戶卡帶入與引擎');
-  DB.products.push({ code: 'MY-X', cat: '地墊', desc: '自訂地墊', price: 500, cycle: '2W', note: '', active: true });   // 只在主系統的商品
+  DB.products.push({ code: 'MY-X', cat: '地墊', series: '自訂', desc: '自訂地墊', size: '', price: 500, cycle: '2W', note: '', active: true });   // 業務自己加的商品
   const TR = items => [{ n: 1, start: '2026-09-01', due: '2026-09-15', items, open: true, recovered: '', result: '' }];
   const q = T.clientToConfig({ name: '店', trials: TR([
     { product: 'DOME', qty: 2, cycle: '2W', quoted: 0 },
     { product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 },
     { product: 'DECLR', qty: 2, cycle: '2W', quoted: 1000 },
-    { product: 'MY-X', qty: 1, cycle: '2W', quoted: 0 }
+    { product: 'MY-X', qty: 1, cycle: '2W', quoted: 0 },
+    { product: 'GONE-99', qty: 1, cycle: '2W', quoted: 0 }   // 主檔完全沒有的舊代號
   ]) });
   eq('DOME 週期 4W', q.items[0].cycle, '4W');
   eq('DOME 單價＝主系統價（不加倍）', q.items[0].unit, dome.price);
@@ -86,10 +88,13 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('地墊選 4W → 2W價×2', q.items[1].unit, 340);
   eq('議價 quoted 1000/(2次×2件)=250', q.items[2].unit, 250);
   eq('議價不標自動帶入', q.items[2]._unitAuto, undefined);
-  eq('只在主系統的商品 → 記 autoCustomCodes', q._meta.autoCustomCodes[0], 'MY-X');
-  eq('由主系統帶價（地墊 2W 500）', q.items[3].unit, 500);
-  eq('AFDW 現在合約庫也有（可從商品庫選）', T.CATALOG.products.AFDW.price, 400);
-  const ex = T.engine.expandQuote(T.buildConfigFrom(q));   // 走真實流程：cmBuildConfig 把主系統品名轉成 nameOverride
+  eq('自訂商品也在主檔 → 不算 autoCustom', q._meta.autoCustomCodes.includes('MY-X'), false);
+  eq('自訂商品由主檔帶價（地墊 2W 500）', q.items[3].unit, 500);
+  eq('主檔完全沒有的代號 → 記 autoCustomCodes', q._meta.autoCustomCodes[0], 'GONE-99');
+  eq('沒有的代號品名用代號、無單價（要業務自己填）', q.items[4].name + '/' + (q.items[4].unit === undefined), 'GONE-99/true');
+  eq('AFDW 可從商品庫選（主檔有價、非配件）', T.sellable().some(x => x.code === 'AFDW'), true);
+  q.items = q.items.filter(it => it.code !== 'GONE-99');   // 無單價的品項會被 cmBuildConfig 擋下，先移除
+  const ex = T.engine.expandQuote(T.buildConfigFrom(q));   // 走真實流程：cmBuildConfig 把主檔品名轉成 nameOverride
   const rows = ex.areas[0].items;
   eq('引擎 DOME 每4週＝price×1×2', rows[0].monthly, dome.price * 2);
   eq('引擎 地墊 4W 每4週＝340×1', rows[1].monthly, 340);
@@ -152,7 +157,7 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('tiers DOME 兩檔 198/187', T.tiers('DOME', '4W').map(t => t.unit).join(','), '198,187');
   eq('DOME 品名＝網狀尿石去除劑 40g', dome.desc, '網狀尿石去除劑 40g');
   eq('DOME 價格 220', dome.price, 220);
-  eq('合約內建庫 DOME 也是 220', T.CATALOG.products.DOME.price, 220);
+  eq('DWTH 在主檔、4W 原價 1880（原本雲端會洗掉）', w.displayFw4('DWTH', 1, '4W'), 1880);
   // 合約精靈：地墊 4W 列顯示建議 8 折提示、單價欄仍是原價 340（不預設帶折扣）
   DB.clients.push({ id: 'cm-mat', name: '地墊店', status: '試用中', trials: TR([{ product: 'DECSR', qty: 1, cycle: '4W', quoted: 0 }, { product: 'DOME', qty: 1, cycle: '2W', quoted: 0 }]), todos: [], visits: [], updatedAt: 1 });
   S.curIdx = DB.clients.length - 1;
