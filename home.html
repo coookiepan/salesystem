@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#085041">
+<meta name="theme-color" content="#06332B">
 <title>首頁｜DUSKIN 銷售系統</title>
 <link rel="icon" href="logo-mark.svg">
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,96 +13,108 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 <link rel="stylesheet" href="tokens.css">
 <script src="nav.js" data-page="home" defer></script>
 <style>
-/* ═══ DESIGN TOKENS — 與 index.html / izcrm.html / sitemap.html 同步 ═══ */
-:root{
-  /* tokens 移至 tokens.css；以下為首頁專屬 */
-  --hero-top:#085041;--hero-top-fg:#fff;
-}
-@media(prefers-color-scheme:dark){:root{
-  --hero-top:#163A2C;--hero-top-fg:#ECECE7;
-}}
+/* 色彩／圓角／字體家族一律在 tokens.css（唯一來源）；這裡只放首頁專屬 */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
+body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
 .phone{max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:8px}
-.num{font-variant-numeric:tabular-nums}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 button{font-family:inherit;cursor:pointer}
 a{text-decoration:none;color:inherit}
 button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 
-.hd{padding:18px 16px 4px;display:flex;align-items:flex-start;gap:10px}
-.hd .hi{flex:1}
-.hd .date{font-size:12px;color:var(--text3);font-weight:500;letter-spacing:.02em}
-.hd h1{font-size:21px;font-weight:700;letter-spacing:-.015em;margin-top:2px}
-.syncs{display:flex;flex-direction:column;gap:4px;padding-top:4px}
-.sync{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text3);justify-content:flex-end}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
-.dot.warn{background:var(--amber-d)}.dot.off{background:var(--text3)}
+.hd{padding:20px 20px 14px;display:flex;align-items:flex-start;gap:12px}
+.hd .hi{flex:1;min-width:0}
+.hd .date{font-family:var(--font-num);font-size:12.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--text3)}
+.hd h1{font-size:28px;font-weight:800;letter-spacing:-.032em;line-height:1.15;margin-top:7px}
+.syncs{display:flex;flex-direction:column;gap:5px;padding-top:4px}
+.sync{display:flex;align-items:center;gap:5px;font-family:var(--font-num);font-size:12.5px;font-weight:500;color:var(--text2);justify-content:flex-end}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot.warn{background:var(--amber)}.dot.off{background:var(--text3)}
 
-.wrap{padding:10px 12px 0;display:flex;flex-direction:column;gap:12px}
-.trip{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);overflow:hidden}
-.trip-top{background:var(--hero-top);color:var(--hero-top-fg);padding:13px 16px;display:flex;align-items:center;gap:8px}
-.trip-top .t{flex:1;font-size:15px;font-weight:700}
-.trip-top .n{font-size:24px;font-weight:700;line-height:1}
-.trip-top .u{font-size:11px;opacity:.78;margin-left:2px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stops{padding:6px 16px 2px}
-.stop{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.wrap{padding:0 20px;display:flex;flex-direction:column;gap:12px}
+
+/* ═══ 主角區塊 — 每頁只有一個，放今天唯一重要的那個數字 ═══ */
+.slab{position:relative;background:var(--theme);color:var(--on-theme);border-radius:var(--r-lg);padding:18px 20px 0;overflow:hidden}
+.slab::before{content:'';position:absolute;left:0;right:0;top:0;height:7px;background-image:repeating-linear-gradient(to right,rgba(159,189,177,.55) 0 1px,transparent 1px 14px)}
+.eyebrow{font-family:var(--font-num);font-size:12.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--on-theme-2)}
+.slab-row{display:flex;align-items:flex-start;gap:12px;margin-top:12px}
+.slab-row .big{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
+.disp{font-family:var(--font-num);font-size:52px;font-weight:600;line-height:.9;letter-spacing:-.045em}
+.slab-row .u{font-size:15px;font-weight:700}
+.slab-side{text-align:right;font-family:var(--font-num);font-size:12px;color:var(--on-theme-2);line-height:1.7;white-space:nowrap}
+.slab-route{font-family:var(--font-num);font-size:12.5px;color:var(--on-theme-2);margin-top:10px}
+.slab-gauge{margin:16px -20px 0}
+/* 量尺（與主系統同一支）：刻度＝今天幾家、填滿＝跑完的、游標＝現在在哪 */
+.gauge{position:relative;height:5px;background:rgba(159,189,177,.26);overflow:hidden}
+.gauge>.f{position:absolute;left:0;top:0;bottom:0;background:var(--green-lit);transform-origin:left center;animation:gaugeDraw .44s var(--ease) both}
+.gauge>.k{position:absolute;top:0;bottom:0;width:2px;background:var(--on-theme)}
+.gauge.tk::after{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(to right,var(--theme) 0 1px,transparent 1px var(--tick,10%))}
+@keyframes gaugeDraw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.stops{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.stop{display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--border)}
 .stop:last-child{border-bottom:none}
-.stop .seq{width:22px;height:22px;border-radius:50%;background:var(--green-l);color:var(--green-d);font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.stop .nm{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stop .nm small{display:block;font-size:11px;color:var(--text3);font-weight:400}
-.chip{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;display:inline-block}
-.c-amber{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
-.c-blue{background:var(--ss-blue-bg);color:var(--ss-blue-fg)}
-.c-gray{background:var(--ss-gray-bg);color:var(--ss-gray-fg)}
-.c-green{background:var(--ss-green-bg);color:var(--ss-green-fg)}
-.c-red{background:var(--ss-red-bg);color:var(--ss-red-fg)}
-.overdue{margin:4px 16px 0;padding:8px 10px;background:var(--red-l);border-radius:var(--r-sm);font-size:12px;color:var(--red);display:flex;align-items:center;gap:6px}
-.overdue a{margin-left:auto;font-size:11.5px;font-weight:600;text-decoration:underline;color:inherit}
-.trip-empty{padding:16px;font-size:13px;color:var(--text3);text-align:center}
-.trip-act{display:flex;gap:8px;padding:12px 16px 14px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;font-size:14px;font-weight:600;border-radius:var(--r-sm);border:1px solid transparent;line-height:1.2}
-.btn-primary{background:var(--green);color:#fff;flex:1}
-.btn-outline{background:var(--bg);color:var(--text);border-color:var(--border2)}
+.stop .seq{width:26px;height:26px;border-radius:50%;border:1px solid var(--tone,var(--text3));color:var(--tone,var(--text3));font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stop .seq.on{background:var(--green);border-color:var(--green);color:var(--on-green)}
+.stop .nm{font-size:15.5px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.014em}
+.stop .nm small{display:block;font-size:12.5px;color:var(--text2);font-weight:400;letter-spacing:0}
+/* 狀態＝一個點＋粗字（顏色只說急迫度，字說階段） */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--tone);white-space:nowrap;letter-spacing:.02em}
+.chip::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.c-amber{--tone:var(--amber)}.c-blue{--tone:var(--blue)}.c-gray{--tone:var(--text2)}
+.c-green{--tone:var(--green-d)}.c-red{--tone:var(--red)}
+.trip-empty{padding:16px;font-size:14px;color:var(--text2);text-align:center;line-height:1.7}
 
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 6px 8px;text-align:center;box-shadow:var(--shadow-sm);display:block}
-.stat .v{font-size:20px;font-weight:700;line-height:1.1}
-.stat .k{font-size:10.5px;color:var(--text3);margin-top:3px}
-.stat.warn .v{color:var(--amber-d)}
+.overdue{padding:11px 14px;border-radius:var(--r-sm);font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;background:var(--red-l);color:var(--red)}
+.overdue a{margin-left:auto;font-size:13px;font-weight:700;text-decoration:underline;color:inherit}
+.trip-act{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:0 18px;font-size:15px;font-weight:700;border-radius:var(--r-sm);border:1px solid transparent;line-height:1.2;letter-spacing:.01em;transition:background .14s var(--ease),border-color .14s var(--ease)}
+.btn-primary{background:var(--green);color:var(--on-green);flex:1}
+.btn-outline{background:var(--bg);color:var(--text);border-color:var(--border2)}
+.btn-outline:active{background:var(--surface-hover)}
+
+/* ═══ 排印式統計列：細線分隔，不做四個白盒子 ═══ */
+.stats{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.stats>.stat{flex:1;padding:12px 10px 11px;border-left:1px solid var(--border);display:block;min-width:0}
+.stats>.stat:first-child{border-left:0;padding-left:0}
+.stat .v{font-family:var(--font-num);font-size:25px;font-weight:600;line-height:1;letter-spacing:-.035em;display:block}
+.stat .k{font-size:12.5px;color:var(--text2);margin-top:6px;display:block;font-weight:500}
+.stat.warn .v{color:var(--amber)}
 .stat.bad .v{color:var(--red)}
 
-.sec-t{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin:6px 2px -4px}
-.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.qa{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;display:flex;align-items:center;gap:11px;box-shadow:var(--shadow-sm);min-height:60px}
+/* ═══ 區段標題：標籤＋往右延伸的細線 ═══ */
+.sec-t{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--text2);margin:14px 0 -2px}
+.sec-t::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.qa{background:var(--bg);padding:14px;display:flex;align-items:center;gap:11px;min-height:70px}
 .qa:active{background:var(--surface-hover)}
-.qa .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.qa .ic{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green-d)}
 .qa .tx{min-width:0}
-.qa .tx b{display:block;font-size:14px;font-weight:600}
-.qa .tx small{font-size:11px;color:var(--text3)}
-.ic-site,.ic-client,.ic-find,.ic-report{background:var(--green-l);color:var(--green-d)}
+.qa .tx b{display:block;font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.qa .tx small{font-size:12px;color:var(--text2)}
 
-.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:14px;box-shadow:var(--shadow-sm)}
-.rp-head{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
-.rp-head b{font-size:15px;font-weight:700}
-.rp-head span{font-size:11px;color:var(--text3)}
-.week{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
-.week div{font-size:12px;color:var(--text2)}
-.week b{display:block;font-size:17px;font-weight:700;color:var(--text)}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.rp-head{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.rp-head b{font-size:16px;font-weight:700;letter-spacing:-.014em}
+.rp-head span{font-family:var(--font-num);font-size:12.5px;color:var(--text2)}
+.week{display:flex;gap:22px;margin-bottom:14px;flex-wrap:wrap}
+.week div{font-size:12.5px;color:var(--text2);font-weight:500}
+.week b{display:block;font-family:var(--font-num);font-size:26px;font-weight:600;color:var(--text);letter-spacing:-.035em;line-height:1}
 .rp-act{display:flex;gap:8px}
-.rp-act .btn{flex:1;padding:10px 8px;font-size:13px}
+.rp-act .btn{flex:1;min-height:44px;padding:0 10px;font-size:13.5px}
 
-.apps{display:flex;flex-direction:column;gap:8px}
-.app{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-sm)}
+.apps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.app{background:var(--bg);padding:13px 16px;display:flex;align-items:center;gap:12px;min-height:62px}
 .app:active{background:var(--surface-hover)}
-.app .ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.app .ic{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green-d)}
 .app .tx{flex:1;min-width:0}
-.app .tx b{display:block;font-size:14.5px;font-weight:600}
-.app .tx small{font-size:11.5px;color:var(--text3)}
-.app .arrow{color:var(--text3);font-size:16px}
+.app .tx b{display:block;font-size:15px;font-weight:700;letter-spacing:-.012em}
+.app .tx small{font-size:12.5px;color:var(--text2)}
+.app .arrow{color:var(--text3);font-size:18px}
 
-.foot{text-align:center;font-size:11px;color:var(--text3);padding:10px 0 4px}
-
+.foot{text-align:center;font-family:var(--font-num);font-size:12.5px;color:var(--text2);padding:14px 0 4px}
 </style>
 </head>
 <body>
@@ -118,33 +130,37 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
 
   <main class="wrap">
 
-    <section class="trip" aria-label="今日行程">
-      <div class="trip-top">
-        <span class="t">今日行程</span>
-        <span class="n num" id="t-count">0</span><span class="u" id="t-route"></span>
+    <section class="slab" aria-label="今日行程">
+      <p class="eyebrow">今日行程</p>
+      <div class="slab-row">
+        <p class="big"><span class="disp num" id="t-count">0</span><span class="u" id="t-unit">家待跑</span></p>
+        <p class="slab-side" id="t-side"></p>
       </div>
-      <div class="stops" id="t-stops"></div>
-      <div class="overdue" id="t-overdue" style="display:none">逾期 <b class="num" id="t-od">0</b> 家未處理<a href="index.html#trip">處理</a></div>
-      <div class="overdue" id="t-fusion" style="display:none;background:var(--ss-amber-bg);color:var(--ss-amber-fg)"><span id="t-fusion-txt"></span><a href="index.html#trip">看行程</a></div>
-      <div class="trip-act">
-        <a class="btn btn-primary" href="index.html#trip">開始跑 →</a>
-        <a class="btn btn-outline" href="index.html#trip">＋順路</a>
-      </div>
+      <p class="slab-route" id="t-route"></p>
+      <div class="slab-gauge" id="t-gauge"></div>
     </section>
 
+    <div class="stops" id="t-stops"></div>
+    <div class="overdue" id="t-overdue" style="display:none">逾期 <b class="num" id="t-od">0</b> 家未處理<a href="index.html#trip">處理</a></div>
+    <div class="overdue" id="t-fusion" style="display:none;background:var(--amber-l);color:var(--amber)"><span id="t-fusion-txt"></span><a href="index.html#trip">看行程</a></div>
+    <div class="trip-act">
+      <a class="btn btn-primary" href="index.html#trip">開始跑 →</a>
+      <a class="btn btn-outline" href="index.html#trip">＋順路</a>
+    </div>
+
     <section class="stats" aria-label="今日概況">
-      <a class="stat" href="index.html#trip"><div class="v num" id="s-trip">0</div><div class="k">今日行程</div></a>
-      <a class="stat bad" href="index.html#trip"><div class="v num" id="s-od">0</div><div class="k">逾期</div></a>
-      <a class="stat warn" href="index.html#clients"><div class="v num" id="s-trial">0</div><div class="k">試用該收</div></a>
-      <a class="stat" href="index.html#todos"><div class="v num" id="s-todo">0</div><div class="k">今日待辦</div></a>
+      <a class="stat" href="index.html#trip"><span class="v" id="s-trip">0</span><span class="k">今日行程</span></a>
+      <a class="stat bad" href="index.html#trip"><span class="v" id="s-od">0</span><span class="k">逾期</span></a>
+      <a class="stat warn" href="index.html#clients"><span class="v" id="s-trial">0</span><span class="k">試用該收</span></a>
+      <a class="stat" href="index.html#todos"><span class="v" id="s-todo">0</span><span class="k">今日待辦</span></a>
     </section>
 
     <div class="sec-t">快速動作</div>
     <section class="quick">
-      <a class="qa" href="sitemap.html#place"><span class="ic ic-site"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M2 20h20"/><path d="M4 20V9l6-4v15"/><path d="M10 9h6l4 4v7"/></svg></span><span class="tx"><b>登記工地</b><small>GPS 一鍵，3 秒完成</small></span></a>
-      <a class="qa" href="index.html#new"><span class="ic ic-client"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="tx"><b>新客戶</b><small>建檔到主系統</small></span></a>
-      <a class="qa" href="index.html#shops"><span class="ic ic-find"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span class="tx"><b>找客戶</b><small>查詢公司既有客戶</small></span></a>
-      <a class="qa" href="index.html#daily"><span class="ic ic-report"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span><span class="tx"><b>寫日報</b><small>今天的拜訪紀錄</small></span></a>
+      <a class="qa" href="sitemap.html#place"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M2 20h20"/><path d="M4 20V9l6-4v15"/><path d="M10 9h6l4 4v7"/></svg></span><span class="tx"><b>登記工地</b><small>GPS 一鍵，3 秒完成</small></span></a>
+      <a class="qa" href="index.html#new"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="tx"><b>新客戶</b><small>建檔到主系統</small></span></a>
+      <a class="qa" href="index.html#shops"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span class="tx"><b>找客戶</b><small>查詢公司既有客戶</small></span></a>
+      <a class="qa" href="index.html#daily"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span><span class="tx"><b>寫日報</b><small>今天的拜訪紀錄</small></span></a>
     </section>
 
     <div class="sec-t">報告</div>
@@ -164,17 +180,17 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
     <div class="sec-t">系統</div>
     <section class="apps">
       <a class="app" href="index.html">
-        <span class="ic ic-client"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
         <span class="tx"><b>客戶管理</b><small id="a-main">主系統</small></span>
         <span class="arrow">›</span>
       </a>
       <a class="app" href="sitemap.html">
-        <span class="ic ic-site"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M2 20h20"/><path d="M4 20V9l6-4v15"/><path d="M10 9h6l4 4v7"/></svg></span>
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M2 20h20"/><path d="M4 20V9l6-4v15"/><path d="M10 9h6l4 4v7"/></svg></span>
         <span class="tx"><b>工地地圖</b><small id="a-site">施工店面共享登記</small></span>
         <span class="arrow">›</span>
       </a>
       <a class="app" href="izcrm.html">
-        <span class="ic ic-find"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/></svg></span>
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/></svg></span>
         <span class="tx"><b>工業區CRM</b><small id="a-iz">工廠陌生開發</small></span>
         <span class="arrow">›</span>
       </a>
@@ -191,7 +207,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offs
    duskin_v2（主系統）/ sitemap_v1（工地地圖）/ izcrm_v1（工業區CRM）
    只讀不寫；資料不存在時顯示空狀態，永不擋住導航。
    ══════════════════════════════════════════════════════════ */
-const HOME_VERSION='v2026.09.08-h1';
+const HOME_VERSION='v2026.10.01-h2';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function readJSON(key,fallback){
@@ -239,19 +255,34 @@ document.getElementById('h-syncs').innerHTML=
   syncRow('工業區', iz&&iz.gasUrl?true:null, iz&&iz.dirty?Object.keys(iz.dirty).length:0);
 
 /* ── 今日行程 ── */
+// 狀態色＝急迫度（與主系統 tokens.css 同一套語彙）：進行中藍、該你動作橙、成約綠、拒絕紅、未開始無彩度
 const stChip=s=>{
-  if(s==='試用中')return ['試用中','c-amber'];
-  if(s==='報價'||s==='將成約')return [s,'c-blue'];
-  if(s==='已成約')return [s,'c-green'];
-  if(!s||s==='未拜訪')return ['未拜訪','c-gray'];
-  return [s,'c-gray'];
+  if(s==='初訪'||s==='複訪'||s==='試用中')return [s,'c-blue'];
+  if(s==='報價'||s==='將成約')return [s,'c-amber'];
+  if(s==='已成約'||s==='已轉交')return [s,'c-green'];
+  if(s==='拒絕')return [s,'c-red'];
+  return [s||'未拜訪','c-gray'];
 };
 const trips=clients.filter(c=>c.nextdate===TODAY);
 const overdue=clients.filter(c=>c.nextdate&&c.nextdate<TODAY);
-document.getElementById('t-count').textContent=trips.length;
+// 「跑完了」＝今天有拜訪紀錄（真資料，不推估）
+const isDone=c=>(c.visits||[]).some(v=>v&&v.date===TODAY);
+const doneN=trips.filter(isDone).length;
+document.getElementById('t-count').textContent=trips.length?trips.length-doneN:0;
+document.getElementById('t-unit').textContent=trips.length?'家待跑':'家排程';
 document.getElementById('s-trip').textContent=trips.length;
+document.getElementById('t-side').innerHTML=trips.length?('已跑<br><b style="font-size:19px;font-weight:600;color:var(--on-theme)">'+doneN+'</b> / '+trips.length+' 家'):'';
 const regions=[...new Set(trips.map(c=>parseRegion(c.addr)).filter(Boolean))];
-document.getElementById('t-route').textContent=trips.length?('家'+(regions.length?' · '+regions.slice(0,3).join(' → '):'')):'家';
+document.getElementById('t-route').textContent=trips.length?(regions.length?regions.slice(0,3).join(' → '):'未填地址區'):'今天還沒排行程';
+// 量尺：刻度＝今天幾家、填滿＝跑完的、游標＝現在在哪
+(function(){
+  const g=document.getElementById('t-gauge');if(!g)return;
+  if(!trips.length){g.innerHTML='<div class="gauge"></div>';return;}
+  const p=Math.round(doneN/trips.length*1000)/10;
+  g.innerHTML='<div class="gauge tk" style="--tick:'+(100/trips.length).toFixed(4)+'%" aria-hidden="true">'
+    +(p>0?'<div class="f" style="width:'+p+'%"></div>':'')
+    +(p>0&&p<100?'<div class="k" style="left:'+p+'%"></div>':'')+'</div>';
+})();
 const stopsEl=document.getElementById('t-stops');
 if(!clients.length){
   stopsEl.innerHTML='<div class="trip-empty">還沒有客戶資料——先開「客戶管理」完成設定，之後這裡會自動顯示每天的行程。</div>';
@@ -259,9 +290,10 @@ if(!clients.length){
   stopsEl.innerHTML='<div class="trip-empty">今天還沒排行程。按「開始跑 →」從逾期與順路建議把今天排起來。</div>';
 }else{
   stopsEl.innerHTML=trips.slice(0,3).map((c,i)=>{
-    const [label,cls]=stChip(c.status);
+    const done=isDone(c);
+    const [label,cls]=done?['已拜訪','c-green']:stChip(c.status);
     const region=parseRegion(c.addr);
-    return '<div class="stop"><span class="seq num">'+(i+1)+'</span>'+
+    return '<div class="stop"><span class="seq num '+(done?'on':'')+'" style="--tone:var(--text3)">'+(done?'✓':(i+1))+'</span>'+
       '<span class="nm">'+esc(c.name||'-')+'<small>'+esc(region||c.addr||'')+'</small></span>'+
       '<span class="chip '+cls+'">'+esc(label)+'</span></div>';
   }).join('')+(trips.length>3?'<div class="trip-empty" style="padding:6px 0 10px">…還有 '+(trips.length-3)+' 家，進行程規劃看全部</div>':'');

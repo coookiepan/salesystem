@@ -2,6 +2,12 @@
 
 A field-sales CRM design system, reverse-engineered from the **DUSKIN 銷售系統** ("DUSKIN Sales System") web app. This folder gives a design agent everything it needs to produce on-brand interfaces, screens, and assets for the product — colours, type, iconography, components, and high-fidelity UI-kit recreations.
 
+> **⚠ 2026-10 改版提醒**：本資料夾的「Visual Foundations」「Status colour language」與
+> `ui_kits/field-app/` 描述的是**改版前**的樣子（七色淡底狀態藥丸、`#12A673` 綠、`#F8F8F5` 紙）。
+> 系統已改為設計語彙「量尺」：單一進度元件、顏色只管三級急迫度、深墨綠主角區塊、
+> 數字走等寬字、不載 webfont。`colors_and_type.css` 已同步到新色值，**README 內文與 UI kit 尚未改寫**。
+> 要做新畫面請以 repo 根目錄的 `tokens.css` ＋ `docs/ARCHITECTURE.md ▸ UI 系統` 為準。
+
 ---
 
 ## What is this product?

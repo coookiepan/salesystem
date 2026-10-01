@@ -3,12 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#085041">
+<meta name="theme-color" content="#06332B">
 <title>工業區CRM｜DUSKIN 銷售系統</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'></text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="tokens.css">
 <script src="nav.js" data-page="iz" defer></script>
 <style>
@@ -24,20 +21,20 @@ html,body{max-width:100%;overflow-x:clip}
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.003em;padding-bottom:76px}
+body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:15px;line-height:1.65;min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.003em;padding-bottom:76px}
 .num{font-variant-numeric:tabular-nums}
 /* ═══ FORM ═══ */
-input,select,textarea{font-family:inherit;font-size:14px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;width:100%;outline:none;transition:border-color .12s var(--ease),box-shadow .12s var(--ease)}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;width:100%;outline:none;transition:border-color .12s var(--ease),box-shadow .12s var(--ease)}
 input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:var(--ring)}
 input::placeholder,textarea::placeholder{color:var(--text3)}
 textarea{resize:vertical;min-height:64px;line-height:1.55}
 select{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500}
+label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:6px;font-weight:600;letter-spacing:.05em}
 .f{margin-bottom:12px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:500px){.g2{grid-template-columns:1fr}}
 /* ═══ BUTTONS ═══ */
-.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;font-size:13.5px;font-weight:500;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease);font-family:inherit;gap:6px;white-space:nowrap;user-select:none;line-height:1.2}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;font-size:15px;font-weight:700;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease);font-family:inherit;gap:6px;white-space:nowrap;user-select:none;line-height:1.2}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
 .btn-primary:hover:not(:disabled){background:var(--green-d);border-color:var(--green-d)}
@@ -45,23 +42,23 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .btn-outline:hover:not(:disabled){background:var(--surface-hover)}
 .btn-danger{background:var(--red-l);color:var(--red)}
 .btn-danger:hover:not(:disabled){background:var(--red);color:#fff}
-.btn-sm{padding:6px 10px;font-size:12.5px}
-.btn-xs{padding:3px 8px;font-size:11.5px}
+.btn-sm{min-height:44px;padding:0 13px;font-size:13.5px}
+.btn-xs{min-height:40px;padding:0 11px;font-size:12.5px}
 /* ═══ CARD / BADGE / PILL ═══ */
-.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
-.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
-.pill{display:inline-flex;align-items:center;font-size:12.5px;padding:5px 12px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;user-select:none;white-space:nowrap}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;min-height:38px;font-size:13px;font-weight:600;padding:0 13px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;user-select:none;white-space:nowrap}
 .pill.on{background:var(--green);border-color:var(--green);color:#fff}
 .pillbar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .pillbar::-webkit-scrollbar{display:none}
 /* ═══ LAYOUT ═══ */
 .top{position:relative;z-index:40;background:var(--theme);color:#fff;padding:10px 14px calc(10px);display:flex;align-items:center;gap:10px}
 .top h1{font-size:16px;font-weight:600;letter-spacing:-.01em;flex:1}
-.top .sync{font-size:11px;opacity:.85}
+.top .sync{font-size:12.5px;opacity:.85}
 .wrap{max-width:760px;margin:0 auto;padding:14px 12px}
 .page-title{font-size:20px;font-weight:600;letter-spacing:-.012em;margin-bottom:2px}
 .page-sub{font-size:12.5px;color:var(--text3);margin-bottom:12px}
-.section-t{font-size:10.5px;font-weight:600;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin:18px 0 8px}
+.section-t{font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin:18px 0 8px}
 .empty{text-align:center;color:var(--text3);padding:28px 10px;font-size:13.5px}
 .navbar{position:sticky;top:0;z-index:40;background:var(--bg);border-bottom:1px solid var(--border);display:flex}
 .nav-btn{flex:1;background:none;border:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--text3);padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
@@ -71,10 +68,10 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px}
 .stat .v{font-size:22px;font-weight:600;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
-.stat .k{font-size:11px;color:var(--text3);margin-top:1px}
+.stat .k{font-size:12.5px;color:var(--text3);margin-top:1px}
 .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);margin-bottom:10px}
 table.tbl{border-collapse:collapse;width:100%;font-size:12.5px;min-width:430px}
-.tbl th{font-size:10.5px;font-weight:600;letter-spacing:.05em;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
+.tbl th{font-size:12px;font-weight:600;letter-spacing:.05em;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
 .tbl td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
 .tbl tr:last-child td{border-bottom:none}
 /* ═══ MODAL / OVERLAY / TOAST ═══ */
@@ -96,13 +93,13 @@ table.tbl{border-collapse:collapse;width:100%;font-size:12.5px;min-width:430px}
 .cpgrid{display:flex;flex-wrap:wrap;gap:6px}
 .cp{font-size:12.5px;padding:6px 12px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;user-select:none}
 .cp.on{background:var(--green-l);border-color:var(--green);color:var(--green-d);font-weight:600}
-.cp.rx.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue-d)}
+.cp.rx.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
 .tagx{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--purple-l);color:var(--purple-d);font-weight:500}
 .tagx button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0;line-height:1}
-.iz-name{font-size:15.5px;font-weight:600;letter-spacing:-.008em}
-.meta-line{font-size:12.5px;color:var(--text2);margin-top:2px}
+.iz-name{font-size:16.5px;font-weight:700;letter-spacing:-.015em}
+.meta-line{font-size:13px;color:var(--text2);margin-top:3px}
 .meta-line a{color:var(--green);text-decoration:none}
-.hl-kw{background:var(--amber-l);color:var(--amber-d);border-radius:3px;padding:0 1px}
+.hl-kw{background:var(--amber-l);color:var(--amber);border-radius:3px;padding:0 1px}
 .rowline{display:flex;align-items:center;gap:8px}
 .grow{flex:1;min-width:0}
 details.sec{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
@@ -111,7 +108,7 @@ details.sec>summary::-webkit-details-marker{display:none}
 details.sec>summary::after{content:'›';margin-left:auto;color:var(--text3);transform:rotate(90deg);transition:transform .15s}
 details.sec[open]>summary::after{transform:rotate(-90deg)}
 details.sec>.bd{padding:0 14px 14px}
-.codebox{background:var(--bg3);border-radius:var(--r-sm);padding:10px;font-size:11px;max-height:120px;overflow:auto;white-space:pre;font-family:ui-monospace,monospace}
+.codebox{background:var(--bg3);border-radius:var(--r-sm);padding:10px;font-size:12.5px;max-height:120px;overflow:auto;white-space:pre;font-family:ui-monospace,monospace}
 </style>
 </head>
 <body>
@@ -245,7 +242,7 @@ details.sec>.bd{padding:0 14px 14px}
    資料兩層：主檔 izdata.json（唯讀）＋ 個人紀錄層 izcrm_v1（同步雲端）
    與主系統僅三個柔性接點：入口按鈕、商品庫唯讀、sw.js 快取
    ═══════════════════════════════════════════════════════════ */
-const IZ_VERSION='v2026.09.07-z1';
+const IZ_VERSION='v2026.10.01-z2';
 
 /* ═══ 內嵌 Apps Script 後端（獨立部署，勿與主系統共用試算表） ═══ */
 const IZ_GAS_CODE=[
@@ -284,7 +281,8 @@ const IZ_GAS_CODE=[
 
 /* ═══ 常數 ═══ */
 const STATUSES=['未接觸','已電訪','已拜訪','有需求未使用','已成交','已拒絕'];
-const ST_STYLE={'未接觸':'gray','已電訪':'blue','已拜訪':'amber','有需求未使用':'purple','已成交':'green2','已拒絕':'red'};
+// 狀態配色＝急迫度（與主系統同一套語彙）：[淡底, 墨色]
+const ST_STYLE={'未接觸':['var(--bg3)','var(--text2)'],'已電訪':['var(--blue-l)','var(--blue)'],'已拜訪':['var(--blue-l)','var(--blue)'],'有需求未使用':['var(--amber-l)','var(--amber)'],'已成交':['var(--green-l)','var(--green-d)'],'已拒絕':['var(--red-l)','var(--red)']};
 const DEFAULT_CP_ACTS=['找到窗口','閒聊','聊產品','逛廠區','發現需求','試用','留下聯絡方式'];
 const DEFAULT_CP_RXS=['明確拒絕','考慮','有需求但不使用','會使用'];
 const RX_TO_STATUS={'明確拒絕':'已拒絕','考慮':'已拜訪','有需求但不使用':'有需求未使用','會使用':'已電訪'};
@@ -568,14 +566,14 @@ function filtered(){
     return true;
   });
 }
-function stBadge(st){const c=ST_STYLE[st]||'gray';
-  return '<span class="badge" style="background:var(--ss-'+c+'-bg);color:var(--ss-'+c+'-fg)">'+esc(st)+'</span>';}
+function stBadge(st){const c=ST_STYLE[st]||['var(--bg3)','var(--text2)'];
+  return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+esc(st)+'</span>';}
 function factoryCard(f,kws){
   const r=rec(f.id);const st=statOf(f);
   const zone=zoneLabel(f);
   return '<div class="card" style="cursor:pointer" onclick="openDetail(\''+f.id+'\')">'+
     '<div class="rowline"><div class="grow iz-name">'+hl(f.name,kws)+'</div>'+
-    (r&&r.main&&r.main.clientId?'<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)"></span>':'')+stBadge(st)+'</div>'+
+    (r&&r.main&&r.main.clientId?'<span class="badge" style="background:var(--green-l);color:var(--green-d)"></span>':'')+stBadge(st)+'</div>'+
     '<div class="meta-line">'+esc(f.dist)+(zone!=='散戶'?' · '+esc(zone):'')+' · '+esc(f.ind||'')+'</div>'+
     '<div class="meta-line">'+hl(f.addr,kws)+(f.phone?' · <a href="tel:'+esc(f.phone.replace(/[^\d+#]/g,''))+'" onclick="event.stopPropagation()">'+hl(f.phone,kws)+'</a>':'')+'</div>'+
     (r&&r.customer?'<div class="meta-line">'+esc(r.customer)+'</div>':'')+
@@ -685,7 +683,7 @@ function renderDetail(){
   '<details class="sec"><summary>報價試算（'+((r.quotes||[]).length)+'）</summary><div class="bd" id="qt-area">'+renderQuoteArea(r)+'</div></details>';
 }
 function izPlanBtn(r){
-  if(r.visitPlan)return '<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">待訪'+(r.visitPlan.date?' '+esc(r.visitPlan.date):'（未排日期）')+'</span> '+
+  if(r.visitPlan)return '<span class="badge" style="background:var(--amber-l);color:var(--amber)">待訪'+(r.visitPlan.date?' '+esc(r.visitPlan.date):'（未排日期）')+'</span> '+
     '<button class="btn btn-xs btn-outline" onclick="planDate()">改日期</button> <button class="btn btn-xs btn-danger" onclick="planRemove()">移除待訪</button>';
   return '<button class="btn btn-sm btn-outline" onclick="planAdd()">加入待訪清單</button>';
 }
@@ -769,12 +767,12 @@ function mainLinkHtml(f,r){
   const undone=(c.todos||[]).filter(t=>!t.done).length;
   return '<div class="card" style="border-left:3px solid var(--green-b)">'+
     '<div class="rowline"><div class="grow" style="font-weight:600;font-size:13.5px">主系統客戶（唯讀鏡射）</div>'+
-    '<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">'+esc(c.status||'未拜訪')+'</span></div>'+
+    '<span class="badge" style="background:var(--green-l);color:var(--green-d)">'+esc(c.status||'未拜訪')+'</span></div>'+
     '<div class="meta-line">'+
       (c.contact?'窗口 '+esc(c.contact)+'　':'')+(c.phone?''+esc(c.phone)+'　':'')+
       (lastV?'最近拜訪 '+esc(lastV.date):'尚未拜訪')+(undone?'　待辦 '+undone+' 項':'')+
     '</div>'+
-    '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">這裡更新窗口／備註會自動同步到主系統；拜訪、試用、合約請在主系統操作。</div></div>';
+    '<div style="font-size:12.5px;color:var(--text3);margin-top:4px">這裡更新窗口／備註會自動同步到主系統；拜訪、試用、合約請在主系統操作。</div></div>';
 }
 function buildMainPayload(f,r){ // 交接欄位：contact/phone＋單行開發摘要（主系統 note 首行＝本區塊）
   const cts=r.contacts||[];const c1=cts[0]||{},c2=cts[1]||null;
@@ -834,7 +832,7 @@ function renderQuoteArea(r){
   const ps=products();
   let html='';
   if(!ps.length){
-    html+='<div style="font-size:12.5px;color:var(--amber-d);background:var(--amber-l);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px">找不到商品庫。請先開啟一次主系統（index.html），商品資料會自動共用過來。</div>';
+    html+='<div style="font-size:12.5px;color:var(--amber);background:var(--amber-l);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px">找不到商品庫。請先開啟一次主系統（index.html），商品資料會自動共用過來。</div>';
   }else{
     html+='<div class="g2"><div><label class="lbl">商品</label><select id="qt-p">'+
       ps.map((p,i)=>'<option value="'+i+'">'+esc(p.code)+'｜'+esc(p.desc||'')+'（$'+p.price+'）</option>').join('')+'</select></div>'+
@@ -905,7 +903,7 @@ function renderPlan(){
       const dist=it.f.dist||'未知區';
       if(dist!==lastDist){html+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin:10px 0 2px;padding-bottom:2px;border-bottom:1px solid var(--border)">'+esc(dist)+'</div>';lastDist=dist;lastRoad=null;}
       const road=it.f.road||'';
-      if(road!==lastRoad){html+='<div style="font-size:11.5px;color:var(--text3);margin:6px 0 4px">'+esc(road||'未知路段')+'</div>';lastRoad=road;}
+      if(road!==lastRoad){html+='<div style="font-size:12.5px;color:var(--text3);margin:6px 0 4px">'+esc(road||'未知路段')+'</div>';lastRoad=road;}
       const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(it.f.addr);
       html+='<div class="card" style="margin-bottom:6px"><div class="rowline">'+
         '<div class="grow" style="cursor:pointer" onclick="openDetail(\''+it.f.id+'\')">'+
@@ -939,7 +937,7 @@ function renderTags(){
       if(r&&(r.tags||[]).includes(tag)&&FID[id])list.push({f:FID[id],r});}
     const done=list.filter(it=>(it.r.visits||[]).some(v=>quarterOf(v.date)===cq));
     html+='<details class="sec"'+(tag===REVISIT_TAG?' open':'')+'><summary>'+esc(tag)+
-      '<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg);margin-left:auto">'+done.length+'/'+list.length+' 本季已訪</span></summary><div class="bd">'+
+      '<span class="badge" style="background:var(--green-l);color:var(--green-d);margin-left:auto">'+done.length+'/'+list.length+' 本季已訪</span></summary><div class="bd">'+
       (list.length?'<button class="btn btn-outline btn-sm" style="margin-bottom:8px" onclick="expTagCsv(\''+esc(tag).replace(/'/g,"\\'")+'\')">匯出此清單 CSV</button>':'')+
       (list.map(it=>{
         const vq=(it.r.visits||[]).some(v=>quarterOf(v.date)===cq);
@@ -947,8 +945,8 @@ function renderTags(){
         return '<div class="card" style="margin-bottom:6px;cursor:pointer" onclick="openDetail(\''+it.f.id+'\')"><div class="rowline">'+
           '<div class="grow"><div class="iz-name" style="font-size:14px">'+esc(it.f.name)+'</div>'+
           '<div class="meta-line">'+esc(it.f.dist)+' · '+esc(statOf(it.f))+(lastV?' · 最近 '+esc(lastV.date):'')+'</div></div>'+
-          (vq?'<span class="badge" style="background:var(--ss-green2-bg);color:var(--ss-green2-fg)">本季✓</span>'
-             :'<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">未回訪</span>')+
+          (vq?'<span class="badge" style="background:var(--green-l);color:var(--green-d)">本季✓</span>'
+             :'<span class="badge" style="background:var(--amber-l);color:var(--amber)">未回訪</span>')+
         '</div></div>';
       }).join('')||'<div class="empty" style="padding:10px">還沒有工廠掛這個標籤</div>')+
     '</div></details>';

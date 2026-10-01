@@ -42,12 +42,15 @@
     var css=document.createElement('style');
     css.textContent=
       '#global-nav{position:fixed;bottom:0;left:0;right:0;z-index:120;background:var(--bg);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom)}'+
-      '#global-nav .gn-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px 7px;font-size:10.5px;font-weight:500;color:var(--text3);text-decoration:none;font-family:inherit;letter-spacing:.01em}'+
+      '#global-nav .gn-btn{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:60px;padding:8px 2px 7px;font-size:11px;font-weight:600;color:var(--text3);text-decoration:none;font-family:inherit;letter-spacing:.01em}'+
       '#global-nav .gn-btn.on{color:var(--text)}'+
+      // 作用中的分頁：上緣一條綠色標記（顏色之外多一個形狀線索）
+      '#global-nav .gn-btn.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:2px;background:var(--green)}'+
       '#global-nav .gn-btn.on svg{color:var(--green)}'+
-      '#global-nav .gn-btn:active{background:var(--bg2)}'+
-      '#global-nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'+
-      'body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}';
+      '#global-nav .gn-btn:active{background:var(--surface-hover)}'+
+      '#global-nav .gn-btn:focus-visible{outline:2px solid var(--green);outline-offset:-2px}'+
+      '#global-nav svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'+
+      'body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}';
     document.head.appendChild(css);
     document.body.appendChild(nav);
   }

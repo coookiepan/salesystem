@@ -52,9 +52,15 @@ DUSKIN 銷售系統是單檔 PWA，幾乎所有程式都在 `index.html`（內�
 - 純函式可用 `index.html` 內 `?test=1` 區塊；合約 builder 可用 docx 套件在 Node 抽函式驗證並產出實檔核對。
 - 測試裡 stub 對話框用 `w.appConfirm = async()=>true`／`w.appAlert = m=>{...}`（原生 `alert/confirm` 已全面棄用，勿再使用）。
 
-## UI 紅線
+## UI 紅線（設計語彙「量尺」, 2026-10；完整規則見 docs/ARCHITECTURE.md ▸ UI 系統）
 
-- 顏色一律用 CSS 變數（含 JS 產生的 inline style），**唯一來源是共用的 `tokens.css`**——深色模式靠變數覆寫，寫死 hex 會在深色模式爆版；頁面專屬變數才放各自檔內。
+- 顏色一律用 CSS 變數（含 JS 產生的 inline style），**唯一來源是共用的 `tokens.css`**——深色模式靠變數覆寫，寫死 hex 會在深色模式爆版；頁面專屬變數（字級表、radius 別名）才放各自檔內。`test/design-tokens.test.js` 會掃四頁的 `#rrggbb` 並驗算對比，白名單只給「產出文件的顏色、品牌標誌 SVG、疊在地圖圖磚上的分類色、getComputedStyle 的退路值」。
+- **顏色管急迫度，文字管階段**：三級訊號色（`--red` 逾期／`--amber` 該你動作／`--blue` 進行中）＋無彩度（未拜訪用 `--text2`）＋成約用唯一的強調綠。九個階段不再各配一色；階段由 `stageRail()` 的格子位置與文字表示。商品**類別**是分類不是狀態，保留自己的三色相。
+- **量尺是唯一的進度元件**（`gaugeHtml()`／`clientGaugeHtml()`）：只量系統真的知道的進度，**沒有時鐘就留空軌，絕不編造百分比**。
+- **每頁只有一個主角**：`.slab`（深墨綠）放今天唯一重要的那個數字，其餘資訊退到紙上。
+- **對比 4.5:1、字級地板、觸控目標**：淺＋深色模式所有文字／底色組合都要過 4.5:1（深色主鈕必須用 `--on-green`）；一般 meta 最小 12.5px、微標籤 12px，顏色不低於 `--text3`；`.btn` 48px／`.btn-sm` 44px／`.btn-xs` 40px。
+- **不載 webfont**：PWA 要能離線、野外首次開啟不能等字型。數字、品號、週期走 `--font-num`（系統等寬字）。
+- 動效 `.12s–.44s` ease-out、不彈跳；按下只變色不縮放；`prefers-reduced-motion` 一律靜止。
 - 提示一律用 `showToast`（非阻斷）／`appAlert`／`appConfirm`（危險操作帶 `danger:true` 紅鈕）。
 
 ## 合約製作（ContractMaker 模組，index.html）

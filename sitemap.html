@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1D9E75">
+<meta name="theme-color" content="#06332B">
 <title>工地地圖 · 裝修據點登記</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -18,7 +18,7 @@
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang TC','Noto Sans TC',sans-serif;background:var(--bg2);color:var(--text);font-size:15px}
+body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:15px;line-height:1.65;letter-spacing:-.003em}
 input,select,textarea{font-family:inherit;font-size:16px;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;width:100%;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.15)}
 textarea{resize:vertical;min-height:64px}
@@ -26,7 +26,7 @@ select{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg x
 label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500}
 .f{margin-bottom:12px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 18px;font-size:15px;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;border:none;font-family:inherit;gap:6px;white-space:nowrap;line-height:1.2;-webkit-user-select:none;user-select:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;font-size:15px;font-weight:700;border-radius:var(--radius-sm);cursor:pointer;border:none;font-family:inherit;gap:6px;white-space:nowrap;line-height:1.2;-webkit-user-select:none;user-select:none}
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--green);color:#fff}
 .btn-outline{background:var(--bg);color:var(--text);border:1px solid var(--border2)}
@@ -35,12 +35,12 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .btn-xs{padding:6px 10px;font-size:12px}
 
 /* ── 地圖 ── */
-#map{position:absolute;inset:0;bottom:calc(60px + var(--safe-b));background:#e8e6e0;z-index:1}
+#map{position:absolute;inset:0;bottom:calc(60px + var(--safe-b));background:var(--bg3);z-index:1}
 .leaflet-container{font-family:inherit}
 .pin{width:26px;height:26px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700}
 .pin.dim{opacity:.45}
 .pin.draft{border-style:dashed}
-.me-dot{width:16px;height:16px;border-radius:50%;background:#3C8DD9;border:3px solid #fff;box-shadow:0 0 0 2px rgba(60,141,217,.4),0 2px 5px rgba(0,0,0,.3)}
+.me-dot{width:16px;height:16px;border-radius:50%;background:var(--blue);border:3px solid var(--bg);box-shadow:0 0 0 6px rgba(23,90,153,.22),0 2px 5px rgba(0,0,0,.3)}
 
 /* ── 上方列 ── */
 #topbar{position:absolute;top:calc(50px + env(safe-area-inset-top));left:0;right:0;z-index:600;padding:0 10px 8px;pointer-events:none}
@@ -58,7 +58,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .fab.busy{background:var(--text3);box-shadow:none}
 .fab.alt{background:var(--bg);color:var(--text);border:1px solid var(--border2);box-shadow:var(--shadow-md);font-size:15px;padding:0 16px}
 .fab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#draft-bar{display:none;pointer-events:auto;margin-top:6px;align-items:center;justify-content:space-between;gap:8px;background:var(--amber-l);color:var(--amber-d);border:1px solid var(--amber-b);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;box-shadow:var(--shadow);cursor:pointer}
+#draft-bar{display:none;pointer-events:auto;margin-top:6px;align-items:center;justify-content:space-between;gap:8px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;box-shadow:var(--shadow);cursor:pointer}
 #draft-bar b{font-size:15px}
 #locate-btn.on{border-color:var(--green);color:var(--green);box-shadow:var(--ring)}
 
@@ -80,8 +80,8 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .panel{position:absolute;inset:0;bottom:calc(60px + var(--safe-b));background:var(--bg2);z-index:680;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:calc(56px + env(safe-area-inset-top)) 12px 20px}
 .panel.on{display:block}
 .panel-title{font-size:19px;font-weight:700;margin-bottom:10px}
-.card{background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:14px;margin-bottom:10px}
-.sec{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.08em;margin:16px 0 8px}
+.card{background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px}
+.sec{font-size:12.5px;font-weight:700;color:var(--text3);letter-spacing:.08em;margin:16px 0 8px}
 .sec:first-child{margin-top:0}
 .row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
 .row:last-child{border-bottom:none}
@@ -92,7 +92,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .site-main{flex:1;min-width:0}
 .site-name{font-size:15px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .site-sub{font-size:12px;color:var(--text2);margin-bottom:5px;line-height:1.4}
-.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;color:#fff;margin-right:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;color:#fff;margin-right:4px}
 .badge.gray{background:var(--bg3);color:var(--text2)}
 .dist{font-size:12px;color:var(--text3);white-space:nowrap;flex-shrink:0;text-align:right}
 
@@ -109,15 +109,15 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
 .chip{padding:8px 12px;font-size:13px;border:1px solid var(--border2);border-radius:20px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit}
 .chip.on{background:var(--green-l);border-color:var(--green);color:var(--green-d);font-weight:600}
 .alert{padding:10px 13px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;line-height:1.55}
-.alert-warn{background:#FAEEDA;color:#633806;border:1px solid #FAC775}
-.alert-info{background:#E6F1FB;color:#0C447C;border:1px solid #B5D4F4}
+.alert-warn{background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b)}
+.alert-info{background:var(--blue-l);color:var(--blue);border:1px solid var(--blue-b)}
 .alert-ok{background:var(--green-l);color:var(--green-d);border:1px solid var(--green-b)}
-.alert-err{background:var(--red-l);color:var(--red);border:1px solid #F7C1C1}
+.alert-err{background:var(--red-l);color:var(--red);border:1px solid var(--red-b)}
 #toast{position:fixed;left:50%;bottom:calc(120px + var(--safe-b));transform:translateX(-50%);background:rgba(26,26,26,.93);color:#fff;padding:11px 18px;border-radius:22px;font-size:14px;z-index:950;display:none;max-width:88vw;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 #toast.on{display:block}
 #photo-prev{width:100%;max-height:180px;object-fit:cover;border-radius:var(--radius-sm);display:none;margin-bottom:8px}
 .sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
-.sync-dot.ok{background:var(--green)}.sync-dot.err{background:var(--red)}.sync-dot.off{background:#999}.sync-dot.busy{background:#EF9F27}
+.sync-dot.ok{background:var(--green)}.sync-dot.err{background:var(--red)}.sync-dot.off{background:var(--text3)}.sync-dot.busy{background:var(--amber)}
 #syncbar{position:absolute;top:0;left:0;right:0;height:3px;z-index:800;background:transparent}
 #syncbar.busy{background:linear-gradient(90deg,var(--green),var(--green-l),var(--green));background-size:200% 100%;animation:sh 1s infinite}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -243,7 +243,7 @@ label.lbl{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;font
     <a class="btn btn-outline btn-sm" href="index.html" style="text-decoration:none">回主系統</a>
   </div>
 
-  <div style="text-align:center;font-size:11px;color:var(--text3);padding:6px 0 20px">
+  <div style="text-align:center;font-size:12.5px;color:var(--text3);padding:6px 0 20px">
     工地地圖 <span id="sm-ver"></span>　·　底圖 © 內政部國土測繪中心 / OpenStreetMap
   </div>
 </div>
@@ -603,7 +603,7 @@ function setMe(p){
   if(!map) return;
   const ll=[meLatLng.lat,meLatLng.lng];
   if(!meMarker){
-    const blue=cssColor('--blue','#2A6BB0');
+    const blue=cssColor('--blue','#175A99');
     meCircle=L.circle(ll,{radius:meFix.acc,color:blue,weight:1,fillColor:blue,fillOpacity:.12,interactive:false}).addTo(map);
     meMarker=L.marker(ll,{
       icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]}),
@@ -682,7 +682,7 @@ function moveTemp(latlng){
   if(tempMarker){ tempMarker.setLatLng(latlng); return; }
   tempMarker=L.marker(latlng,{draggable:true,icon:L.divIcon({
     className:'',
-    html:'<div class="pin" style="background:#A32D2D;width:32px;height:32px;font-size:15px">＋</div>',
+    html:'<div class="pin" style="background:'+cssColor('--red','#8F1A11')+';width:32px;height:32px;font-size:15px">＋</div>',
     iconSize:[32,32],iconAnchor:[16,16]
   }),zIndexOffset:1000}).addTo(map);
   tempMarker.on('dragend',()=>{ formSrc='drag'; });

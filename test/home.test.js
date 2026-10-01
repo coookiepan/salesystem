@@ -85,7 +85,15 @@ function boot(html, store, url) {
   const w = boot(homeHtml, store);
   await wait(200);
   const txt = id => w.document.getElementById(id).textContent;
-  assert('今日行程 = 1', txt('t-count') === '1' && txt('s-trip') === '1');
+  // 主角區塊的大數字＝「還有幾家待跑」（不是總數）；總數在統計列的「今日行程」
+  assert('今日行程 = 1（統計列）', txt('s-trip') === '1');
+  assert('主角大數字 = 0 待跑（這 1 家今天已有拜訪紀錄）', txt('t-count') === '0' && txt('t-unit') === '家待跑');
+  assert('主角側欄顯示已跑 1 / 1', txt('t-side').replace(/\s/g, '').includes('1/1'));
+  assert('路線量尺：刻度＝家數、填滿＝跑完的', (() => {
+    const g = w.document.getElementById('t-gauge').innerHTML;
+    return g.includes('--tick:100.0000%') && /class="f" style="width:100%/.test(g);
+  })());
+  assert('跑完的站點序號換成 ✓', w.document.getElementById('t-stops').innerHTML.includes('✓'));
   assert('路線副標帶行政區', txt('t-route').includes('永康區'));
   assert('逾期 = 1（紅條顯示）', txt('s-od') === '1' && w.document.getElementById('t-overdue').style.display === 'flex');
   assert('試用該收 = 1（20 天）', txt('s-trial') === '1');

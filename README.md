@@ -91,8 +91,10 @@ flowchart LR
 
 ```
 salesystem/
-├── index.html              ⭐ 整個 App（~7,900 行）：CSS 設計 tokens、六分頁 UI、
+├── index.html              ⭐ 整個 App（~9,600 行）：頁面 CSS 與字級表、六分頁 UI、
 │                              資料層、同步引擎、報價/合約產生器、內嵌 Apps Script 後端
+├── tokens.css              ⭐ 設計 tokens 唯一來源（四頁共用，深色模式只覆寫同名變數）
+├── nav.js                  全域底部導覽（五格，四頁共用）
 ├── sw.js                   Service Worker（離線快取策略）
 ├── manifest.webmanifest    PWA 安裝資訊（名稱、圖示、主題色）
 ├── icon.svg / logo-mark.svg  App 圖示
@@ -110,7 +112,7 @@ salesystem/
 │   ├── README.md           各測試層說明
 │   └── *.test.js           語法/XSS/同步/outbox/待辦解析/a11y/PWA…
 │
-├── design-system/          設計系統（tokens、元件預覽、UI kit）— 供設計工具使用
+├── design-system/          設計系統舊版文件與 UI kit（供設計工具參照；配色以 tokens.css 為準）
 └── .github/workflows/      CI：每次 push / PR 自動跑全套測試
 ```
 
