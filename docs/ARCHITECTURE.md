@@ -324,10 +324,51 @@ sequenceDiagram
 
 ## UI 系統
 
-- **設計 tokens 唯一來源＝`tokens.css`**：四個頁面（index/home/izcrm/sitemap）共用引入，深色模式以 `prefers-color-scheme` 覆寫同名變數；頁面專屬變數（index 字級表、home hero 色、sitemap radius）留在各自檔內。**JS 產生的 HTML 也必須引用變數**，不可寫死 hex
-- **狀態色票**：`SS_STYLE`／`CB_STYLE` 以 `var(--ss-*)` 引用，雙色票（淺/深）定義在 tokens 區
+### 設計語彙「量尺」（2026-10 改版）
+
+全系統只有一個進度元件，量的是**「現在走到這個時鐘的哪裡」**。五條規則：
+
+1. **墨與紙** — 暖紙 `--bg2` 當頁底、`--bg` 當卡片；分層靠細線不靠陰影（`--shadow-sm`／`--shadow` 已經是 `none`，陰影只留給浮層）
+2. **永遠有一個主角** — 每頁最上面一塊 `.slab`（深墨綠 `--theme`），只放今天唯一重要的那個數字。目前在 home.html 與主系統行程頁
+3. **時間要看得見** — `.gauge` 是唯一的進度元件，`gaugeHtml(pct, tone, ticks, head)` 產生
+4. **顏色管急迫度，文字管階段** — 見下表
+5. **數字用等寬** — `.num` ＋ `--font-num`（系統等寬字，**不載 webfont**：PWA 要能離線、野外首次開啟不等字型）
+
+**顏色＝急迫度，不是階段**（`SS_TONE` → `TONE` → `statusStyle()`）：
+
+| 急迫度 | token | 相對亮度 | 對應狀態 |
+|---|---|---|---|
+| 逾期／拒絕 | `--red` | 6.6% | 拒絕、試用逾期、報價該追了 |
+| 該你動作 | `--amber` | 9.8%→12.8% | 報價、將成約 |
+| 進行中 | `--blue` | 9.8% | 初訪、複訪、試用中 |
+| 沒有急迫度 | `--text2` | 無彩度 | 未拜訪 |
+| 成約（強調色） | `--green-d` | — | 已成約、已轉交 |
+
+三個訊號色的亮度刻意拉開 ≥2 個百分點，灰階列印與紅綠色盲都分得出來。**階段本身**由 `stageRail(status)`（九格，位置＝第幾階段）與文字表示，不靠顏色。
+商品類別是「分類」不是「狀態」，所以保留自己的三個色相（`--purple-*` 拖把／`--blue-*` 地墊／`--green-*` 芳香，見 `CB_STYLE`）。
+
+**量尺量什麼**（`clientGaugeHtml(c)`／`clientClockLabel(c)`）——只量系統真的知道的進度，**沒有時鐘就留空軌，絕不編造**：
+
+| 狀態 | 時鐘 | 刻度 |
+|---|---|---|
+| 試用中（進行中試用） | 試用第幾天 / 回收日 | 14 格，到期前 2 天轉橙、逾期轉紅並滿格 |
+| 報價 | 距離 `quote-followup` 待辦的提醒日 | 7 格，到期轉紅 |
+| 已成約／已轉交 | 走完了 | 滿格綠 |
+| 未拜訪、初訪、複訪、將成約、拒絕 | 沒有 | 空軌 |
+
+卡片下緣就是它自己的量尺：`.cc.has-g` 留出 17px，`.cc-gauge` 絕對定位貼底。
+
+**地圖圖釘**也走同一套語彙（`mapColorForClient`）：逾期紅、試用／報價橙、初訪複訪藍、成約綠、未拜訪無彩度。Leaflet 吃不到 `var()`，所以用 `cssVar()` 從 `--*` 解析實際色值，`--pin-fallback` 是唯一的退路值。
+
+### 紅線
+
+- **設計 tokens 唯一來源＝`tokens.css`**：四個頁面（index/home/izcrm/sitemap）共用引入，深色模式以 `prefers-color-scheme` 覆寫同名變數；頁面專屬變數（index 字級表、sitemap radius 別名）留在各自檔內。**JS 產生的 HTML 也必須引用變數**，不可寫死 hex——`test/design-tokens.test.js` 會掃四頁的 `#rrggbb`，白名單只放「產出文件的顏色（docx/xlsx/canvas 不吃 var()）、品牌標誌 SVG、疊在地圖圖磚上的分類色、getComputedStyle 的退路值」
+- **對比門檻 4.5:1**：淺色與深色模式所有「文字／底色」組合都由測試驗算（WCAG relative luminance）。深色模式主鈕必須用 `--on-green`（亮綠底配白字只有 2.4:1）
+- **字級地板**：一般 meta 12.5px、微標籤 12px，顏色不低於 `--text3`（對紙 4.51:1）
+- **觸控目標**：`.btn` 48px、`.btn-sm` 44px、`.btn-xs` 40px
 - **對話框**：原生 `alert/confirm` 已全面棄用，改用 `appAlert()`／`appConfirm()`（Promise-based、Esc/背景可關、danger 紅鈕）與非阻斷 `showToast()`；測試 stub 時覆寫 `w.appConfirm` 即可
-- **設計系統**：[design-system/](../design-system/README.md) 內有 tokens 文件、元件預覽 HTML 與可瀏覽的 UI kit，供設計工具或重建畫面時參照
+- **動效**：`.12s–.44s` ease-out、不彈跳；按下只變色不縮放；`prefers-reduced-motion` 一律靜止
+- **設計系統**：[design-system/](../design-system/README.md) 內有舊版 tokens 文件與 UI kit（**尚未更新到「量尺」語彙**，重建畫面時以 `tokens.css` 與本節為準）
 
 ---
 

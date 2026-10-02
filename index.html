@@ -9,12 +9,9 @@
 <meta http-equiv="Expires" content="0">
 <title>DUSKIN 銷售系統</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#085041">
+<meta name="theme-color" content="#06332B">
 <link rel="icon" href="logo-mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="logo-mark.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap">
 <script>
 // H2 PWA：註冊 Service Worker（離線可開）。失敗不影響 App 正常運作。
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
@@ -32,33 +29,22 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
    DESIGN TOKENS
    ═══════════════════════════════════════════════════════════ */
 :root{
-  /* Brand (single accent) */
-    /* PWA theme / logo plate / deal */
-  /* Semantic (muted) */
-      --yellow:#BA7517;--yellow-b:#EF9F27;
-  /* Alert borders */
-     /* Status badge palette（深色模式於下方覆寫） */
-    /* Neutrals (warm) */
-     /* Radius scale */
-     --radius:var(--r);--radius-sm:var(--r-sm);--radius-lg:var(--r-lg);
-  /* Shadow (minimal) */
-     /* Type — Inter (Latin) + Noto Sans TC (CJK), then native stack */
-   --font-num:var(--font-sans);
-  /* Semantic type scale (size / weight / tracking) */
-  --fs-base:14.5px;--lh-base:1.55;--fs-input:14px;
-  --fs-page-title:20px;--fw-page-title:600;--tr-page-title:-.012em;
-  --fs-modal-title:16px;--fw-modal-title:600;--tr-modal-title:-.008em;
-  --fs-card-name:15.5px;--fw-card-name:600;--tr-card-name:-.008em;
-  --fs-stat:22px;--fw-stat:600;--tr-stat:-.015em;
-  --fs-body:14px;--fs-sub:12.5px;--fs-meta:11.5px;
-  --fs-label:11.5px;--fw-label:500;
-  --fs-section:10.5px;--fw-section:600;--tr-section:.1em;
-  --fs-badge:11px;--fw-badge:600;
-  --fs-btn:13.5px;--fw-btn:500;
+  /* 色彩、圓角、陰影、字體家族一律在 tokens.css（唯一來源），這裡只放本頁字級表與別名 */
+  --yellow:var(--amber);--yellow-b:var(--amber-b);          /* 低價警示：沿用急迫度橙 */
+  --radius:var(--r);--radius-sm:var(--r-sm);--radius-lg:var(--r-lg);
+  /* 字級表（大小 / 字重 / 字距）— 正文放大到 15px、meta 最小 12.5px 且顏色不低於 --text2 */
+  --fs-base:15px;--lh-base:1.65;--fs-input:15px;
+  --fs-page-title:24px;--fw-page-title:800;--tr-page-title:-.028em;
+  --fs-modal-title:18px;--fw-modal-title:700;--tr-modal-title:-.015em;
+  --fs-card-name:16.5px;--fw-card-name:700;--tr-card-name:-.015em;
+  --fs-stat:25px;--fw-stat:600;--tr-stat:-.035em;
+  --fs-body:14.5px;--fs-sub:13.5px;--fs-meta:12.5px;
+  --fs-label:12px;--fw-label:600;
+  --fs-section:12px;--fw-section:700;--tr-section:.06em;
+  --fs-badge:12px;--fw-badge:700;
+  --fs-btn:15px;--fw-btn:700;
 }
 @media(prefers-color-scheme:dark){
-  :root{
-          }
   body{background:var(--bg2)!important}
 }
 
@@ -78,8 +64,9 @@ html,body{max-width:100%;overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
-body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.003em}
-.snum,.prod-price,.prod-code,#cf-total,#cd-fw4,#ds-v,#ds-t,#ds-a,.vb-ver{font-variant-numeric:tabular-nums}
+body{font-family:var(--font-sans);background:var(--bg2);color:var(--text);font-size:var(--fs-base);line-height:var(--lh-base);min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-.003em}
+/* 數字、品號、週期一律等寬：清單上下對齊、改數字不跳版（系統等寬字，不載 webfont） */
+.num,.snum,.prod-price,.prod-code,#cf-total,#cd-fw4,#ds-v,#ds-t,#ds-a,.vb-ver{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 
 /* ═══════════════════════════════════════════════════════════
    FORM CONTROLS
@@ -91,7 +78,7 @@ input::placeholder,textarea::placeholder{color:var(--text3)}
 input:disabled,select:disabled,textarea:disabled{background:var(--bg2);color:var(--text3);cursor:not-allowed}
 textarea{resize:vertical;min-height:72px;line-height:1.55}
 select{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500;letter-spacing:.01em}
+label.lbl{font-size:12.5px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500;letter-spacing:.01em}
 .f{margin-bottom:12px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -100,19 +87,19 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 /* ═══════════════════════════════════════════════════════════
    BUTTONS — flat, clear hierarchy
    ═══════════════════════════════════════════════════════════ */
-.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;font-size:13.5px;font-weight:500;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease);font-family:inherit;gap:6px;white-space:nowrap;-webkit-user-select:none;user-select:none;line-height:1.2;letter-spacing:-.003em}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;font-size:var(--fs-btn);font-weight:var(--fw-btn);border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease);font-family:inherit;gap:6px;white-space:nowrap;-webkit-user-select:none;user-select:none;line-height:1.2;letter-spacing:-.003em}
 .btn:focus-visible{box-shadow:var(--ring);outline:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
-.btn-primary:hover:not(:disabled){background:var(--green-d);border-color:var(--green-d)}
+.btn-primary{background:var(--green);color:var(--on-green);border-color:var(--green)}
+.btn-primary:hover:not(:disabled){background:var(--green-d);border-color:var(--green-d);color:var(--on-green)}
 .btn-primary:active:not(:disabled){background:var(--green-d);filter:brightness(.95)}
 .btn-outline{background:var(--bg);color:var(--text);border-color:var(--border2)}
 .btn-outline:hover:not(:disabled){background:var(--surface-hover);border-color:var(--text3)}
 .btn-outline:active:not(:disabled){background:var(--bg2)}
 .btn-danger{background:var(--red-l);color:var(--red);border-color:transparent}
-.btn-danger:hover:not(:disabled){background:var(--red);color:#fff;border-color:var(--red)}
-.btn-sm{padding:6px 12px;font-size:13px}
-.btn-xs{padding:4px 10px;font-size:12px}
+.btn-danger:hover:not(:disabled){background:var(--red);color:var(--bg);border-color:var(--red)}
+.btn-sm{min-height:44px;padding:0 14px;font-size:13.5px}
+.btn-xs{min-height:40px;padding:0 12px;font-size:12.5px}
 
 /* ═══════════════════════════════════════════════════════════
    CARD / CLIENT CARD
@@ -124,46 +111,78 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .cc-map-btn{position:absolute;top:8px;right:8px;width:36px;height:36px;touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;padding:0;transition:background .12s var(--ease),border-color .12s var(--ease),color .12s var(--ease)}
 .cc-map-btn:hover{background:var(--bg);border-color:var(--border2);color:var(--text)}
 .cc-map-btn:active{background:var(--bg3)}
-.cc-name{font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px;color:var(--text);line-height:1.35}
+.cc-name{font-size:var(--fs-card-name);font-weight:var(--fw-card-name);letter-spacing:var(--tr-card-name);margin-bottom:2px;color:var(--text);line-height:1.35}
 /* 新設計：名稱與狀態同行，狀態圓角膠囊推到右邊 */
 .cc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:2px}
 .cc-head .cc-name{flex:1;min-width:0;margin-bottom:0}
 .cc-mapped .cc-head{padding-right:36px}
-.cc-status{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.4;flex-shrink:0}
-.cc-status .sdot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
-.cc-sub{font-size:12.5px;color:var(--text2);margin-bottom:8px;line-height:1.45}
+.cc-status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;white-space:nowrap;line-height:1.4;flex-shrink:0;letter-spacing:.02em}
+.cc-status .sdot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+/* 階段軌：九階段＝九格，位置說階段、顏色說急迫度 */
+.rail{display:inline-flex;gap:2px;align-items:flex-end;height:12px;flex-shrink:0}
+.rail>i{width:4px;height:3px;background:var(--track);display:block}
+.rail>i.p{height:6px;background:var(--border2)}
+.rail>i.o{height:12px;background:var(--tone,var(--green))}
+/* ═══ 量尺 — 全系統唯一的進度元件 ═══
+   量的是「現在走到這個時鐘的哪裡」：行程第幾家、試用第幾天、報價等幾天、階段第幾格。
+   刻度＝這個時鐘總共幾格；游標＝現在在哪。系統不知道的進度就留空軌，絕不編造。
+   卡片的下緣就是它自己的量尺（.cc-gauge）。 */
+.gauge{position:relative;height:5px;background:var(--track);overflow:hidden}
+.gauge>.f{position:absolute;left:0;top:0;bottom:0;background:var(--tone,var(--green));transform-origin:left center;animation:gaugeDraw .44s var(--ease) both;transition:width .32s var(--ease)}
+.gauge>.k{position:absolute;top:0;bottom:0;width:2px;background:var(--text);transition:left .32s var(--ease)}
+.gauge.tk::after{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(to right,var(--bg) 0 1px,transparent 1px var(--tick,10%))}
+@keyframes gaugeDraw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.cc-gauge{position:absolute;left:0;right:0;bottom:0}
+.cc.has-g{padding-bottom:17px}
+.cc,.card{overflow:hidden}
+/* ═══ 主角區塊 — 每頁只有一個，放今天唯一重要的那個數字 ═══ */
+.slab{position:relative;background:var(--theme);color:var(--on-theme);border-radius:var(--r-lg);padding:18px 20px 0;overflow:hidden;margin-bottom:14px}
+.slab::before{content:'';position:absolute;left:0;right:0;top:0;height:7px;background-image:repeating-linear-gradient(to right,rgba(159,189,177,.55) 0 1px,transparent 1px 14px)}
+.slab .eyebrow{font-family:var(--font-num);font-size:12.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--on-theme-2)}
+.slab .disp{font-family:var(--font-num);font-size:52px;font-weight:600;line-height:.9;letter-spacing:-.045em}
+.slab-row{display:flex;align-items:flex-start;gap:12px;margin-top:12px}
+.slab-row .big{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px;font-size:15px;font-weight:700}
+.slab-side{text-align:right;font-family:var(--font-num);font-size:12px;color:var(--on-theme-2);line-height:1.7;white-space:nowrap}
+.slab-route{font-family:var(--font-num);font-size:12.5px;color:var(--on-theme-2);margin-top:10px}
+.slab-gauge{margin:16px -20px 0}
+.slab-gauge .gauge{background:rgba(159,189,177,.26)}
+.slab-gauge .gauge>.f{background:var(--green-lit)}
+.slab-gauge .gauge>.k{background:var(--on-theme)}
+.slab-gauge .gauge.tk::after{background-image:repeating-linear-gradient(to right,var(--theme) 0 1px,transparent 1px var(--tick,10%))}
+.cc-sub{font-size:var(--fs-sub);color:var(--text2);margin-bottom:8px;line-height:1.5}
 .cc-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
-.cc-meta{font-size:11.5px;color:var(--text3);display:flex;flex-wrap:wrap;gap:3px 14px;line-height:1.55}
+.cc-meta{font-size:var(--fs-meta);color:var(--text2);display:flex;flex-wrap:wrap;gap:3px 14px;line-height:1.55;font-family:var(--font-num);font-variant-numeric:tabular-nums}
 .cc-meta>span{display:inline-flex;align-items:center;position:relative}
 .cc-meta>span+span{padding-left:14px}
-.cc-meta>span+span::before{content:'';position:absolute;left:6px;top:50%;transform:translateY(-50%);width:2px;height:2px;border-radius:50%;background:var(--text3);opacity:.6}
+.cc-meta>span+span::before{content:'';position:absolute;left:6px;top:50%;transform:translateY(-50%);width:2px;height:2px;border-radius:50%;background:var(--text3);opacity:.8}
 
 /* ═══════════════════════════════════════════════════════════
    BADGE — neutral shape (squarer, tag-like)
    ═══════════════════════════════════════════════════════════ */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.01em;white-space:nowrap;line-height:1.7;border:1px solid transparent}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;font-size:var(--fs-badge);font-weight:var(--fw-badge);letter-spacing:.01em;white-space:nowrap;line-height:1.65;border:1px solid transparent}
 
 /* ═══════════════════════════════════════════════════════════
    FORM SECTION / ACTIONS
    ═══════════════════════════════════════════════════════════ */
-.form-section{font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin:20px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.form-section{display:flex;align-items:center;gap:10px;font-size:var(--fs-section);font-weight:var(--fw-section);color:var(--text2);letter-spacing:var(--tr-section);margin:26px 0 12px;padding:0;border:0}
+.form-section::after{content:'';flex:1;height:1px;background:var(--border)}
 .form-section:first-child{margin-top:0}
 .form-actions{display:flex;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
 
 /* ═══════════════════════════════════════════════════════════
    TRIAL ITEMS
    ═══════════════════════════════════════════════════════════ */
-.ti-row{background:var(--bg2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:6px;border-left:2px solid transparent;transition:border-color .12s var(--ease)}
-.ti-row:not(.ti-acc):hover{border-left-color:var(--green-b)}
-.ti-row.ti-acc{background:var(--bg);border:1px solid var(--border);border-left:2px solid var(--border2);padding:6px 10px 6px 22px;margin-top:-2px;margin-bottom:4px;margin-left:14px;border-radius:0 var(--r-sm) var(--r-sm) 0;opacity:.88}
+.ti-row{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:6px;transition:border-color .12s var(--ease)}
+.ti-row:not(.ti-acc):hover{border-color:var(--border2)}
+.ti-row.ti-acc{background:var(--bg2);border:1px solid var(--border);padding:6px 10px 6px 22px;margin-top:-2px;margin-bottom:4px;margin-left:14px;border-radius:var(--r-sm);opacity:.9}
 .ti-row.ti-acc .ti-top{margin-bottom:0}
-.ti-acc-mark{font-size:10px;color:var(--text3);font-weight:600;white-space:nowrap;margin-right:4px;letter-spacing:.08em;text-transform:uppercase}
+.ti-acc-mark{font-size:12px;color:var(--text3);font-weight:600;white-space:nowrap;margin-right:4px;letter-spacing:.08em;text-transform:uppercase}
 .ti-top{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .ti-bot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.ti-label{font-size:11px;color:var(--text2);white-space:nowrap}
+.ti-label{font-size:12.5px;color:var(--text2);white-space:nowrap}
 .ti-tiers{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px}
-.tier{font-family:inherit;font-size:11.5px;line-height:1.4;padding:4px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
-.tier:active{transform:scale(.97)}
+.tier{font-family:inherit;font-size:12.5px;line-height:1.4;padding:4px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tier:active{background:var(--bg3)}
 .tier.on{border-color:var(--green);color:var(--green-d);background:var(--green-l);font-weight:600}
 .price-inp{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text);padding:6px 9px;font-size:13px;width:90px;text-align:right;font-family:inherit;outline:none;transition:border-color .12s var(--ease),box-shadow .12s var(--ease);font-variant-numeric:tabular-nums}
 .price-inp:focus{border-color:var(--green);box-shadow:var(--ring)}
@@ -174,7 +193,7 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 /* ═══════════════════════════════════════════════════════════
    DETAIL VIEW
    ═══════════════════════════════════════════════════════════ */
-.detail-label{font-size:10.5px;color:var(--text3);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+.detail-label{font-size:12px;color:var(--text3);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
 .detail-val{font-size:14px;color:var(--text);margin-bottom:12px;line-height:1.5}
 .vl-edit-btn{background:none;border:none;cursor:pointer;padding:4px 8px;font-size:13px;color:var(--text3);transition:color .12s var(--ease),background .12s var(--ease);border-radius:4px}
 .vl-edit-btn:hover{color:var(--text);background:var(--bg3)}
@@ -188,10 +207,10 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .scard{background:var(--bg);border-radius:var(--r);padding:14px 12px;text-align:center;border:1px solid var(--border);transition:border-color .12s var(--ease)}
 .scard:hover{border-color:var(--border2)}
 .snum{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--text);line-height:1.1}
-.slbl{font-size:11px;color:var(--text2);margin-top:4px;font-weight:500;letter-spacing:.02em}
+.slbl{font-size:12.5px;color:var(--text2);margin-top:4px;font-weight:500;letter-spacing:.02em}
 .prog{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:10px}
 .prog-f{height:100%;background:var(--green);border-radius:2px;transition:width .3s var(--ease)}
-.prog-hint{font-size:10.5px;color:var(--text3);margin-top:4px}
+.prog-hint{font-size:12px;color:var(--text3);margin-top:4px}
 
 /* ═══════════════════════════════════════════════════════════
    TODO
@@ -218,7 +237,7 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .pill:hover{border-color:var(--border2);color:var(--text);background:var(--surface-hover)}
 .pill.on{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:500}
 .pill.on:hover{background:var(--text);color:var(--bg);border-color:var(--text)}
-.pill-sm{font-size:11.5px;padding:4px 10px}
+.pill-sm{font-size:12.5px;padding:4px 10px}
 .search-bar{display:flex;gap:8px;margin-bottom:12px}
 .search-bar input{flex:1}
 
@@ -243,19 +262,18 @@ label.lbl{font-size:11.5px;color:var(--text2);display:block;margin-bottom:5px;fo
    ═══════════════════════════════════════════════════════════ */
 .alert{padding:10px 14px;border-radius:var(--r-sm);font-size:13px;margin-bottom:10px;border:1px solid transparent;line-height:1.5}
 .alert-ok{background:var(--green-l);color:var(--green-d);border-color:var(--green-b)}
-.alert-warn{background:var(--amber-l);color:var(--amber-d);border-color:var(--amber-b)}
+.alert-warn{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b)}
 .alert-err{background:var(--red-l);color:var(--red);border-color:var(--red-b)}
-.alert-info{background:var(--blue-l);color:var(--blue-d);border-color:var(--blue-b)}
+.alert-info{background:var(--blue-l);color:var(--blue);border-color:var(--blue-b)}
 /* 搜尋關鍵字標亮（深淺色模式皆可讀） */
-.hl-kw{background:#FFF3A0;padding:0 2px;border-radius:2px;font-weight:600}
-@media(prefers-color-scheme:dark){.hl-kw{background:#5C4F14;color:#FFE99A}}
+.hl-kw{background:var(--mark-bg);color:var(--mark-fg);padding:0 2px;border-radius:2px;font-weight:700}
 
 /* ═══════════════════════════════════════════════════════════
    TABLE
    ═══════════════════════════════════════════════════════════ */
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--r-sm)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{padding:9px 12px;text-align:left;font-weight:600;font-size:10.5px;color:var(--text3);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.05em;text-transform:uppercase}
+th{padding:9px 12px;text-align:left;font-weight:600;font-size:12px;color:var(--text3);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.05em;text-transform:uppercase}
 td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tbody tr{transition:background .12s var(--ease)}
@@ -278,7 +296,7 @@ tbody tr:hover{background:var(--surface-hover)}
 .prod-code{font-weight:600;font-size:13.5px;min-width:80px}
 .prod-desc{font-size:12.5px;color:var(--text2);flex:1;line-height:1.4}
 .prod-price{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap}
-.prod-cycle{font-size:11px;color:var(--text3);white-space:nowrap}
+.prod-cycle{font-size:12.5px;color:var(--text3);white-space:nowrap}
 .prod-inactive{opacity:.4}
 
 /* ═══════════════════════════════════════════════════════════
@@ -311,24 +329,24 @@ tbody tr:hover{background:var(--surface-hover)}
 .qa-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid transparent;line-height:1.4}
 .qa-chip button{background:none;border:none;cursor:pointer;color:inherit;font-size:14px;padding:0;line-height:1;opacity:.65}
 .qa-chip button:hover{opacity:1}
-.qa-chip.date{background:var(--ss-green-bg);color:var(--ss-green-fg)}
-.qa-chip.client{background:var(--ss-purple-bg);color:var(--ss-purple-fg)}
-.qa-chip.pri1{background:var(--ss-red-bg);color:var(--ss-red-fg)}
-.qa-chip.pri2{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
-.qa-chip.pri3{background:var(--ss-blue-bg,var(--blue-l));color:var(--ss-blue-fg)}
+.qa-chip.date{background:var(--green-l);color:var(--green-d)}
+.qa-chip.client{background:var(--blue-l);color:var(--blue)}
+.qa-chip.pri1{background:var(--red-l);color:var(--red)}
+.qa-chip.pri2{background:var(--amber-l);color:var(--amber)}
+.qa-chip.pri3{background:var(--blue-l);color:var(--blue)}
 .qa-suggest{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-md);max-height:250px;overflow-y:auto}
 .qa-suggest.on{display:block}
 .qa-sg{padding:10px 14px;cursor:pointer;font-size:13.5px;display:flex;justify-content:space-between;gap:8px;align-items:center}
-.qa-sg .sg-status{font-size:11px;color:var(--text3);flex-shrink:0}
+.qa-sg .sg-status{font-size:12.5px;color:var(--text3);flex-shrink:0}
 .qa-sg.sel,.qa-sg:hover{background:var(--surface-hover)}
 .gt-sec{font-size:12px;font-weight:600;letter-spacing:.05em;color:var(--text2);margin:18px 2px 8px;display:flex;gap:6px;align-items:baseline}
 .gt-sec:first-child{margin-top:4px}
 .gt-sec.overdue{color:var(--red)}
-.gt-sec .gt-count{font-weight:500;color:var(--text3);font-size:11.5px}
-.pflag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px;letter-spacing:.03em}
-.pflag.p1{background:var(--ss-red-bg);color:var(--ss-red-fg)}
-.pflag.p2{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
-.pflag.p3{background:var(--ss-blue-bg,var(--blue-l));color:var(--ss-blue-fg)}
+.gt-sec .gt-count{font-weight:500;color:var(--text3);font-size:12.5px}
+.pflag{display:inline-block;font-size:12px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px;letter-spacing:.03em}
+.pflag.p1{background:var(--red-l);color:var(--red)}
+.pflag.p2{background:var(--amber-l);color:var(--amber)}
+.pflag.p3{background:var(--blue-l);color:var(--blue)}
 /* 試用逾期回收 X 分級（公司規則：>7天X、>14天XX、>21天XXX、>28天XXXX 業助提醒） */
 .trial-card{background:var(--bg2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--border2)}
 .trial-card.open{border-left-color:var(--green)}
@@ -348,14 +366,14 @@ details.trial-card[open] summary::before{transform:rotate(90deg)}
 details.trial-card summary b{color:var(--text)}
 details.trial-card .trial-body{margin-top:8px}
 .trial-count{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
-.trial-count.max{color:var(--amber-d);font-weight:600}
+.trial-count.max{color:var(--amber);font-weight:600}
 .rc-opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--bg);font-family:inherit;cursor:pointer;color:var(--text)}
 .rc-opt:active{transform:scale(.99)}
 .rc-opt b{font-size:14px;min-width:52px}
 .rc-opt span{font-size:12px;color:var(--text2);line-height:1.4}
-.xbadge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;padding:1.5px 7px;border-radius:4px;margin-left:6px;vertical-align:1px;font-variant-numeric:tabular-nums}
-.xbadge.x1{background:var(--ss-amber-bg);color:var(--ss-amber-fg)}
-.xbadge.x2{background:var(--ss-red-bg);color:var(--ss-red-fg)}
+.xbadge{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.1em;padding:1.5px 7px;border-radius:4px;margin-left:6px;vertical-align:1px;font-variant-numeric:tabular-nums}
+.xbadge.x1{background:var(--amber-l);color:var(--amber)}
+.xbadge.x2{background:var(--red-l);color:var(--red)}
 .xbadge.x3{background:var(--red);color:#fff}
 .xbadge.x4{background:var(--red);color:#fff;animation:pulse 1.6s ease-in-out infinite}
 .gt-trial-row{cursor:pointer}
@@ -365,7 +383,7 @@ details.trial-card .trial-body{margin-top:8px}
    NAVIGATION — simple, no glow
    ═══════════════════════════════════════════════════════════ */
 #app-nav{position:sticky;top:32px;margin-top:32px;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid var(--border);display:flex;z-index:100}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:10.5px;font-family:inherit;transition:color .12s var(--ease);font-weight:500;letter-spacing:.01em}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;cursor:pointer;border:none;background:none;color:var(--text3);font-size:12px;font-family:inherit;transition:color .12s var(--ease);font-weight:500;letter-spacing:.01em}
 .nav-btn.on{color:var(--text)}
 .nav-btn.on svg{color:var(--green)}
 .nav-btn:active{background:var(--bg2)}
@@ -402,7 +420,7 @@ details.trial-card .trial-body{margin-top:8px}
 #sync-bar.syncing{background:linear-gradient(90deg,var(--green) 0%,var(--green-l) 50%,var(--green) 100%);background-size:200% 100%;animation:shimmer 1.2s infinite}
 #sync-bar.err{background:var(--red)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-#ver-badge{position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:998;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border:1px solid var(--border);border-radius:999px;padding:4px 11px;font-size:10.5px;color:var(--text2);cursor:pointer;-webkit-user-select:none;user-select:none;display:inline-flex;align-items:center;gap:7px;line-height:1.3;white-space:nowrap;max-width:90vw;transition:border-color .12s var(--ease)}
+#ver-badge{position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:998;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border:1px solid var(--border);border-radius:999px;padding:4px 11px;font-size:12px;color:var(--text2);cursor:pointer;-webkit-user-select:none;user-select:none;display:inline-flex;align-items:center;gap:7px;line-height:1.3;white-space:nowrap;max-width:90vw;transition:border-color .12s var(--ease)}
 #ver-badge:hover{border-color:var(--border2)}
 #ver-badge .vb-logo{display:block;flex-shrink:0;border-radius:4px}
 #ver-badge .vb-ver{font-weight:600;color:var(--text)}
@@ -421,16 +439,16 @@ details.trial-card .trial-body{margin-top:8px}
 #update-banner .pb-close:hover{opacity:1}
 @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-#pull-banner{background:var(--amber-l);border:1px solid #F0C674;color:var(--amber-d);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px}
+#pull-banner{background:var(--amber-l);border:1px solid var(--amber-b);color:var(--amber);padding:10px 14px;border-radius:var(--r-sm);margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px}
 #pull-banner .pb-txt{flex:1;line-height:1.45}
-#pull-banner .pb-close{background:none;border:none;color:var(--amber-d);font-size:16px;cursor:pointer;padding:0 4px;opacity:.6}
+#pull-banner .pb-close{background:none;border:none;color:var(--amber);font-size:16px;cursor:pointer;padding:0 4px;opacity:.6}
 #pull-banner .pb-close:hover{opacity:1}
 
 #ver-toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:300;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:var(--r-sm);font-size:13px;box-shadow:var(--shadow-lg);display:none;max-width:90vw}
 #ver-toast.show{display:block;animation:slideIn .2s var(--ease)}
 @keyframes slideIn{from{transform:translateX(-50%) translateY(-12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 
-#sync-status{display:none;position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:999;font-size:11px;padding:2px 10px;border-radius:10px;white-space:nowrap}
+#sync-status{display:none;position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:999;font-size:12.5px;padding:2px 10px;border-radius:10px;white-space:nowrap}
 #sync-status:not(:empty){display:block;background:var(--bg);border:1px solid var(--border);color:var(--red)}
 
 /* ═══════════════════════════════════════════════════════════
@@ -450,12 +468,12 @@ details.trial-card .trial-body{margin-top:8px}
 .leaflet-popup-close-button{color:var(--text3)!important}
 .map-popup{min-width:200px}
 .map-popup .mp-name{font-weight:600;font-size:14.5px;color:var(--text);margin-bottom:3px;letter-spacing:-.008em;line-height:1.3}
-.map-popup .mp-sub{font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
+.map-popup .mp-sub{font-size:12.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
 .map-popup .mp-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.map-popup .mp-meta{font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.map-popup .mp-meta{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:10px}
 .map-popup .mp-actions{display:flex;gap:6px}
 .map-popup .mp-actions a,.map-popup .mp-actions button{text-decoration:none;flex:1;text-align:center}
-#geo-progress{background:var(--amber-l);border:1px solid #F0C674;color:var(--amber-d);padding:10px 12px;border-radius:var(--r-sm);font-size:12.5px;margin-bottom:10px}
+#geo-progress{background:var(--amber-l);border:1px solid var(--amber-b);color:var(--amber);padding:10px 12px;border-radius:var(--r-sm);font-size:12.5px;margin-bottom:10px}
 #geo-progress .gp-main{display:flex;align-items:center;gap:10px}
 #geo-progress .gp-ico{font-size:18px;flex-shrink:0}
 #geo-progress .gp-body{flex:1;min-width:0}
@@ -464,17 +482,17 @@ details.trial-card .trial-body{margin-top:8px}
 #geo-progress .gp-txt{font-variant-numeric:tabular-nums;font-weight:500;font-size:12px}
 #geo-progress .gp-bar{height:4px;background:rgba(99,56,6,.15);border-radius:2px;overflow:hidden;margin-bottom:5px}
 #geo-progress .gp-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .3s var(--ease)}
-#geo-progress .gp-hint{font-size:11px;opacity:.8;line-height:1.4}
+#geo-progress .gp-hint{font-size:12.5px;opacity:.8;line-height:1.4}
 #gp-eta{font-variant-numeric:tabular-nums;font-weight:500}
 .map-failed{margin-top:14px;border-top:1px solid var(--border);padding-top:14px}
-.map-failed-title{font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.map-failed-title{font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .mf-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:6px;background:var(--bg);font-size:13px}
 .mf-row:hover{border-color:var(--border2);background:var(--surface-hover)}
 .mf-name{flex:1;font-weight:500;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mf-addr{font-size:11.5px;color:var(--text3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.mf-addr{font-size:12.5px;color:var(--text3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .mf-actions{display:flex;gap:4px;flex-shrink:0}
 .map-toolbar{margin-bottom:10px}
-.map-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--text2);padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px}
+.map-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;color:var(--text2);padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px}
 .map-legend-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .map-legend-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 .pin-drop-hint{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:var(--r-sm);font-size:12.5px;z-index:500;box-shadow:var(--shadow-md);display:flex;align-items:center;gap:10px;pointer-events:auto}
@@ -534,7 +552,7 @@ details.trial-card .trial-body{margin-top:8px}
 .cm-row.full{grid-template-columns:1fr}
 .cm-row.three{grid-template-columns:1fr 1fr 1fr}
 .cm-field{display:flex;flex-direction:column;gap:4px}
-.cm-field>span{font-size:11px;color:var(--text2)}
+.cm-field>span{font-size:12.5px;color:var(--text2)}
 /* font-size:16px 避免 iOS Safari focus 時自動放大頁面 */
 .cm-field input,.cm-field select,.cm-field textarea{padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:16px;font-family:inherit;width:100%;box-sizing:border-box}
 .cm-field textarea{min-height:60px;resize:vertical}
@@ -558,24 +576,24 @@ details.trial-card .trial-body{margin-top:8px}
 .cm-item-pick.empty{color:var(--text3);font-style:italic}
 .cm-item-pick .code{display:inline-block;font-weight:700;color:var(--green-d);margin-right:6px}
 .cm-item-pick .price{display:inline-block;color:var(--text3);font-size:12px;margin-left:6px}
-.cm-item-rm{background:#FCEBEB;color:#A32D2D;border:1px solid #F0B5B5;border-radius:var(--radius-sm);width:40px;height:40px;font-size:18px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cm-item-rm{background:var(--red-l);color:var(--red);border:1px solid var(--red-b);border-radius:var(--radius-sm);width:40px;height:40px;font-size:18px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .cm-item-fields{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.cm-item-fields .cm-field>span{font-size:11px}
+.cm-item-fields .cm-field>span{font-size:12.5px}
 .cm-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;padding-bottom:calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg);border-radius:0 0 var(--radius) var(--radius);z-index:2}
 .cm-actions .btn{min-height:40px;padding:8px 14px;font-size:14px}
 .cm-preview{font-family:'Courier New',monospace;font-size:12px;background:var(--bg2);border-radius:var(--radius-sm);padding:10px 12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border)}
 .cm-prod-list{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)}
-.cm-prod-cat{position:sticky;top:0;background:#D9E1F2;color:#1f4e79;font-weight:700;padding:8px 12px;font-size:13px;z-index:1}
+.cm-prod-cat{position:sticky;top:0;background:var(--bg3);color:var(--text);font-weight:700;padding:8px 12px;font-size:13px;z-index:1}
 .cm-prod-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px;min-height:48px}
 .cm-prod-row:active{background:var(--bg)}
 .cm-prod-row .name{font-weight:500}
 .cm-prod-row .meta{color:var(--text3);font-size:12px;margin-top:2px}
 .cm-prod-row .price{color:var(--green-d);font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0}
 .cm-msg{padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;display:none;line-height:1.4}
-.cm-msg.warn{display:block;background:var(--ss-amber-bg);color:var(--ss-amber-fg);border:1px solid var(--amber-b)}
-.cm-msg.error{display:block;background:var(--ss-red-bg);color:var(--ss-red-fg);border:1px solid var(--red-b)}
-.cm-msg.info{display:block;background:#E6F1FB;color:#0C447C;border:1px solid #B4D2EE}
-.cm-msg.success{display:block;background:var(--ss-green-bg);color:var(--ss-green-fg);border:1px solid var(--green-b)}
+.cm-msg.warn{display:block;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b)}
+.cm-msg.error{display:block;background:var(--red-l);color:var(--red);border:1px solid var(--red-b)}
+.cm-msg.info{display:block;background:var(--blue-l);color:var(--blue);border:1px solid var(--blue-b)}
+.cm-msg.success{display:block;background:var(--green-l);color:var(--green-d);border:1px solid var(--green-b)}
 .cm-ios-tip{font-size:12px;color:var(--text2);background:var(--bg2);padding:8px 10px;border-radius:var(--radius-sm);margin-top:8px;display:none;line-height:1.5}
 .cm-ios-tip.on{display:block}
 .cm-ios-tip b{color:var(--text)}
@@ -687,11 +705,11 @@ details.trial-card .trial-body{margin-top:8px}
         </div>
       </div>
       <div id="map-layer-bar" class="toolbar-left" style="margin-bottom:6px;gap:6px">
-        <span style="font-size:11.5px;color:var(--text3);align-self:center">圖層</span>
+        <span style="font-size:12.5px;color:var(--text3);align-self:center">圖層</span>
         <button class="pill pill-sm on" id="map-layer-dev" onclick="toggleMapLayer('dev',this)">開發客戶</button>
         <button class="pill pill-sm" id="map-layer-shops" onclick="toggleMapLayer('shops',this)">既有客戶</button>
         <button class="pill pill-sm" id="map-layer-sites" onclick="toggleMapLayer('sites',this)">工地</button>
-        <span id="map-shops-geo" style="font-size:11.5px;color:var(--text3);align-self:center"></span>
+        <span id="map-shops-geo" style="font-size:12.5px;color:var(--text3);align-self:center"></span>
       </div>
       <div id="map-filter-bar" class="toolbar-left" style="margin-bottom:10px;gap:6px">
         <button class="pill pill-sm on" onclick="setMapFilter('all',this)">全部</button>
@@ -700,13 +718,13 @@ details.trial-card .trial-body{margin-top:8px}
         <button class="pill pill-sm" onclick="setMapFilter('todo',this)">有未完成待辦</button>
       </div>
       <div class="map-legend">
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#D4A017"></span>報價/將成約</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#C94545"></span>試用中</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#9A9A93"></span>已成約</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#2A6BB0"></span>初訪/複訪</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#8DB4D9"></span>未拜訪</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#2F7D6D"></span>既有客戶</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:#C77B3B;border-radius:3px"></span>工地</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--red)"></span>逾期該處理</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--amber)"></span>試用／報價</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--blue)"></span>初訪/複訪</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--green)"></span>已成約</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--text3)"></span>未拜訪</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--pin-shop)"></span>既有客戶</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--pin-site);border-radius:3px"></span>工地</span>
         <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 點</span>
       </div>
     </div>
@@ -775,7 +793,7 @@ details.trial-card .trial-body{margin-top:8px}
           <div class="f"><label class="lbl">開始日</label><input id="cf-trial-start" type="date" onchange="cfTrialStartChanged()"></div>
           <div class="f"><label class="lbl">回收日（開始＋14 天，可改）</label><input id="cf-trial-due" type="date"></div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin:-2px 0 8px">試用品項：4W原價・點建議折數一鍵帶入・黃=低於最低建議</div>
+        <div style="font-size:12.5px;color:var(--text3);margin:-2px 0 8px">試用品項：4W原價・點建議折數一鍵帶入・黃=低於最低建議</div>
         <div id="cf-items"></div>
         <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-bottom:10px">+ 新增品項</button>
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:13px">
@@ -806,8 +824,9 @@ details.trial-card .trial-body{margin-top:8px}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <div style="flex:1 1 200px;min-width:0">
-          <div style="font-size:18px;font-weight:700;overflow-wrap:anywhere" id="cd-name"></div>
-          <div style="font-size:13px;color:var(--text2);margin-top:3px;overflow-wrap:anywhere" id="cd-sub"></div>
+          <div style="font-size:var(--fs-page-title);font-weight:var(--fw-page-title);letter-spacing:var(--tr-page-title);line-height:1.2;overflow-wrap:anywhere" id="cd-name"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap" id="cd-stage"></div>
+          <div style="font-size:var(--fs-sub);color:var(--text2);margin-top:5px;overflow-wrap:anywhere" id="cd-sub"></div>
         </div>
         <div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-outline btn-sm" id="cd-map-btn" onclick="jumpToMap(S.curIdx,event)" style="display:none" title="在地圖上查看">地圖</button>
@@ -818,9 +837,10 @@ details.trial-card .trial-body{margin-top:8px}
         </div>
       </div>
       <div id="cd-badges" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
+      <div id="cd-clock" style="margin:0 -18px 14px"></div>
       <div class="g2">
         <div><div class="detail-label">提案商品</div><div class="detail-val" id="cd-product">-</div></div>
-        <div><div class="detail-label">預估4W</div><div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px"><div style="font-size:15px;font-weight:700;color:var(--green-d)" id="cd-fw4">-</div><div id="cd-fw4-src" style="font-size:10px;color:var(--text3);font-weight:500"></div></div></div>
+        <div><div class="detail-label">預估4W</div><div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px"><div style="font-size:15px;font-weight:700;color:var(--green-d)" id="cd-fw4">-</div><div id="cd-fw4-src" style="font-size:12px;color:var(--text3);font-weight:500"></div></div></div>
         <div><div class="detail-label">下次拜訪</div><div class="detail-val" id="cd-next">-</div></div>
         <div><div class="detail-label">地址</div><div class="detail-val" id="cd-addr">-</div></div>
       </div>
@@ -991,7 +1011,7 @@ details.trial-card .trial-body{margin-top:8px}
           <button class="btn btn-outline btn-sm" id="cmw-additem">＋ 從商品庫新增</button>
         </div>
         <div id="cmw-total" style="margin-top:8px;font-weight:600;text-align:right"></div>
-        <p style="font-size:11px;color:var(--text3);margin:6px 0 0">契約單價＝每件每次更換的價格；4W租賃金額與遺失賠償費單價由系統依更換週期自動換算（遺失賠償費單價＝每件4W金額×5）。</p>
+        <p style="font-size:12.5px;color:var(--text3);margin:6px 0 0">契約單價＝每件每次更換的價格；4W租賃金額與遺失賠償費單價由系統依更換週期自動換算（遺失賠償費單價＝每件4W金額×5）。</p>
       </section>
 
       <section data-wiz-step="2" class="cm-section" style="display:none">
@@ -1099,37 +1119,37 @@ details.trial-card .trial-body{margin-top:8px}
       </div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ① RS 推進表 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶，最多 50 列）</span>
+        ① RS 推進表 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶，最多 50 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-4w')">複製</button>
-        <span id="rpt-4w-cnt" style="font-size:11px;color:var(--text3)"></span>
-        <span id="rpt-4w-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
+        <span id="rpt-4w-cnt" style="font-size:12.5px;color:var(--text3)"></span>
+        <span id="rpt-4w-msg" style="font-size:12.5px;color:var(--green);margin-left:auto"></span>
       </div>
-      <textarea id="rpt-4w" readonly style="width:100%;min-height:160px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
-      <div id="rpt-4w-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
+      <textarea id="rpt-4w" readonly style="width:100%;min-height:160px;font-family:'Courier New',monospace;font-size:12.5px;white-space:pre;tab-size:4"></textarea>
+      <div id="rpt-4w-vip" style="font-size:12.5px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到 A74，未拜訪的客戶清單，最多 35 列）</span>
+        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（貼到 A74，未拜訪的客戶清單，最多 35 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-plan')">複製</button>
-        <span id="rpt-plan-cnt" style="font-size:11px;color:var(--text3)"></span>
-        <span id="rpt-plan-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
+        <span id="rpt-plan-cnt" style="font-size:12.5px;color:var(--text3)"></span>
+        <span id="rpt-plan-msg" style="font-size:12.5px;color:var(--green);margin-left:auto"></span>
       </div>
-      <textarea id="rpt-plan" readonly style="width:100%;min-height:140px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
-      <div id="rpt-plan-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
+      <textarea id="rpt-plan" readonly style="width:100%;min-height:140px;font-family:'Courier New',monospace;font-size:12.5px;white-space:pre;tab-size:4"></textarea>
+      <div id="rpt-plan-vip" style="font-size:12.5px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ③ 本週日報 <span style="font-weight:400;font-size:11px;color:var(--text3)">（貼到本週日報 A7，每筆拜訪一列，最多 50 列）</span>
+        ③ 本週日報 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（貼到本週日報 A7，每筆拜訪一列，最多 50 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-daily')">複製</button>
-        <span id="rpt-daily-cnt" style="font-size:11px;color:var(--text3)"></span>
-        <span id="rpt-daily-msg" style="font-size:11px;color:var(--green);margin-left:auto"></span>
+        <span id="rpt-daily-cnt" style="font-size:12.5px;color:var(--text3)"></span>
+        <span id="rpt-daily-msg" style="font-size:12.5px;color:var(--green);margin-left:auto"></span>
       </div>
-      <textarea id="rpt-daily" readonly style="width:100%;min-height:220px;font-family:'Courier New',monospace;font-size:11px;white-space:pre;tab-size:4"></textarea>
-      <div id="rpt-daily-vip" style="font-size:11px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
+      <textarea id="rpt-daily" readonly style="width:100%;min-height:220px;font-family:'Courier New',monospace;font-size:12.5px;white-space:pre;tab-size:4"></textarea>
+      <div id="rpt-daily-vip" style="font-size:12.5px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
     </div>
   </div>
 </div>
@@ -1174,6 +1194,15 @@ details.trial-card .trial-body{margin-top:8px}
   </div>
 
   <div id="todos-mode-trip" style="display:none">
+    <section class="slab" id="trip-hero" aria-label="今日行程概況">
+      <p class="eyebrow">今日行程</p>
+      <div class="slab-row">
+        <p class="big"><span class="disp" id="trip-left">0</span><span id="trip-unit">家待跑</span></p>
+        <p class="slab-side" id="trip-side"></p>
+      </div>
+      <p class="slab-route" id="trip-route"></p>
+      <div class="slab-gauge" id="trip-gauge"></div>
+    </section>
     <div class="page-subtitle">行程＝「下次拜訪日為今天」的客戶（三台裝置自動同步）。逾期不會蓋住今天，收在下方一鍵處理。</div>
     <div id="trip-out"></div>
   </div>
@@ -1262,11 +1291,11 @@ details.trial-card .trial-body{margin-top:8px}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <div>
         <div style="font-size:18px;font-weight:700;color:var(--green-d)" id="st-ver">v...</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">目前使用的版本</div>
+        <div style="font-size:12.5px;color:var(--text3);margin-top:2px">目前使用的版本</div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="forceReload()">強制重新載入</button>
     </div>
-    <div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+    <div style="font-size:12.5px;color:var(--text3);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
       每天打開時確認此版本號是否為最新。若顯示舊版，按「強制重新載入」清除快取。
     </div>
   </div>
@@ -1526,7 +1555,7 @@ details.trial-card .trial-body{margin-top:8px}
       <button class="btn btn-primary" onclick="closeVerMenu();syncFromSheet()">從雲端拉最新（每日開工建議）</button>
       <button class="btn btn-outline" onclick="closeVerMenu();pushAllToSheet()">推送全部到雲端</button>
       <button class="btn btn-outline" onclick="closeVerMenu();openDedupModal()">清理重複店家</button>
-      <button class="btn btn-outline" id="vm-admin-btn" style="display:none;background:#FFF6CC;border-color:#E0B400" onclick="closeVerMenu();openAdminModal()">長官儀表板</button>
+      <button class="btn btn-outline" id="vm-admin-btn" style="display:none;background:var(--amber-l);border-color:var(--amber-b)" onclick="closeVerMenu();openAdminModal()">長官儀表板</button>
       <button class="btn btn-outline" onclick="closeVerMenu();forceReload()" style="color:var(--text3)">強制重新載入程式</button>
       <button class="btn btn-outline" onclick="closeVerMenu()">關閉</button>
     </div>
@@ -1559,7 +1588,7 @@ details.trial-card .trial-body{margin-top:8px}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
         <label class="lbl" style="font-size:12px">業務員 Apps Script URL（一行一個）</label>
-        <textarea id="admin-urls" rows="4" style="font-size:11px;font-family:monospace" placeholder="https://script.google.com/macros/s/.../exec
+        <textarea id="admin-urls" rows="4" style="font-size:12.5px;font-family:monospace" placeholder="https://script.google.com/macros/s/.../exec
 https://script.google.com/macros/s/.../exec"></textarea>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="loadAdminSnapshot()">載入彙總</button>
@@ -1578,7 +1607,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.09.13-p2';
+const APP_VERSION='v2026.10.01-d1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2069,9 +2098,14 @@ const STATUS={
 };
 const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
 const MOODS=['','差','普','好','優'];
-// 狀態徽章配色：用 CSS 變數（深淺色模式自動切換，變數定義在 <style> :root）
-const _SS=k=>['var(--ss-'+k+'-bg)','var(--ss-'+k+'-fg)'];
-const SS_STYLE={'未拜訪':_SS('gray'),'初訪':_SS('blue'),'複訪':_SS('amber'),'試用中':_SS('blue'),'報價':_SS('amber'),'將成約':_SS('purple'),'已成約':_SS('green'),'已轉交':_SS('green2'),'拒絕':_SS('red')};
+// 狀態配色＝「急迫度」，不是階段。三級明度分明（red 6.6% → blue 9.8% → amber 12.8%）＋
+// 無急迫度用無彩度 --text2 ＋成約用唯一的強調綠；階段本身由文字與階段軌（stageRail）表示。
+// 原本九階段各配一個淡底色，七個底色彼此明度只差 2%，在陽光下分不出來。
+const _T=k=>['var(--'+k+'-l)','var(--'+k+')'];
+const TONE={quiet:['var(--bg3)','var(--text2)'],cool:_T('blue'),due:_T('amber'),late:_T('red'),won:['var(--green-l)','var(--green-d)']};
+const SS_TONE={'未拜訪':'quiet','初訪':'cool','複訪':'cool','試用中':'cool','報價':'due','將成約':'due','已成約':'won','已轉交':'won','拒絕':'late'};
+// [淡底, 墨色] — 淡底只給徽章與提示條，狀態本身只用墨色
+function statusStyle(t){return TONE[SS_TONE[t]]||TONE.quiet;}
 // 舊狀態顯示文字對應（新舊並存）
 // 未設定狀態一律視為「未拜訪」（舊「已結案」由 migration v3 與 validateClients 轉為「拒絕」，程式內不再映射）
 function displayStatus(s){return s||STATUS.UNVISITED;}
@@ -2091,10 +2125,68 @@ function fillTypeOpts(current){
   if(current&&opts.indexOf(current)<0)opts.push(current); // 舊值不在清單也要能顯示
   el.innerHTML='<option value="">-</option>'+opts.map(t=>`<option${t===current?' selected':''}>${escHtml(t)}</option>`).join('');
 }
-const CB_STYLE={'拖把':_SS('purple'),'地墊':_SS('blue'),'芳香':_SS('green')};
-function bdg(t,c){const[bg,fg]=c||SS_STYLE[t]||_SS('gray');return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
-// 新設計：客戶列表卡片專用 — 狀態圓角膠囊（含圓點），放在卡片右上角
-function statusPill(t){const[bg,fg]=SS_STYLE[t]||_SS('gray');return`<span class="cc-status" style="background:${bg};color:${fg}"><span class="sdot"></span>${t}</span>`;}
+// 商品類別是「分類」不是「狀態」，所以保留自己的三個色相（拖把紫／地墊藍／芳香綠）
+const CB_STYLE={'拖把':['var(--purple-l)','var(--purple-d)'],'地墊':_T('blue'),'芳香':['var(--green-l)','var(--green-d)']};
+function bdg(t,c){const[bg,fg]=c||statusStyle(t);return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
+// 狀態＝一個點＋粗字（不用淡底藥丸）：對比 5.9–9.0:1，陽光下也讀得到
+function statusPill(t){return`<span class="cc-status" style="color:${statusStyle(t)[1]}"><span class="sdot"></span>${t}</span>`;}
+// 階段軌：九階段＝九格，位置說階段、顏色說急迫度，兩件事分開編碼
+function stageRail(t){
+  const i=SO.indexOf(displayStatus(t)),tone=statusStyle(t)[1];
+  return`<span class="rail" style="--tone:${tone}" role="img" aria-label="階段 ${i<0?'-':i+1} / ${SO.length}：${escHtml(displayStatus(t))}">`+
+    SO.map((_,k)=>`<i class="${k<i?'p':k===i?'o':''}"></i>`).join('')+'</span>';
+}
+// 量尺：pct 0–100、tone 是 CSS 變數字串、ticks＝刻度數（<2 不畫刻度）、head＝要不要游標
+function gaugeHtml(pct,tone,ticks,head){
+  const p=Math.max(0,Math.min(100,Number(pct)||0));
+  const tk=ticks>1?`;--tick:${(100/ticks).toFixed(4)}%`:'';
+  return`<span class="gauge${ticks>1?' tk':''}" style="--tone:${tone||'var(--green)'}${tk}" aria-hidden="true">`+
+    (p>0?`<span class="f" style="width:${p}%"></span>`:'')+
+    (head&&p>0&&p<100?`<span class="k" style="left:${p}%"></span>`:'')+'</span>';
+}
+function daysUntil(ymd,base){
+  const a=new Date(String(base||today())+'T00:00:00'),b=new Date(String(ymd||'')+'T00:00:00');
+  if(isNaN(a.getTime())||isNaN(b.getTime()))return null;
+  return Math.round((b-a)/86400000);
+}
+// 客戶的「時鐘」—— 只量系統真的知道的進度：
+//   進行中試用 → 試用第幾天 / 回收日（14 刻度）；到期前 2 天轉橙、逾期轉紅
+//   報價       → 距離「報價追蹤」提醒日還剩幾天（7 刻度）
+//   已成約/已轉交 → 滿格（這個時鐘走完了）
+//   其餘（未拜訪、初訪、複訪、將成約、拒絕）→ 空軌
+// 時鐘的文字說明：量尺旁邊一定要有字，不能只靠圖形傳達
+function clientClockLabel(c){
+  if(!c)return '';
+  const x=trialXInfo(c);
+  if(x){
+    const tone=x.level>=1?'var(--red)':(x.left<=2?'var(--amber)':'var(--text2)');
+    const tail=x.left<0?`逾期 ${-x.left} 天`:x.left===0?'今天回收':`剩 ${x.left} 天`;
+    return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:${tone}">試用第 ${x.days} / ${TRIAL_DEFAULT_DAYS} 天 · ${tail}</span>`;
+  }
+  if(c.status===STATUS.QUOTE){
+    const td=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
+    const left=td?daysUntil(td.dueDate):null;
+    if(left!==null)return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:${left<=0?'var(--red)':'var(--amber)'}">${left<=0?'該追報價結果了':`追報價還剩 ${left} 天`}</span>`;
+  }
+  if(c.status===STATUS.DEAL||c.status===STATUS.TRANSFER)
+    return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:var(--green-d)">成約${dealDate(c)?' '+dealDate(c):''}</span>`;
+  return '';
+}
+function clientGaugeHtml(c){
+  if(!c)return gaugeHtml(0);
+  const x=trialXInfo(c);
+  if(x){
+    const tone=x.level>=1?'var(--red)':(x.left<=2?'var(--amber)':'var(--blue)');
+    return gaugeHtml(x.days/TRIAL_DEFAULT_DAYS*100,tone,TRIAL_DEFAULT_DAYS,true);
+  }
+  if(c.status===STATUS.QUOTE){
+    const td=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
+    const left=td?daysUntil(td.dueDate):null;
+    if(left!==null)return gaugeHtml((7-Math.max(0,Math.min(7,left)))/7*100,left<=0?'var(--red)':'var(--amber)',7,true);
+  }
+  if(c.status===STATUS.DEAL||c.status===STATUS.TRANSFER)return gaugeHtml(100,'var(--green)');
+  return gaugeHtml(0);
+}
 
 function loadLocal(){try{const r=localStorage.getItem('duskin_v2');if(r)return JSON.parse(r);}catch(e){logErr('loadLocal',e);}return null;}
 let _quotaWarned=false;
@@ -2589,7 +2681,7 @@ function renderOnboardChecklist(){
   const p=getProfile();
   const row=(st,title,sub)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)">
      <span style="font-size:15px;line-height:1.4">${st==='ok'?'✓':st==='warn'?'':'○'}</span>
-     <div style="flex:1"><div style="font-size:13px;color:var(--text)">${title}</div>${sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>
+     <div style="flex:1"><div style="font-size:13px;color:var(--text)">${title}</div>${sub?`<div style="font-size:12.5px;color:var(--text3);margin-top:2px">${sub}</div>`:''}</div>
    </div>`;
   const c1=profileNeedsSetup()?'todo':'ok';
   const c2=SHEET_URL?'ok':'todo';
@@ -2789,10 +2881,10 @@ function renderInventory(){
     GROUPS.forEach(g=>{
       const items=grouped[g]||[];
       if(!items.length)return;
-      html+=`<div style="font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin:18px 0 8px 0;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>${g}</span><span style="font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums">${items.length}</span></div>`;
+      html+=`<div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin:18px 0 8px 0;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>${g}</span><span style="font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums">${items.length}</span></div>`;
       items.forEach(x=>{
         const pct=x.std>0?x.stock/x.std:1;
-        const color=x.stock===0?'var(--red)':pct<1?'var(--amber)':'var(--ss-green-fg)';
+        const color=x.stock===0?'var(--red)':pct<1?'var(--amber)':'var(--green-d)';
         const esc=escHtml(x.name).replace(/'/g,"&#39;");
         html+=`<div class="inv-item">
           <div class="inv-item-head">
@@ -3091,13 +3183,13 @@ function showUndoToast(msg,undoFn){
   if(!t){
     t=document.createElement('div');
     t.id='undo-toast';
-    t.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#2a2a2a;color:#fff;padding:10px 14px;border-radius:8px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:9999;font-size:14px;max-width:92%;opacity:0;pointer-events:none;transition:opacity 0.2s';
+    t.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 14px;border-radius:var(--r-sm);display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:9999;font-size:14px;max-width:92%;opacity:0;pointer-events:none;transition:opacity 0.2s';
     document.body.appendChild(t);
   }
   t.innerHTML='';
   const span=document.createElement('span');span.textContent=msg;
   const btn=document.createElement('button');btn.textContent='復原';
-  btn.style.cssText='background:#5a9efd;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;font-size:13px;flex-shrink:0';
+  btn.style.cssText='background:var(--blue);color:var(--bg);border:none;padding:6px 14px;border-radius:var(--r-chip,4px);cursor:pointer;font-weight:600;font-size:13px;flex-shrink:0';
   btn.onclick=()=>{try{undoFn();}catch(e){}t.style.opacity='0';t.style.pointerEvents='none';clearTimeout(_undoTimer);};
   t.appendChild(span);t.appendChild(btn);
   t.style.opacity='1';t.style.pointerEvents='auto';
@@ -3219,7 +3311,7 @@ function renderInvNameHint(){
   if(!code){el.innerHTML='';return;}
   const p=getProd(code);
   el.innerHTML=p?`<span style="color:var(--green-d)">${escHtml(p.desc)}</span>`
-                :`<span style="color:var(--amber-d)">商品庫沒有「${escHtml(code)}」——請先到「商品」頁建立，庫存才抓得到品名與分類</span>`;
+                :`<span style="color:var(--amber)">商品庫沒有「${escHtml(code)}」——請先到「商品」頁建立，庫存才抓得到品名與分類</span>`;
 }
 function openInvModal(name){
   INV_EDIT_NAME=(name&&name!==-1)?name:null;
@@ -3291,7 +3383,7 @@ function renderProducts(){
   for(const cat of cats){
     const items=list.filter(p=>p.cat===cat);
     if(!items.length)continue;
-    const[cbg,cfg]=CB_STYLE[cat]||['#F1EFE8','#666'];
+    const[cbg,cfg]=CB_STYLE[cat]||TONE.quiet;
     html+=`<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
       <span class="badge" style="background:${cbg};color:${cfg}">${cat}</span>
       <span style="font-size:12px;color:var(--text3)">${items.length} 項</span>
@@ -3301,12 +3393,12 @@ function renderProducts(){
       <div class="prod-row${p.active?'':' prod-inactive'}" onclick="openProdModal(${p._i})">
         <div>
           <div class="prod-code">${escHtml(p.code)}${p.size?` <span style="font-weight:500;color:var(--text3)">${escHtml(p.size)}</span>`:''}</div>
-          <div class="prod-desc">${escHtml(p.desc)}${p.contractYears?` <span style="color:var(--amber-d)">訂製 ${p.contractYears} 年</span>`:''}${p.note?` <span style="color:var(--text3)">${escHtml(p.note)}</span>`:''}</div>
+          <div class="prod-desc">${escHtml(p.desc)}${p.contractYears?` <span style="color:var(--amber)">訂製 ${p.contractYears} 年</span>`:''}${p.note?` <span style="color:var(--text3)">${escHtml(p.note)}</span>`:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           ${p.price>0?`<div class="prod-price">$${p.price}</div><div class="prod-cycle">${escHtml(p.cycle||'-')}${p.price4w?` · 4W $${p.price4w}`:''}</div>`:'<div class="prod-cycle">配件/機台</div>'}
         </div>
-        ${!p.active?'<span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:10px;flex-shrink:0">停用</span>':''}
+        ${!p.active?'<span style="font-size:12px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:10px;flex-shrink:0">停用</span>':''}
       </div>`).join('');
     html+='</div>';
   }
@@ -3485,7 +3577,7 @@ let _clientShowN=INITIAL_CLIENT_N, _clientFilterSig=null;
 function loadMoreClients(){_clientShowN+=CLIENT_PAGE;renderClients();}
 function initPills(){
   document.getElementById('status-pills').innerHTML=CATEGORIES.map(s=>
-    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}')">${s} <span style="opacity:.55;font-size:11px" class="snum">${categoryCount(s)}</span></button>`
+    `<button class="pill${s===activeCat?' on':''}" onclick="toggleCat('${s}')">${s} <span style="opacity:.55;font-size:12.5px" class="snum">${categoryCount(s)}</span></button>`
   ).join('');
 }
 function toggleCat(s){
@@ -3759,7 +3851,7 @@ function openStatusFilterModal(){
   const el=document.getElementById('status-filter-list');
   el.innerHTML=SO.map(s=>{
     const checked=statusFilter[s]!==false;
-    const [bg,fg]=SS_STYLE[s]||['#F1EFE8','#666'];
+    const [bg,fg]=statusStyle(s);
     return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--bg2)">
       <input type="checkbox" ${checked?'checked':''} onchange="toggleStatusFilter('${s}',this.checked)" style="width:18px;height:18px;cursor:pointer">
       <span class="badge" style="background:${bg};color:${fg}">${s}</span>
@@ -3888,15 +3980,33 @@ function setMapFilter(f,el){
   renderMapMarkers();
 }
 
-// 狀態 → marker 顏色
+// CSS 變數 → 實際色值（Leaflet 的圖釘要真的顏色，不能吃 var()）
+function cssVar(name,fallback){
+  try{const v=getComputedStyle(document.documentElement).getPropertyValue(name).trim();if(v)return v;}catch(e){}
+  return fallback;
+}
+// 圖釘顏色＝急迫度（和客戶卡、狀態字同一套語彙），所以地圖一眼看得出今天該處理哪幾點
+const MAP_PIN={late:'--red',due:'--amber',cool:'--blue',won:'--green',quiet:'--text3',
+               shop:'--pin-shop',site:'--pin-site'};
+function pinColor(k){return cssVar(MAP_PIN[k]||'--text3','')||cssVar('--pin-fallback','#5E726A');}
 function mapColorForStatus(s){
   s=displayStatus(s);
-  if(s===STATUS.QUOTE||s===STATUS.CLOSING) return '#D4A017'; // 黃：熱客（報價/將成約）
-  if(s===STATUS.TRIAL) return '#C94545';                      // 紅：試用中
-  if(s===STATUS.DEAL||s===STATUS.TRANSFER) return '#9A9A93';  // 灰：已成約
-  if(s===STATUS.FIRST||s===STATUS.REVISIT) return '#2A6BB0';  // 深藍：初訪/複訪
-  if(s===STATUS.UNVISITED) return '#8DB4D9';                  // 淡藍：未拜訪
-  return '#B0B0A7';
+  if(s===STATUS.QUOTE||s===STATUS.CLOSING) return pinColor('due');       // 橙：該你動作
+  if(s===STATUS.TRIAL) return pinColor('due');                            // 橙：試用要回收
+  if(s===STATUS.DEAL||s===STATUS.TRANSFER) return pinColor('won');        // 綠：已成約
+  if(s===STATUS.FIRST||s===STATUS.REVISIT) return pinColor('cool');       // 藍：進行中
+  return pinColor('quiet');                                               // 無彩度：未拜訪
+}
+// 逾期的（試用過回收日、報價該追了）直接轉紅，比只看 status 更有用
+function mapColorForClient(c){
+  if(!c)return pinColor('quiet');
+  const x=trialXInfo(c);
+  if(x&&x.level>=1)return pinColor('late');
+  if(c.status===STATUS.QUOTE){
+    const td=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
+    if(td&&daysUntil(td.dueDate)<=0)return pinColor('late');
+  }
+  return mapColorForStatus(c.status);
 }
 
 // 是否該在地圖上顯示（排除 拒絕/結案）
@@ -4137,7 +4247,7 @@ function meUpdate(pos){
   if(!MAP_STATE.map) return;
   const ll=[ME.fix.lat,ME.fix.lng];
   if(!ME.marker){
-    let blue='#2A6BB0'; try{blue=getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()||blue;}catch(e){}
+    const blue=pinColor('cool');
     ME.circle=L.circle(ll,{radius:ME.fix.acc,color:blue,weight:1,fillColor:blue,fillOpacity:.12,interactive:false}).addTo(MAP_STATE.map);
     ME.marker=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]}),interactive:false,zIndexOffset:-100}).addTo(MAP_STATE.map);
   }else{ME.marker.setLatLng(ll);ME.circle.setLatLng(ll);ME.circle.setRadius(ME.fix.acc);}
@@ -4223,7 +4333,7 @@ function buildShopPopup(s){
   const tel=(s.phone||'').replace(/[^\d+#]/g,'');
   const nav='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.addr||'');
   return '<div style="font-size:13px;min-width:180px"><b>'+escHtml(s.name)+'</b>'+
-    '<div style="color:var(--text3);font-size:11px;margin:2px 0">既有客戶（公司名單）</div>'+
+    '<div style="color:var(--text3);font-size:12.5px;margin:2px 0">既有客戶（公司名單）</div>'+
     (s.owner?'<div>負責人：'+escHtml(s.owner)+'</div>':'')+
     (s.phone?'<div><a href="tel:'+escHtml(tel)+'">'+escHtml(s.phone)+'</a></div>':'')+
     (s.addr?'<div style="color:var(--text2)">'+escHtml(s.addr)+'</div>':'')+
@@ -4242,7 +4352,7 @@ function mapSites(){
 }
 function buildSitePopup(s){
   return '<div style="font-size:13px;min-width:180px"><b>'+escHtml(s.name||s.addr||'工地')+'</b>'+
-    '<div style="color:var(--text3);font-size:11px;margin:2px 0">工地（工地地圖鏡射）</div>'+
+    '<div style="color:var(--text3);font-size:12.5px;margin:2px 0">工地（工地地圖鏡射）</div>'+
     '<div>'+escHtml(s.town||'')+(s.stage?'　'+escHtml(s.stage):'')+(s.openDate?'　開幕 '+escHtml(s.openDate):'')+'</div>'+
     (s.note?'<div style="color:var(--text2)">'+escHtml(s.note)+'</div>':'')+
     '<button class="btn btn-xs btn-primary" style="margin-top:6px" onclick="mainConvertSite(\''+escHtml(String(s.id))+'\')">轉為客戶</button></div>';
@@ -4256,7 +4366,7 @@ function renderMapMarkers(){
   const visible=MAP_STATE.layers.dev?(DB.clients||[]).filter(c=>mapShouldShow(c)&&typeof c.lat==='number'&&typeof c.lng==='number'&&mapMatchesFilter(c)):[];
   const bounds=[];
   visible.forEach(c=>{
-    const color=mapColorForStatus(c.status);
+    const color=mapColorForClient(c);
     const hasTodo=(c.todos||[]).some(t=>!t.done);
     const icon=L.divIcon({
       className:'duskin-marker-wrap',
@@ -4282,7 +4392,7 @@ function renderMapMarkers(){
     SHOPS.forEach(s=>{
       const g=SHOPS_GEO[shopGeoKey(s)];
       if(!g||g.failed)return;
-      const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker" style="background:#2F7D6D"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+      const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker" style="background:'+pinColor('shop')+'"></div>',iconSize:[16,16],iconAnchor:[8,8]});
       const m=L.marker([g.lat,g.lng],{icon});
       m.bindPopup(buildShopPopup(s),{maxWidth:280});
       if(cluster)cluster.addLayer(m);else{m.addTo(MAP_STATE.map);MAP_STATE.markers.push(m);}
@@ -4292,7 +4402,7 @@ function renderMapMarkers(){
   }
   if(MAP_STATE.layers.sites){
     mapSites().forEach(s=>{
-      const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker sq" style="background:#C77B3B"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+      const icon=L.divIcon({className:'duskin-marker-wrap',html:'<div class="duskin-marker sq" style="background:'+pinColor('site')+'"></div>',iconSize:[16,16],iconAnchor:[8,8]});
       const m=L.marker([s.lat,s.lng],{icon}).addTo(MAP_STATE.map);
       m.bindPopup(buildSitePopup(s),{maxWidth:280});
       MAP_STATE.markers.push(m);bounds.push([s.lat,s.lng]);
@@ -4343,8 +4453,8 @@ function buildMapPopup(c,idx){
     if(navAddr) navUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(navAddr);
   }
   const badges=bdg(displayStatus(c.status||STATUS.UNVISITED))
-    +(fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:'')
-    +(todos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${todos}待辦</span>`:'');
+    +(fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:'')
+    +(todos>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${todos}待辦</span>`:'');
   return `<div class="map-popup">
     <div class="mp-name">${escHtml(c.name||'-')}</div>
     <div class="mp-sub">${escHtml([c.contact,c.type].filter(Boolean).join(' · ')||c.addr||'')}</div>
@@ -4653,7 +4763,7 @@ function renderClients(){
     let regionHead='';
     if(groupByRegion){
       const r=parseRegion(c.addr)||'（無地址區）';
-      if(r!==_lastRegion){_lastRegion=r;regionHead=`<div style="font-size:11.5px;color:var(--text3);margin:10px 0 4px">${escHtml(r)}</div>`;}
+      if(r!==_lastRegion){_lastRegion=r;regionHead=`<div style="font-size:12.5px;color:var(--text3);margin:10px 0 4px">${escHtml(r)}</div>`;}
     }
     const fw=calcFW4(c);
     const lastV=c.visits?.length?c.visits[c.visits.length-1]:null;
@@ -4666,11 +4776,11 @@ function renderClients(){
     const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
     const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
     const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
-    const _extraBadges=`${trialXBadge(c)}${fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${pTodos}待辦</span>`:''}`;
-    return`${regionHead}<div class="cc${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
+    const _extraBadges=`${trialXBadge(c)}${fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${pTodos}待辦</span>`:''}`;
+    return`${regionHead}<div class="cc has-g${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
-        <div class="cc-name">${segOf(c)==='工廠'?'<svg class="seg-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/></svg> ':''}${escHtml(c.name)}${c.type?` <span style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:10px;color:var(--amber);margin-left:2px"></span>':''}</div>
+        <div class="cc-name">${segOf(c)==='工廠'?'<svg class="seg-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/></svg> ':''}${escHtml(c.name)}${c.type?` <span style="font-size:12.5px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:12px;color:var(--amber);margin-left:2px"></span>':''}</div>
         ${statusPill(displayStatus(c.status))}
       </div>
       <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
@@ -4684,6 +4794,7 @@ function renderClients(){
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
       </div>
+      <span class="cc-gauge">${clientGaugeHtml(c)}</span>
     </div>`;
   }).join('')+(total>_clientShowN?`<button class="btn btn-light" style="width:100%;margin-top:10px" onclick="loadMoreClients()">載入更多（已顯示 ${shown.length} / ${total}）</button>`:'');
 }
@@ -4826,16 +4937,16 @@ function renderItems(){
           <option value="2W"${(it.cycle||'2W')==='2W'?' selected':''}>2W換</option>
           <option value="4W"${it.cycle==='4W'?' selected':''}>4W換</option>
         </select>`:''}
-        <button onclick="promoteToContract(${i})" title="轉為成約" style="background:none;border:1px solid var(--green-b);color:var(--green-d);font-size:11px;padding:3px 7px;border-radius:4px;cursor:pointer;flex-shrink:0">✓成約</button><button onclick="removeMain(${i})" aria-label="移除品項" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
+        <button onclick="promoteToContract(${i})" title="轉為成約" style="background:none;border:1px solid var(--green-b);color:var(--green-d);font-size:12.5px;padding:3px 7px;border-radius:4px;cursor:pointer;flex-shrink:0">✓成約</button><button onclick="removeMain(${i})" aria-label="移除品項" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0 4px;flex-shrink:0">×</button>
       </div>
       <div class="ti-bot">
         <span class="ti-label">4W原價</span>
-        <span style="font-size:13px;font-weight:600;color:var(--ss-green-fg)">${f>0?'$'+f.toLocaleString():'-'}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--green-d)">${f>0?'$'+f.toLocaleString():'-'}</span>
         <span class="ti-label" style="margin-left:8px">報價</span>
         <input type="number" min="0" class="price-inp${isLow?' low':''}" value="${it.quoted||''}" placeholder="${r>0?r:''}"
           oninput="S.cfItems[${i}].quoted=Math.max(0,+this.value||0)" onblur="renderItems()">
         ${discount!==null
-          ?`<span style="font-size:11px;color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`
+          ?`<span style="font-size:12.5px;color:${discountLow?'var(--yellow)':'var(--text3)'};font-weight:${discountLow?'600':'500'};font-variant-numeric:tabular-nums">${discount.toFixed(1)}折</span>`
           :''}
       </div>
       ${tiers.length?`<div class="ti-tiers"><span class="ti-label">建議</span>${tiers.map(t=>`<button type="button" class="tier${it.quoted===t.v?' on':''}" onclick="S.cfItems[${i}].quoted=${t.v};renderItems()" title="帶入${tierLabel(t.rt)}報價">${tierLabel(t.rt)} $${t.v.toLocaleString()}</button>`).join('')}</div>`:''}
@@ -4899,7 +5010,7 @@ function renderContracted(){
     return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
       <span style="flex:1;font-size:13px">${escHtml(it.product)} ${p?'· '+escHtml(p.desc):''} ×${it.qty||1}</span>
-      <span style="font-size:13px;color:var(--ss-green-fg);font-weight:600">${amt}</span>
+      <span style="font-size:13px;color:var(--green-d);font-weight:600">${amt}</span>
       ${!isAcc?`<button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
     </div></div>`;
   }).join('');
@@ -5119,12 +5230,16 @@ function openCD(i){
   const cdMapBtn=document.getElementById('cd-map-btn');
   if(cdMapBtn) cdMapBtn.style.display=(c.lat&&c.lng&&mapShouldShow(c))?'inline-flex':'none';
   document.getElementById('cd-name').textContent=c.name;
+  // 狀態＝點＋粗字，旁邊是階段軌（位置說階段），底下 cd-clock 是這個客戶的時鐘
+  document.getElementById('cd-stage').innerHTML=
+    statusPill(displayStatus(c.status))+stageRail(c.status)+clientClockLabel(c);
+  const cdClock=document.getElementById('cd-clock');
+  if(cdClock)cdClock.innerHTML=clientGaugeHtml(c);
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
-    bdg(c.status||STATUS.UNVISITED)+
     trialXBadge(c)+
-    (fw>0?`<span class="badge" style="background:var(--ss-green-bg);color:var(--ss-green-fg)">4W $${fw.toLocaleString()}</span>`:'')+
-    ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:var(--ss-amber-bg);color:var(--ss-amber-fg)">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
+    (fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:'')+
+    ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
   document.getElementById('cd-fw4').textContent=fw>0?'$'+fw.toLocaleString():'-';
   document.getElementById('cd-fw4-src').textContent=fw>0?fwSrc:'';
@@ -5157,7 +5272,7 @@ function trialItemChips(items){
     const p=getProd(it.product);const canCycle=p?.cycle==='2W';
     const discount=(it.quoted>0&&f>0)?(it.quoted/f*10):null;
     const accs=(items||[]).filter(x=>x&&x.bundledTo===it.product&&x.product);
-    const accTxt=accs.length?'<span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>escHtml(a.product)+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
+    const accTxt=accs.length?'<span style="color:var(--text3);font-size:12.5px">(含 '+accs.map(a=>escHtml(a.product)+(a.qty>1?'×'+a.qty:'')).join('、')+')</span>':'';
     return`<span class="trial-chip"><b>${escHtml(it.product)}</b> ×${it.qty||1}${canCycle?` <span style="color:var(--text3)">${escHtml(it.cycle||'2W')}換</span>`:''}<span style="color:var(--text2);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>${it.quoted>0?`<span style="color:var(--text2);font-variant-numeric:tabular-nums">報價 $${it.quoted.toLocaleString()}</span><span style="color:${discount<9?'var(--yellow)':'var(--text3)'}">${discount.toFixed(1)}折</span>`:''}${accTxt}</span>`;
   }).join('')||'<span style="font-size:12px;color:var(--text3)">尚無品項</span>';
 }
@@ -5173,7 +5288,7 @@ function renderCDTrials(c){
     html+='<div class="trial-items" style="margin-bottom:10px">'+mainsCon.map(it=>{
       const f=itemFW4(it);
       const accs=(c.contractedItems||[]).filter(x=>x.bundledTo===it.product&&x.product);
-      return`<span class="trial-chip" style="background:var(--ss-green-bg);border-color:var(--green-b)"><span style="color:var(--ss-green-fg);font-weight:600">成約</span><b>${escHtml(it.product)}</b> ×${it.qty||1}<span style="color:var(--ss-green-fg);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>${accs.length?'<span style="color:var(--text3);font-size:11px">(含 '+accs.map(a=>escHtml(a.product)).join('、')+')</span>':''}</span>`;
+      return`<span class="trial-chip" style="background:var(--green-l);border-color:var(--green-b)"><span style="color:var(--green-d);font-weight:600">成約</span><b>${escHtml(it.product)}</b> ×${it.qty||1}<span style="color:var(--green-d);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>${accs.length?'<span style="color:var(--text3);font-size:12.5px">(含 '+accs.map(a=>escHtml(a.product)).join('、')+')</span>':''}</span>`;
     }).join('')+`<button class="btn btn-outline btn-xs" onclick="openCDItems(${currentTrial(c)?currentTrial(c).n:0})">編輯成約</button></div>`;
   }
   const x=trialXInfo(c);
@@ -5348,7 +5463,7 @@ function renderCDTodos(){
       <input type="checkbox" ${t.done?'checked':''} onchange="togCDTodo(${i})">
       <div style="flex:1;cursor:pointer" onclick="gtEdit('c',${S.curIdx},${i})" title="點擊編輯">
         <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}</div>
-        ${t.dueDate?`<div style="font-size:11px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'':''}${dueLabel(t.dueDate)}</div>`:''}
+        ${t.dueDate?`<div style="font-size:12.5px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'':''}${dueLabel(t.dueDate)}</div>`:''}
       </div>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦（點「+ 新增待辦」或直接點待辦文字可編輯）</div>';
 }
@@ -5530,7 +5645,7 @@ function renderVisits(){
         </div>
       </div>
       ${v.note?`<div style="font-size:14px;color:var(--text2);margin-bottom:3px">${escHtml(v.note)}</div>`:''}
-      ${v.insight?`<div style="font-size:13px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:5px 10px">${escHtml(v.insight)}</div>`:''}
+      ${v.insight?`<div style="font-size:13px;color:var(--blue);background:var(--blue-l);border-radius:var(--r-sm);padding:5px 10px">${escHtml(v.insight)}</div>`:''}
       ${v.nextdate?`<div style="font-size:12px;color:var(--text3);margin-top:4px">下次：${v.nextdate}</div>`:''}
     </div>`).join('');
 }
@@ -5556,7 +5671,7 @@ function renderDaily(){
       <div class="cc-sub">${escHtml(c.contact||'')}</div>
       <div class="cc-badges">${bdg(displayStatus(c.status))}${v?.statusChange?bdg(v.statusChange):''}</div>
       ${v?.note?`<div style="font-size:13px;color:var(--text2)">${escHtml(v.note)}</div>`:''}
-      ${v?.insight?`<div style="font-size:12px;color:#0C447C;background:#E6F1FB;border-radius:6px;padding:4px 8px;margin-top:4px">${escHtml(v.insight)}</div>`:''}
+      ${v?.insight?`<div style="font-size:12px;color:var(--blue);background:var(--blue-l);border-radius:var(--r-sm);padding:4px 8px;margin-top:4px">${escHtml(v.insight)}</div>`:''}
     </div>`;
   }).join(''):'<div class="empty">此日無拜訪記錄</div>';
 }
@@ -5986,14 +6101,14 @@ function gtSort(a,b){
 function gtRow(t){
   const od=isOD(t);
   const cnHtml=t.src==='c'
-    ?`<span style="font-size:11px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
+    ?`<span style="font-size:12.5px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
         onclick="event.stopPropagation();navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>`
-    :`<span style="font-size:11px;color:var(--text3);margin-left:5px">一般</span>`;
+    :`<span style="font-size:12.5px;color:var(--text3);margin-left:5px">一般</span>`;
   return`<div class="todo-row">
     <input type="checkbox" ${t.done?'checked':''} onchange="togGT('${t.src}',${t.ci},${t.ti})">
     <div style="flex:1;cursor:pointer" onclick="gtEdit('${t.src}',${t.ci},${t.ti})" title="點擊編輯">
       <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}${cnHtml}</div>
-      ${t.dueDate?`<div style="font-size:11px;color:${od?'var(--red)':'var(--text3)'};">${od?'':''}${dueLabel(t.dueDate)}</div>`:''}
+      ${t.dueDate?`<div style="font-size:12.5px;color:${od?'var(--red)':'var(--text3)'};">${od?'':''}${dueLabel(t.dueDate)}</div>`:''}
     </div>
   </div>`;
 }
@@ -6008,7 +6123,7 @@ function gtTrialSection(){
     return`<div class="todo-row gt-trial-row" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
       <div style="flex:1">
         <div>${escHtml(c.name)}<span class="xbadge x${info.level}">${info.marks}</span></div>
-        <div style="font-size:11px;color:${info.level>=3?'var(--red)':'var(--text3)'}">第 ${info.n} 次試用・回收日 ${info.due}${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・已達業助提醒等級':''}</div>
+        <div style="font-size:12.5px;color:${info.level>=3?'var(--red)':'var(--text3)'}">第 ${info.n} 次試用・回收日 ${info.due}${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・已達業助提醒等級':''}</div>
       </div>
       <span style="color:var(--text3);font-size:16px;flex-shrink:0">›</span>
     </div>`;
@@ -6215,22 +6330,22 @@ function renderDedupModal(){
       const visitCnt=(x.client.visits||[]).length;
       return `<div style="font-size:12px;padding:4px 8px;background:var(--bg2);border-radius:4px;margin-bottom:3px">
         ${mark} · #${x.idx} · updatedAt ${upd} · ${visitCnt} 筆 visit
-        <div style="color:var(--text3);font-size:11px">${escHtml(x.client.contact||'—')} · ${escHtml((x.client.addr||'').slice(0,30)||'—')}</div>
+        <div style="color:var(--text3);font-size:12.5px">${escHtml(x.client.contact||'—')} · ${escHtml((x.client.addr||'').slice(0,30)||'—')}</div>
       </div>`;
     }).join('');
     let cHtml='';
     if(conflicts.length){
-      cHtml='<div style="margin-top:6px;padding:6px;border:1px solid var(--yellow);border-radius:4px;background:#fffbe6">'+
-        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:var(--text2)">欄位衝突，選擇要保留的值：</div>'+
+      cHtml='<div style="margin-top:6px;padding:6px;border:1px solid var(--yellow);border-radius:var(--r-sm);background:var(--amber-l)">'+
+        '<div style="font-size:12.5px;font-weight:600;margin-bottom:4px;color:var(--text2)">欄位衝突，選擇要保留的值：</div>'+
         conflicts.map(c=>{
           const chosen=(s.resolutions[g.key]||{})[c.field];
           const opts=c.values.map(v=>{
             const sel=chosen===v.value?' selected':'';
             return `<option value="${encodeURIComponent(v.value)}"${sel}>${escHtml(v.value.slice(0,50))}</option>`;
           }).join('');
-          return `<div style="font-size:11px;margin-bottom:3px">
+          return `<div style="font-size:12.5px;margin-bottom:3px">
             <span style="display:inline-block;min-width:60px;color:var(--text2)">${c.field}:</span>
-            <select onchange="setDedupResolution('${g.key}','${c.field}',decodeURIComponent(this.value))" style="font-size:11px;max-width:300px">
+            <select onchange="setDedupResolution('${g.key}','${c.field}',decodeURIComponent(this.value))" style="font-size:12.5px;max-width:300px">
               <option value="">（請選擇）</option>${opts}
             </select>
           </div>`;
@@ -6288,7 +6403,7 @@ function showDedupReport(fullLog,totalGroups){
     html+=`<div style="color:var(--red);margin-top:8px"><b>${fails.length} 筆失敗</b>：</div>`;
     html+='<ul style="margin:4px 0 0 18px;font-size:12px;color:var(--text2)">'+
       fails.map(f=>`<li>${f.type} <b>${escHtml(f.name||f.id||'')}</b>：${escHtml(f.error||'未知')}</li>`).join('')+'</ul>';
-    html+=`<div style="margin-top:8px;padding:8px;background:#fffbe6;border:1px solid var(--yellow);border-radius:4px;font-size:12px">
+    html+=`<div style="margin-top:8px;padding:8px;background:var(--amber-l);border:1px solid var(--amber-b);border-radius:4px;font-size:12px">
       <b>若顯示「舊版 Apps Script 不支援 deleteByName」</b>：請到「Google Sheets 同步」區塊按「複製 Apps Script 程式碼」，貼回你的 Apps Script 專案覆寫 → 重新部署後再跑一次清理即可徹底清乾淨。
     </div>`;
   }else{
@@ -6444,23 +6559,23 @@ function renderAdminDashboard(){
   if(!dash||!_adminSnapshots)return;
   const cards=_adminSnapshots.map((s,idx)=>{
     if(s.error){
-      return `<div style="border:1px solid var(--red);border-radius:6px;padding:10px;margin-bottom:10px;background:#FCEBEB">
+      return `<div style="border:1px solid var(--red);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--red-l)">
         <div style="font-weight:600;color:var(--red)">${escHtml(s.sheetName)}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">${escHtml(s.error)}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px;word-break:break-all">${escHtml(s.url||'')}</div>
+        <div style="font-size:12.5px;color:var(--text2);margin-top:4px">${escHtml(s.error)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;word-break:break-all">${escHtml(s.url||'')}</div>
       </div>`;
     }
     const m=calcAdminMetrics(s.clients);
     const dups=findDuplicateGroupsIn(s.clients);
-    const dupWarn=dups>0?`<span style="color:var(--yellow);font-size:11px;margin-left:6px">${dups} 組重複未清</span>`:'';
+    const dupWarn=dups>0?`<span style="color:var(--yellow);font-size:12.5px;margin-left:6px">${dups} 組重複未清</span>`:'';
     return `<div onclick="switchAdminTab(${idx})" style="cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--bg2);transition:background .15s" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='var(--bg2)'">
-      <div style="font-weight:600;font-size:14px">${escHtml(s.sheetName)} <span style="color:var(--text3);font-weight:400;font-size:11px">${s.clients.length} 筆客戶 · 點選看詳情 →</span>${dupWarn}</div>
+      <div style="font-weight:600;font-size:14px">${escHtml(s.sheetName)} <span style="color:var(--text3);font-weight:400;font-size:12.5px">${s.clients.length} 筆客戶 · 點選看詳情 →</span>${dupWarn}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px">
-        <div><div style="font-size:11px;color:var(--text3)">試用軒數</div><div style="font-size:18px;font-weight:700">${m.trialShop}</div></div>
-        <div><div style="font-size:11px;color:var(--text3)">試用金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${m.trialAmount.toLocaleString()}</div></div>
-        <div><div style="font-size:11px;color:var(--text3)">成約軒數</div><div style="font-size:18px;font-weight:700">${m.contractShop}</div></div>
-        <div><div style="font-size:11px;color:var(--text3)">成約金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${m.contractAmount.toLocaleString()}</div></div>
-        <div><div style="font-size:11px;color:var(--text3)">成約轉換率</div><div style="font-size:18px;font-weight:700">${(m.conversionRate*100).toFixed(1)}%</div></div>
+        <div><div style="font-size:12.5px;color:var(--text3)">試用軒數</div><div style="font-size:18px;font-weight:700">${m.trialShop}</div></div>
+        <div><div style="font-size:12.5px;color:var(--text3)">試用金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${m.trialAmount.toLocaleString()}</div></div>
+        <div><div style="font-size:12.5px;color:var(--text3)">成約軒數</div><div style="font-size:18px;font-weight:700">${m.contractShop}</div></div>
+        <div><div style="font-size:12.5px;color:var(--text3)">成約金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${m.contractAmount.toLocaleString()}</div></div>
+        <div><div style="font-size:12.5px;color:var(--text3)">成約轉換率</div><div style="font-size:18px;font-weight:700">${(m.conversionRate*100).toFixed(1)}%</div></div>
       </div>
     </div>`;
   }).join('');
@@ -6474,14 +6589,14 @@ function renderAdminDashboard(){
   },{trialShop:0,trialAmount:0,contractShop:0,contractAmount:0});
   const totalEngaged=totalM.trialShop+totalM.contractShop;
   const totalConv=totalEngaged>0?(totalM.contractShop/totalEngaged):0;
-  const totalCard=`<div style="border:2px solid var(--green-d);border-radius:6px;padding:10px;margin-bottom:10px;background:#E1F5EE">
+  const totalCard=`<div style="border:2px solid var(--green-d);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--green-l)">
     <div style="font-weight:700;font-size:14px;color:var(--green-d)">總計（${validSnaps.length} 位業務員）</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px">
-      <div><div style="font-size:11px;color:var(--text3)">試用軒數</div><div style="font-size:18px;font-weight:700">${totalM.trialShop}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">試用金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${totalM.trialAmount.toLocaleString()}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">成約軒數</div><div style="font-size:18px;font-weight:700">${totalM.contractShop}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">成約金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${totalM.contractAmount.toLocaleString()}</div></div>
-      <div><div style="font-size:11px;color:var(--text3)">成約轉換率</div><div style="font-size:18px;font-weight:700">${(totalConv*100).toFixed(1)}%</div></div>
+      <div><div style="font-size:12.5px;color:var(--text3)">試用軒數</div><div style="font-size:18px;font-weight:700">${totalM.trialShop}</div></div>
+      <div><div style="font-size:12.5px;color:var(--text3)">試用金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${totalM.trialAmount.toLocaleString()}</div></div>
+      <div><div style="font-size:12.5px;color:var(--text3)">成約軒數</div><div style="font-size:18px;font-weight:700">${totalM.contractShop}</div></div>
+      <div><div style="font-size:12.5px;color:var(--text3)">成約金額</div><div style="font-size:18px;font-weight:700;color:var(--green-d)">$${totalM.contractAmount.toLocaleString()}</div></div>
+      <div><div style="font-size:12.5px;color:var(--text3)">成約轉換率</div><div style="font-size:18px;font-weight:700">${(totalConv*100).toFixed(1)}%</div></div>
     </div>
   </div>`;
   dash.innerHTML=totalCard+cards;
@@ -6810,17 +6925,37 @@ function tripCard(it,actions){
   const region=parseRegion(c.addr)||'（無區）';
   const tel=c.phone?`<a class="btn btn-outline btn-xs" href="tel:${escHtml(String(c.phone).replace(/[^\d+#]/g,''))}" onclick="event.stopPropagation()" aria-label="撥打電話"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.81.3 1.6.54 2.36a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.72-1.22a2 2 0 0 1 2.11-.45c.76.24 1.55.42 2.36.54A2 2 0 0 1 22 16.92z"/></svg></a>`:'';
   const map=c.addr?`<a class="btn btn-outline btn-xs" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.addr)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="開地圖導航"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></a>`:'';
-  return `<div class="card" style="margin-bottom:6px">
+  return `<div class="card" style="margin-bottom:6px;padding-bottom:17px;position:relative">
     <div style="display:flex;gap:8px;align-items:flex-start">
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openCD(${it.i})">
-        <div style="font-size:14.5px;font-weight:600">${escHtml(c.name)} ${bdg(displayStatus(c.status||STATUS.UNVISITED))}</div>
-        <div style="font-size:12.5px;color:var(--text2);margin-top:2px">${escHtml(region)}・${escHtml(c.addr||'')}</div>
-        ${undone.length?`<div style="font-size:12px;color:var(--amber-d);margin-top:2px">${escHtml(undone[0].text)}${undone.length>1?'（＋'+(undone.length-1)+' 項）':''}</div>`:''}
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0;font-size:var(--fs-card-name);font-weight:var(--fw-card-name);letter-spacing:var(--tr-card-name)">${escHtml(c.name)}</div>
+          ${statusPill(displayStatus(c.status||STATUS.UNVISITED))}
+        </div>
+        <div style="font-size:var(--fs-sub);color:var(--text2);margin-top:3px">${escHtml(region)}・${escHtml(c.addr||'')}</div>
+        ${undone.length?`<div style="font-size:var(--fs-meta);color:var(--amber);margin-top:4px;font-weight:600">${escHtml(undone[0].text)}${undone.length>1?'（＋'+(undone.length-1)+' 項）':''}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${tel}${map}</div>
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">${actions}</div>
+    <div style="display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap">${actions}</div>
+    <span class="cc-gauge">${clientGaugeHtml(c)}</span>
   </div>`;
+}
+// 主角區塊：待跑幾家、已跑幾家、路線、量尺。「跑完了」＝今天有拜訪紀錄（不推估）
+function renderTripHero(list,td){
+  const left=document.getElementById('trip-left');if(!left)return;
+  const total=list.length;
+  const done=list.filter(({c})=>(c.visits||[]).some(v=>v&&v.date===td)).length;
+  left.textContent=total?total-done:0;
+  document.getElementById('trip-unit').textContent=total?'家待跑':'家排程';
+  document.getElementById('trip-side').innerHTML=total
+    ?`已跑<br><b style="font-size:19px;font-weight:600;color:var(--on-theme)">${done}</b> / ${total} 家`:'';
+  const regions=[...new Set(list.map(({c})=>parseRegion(c.addr)).filter(Boolean))];
+  document.getElementById('trip-route').textContent=total
+    ?(regions.length?regions.slice(0,4).join(' → '):'未填地址區')
+    :'今天還沒排行程——從下面「順路建議」挑幾家';
+  const g=document.getElementById('trip-gauge');
+  g.innerHTML=total?gaugeHtml(done/total*100,'var(--green-lit)',total,true):gaugeHtml(0);
 }
 function renderTrip(){
   const el=document.getElementById('trip-out');if(!el)return;
@@ -6836,6 +6971,7 @@ function renderTrip(){
   const byRegion=(a,b)=>((parseRegion(a.c.addr)||'')+(a.c.addr||'')).localeCompare((parseRegion(b.c.addr)||'')+(b.c.addr||''),'zh-Hant');
   groups.today.sort(byRegion);groups.future.sort((a,b)=>a.c.nextdate<b.c.nextdate?-1:1);
   groups.overdue.sort((a,b)=>a.c.nextdate<b.c.nextdate?-1:1);
+  renderTripHero(groups.today,td);
   let html='';
   // ── 今天（依區分組）──
   html+=`<div class="form-section" style="margin-top:0">今天（${groups.today.length} 家）</div>`;
@@ -6844,10 +6980,10 @@ function renderTrip(){
     let lastR='';
     groups.today.forEach(it=>{
       const r=parseRegion(it.c.addr)||'（無區）';
-      if(r!==lastR){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">${escHtml(r)}</div>`;lastR=r;}
+      if(r!==lastR){html+=`<div style="font-size:12.5px;color:var(--text3);margin:8px 0 4px">${escHtml(r)}</div>`;lastR=r;}
       html+=tripCard(it,
         `<button class="btn btn-outline btn-xs" onclick="tripSetDate(${it.i},'')">移出行程</button>
-         <label style="font-size:11.5px;color:var(--text3);margin-left:auto">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>`);
+         <label style="font-size:12.5px;color:var(--text3);margin-left:auto">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>`);
     });
   }
   // ── 選區＋順路建議 ──
@@ -6856,7 +6992,7 @@ function renderTrip(){
   if(TRIP_PICK)tripDists.add(TRIP_PICK);
   const allRegions=[...new Set(DB.clients.map(c=>c&&parseRegion(c.addr)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
   html+=`<div class="form-section">順路建議</div>
-    <div style="font-size:11.5px;color:var(--text3);margin-bottom:4px">今天想跑哪一區？（點選看該區＋順路的建議）</div>
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:4px">今天想跑哪一區？（點選看該區＋順路的建議）</div>
     <div class="toolbar-left" style="flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;margin-bottom:8px;padding-bottom:2px">`+
     allRegions.map(r=>`<button class="pill pill-sm${TRIP_PICK===r?' on':''}" onclick="tripPickDist('${escHtml(r)}')">${escHtml(r)}</button>`).join('')+
     `</div>`;
@@ -6865,7 +7001,7 @@ function renderTrip(){
     let lastKey='';
     sug.forEach(s=>{
       const key=s.region+'｜'+s.where;
-      if(key!==lastKey){html+=`<div style="font-size:11.5px;color:var(--text3);margin:8px 0 4px">${escHtml(s.region)} <span style="color:var(--blue)">${escHtml(s.where)}</span></div>`;lastKey=key;}
+      if(key!==lastKey){html+=`<div style="font-size:12.5px;color:var(--text3);margin:8px 0 4px">${escHtml(s.region)} <span style="color:var(--blue)">${escHtml(s.where)}</span></div>`;lastKey=key;}
       html+=tripCard(s,
         `<span style="font-size:12px;color:var(--text2)">${s.whyIcon} ${escHtml(s.why)}</span>
          <button class="btn btn-primary btn-xs" style="margin-left:auto" onclick="tripSetDate(${s.i},'${td}')">＋拉進今天</button>`);
@@ -6881,7 +7017,7 @@ function renderTrip(){
       html+=tripCard(it,
         `<span style="font-size:12px;color:var(--red)">原訂 ${escHtml(it.c.nextdate)}</span>
          <button class="btn btn-primary btn-xs" onclick="tripSetDate(${it.i},'${td}')">今天</button>
-         <label style="font-size:11.5px;color:var(--text3)">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>
+         <label style="font-size:12.5px;color:var(--text3)">改期 <input type="date" style="width:auto;padding:3px 6px;font-size:12px" onchange="tripSetDate(${it.i},this.value)"></label>
          <button class="btn btn-danger btn-xs" onclick="tripSetDate(${it.i},'')">清除</button>`);
     });
     html+='</details>';
@@ -6904,13 +7040,13 @@ function renderTrip(){
       html+=`<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
         <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(st.name||'未命名')}</div>
-          <div style="font-size:11.5px;color:var(--text3)">${escHtml([st.town,st.stage].filter(Boolean).join('・'))}・可拜訪 ${escHtml(st.openDate)}${st.by?'・'+escHtml(st.by)+' 登記':''}</div>
+          <div style="font-size:12.5px;color:var(--text3)">${escHtml([st.town,st.stage].filter(Boolean).join('・'))}・可拜訪 ${escHtml(st.openDate)}${st.by?'・'+escHtml(st.by)+' 登記':''}</div>
         </div>
         <a class="btn btn-outline btn-xs" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}">導航</a>
         <button class="btn btn-primary btn-xs" onclick="mainConvertSite('${escHtml(st.id)}')">轉為客戶</button>
       </div>`;
     });
-    if(dueSites.length>8)html+=`<div style="font-size:11.5px;color:var(--text3);margin:2px 0 6px">…還有 ${dueSites.length-8} 個，<a href="sitemap.html" style="color:var(--green)">開工地地圖看全部</a></div>`;
+    if(dueSites.length>8)html+=`<div style="font-size:12.5px;color:var(--text3);margin:2px 0 6px">…還有 ${dueSites.length-8} 個，<a href="sitemap.html" style="color:var(--green)">開工地地圖看全部</a></div>`;
   }
   const izDue=fusionIzDue();
   if(izDue.length){
@@ -6919,7 +7055,7 @@ function renderTrip(){
       html+=`<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
         <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.name)}</div>
-          <div style="font-size:11.5px;color:var(--text3)">${escHtml(r.dist||'')}${r.date?'・約 '+escHtml(r.date):''}</div>
+          <div style="font-size:12.5px;color:var(--text3)">${escHtml(r.dist||'')}${r.date?'・約 '+escHtml(r.date):''}</div>
         </div>
         <a class="btn btn-outline btn-xs" href="izcrm.html" style="text-decoration:none">開啟 →</a>
       </div>`;
@@ -8022,8 +8158,8 @@ function cmGoStep(n){
 function cmRenderStepPills(){
   const labels = ['商品明細', '客戶名稱', '預覽下載'];
   const el = document.getElementById('cm-steps'); if(!el || !CM_state) return;
-  el.innerHTML = labels.map((t, i) => '<span style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;font-size:11px;'
-    + (i === (CM_state.step||0) ? 'background:var(--brand-d,#1f4e79);color:#fff' : 'background:var(--surface2,#eee);color:var(--text3,#888)')
+  el.innerHTML = labels.map((t, i) => '<span style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;font-size:12.5px;'
+    + (i === (CM_state.step||0) ? 'background:var(--green);color:var(--on-green)' : 'background:var(--bg3);color:var(--text2)')
     + '">' + (i + 1) + '. ' + t + '</span>').join('');
 }
 function closeCM(){
@@ -8755,7 +8891,7 @@ function cmwRenderItems(){
     const head = document.createElement('div'); head.className = 'cm-item-head';
     const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'cm-item-pick' + (it.code ? '' : ' empty');
     pick.innerHTML = it.code
-      ? '<span class="code">' + HOST.escapeHtml(it.code) + '</span>' + HOST.escapeHtml(it.name || '') + (it.isCustomMat ? '<span class="price" style="color:#A36B00">特製地墊</span>' : '')
+      ? '<span class="code">' + HOST.escapeHtml(it.code) + '</span>' + HOST.escapeHtml(it.name || '') + (it.isCustomMat ? '<span class="price" style="color:var(--amber)">特製地墊</span>' : '')
       : '點此從商品庫選擇';
     pick.onclick = () => cmwOpenPicker(idx);
     const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'cm-item-rm'; rm.textContent = '✕'; rm.title = '刪除品項'; rm.setAttribute('aria-label', '刪除此品項');
@@ -8774,7 +8910,7 @@ function cmwRenderItems(){
     };
     cw.appendChild(sel); fields.appendChild(cw);
     // 金額列先建立，數量／單價輸入時只就地更新金額與合計，不重繪整列（否則每按一鍵 input 被重建、游標跳出）
-    const info = document.createElement('div'); info.style.cssText = 'font-size:11px;color:var(--text3);margin-top:4px';
+    const info = document.createElement('div'); info.style.cssText = 'font-size:12.5px;color:var(--text3);margin-top:4px';
     const recalc = () => {
       const n = cmChangesPer4W(it.cycle), per4W = (Number(it.contractUnit) || 0) * n, qty = parseInt(it.qty, 10) || 1;
       info.textContent = '每件4W金額 ' + per4W.toLocaleString() + '　·　遺失賠償費單價 ' + (per4W * 5).toLocaleString() + '　·　4W租賃金額 ' + (per4W * qty).toLocaleString();
@@ -8883,7 +9019,7 @@ function cmwPreview(){
 function cmwRenderSteps(){
   const labels = ['公版訊息', '商品明細', '租賃付款', '立契約書人', '附帶事項', '預覽下載'];
   const el = document.getElementById('cmw-steps'); if(!el) return;
-  el.innerHTML = labels.map((t, i) => '<span style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;font-size:11px;' + (i === CM_wiz.step ? 'background:var(--brand-d,#1f4e79);color:#fff' : 'background:var(--surface2,#eee);color:var(--text3,#888)') + '">' + (i + 1) + '. ' + t + '</span>').join('');
+  el.innerHTML = labels.map((t, i) => '<span style="display:inline-block;margin:2px;padding:2px 8px;border-radius:10px;font-size:12.5px;' + (i === CM_wiz.step ? 'background:var(--green);color:var(--on-green)' : 'background:var(--bg3);color:var(--text2)') + '">' + (i + 1) + '. ' + t + '</span>').join('');
 }
 function cmwGoTo(n){
   if(!CM_wiz) return;
@@ -9569,8 +9705,8 @@ if(location.search.includes('test=1')){
   const total=results.length;
   const banner=document.createElement('div');
   banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;font-size:14px;font-weight:600;text-align:center;';
-  banner.style.background=fail?'#FCEBEB':'#E1F5EE';
-  banner.style.color=fail?'#A32D2D':'#085041';
+  banner.style.background=fail?'var(--red-l)':'var(--green-l)';
+  banner.style.color=fail?'var(--red)':'var(--green-d)';
   banner.textContent='TEST: '+pass+'/'+total+' passed'+(fail?' — '+fail+' FAILED':'  ✓ ALL PASS');
   document.body.prepend(banner);
   console.log('=== TEST SUMMARY: '+pass+'/'+total+' passed'+(fail?', '+fail+' FAILED':' ✓ ALL PASS')+' ===');
