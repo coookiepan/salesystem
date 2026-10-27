@@ -265,6 +265,19 @@ label.lbl{font-size:12.5px;color:var(--text2);display:block;margin-bottom:5px;fo
 .alert-warn{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b)}
 .alert-err{background:var(--red-l);color:var(--red);border-color:var(--red-b)}
 .alert-info{background:var(--blue-l);color:var(--blue);border-color:var(--blue-b)}
+
+/* ═══ 清單健檢（產出報表前）═══ */
+.sc-list{border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.sc-row{padding:13px 15px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
+.sc-row:last-child{border-bottom:none}
+.sc-name{font-size:var(--fs-card-name);font-weight:var(--fw-card-name);letter-spacing:var(--tr-card-name);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sc-why{font-size:var(--fs-meta);color:var(--text2);margin-top:5px;line-height:1.6;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.sc-why b{color:var(--amber);font-weight:700}
+.sc-why b.late{color:var(--red)}
+.sc-acts{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.sc-acts .btn,.sc-res .btn{flex:1 1 auto;min-width:92px}
+.sc-res{display:none;gap:7px;margin-top:9px;padding-top:11px;border-top:1px solid var(--border);flex-wrap:wrap}
+.sc-row.open .sc-res{display:flex}
 /* 搜尋關鍵字標亮（深淺色模式皆可讀） */
 .hl-kw{background:var(--mark-bg);color:var(--mark-fg);padding:0 2px;border-radius:2px;font-weight:700}
 
@@ -1104,6 +1117,7 @@ details.trial-card .trial-body{margin-top:8px}
         <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
       </select>
     </div>
+    <div id="rpt-stale" style="margin-bottom:14px"></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
       <button class="btn btn-outline btn-xs" onclick="setRptRange('today')">今天</button>
       <button class="btn btn-outline btn-xs" onclick="setRptRange('week')">本週</button>
@@ -1607,7 +1621,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.10.01-d1';
+const APP_VERSION='v2026.10.27-r1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -3821,6 +3835,155 @@ async function checkQuoteFollowups(){
   }
   if(touched)renderClients();
 }
+// ═══════════════════════════════════════════════════════════
+// 清單健檢 — 產出報表前，把過期的店清乾淨
+// ═══════════════════════════════════════════════════════════
+// 問題：推進表只要狀態是「試用中／報價／將成約」就一定列進去，完全不看最近有沒有在動。
+// 忘記按回收，那家店就永遠留在表上，日報被舊店塞滿。
+// 解法：產出報表前先列出這三種狀態裡「試用逾期／報價追蹤逾期／超過三週沒動」的店，
+//       每家三個大按鈕一分鐘清完。推進表本身不偷偷刪資料（長久沒動的報價也可能還是真機會），
+//       只在列數旁邊標出有幾家沒確認。
+const STALE_DAYS=21;                                            // 三週沒動就該問一次
+const RPT_ACTIVE=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);   // 推進表會列入的狀態
+// 最後一次「有事情發生」的日子：拜訪／試用開始或回收／成約日／上次健檢確認
+function lastTouchDate(c){
+  if(!c)return '';
+  const ds=[];
+  (c.visits||[]).forEach(v=>{if(v&&v.date)ds.push(v.date);});
+  trialsOf(c).forEach(t=>{if(t){if(t.start)ds.push(t.start);if(t.recovered)ds.push(t.recovered);}});
+  (c.contractedItems||[]).forEach(it=>{if(it&&it.contractDate)ds.push(it.contractDate);});
+  if(c.reviewedAt)ds.push(c.reviewedAt);
+  ds.sort();
+  return ds.length?ds[ds.length-1]:'';
+}
+function daysSince(ymd,base){const n=daysUntil(ymd,base);return n===null?null:-n;}
+// 回傳 [{c, id, reasons:[{kind,days,text}], trial, worst}]，最該處理的排最前面
+function staleReviewList(base){
+  const td=base||today();
+  const out=[];
+  (DB.clients||[]).forEach(c=>{
+    if(!c||!RPT_ACTIVE.has(c.status))return;
+    const reasons=[];
+    // ① 試用過了回收日還開著
+    const x=trialXInfo(c,td);
+    if(x&&x.left<0)reasons.push({kind:'overdue',days:-x.left,text:'試用逾期 '+(-x.left)+' 天還沒回收'});
+    // ② 報價追蹤的提醒日過了還沒結果
+    if(c.status===STATUS.QUOTE){
+      const q=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
+      const left=q?daysUntil(q.dueDate,td):null;
+      if(left!==null&&left<0)reasons.push({kind:'quote',days:-left,text:'報價追蹤超過 '+(-left)+' 天沒結果'});
+    }
+    // ③ 超過三週完全沒動
+    const quiet=daysSince(lastTouchDate(c),td);
+    if(quiet===null)reasons.push({kind:'quiet',days:9999,text:'完全沒有拜訪紀錄'});
+    else if(quiet>=STALE_DAYS)reasons.push({kind:'quiet',days:quiet,text:'已經 '+quiet+' 天沒動'});
+    if(!reasons.length)return;
+    const open=openTrials(c);
+    out.push({c,id:c.id||'',reasons,trial:open.length?open[open.length-1]:null,
+              worst:reasons.reduce((m,r)=>Math.max(m,r.days),0)});
+  });
+  // 排序：先看急迫種類（試用逾期＝有東西還在客戶那裡＞報價逾期＞只是沒動），同種再看天數
+  const rank=r=>r.reasons.some(x=>x.kind==='overdue')?0:r.reasons.some(x=>x.kind==='quote')?1:2;
+  out.sort((a,b)=>rank(a)-rank(b)||b.worst-a.worst||(a.c.name||'').localeCompare(b.c.name||'','zh-Hant'));
+  return out;
+}
+// 「還在追」：不是把問題蓋掉，而是把到期日往後推 —— 逾期的試用重算回收日、
+// 逾期的報價追蹤再等一週，並蓋上今天的確認日，所以健檢清單會真的變乾淨。
+function scStay(id){
+  const c=(DB.clients||[]).find(x=>x&&x.id===id);
+  if(!c)return;
+  const td=today();
+  const msg=[];
+  const open=openTrials(c);
+  const t=open.length?open[open.length-1]:null;
+  if(t&&t.due&&t.due<td){t.due=addDays(td,TRIAL_DEFAULT_DAYS);msg.push('回收日改成 '+t.due);}
+  if(c.status===STATUS.QUOTE){
+    const q=(c.todos||[]).find(x=>x&&!x.done&&x.source==='quote-followup'&&x.dueDate);
+    if(q&&q.dueDate<=td){q.dueDate=addDays(td,7);msg.push('一週後再問你報價結果');}
+  }
+  c.reviewedAt=td;
+  c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  renderStaleCheck();renderClients();
+  showToast('✓ '+c.name+'：還在追'+(msg.length?'（'+msg.join('、')+'）':''));
+}
+// 「已回收」展開四選一（只有進行中試用才有）
+function scToggle(id){
+  const row=document.getElementById('sc-'+id);
+  if(row)row.classList.toggle('open');
+}
+// 回收結果走原本的回收邏輯（成約時品項會自動轉成成約品項）
+function scResult(id,result){
+  const c=(DB.clients||[]).find(x=>x&&x.id===id);
+  if(!c)return;
+  const open=openTrials(c);
+  const t=open.length?open[open.length-1]:null;
+  if(!t)return;                      // 沒有進行中試用就沒有「回收」可做
+  applyRecoverResult(c,t,result,today());
+  renderStaleCheck();renderClients();
+  showToast('✓ '+c.name+'：第 '+t.n+' 次試用已回收（'+result+'）');
+}
+// 拒絕：有進行中試用就一併回收，沒有的話只改狀態補紀錄（絕不憑空生成約品項）
+async function scRefuse(id){
+  const c=(DB.clients||[]).find(x=>x&&x.id===id);
+  if(!c)return;
+  if(!await appConfirm('把「'+c.name+'」改成拒絕？之後就不會再出現在推進表與未來兩週規劃。',
+    {title:'確認拒絕',okText:'改成拒絕',danger:true}))return;
+  const open=openTrials(c);
+  const t=open.length?open[open.length-1]:null;
+  if(t){
+    applyRecoverResult(c,t,'拒絕',today());
+  }else{
+    const td=today();
+    c.status=STATUS.REFUSE;
+    (c.visits=c.visits||[]).push({date:td,mood:0,note:'',insight:'清單健檢：拒絕',statusChange:c.status,nextdate:c.nextdate||null});
+    c.reviewedAt=td;
+    c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  }
+  renderStaleCheck();renderClients();
+  showToast('✓ '+c.name+'：拒絕');
+}
+// ── 面板 ──
+function renderStaleCheck(){
+  const el=document.getElementById('rpt-stale');if(!el)return;
+  const list=staleReviewList();
+  if(!list.length){
+    el.innerHTML='<p class="alert alert-ok" style="margin-bottom:0">清單健檢：推進表上的店都還在動，可以直接產出。</p>';
+    return;
+  }
+  const rows=list.map(r=>{
+    const c=r.c;
+    const why=r.reasons.map(x=>`<b${x.kind==='quiet'?'':' class="late"'}>${escHtml(x.text)}</b>`).join(' · ');
+    const fw=calcReportAmt(c);
+    const amt=fw>0?` · 推進表會算 $${fw.toLocaleString()}／4W`:'';
+    const idx=DB.clients.indexOf(c);
+    // 成約要嘛走試用回收（品項自動轉過去），要嘛到客戶卡好好填；健檢不做「沒有品項的成約」
+    const back=r.trial
+      ? `<button class="btn btn-primary btn-sm" onclick="scToggle('${escHtml(r.id)}')">已回收</button>`
+      : `<button class="btn btn-primary btn-sm" onclick="closeReportModal();openCD(${idx})">開客戶卡成約</button>`;
+    const opts=r.trial?`
+      <div class="sc-res">
+        <button class="btn btn-outline btn-sm" onclick="scResult('${escHtml(r.id)}','成約')">成約</button>
+        <button class="btn btn-outline btn-sm" onclick="scResult('${escHtml(r.id)}','報價中')">報價中</button>
+        <button class="btn btn-outline btn-sm" onclick="scResult('${escHtml(r.id)}','再試用')">再試用</button>
+        <button class="btn btn-outline btn-sm" onclick="scResult('${escHtml(r.id)}','拒絕')">拒絕</button>
+      </div>`:'';
+    return `<div class="sc-row" id="sc-${escHtml(r.id)}">
+      <p class="sc-name">${escHtml(c.name)}${statusPill(displayStatus(c.status))}</p>
+      <p class="sc-why">${why}${escHtml(amt)}</p>
+      <div class="sc-acts">
+        ${back}
+        <button class="btn btn-outline btn-sm" onclick="scStay('${escHtml(r.id)}')">還在追</button>
+        <button class="btn btn-danger btn-sm" onclick="scRefuse('${escHtml(r.id)}')">拒絕</button>
+        ${r.trial?`<button class="btn btn-outline btn-sm" onclick="closeReportModal();openCD(${idx})">開客戶卡</button>`:''}
+      </div>${opts}
+    </div>`;
+  }).join('');
+  el.innerHTML=`<p class="alert alert-warn" style="margin-bottom:8px"><b>清單健檢：${list.length} 家可能已經過期</b><br>
+      這些店還在推進表上（狀態是試用中／報價／將成約），但試用逾期或超過 ${STALE_DAYS} 天沒動。
+      先在這裡清掉，報表就不會被舊店塞滿。</p>
+    <div class="sc-list">${rows}</div>`;
+}
+
 // 狀態開關 — 哪些 status 要顯示在列表中
 // key 是 status 字串，value 是 true/false
 let statusFilter={};
@@ -5344,26 +5507,34 @@ function openRecoverModal(n){
   document.getElementById('trial-recover-modal').classList.add('on');
 }
 function closeRecoverModal(){document.getElementById('trial-recover-modal').classList.remove('on');}
-function finishRecover(result){
-  const c=DB.clients[RECOVER.ci];const t=c?trialsOf(c).find(x=>x.n===RECOVER.n):null;
-  if(!c||!t){closeRecoverModal();return;}
-  const date=document.getElementById('tr-date').value||today();
-  t.open=false;t.recovered=date;t.result=result;
+// 回收一筆試用並套用結果 —— 純資料層（回收 modal 與產出報表前的「清單健檢」共用同一套）
+function applyRecoverResult(c,t,result,date){
+  if(!c||!t)return false;
+  const d=date||today();
+  t.open=false;t.recovered=d;t.result=result;
   (c.todos||[]).forEach(x=>{if(x&&x.source==='auto-recycle'&&(x.trialN||1)===t.n)x.done=true;});
   if(result==='成約'){
-    (t.items||[]).forEach(it=>{if(it&&it.product){const k=JSON.parse(JSON.stringify(it));k.contractDate=date;(c.contractedItems=c.contractedItems||[]).push(k);}});
+    (t.items||[]).forEach(it=>{if(it&&it.product){const k=JSON.parse(JSON.stringify(it));k.contractDate=d;(c.contractedItems=c.contractedItems||[]).push(k);}});
     c.status=STATUS.DEAL;
   }else if(result==='報價中'){
     c.status=STATUS.QUOTE;
-    (c.todos=c.todos||[]).push({text:'報價追蹤（第 '+t.n+' 次試用回收後一週未回覆，問是否改拒絕）',dueDate:addDays(date,7),done:false,source:'quote-followup',trialN:t.n});
+    (c.todos=c.todos||[]).push({text:'報價追蹤（第 '+t.n+' 次試用回收後一週未回覆，問是否改拒絕）',dueDate:addDays(d,7),done:false,source:'quote-followup',trialN:t.n});
   }else if(result==='再試用'){
-    c.trials.push(newTrial(c,t.items,date));
+    c.trials=trialsOf(c);c.trials.push(newTrial(c,t.items,d));
     c.status=STATUS.TRIAL;
   }else if(result==='拒絕'){
     c.status=STATUS.REFUSE;
   }
-  (c.visits=c.visits||[]).push({date,mood:0,note:'',insight:'第 '+t.n+' 次試用回收：'+result,statusChange:c.status,nextdate:c.nextdate||null});
+  (c.visits=c.visits||[]).push({date:d,mood:0,note:'',insight:'第 '+t.n+' 次試用回收：'+result,statusChange:c.status,nextdate:c.nextdate||null});
+  c.reviewedAt=d;                        // 回收＝剛剛確認過，健檢不用再問
   c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  return true;
+}
+function finishRecover(result){
+  const c=DB.clients[RECOVER.ci];const t=c?trialsOf(c).find(x=>x.n===RECOVER.n):null;
+  if(!c||!t){closeRecoverModal();return;}
+  const date=document.getElementById('tr-date').value||today();
+  applyRecoverResult(c,t,result,date);
   closeRecoverModal();renderClients();openCD(RECOVER.ci);
   const n=trialsOf(c).length;
   if(result==='再試用'&&n>TRIAL_MAX)showToast('提醒：這家已經第 '+n+' 次試用，超過公司規定的 '+TRIAL_MAX+' 次');
@@ -5687,6 +5858,7 @@ function openReportModal(){
   setRptRange('week');
   document.getElementById('rpt-start-month').value=String(new Date().getMonth()+1);
   document.getElementById('rpt-output').style.display='none';
+  renderStaleCheck();                      // 產出前先把過期的店攤在眼前
   document.getElementById('report-modal').style.display='block';
 }
 function closeReportModal(){document.getElementById('report-modal').style.display='none';}
@@ -5809,8 +5981,10 @@ function genReport(){
     if(fw>=RPT_VIP_THRESHOLD) vip4w.push({row:i+1,name:c.name});
   });
   document.getElementById('rpt-4w').value=rows4w.join('\n');
+  const staleIn=staleReviewList().filter(r=>picked.indexOf(r.c)>=0).length;
   document.getElementById('rpt-4w-cnt').textContent=
-    `共 ${rows4w.length} 筆${rows4w.length>50?'（超過模板 50 列上限，請刪減後再貼）':''}`;
+    `共 ${rows4w.length} 筆${rows4w.length>50?'（超過模板 50 列上限，請刪減後再貼）':''}`
+    +(staleIn?`　·　其中 ${staleIn} 家還沒做清單健檢`:'');
   document.getElementById('rpt-4w-vip').textContent=rptVipHint(vip4w);
 
   // ═════════════════════════════════════════════
