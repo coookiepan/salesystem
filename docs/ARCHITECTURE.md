@@ -198,7 +198,7 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 | `trialXInfo(c)` | 以進行中那次的 `due` 分級：到回收日 X、之後每 7 天多一個 X |
 | `autoAddRecycleTodos()` | 每次進行中的試用開始＋7 天後各自加「回收試用品（第 N 次）」，到期＝回收日，`todo.trialN` 對應 |
 | `startTrial()`／`cfStartTrial()` | 新一次試用：**品項從空的開始**、開始日今天、回收日＋14；狀態自動試用中；還有進行中或已達 3 次會先確認 |
-| `finishRecover(result)` | 回收結果四選一：成約（品項含配件轉 `contractedItems`、狀態已成約）／報價中（狀態報價＋`quote-followup` 待辦一週後由 `checkQuoteFollowups` 問是否改拒絕，每週再問）／再試用（複製同品項開下一次）／拒絕。每次回收補一筆拜訪紀錄 |
+| `applyRecoverResult(c,t,result,date)` | **回收的資料層（唯一入口）**：成約（品項含配件轉 `contractedItems`、狀態已成約）／報價中（狀態報價＋`quote-followup` 待辦一週後由 `checkQuoteFollowups` 問是否改拒絕，每週再問）／再試用（複製同品項開下一次）／拒絕。補一筆拜訪紀錄並蓋 `reviewedAt`。回收 modal 的 `finishRecover()` 與產出報表前的清單健檢都走這支 |
 | `packTrials(c)` | 舊格式 `trialDate`＋`trialItems` → 第 1 次（試用中＝進行中、其餘＝已回收、回收日不明）。migration v11 與所有資料進入點（雲端拉取、備份匯入、長官快照）都呼叫，其他裝置未升級時雲端仍可能是舊格式 |
 
 編輯客戶表單只編「進行中的那次」（沒有就提供「開始第 N 次試用」）；過去的試用一律從詳情頁的試用卡進出（`openCDItems(n)`，可改日期、品項、刪除整筆）。
@@ -580,6 +580,50 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 - 前端 POST 刻意不帶 `Content-Type`（維持 simple request 避開 CORS preflight）。
 - 慣例對齊：對話框用 `appAlert`/`appConfirm`（原生已移除）、popup/清單輸出皆經 `esc()`、
   照片 src 僅接受 `data:image/`。改檔屬實質改動 → 同步 bump `APP_VER` 與 `sw.js` CACHE。
+
+---
+
+## 週報產出與清單健檢（主系統，日報頁「產出週報」）
+
+`genReport()` 一次產三段貼進 RS 模板：① 推進表（A20）② 未來兩週（A74）③ 本週日報（A7）。
+
+**推進表的挑選口徑（刻意保留，勿改）**：狀態是試用中／報價／將成約的一律列入，
+或「區間內有拜訪」且「還有未回收的試用品項」。金額走 `calcReportAmt()`——
+只算**未回收**試用品項、且一律以 2W 預設換週的 4W 原價加總（未成約前不可預設 4W）。
+副作用：剛回收成約的那一週不會出現在推進表（它已經沒有未回收品項了）。
+
+### 清單健檢（`staleReviewList()`）
+
+挑選口徑只看狀態，所以**忘記按一次回收，那家店就永遠留在表上**，日報會被舊店塞滿。
+解法不是讓程式替使用者判死（長久沒動的報價也可能還是真機會），而是在產出前先問：
+
+```js
+const STALE_DAYS=21;
+const RPT_ACTIVE=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
+```
+
+`staleReviewList(base)` 回傳 `[{c,id,reasons:[{kind,days,text}],trial,worst}]`，三種 `kind`：
+
+| kind | 條件 | 排序優先 |
+|------|------|---------|
+| `overdue` | 進行中試用過了 `due`（`trialXInfo(c).left<0`）——東西還在客戶那裡 | 1 |
+| `quote` | 狀態報價，且 `quote-followup` 待辦的 `dueDate` 已過 | 2 |
+| `quiet` | `lastTouchDate(c)` 距今 ≥ `STALE_DAYS`（完全沒紀錄視為最久） | 3 |
+
+`lastTouchDate(c)` ＝ 拜訪日／試用開始與回收日／成約日／`reviewedAt` 取最大。
+
+三個動作（`openReportModal()` 時渲染，動作後即時重算）：
+
+| 動作 | 做什麼 |
+|------|--------|
+| `scResult(id,result)` 已回收 | 展開成約／報價中／再試用／拒絕 → `applyRecoverResult()`。**只有進行中試用才有**：沒有試用的店不給「成約」，避免做出一筆沒有 `contractedItems` 的成約（改成帶去客戶卡） |
+| `scStay(id)` 還在追 | **不是把問題蓋掉**：逾期的試用 `t.due=今天+14`、逾期的 `quote-followup` `dueDate=今天+7`（與 `checkQuoteFollowups` 的「再等一週」一致），並蓋 `c.reviewedAt=今天`。所以它會真的離開清單，`STALE_DAYS` 後才再問 |
+| `scRefuse(id)` 拒絕 | 確認後改 `STATUS.REFUSE`；有進行中試用就一併回收，沒有的話只改狀態補一筆紀錄（`insight:'清單健檢：拒絕'`），**絕不憑空生成約品項** |
+
+`c.reviewedAt`（`'YYYY-MM-DD'`）是這次新增的客戶欄位，意思是「我確認過這家還在追」。
+客戶整筆以 JSON 存一列，所以**後端與 migration 都不用動**（沒有這欄＝從未確認過）。
+
+推進表不因健檢而少列任何一筆，只在列數旁標「其中 N 家還沒做清單健檢」。
 
 ---
 
