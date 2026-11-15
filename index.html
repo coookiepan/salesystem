@@ -923,6 +923,7 @@ details.trial-card .trial-body{margin-top:8px}
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="daily-date" type="date" style="width:auto" onchange="renderDaily()">
     <button class="btn btn-outline btn-sm" onclick="openReportModal()">產出報表</button>
+    <button class="btn btn-outline btn-sm" onclick="openServeModal()">公司試用表比對</button>
   </div>
   <div class="stat-grid">
     <div class="scard"><div class="snum" id="ds-v">0</div><div class="slbl">拜訪軒數</div><div class="prog"><div class="prog-f" id="dp-v" style="width:0%"></div></div><div class="prog-hint">目標 15</div></div>
@@ -1101,6 +1102,22 @@ details.trial-card .trial-body{margin-top:8px}
       <button class="btn btn-primary" id="cmw-next-btn">下一步 →</button>
       <button class="btn btn-primary" id="cmw-download-btn" style="display:none">下載合約</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ 公司試用表比對 ═══ -->
+<div id="serve-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:16px">
+  <div style="background:var(--bg);max-width:960px;margin:10px auto;border-radius:var(--radius);padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:17px;font-weight:700">公司試用表比對</div>
+      <button class="btn btn-outline btn-sm" onclick="closeServeModal()">關閉</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      選公司系統下載的「SERVE別試用顧客一覽表」（.xlsx）。App 只會<b>列出落差</b>，不會自動改你的資料；每一筆由你按「照公司的」才會更新。檔案只在這台手機上讀，不會上傳。
+    </div>
+    <label class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;cursor:pointer">選擇檔案<input type="file" id="serve-file" accept=".xlsx,.xls" onchange="serveImportFile(this)" style="display:none"></label>
+    <div id="serve-summary" style="font-size:13px;color:var(--text2);margin:10px 0"></div>
+    <div id="serve-list"></div>
   </div>
 </div>
 
@@ -1661,7 +1678,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-s3';
+const APP_VERSION='v2026.11.15-r1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2233,6 +2250,227 @@ function markQuoted(c,date){
   c.todos.forEach(t=>{if(t&&!t.done&&t.source==='auto-quote')t.done=true;});
   if(!c.todos.some(t=>t&&!t.done&&t.source==='quote-followup'))
     c.todos.push({text:'報價追蹤（報價後一週，問結果）',dueDate:addDays(date||today(),7),done:false,source:'quote-followup'});
+}
+// ═══ 公司試用表比對 ═══ 匯入公司系統的「SERVE別試用顧客一覽表」，和本機的試用紀錄逐筆對照。
+// 原則：只列落差、不自動改資料；每筆由使用者按「照公司的」才寫入（serveApply）。
+// 公司表：一張試用單＝一次試用（同店可多張）；單頭列有單號／顧客編號／全名／電話／狀態／日期，其下每商品一列。
+// 匯入結果只存本機 localStorage.duskin_serve（每週重匯）；配對成功後把公司顧客編號記在 c.custNo，下次直接對上。
+function loadXLSX(){
+  if(window.XLSX)return Promise.resolve(window.XLSX);
+  return new Promise((res,rej)=>{
+    const sc=document.createElement('script');sc.src='vendor/xlsx.mini.min.js';
+    sc.onload=()=>window.XLSX?res(window.XLSX):rej(new Error('讀取 Excel 的元件載入失敗'));
+    sc.onerror=()=>rej(new Error('讀取 Excel 的元件載入失敗（第一次使用請先連上網路）'));
+    document.head.appendChild(sc);
+  });
+}
+function serveDate(v){const m=String(v||'').match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0'):'';}
+// rows＝整張工作表的二維陣列（與讀檔的函式庫無關，方便測試）
+function parseServeRows(rows){
+  rows=rows||[];
+  const hi=rows.findIndex(r=>(r||[]).some(c=>String(c==null?'':c).trim()==='試用單號'));
+  if(hi<0)throw new Error('這不是「SERVE別試用顧客一覽表」：找不到「試用單號」欄');
+  const H=(rows[hi]||[]).map(c=>String(c==null?'':c).trim());
+  const col={};
+  ['試用單號','負責人','顧客編號','顧客名稱','電話號碼','狀態','最初試用','試用日','回收預定日','商品名稱','試用數','試用金額','4W試用金額','回收日','契約數','次數'].forEach(n=>{col[n]=H.indexOf(n);});
+  const lack=Object.keys(col).filter(n=>col[n]<0);
+  if(lack.length)throw new Error('表格缺少欄位：'+lack.join('、'));
+  const num=v=>Number(v)||0, str=v=>String(v==null?'':v).trim();
+  const head=rows.slice(0,hi).map(r=>(r||[]).map(str).join(' ')).join(' ');
+  const pm=head.match(/對象期間[：:]\s*(\S+)\s*~\s*(\S+)/);
+  const orders=[];let cur=null;
+  rows.slice(hi+1).forEach(r=>{
+    r=r||[];
+    const no=str(r[col['試用單號']]);
+    if(/^\d{6,}$/.test(no)){
+      const mark=str(r[col['負責人']]);
+      cur={no,custNo:str(r[col['顧客編號']]),name:str(r[col['顧客名稱']]),phone:str(r[col['電話號碼']]),status:str(r[col['狀態']]),
+        first:serveDate(r[col['最初試用']]),start:serveDate(r[col['試用日']]),due:serveDate(r[col['回收預定日']]),marks:/^X+$/.test(mark)?mark:'',items:[]};
+      orders.push(cur);
+    }
+    const code=str(r[col['商品名稱']+1]);   // 「商品名稱」佔兩欄：商品序號、商品代號
+    if(!cur||!code||code==='合計'||code==='總合計')return;
+    cur.items.push({code,qty:num(r[col['試用數']]),amt:num(r[col['試用金額']]),amt4w:num(r[col['4W試用金額']]),recovered:serveDate(r[col['回收日']]),contract:num(r[col['契約數']]),n:num(r[col['次數']])||1});
+  });
+  if(!orders.length)throw new Error('表格裡沒有試用單');
+  return {from:pm?serveDate(pm[1]):'',to:pm?serveDate(pm[2]):'',orders};
+}
+function serveData(){try{return JSON.parse(localStorage.getItem('duskin_serve')||'null');}catch(e){return null;}}
+function serveAmt4w(o){return (o.items||[]).reduce((a,it)=>a+(it.amt4w||0),0);}
+function normPhone(p){return String(p||'').replace(/\D/g,'');}
+function normCorp(n){return normalizeName(n).replace(/股份有限公司|有限公司|企業社|商行|\s/g,'');}
+// 找這張單對應的客戶：顧客編號（配對過的）→ 電話唯一相同 → 名稱（去掉公司字尾）唯一相同
+function serveFindClient(o){
+  const cs=(DB.clients||[]).filter(Boolean);
+  const byNo=cs.find(c=>c.custNo&&String(c.custNo)===String(o.custNo));
+  if(byNo)return byNo;
+  const ph=normPhone(o.phone);
+  if(ph.length>=7){const m=cs.filter(c=>normPhone(c.phone)===ph);if(m.length===1)return m[0];}
+  const nm=normCorp(o.name);
+  if(nm){const m=cs.filter(c=>normCorp(c.name)===nm);if(m.length===1)return m[0];}
+  return null;
+}
+// 名稱互相包含的候選（給配不上的店一鍵指定）
+function serveCandidates(o){
+  const nm=normCorp(o.name);if(nm.length<2)return [];
+  return (DB.clients||[]).filter(c=>{if(!c)return false;const x=normCorp(c.name);return x.length>=2&&(x.includes(nm)||nm.includes(x));}).slice(0,4);
+}
+const _itemsKey=list=>list.map(([c,q])=>c+'×'+q).sort().join('、');
+// 主商品的判斷以本機商品主檔為準（配件、口味不算）。公司把芳香機的錢記在「口味」那一行、機台記 0，
+// 本機記在機台——所以不能用「公司金額 > 0」當主商品；金額改比整張單的合計。主檔沒有的代號才退回看金額。
+function serveIsMain(it){const p=getProd(it.code);return p?(p.note!=='配件'&&p.note!=='口味'):it.amt4w>0;}
+function servePaidKey(o){return _itemsKey((o.items||[]).filter(serveIsMain).map(it=>[it.code,it.qty]));}
+function trialMainKey(t){return _itemsKey((t.items||[]).filter(it=>it&&it.product&&!it.bundledTo).map(it=>[it.product,it.qty||1]));}
+// 一張公司單 vs 一筆本機試用：回傳差異說明（空陣列＝一致）。配件與口味不比品項，只比主商品與整張單的 4W 合計。
+function serveCompare(o,t){
+  const d=[];
+  if(o.start!==t.start)d.push('試用日：公司 '+o.start+'／你 '+(t.start||'沒填'));
+  if(o.due&&o.due!==t.due)d.push('回收預定日：公司 '+o.due+'／你 '+(t.due||'沒填'));
+  const coOpen=o.status==='未回收';
+  if(coOpen!==!!t.open)d.push(coOpen?'公司：未回收／你：已回收':'公司：已回收／你：還在試用');
+  const a=servePaidKey(o),b=trialMainKey(t);
+  if(a!==b)d.push('品項：公司 '+(a||'（無）')+'／你 '+(b||'（無）'));
+  else{
+    const mine=(t.items||[]).filter(it=>it&&it.product&&!it.bundledTo).reduce((x,it)=>x+displayFw4(it.product,it.qty||1,'2W'),0);
+    if(mine!==serveAmt4w(o))d.push('4W 金額：公司 $'+serveAmt4w(o)+'／你 $'+mine+'（商品價格不同）');
+  }
+  return d;
+}
+// 整份對照 → 落差清單。kind：nomatch 配不上店｜missing 公司有你沒記｜diff 兩邊都有但不一樣｜extra 你有公司沒有
+function serveDiff(data){
+  const out={issues:[],okShops:0,shops:0};
+  if(!data||!data.orders)return out;
+  const groups=new Map();
+  data.orders.forEach(o=>{if(!groups.has(o.custNo))groups.set(o.custNo,[]);groups.get(o.custNo).push(o);});
+  out.shops=groups.size;
+  const seen=new Set();
+  groups.forEach((orders,custNo)=>{
+    const c=serveFindClient(orders[0]);
+    if(!c){out.issues.push({kind:'nomatch',custNo,orders,cands:serveCandidates(orders[0])});return;}
+    seen.add(c);
+    const before=out.issues.length,used=new Set(),ts=trialsOf(c);
+    orders.slice().sort((a,b)=>a.start<b.start?-1:1).forEach(o=>{
+      const t=ts.find(x=>!used.has(x)&&x.start===o.start)||ts.find(x=>!used.has(x)&&x.start&&Math.abs(daysUntil(x.start,o.start))<=3);
+      if(!t){out.issues.push({kind:'missing',c,o});return;}
+      used.add(t);
+      const diffs=serveCompare(o,t);
+      if(diffs.length)out.issues.push({kind:'diff',c,o,t,diffs});
+    });
+    ts.forEach(t=>{if(!used.has(t)&&serveInPeriod(data,t.start))out.issues.push({kind:'extra',c,t});});
+    if(out.issues.length===before)out.okShops++;
+  });
+  // 公司表上完全沒有這家店，但你在同一期間記了試用
+  (DB.clients||[]).forEach(c=>{if(!c||seen.has(c))return;trialsOf(c).forEach(t=>{if(serveInPeriod(data,t.start))out.issues.push({kind:'extra',c,t});});});
+  return out;
+}
+function serveInPeriod(data,d){return !!(d&&data.from&&data.to&&d>=data.from&&d<=data.to);}
+// 公司單的品項 → 本機試用品項。金額 0 的配件掛到同單裡對應的主商品底下；同代號保留你原本填的議價與週期
+function serveItems(o,old){
+  const prev={};(old||[]).forEach(it=>{if(it&&it.product&&!prev[it.product])prev[it.product]=it;});
+  const mains=(o.items||[]).filter(serveIsMain).map(it=>it.code);
+  return (o.items||[]).map(it=>{
+    const p=prev[it.code];
+    const x={product:it.code,qty:it.qty||1,cycle:(p&&p.cycle)||((getProd(it.code)||{}).cycle||'2W'),quoted:(p&&p.quoted)||0};
+    if(!serveIsMain(it)){
+      const acc=mains.find(m=>((BUNDLE_MAP[m]||{}).accs||[]).some(a=>a.code===it.code));
+      const fla=mains.find(m=>{const b=BUNDLE_MAP[m];return b&&b.flavorPrefix&&it.code.startsWith(b.flavorPrefix)&&!(b.flavorExclude||[]).includes(it.code);});
+      if(acc){x.bundledTo=acc;x.bundleRole='acc';x.cycle='';x.quoted=0;}
+      else if(fla){x.bundledTo=fla;x.bundleRole='flavor';x.quoted=0;}
+    }
+    return x;
+  });
+}
+// 逐筆「照公司的」：補上或更新這一筆試用（只動這一筆），並記下顧客編號
+function serveApply(no){
+  const data=serveData();const is=serveDiff(data).issues.find(i=>(i.kind==='missing'||i.kind==='diff')&&i.o.no===String(no));
+  if(!is)return;
+  const c=is.c,o=is.o,open=o.status==='未回收';
+  c.trials=trialsOf(c);
+  let t=is.t;
+  if(!t){t={n:0,start:'',due:'',items:[],open:false,recovered:'',result:''};c.trials.push(t);}
+  t.start=o.start;t.due=o.due||addDays(o.start,TRIAL_DEFAULT_DAYS);t.items=serveItems(o,t.items);
+  if(open){t.open=true;t.recovered='';}
+  else{t.open=false;t.recovered=(o.items||[]).map(it=>it.recovered).filter(Boolean).sort().pop()||t.recovered||today();}
+  // 補進來的可能比現有的早：依試用日重排並重編「第幾次」，待辦上的 trialN 跟著換
+  const oldN=new Map();c.trials.forEach(x=>oldN.set(x,x.n));
+  c.trials.sort((a,b)=>(a.start||'')<(b.start||'')?-1:(a.start||'')>(b.start||'')?1:0);
+  const remap={};c.trials.forEach((x,i)=>{if(oldN.get(x))remap[oldN.get(x)]=i+1;x.n=i+1;});
+  (c.todos||[]).forEach(td=>{if(td&&td.trialN&&remap[td.trialN])td.trialN=remap[td.trialN];});
+  if(!open)(c.todos||[]).forEach(td=>{if(td&&!td.done&&td.source==='auto-recycle'&&td.trialN===t.n)td.done=true;});
+  if(open&&c.status!==STATUS.TRIAL&&c.status!==STATUS.DEAL){
+    c.status=STATUS.TRIAL;c.wakeDate='';
+    (c.visits=c.visits||[]).push({date:o.start,mood:0,note:'',insight:'公司試用表補登：第 '+t.n+' 次試用',statusChange:STATUS.TRIAL,nextdate:c.nextdate||null});
+  }
+  c.custNo=o.custNo;c.updatedAt=Date.now();
+  saveLocal();autoSync('save',{client:c});
+  renderServe();renderClients();
+  showToast('✓ 已照公司的'+(is.kind==='missing'?'補上':'更新')+'：'+c.name);
+}
+function serveLink(custNo,ci){
+  const c=DB.clients[ci];if(!c)return;
+  const other=(DB.clients||[]).find(x=>x&&x!==c&&x.custNo&&String(x.custNo)===String(custNo));
+  if(other)delete other.custNo;
+  c.custNo=String(custNo);c.updatedAt=Date.now();
+  saveLocal();autoSync('save',{client:c});renderServe();
+  showToast('✓ 已配對：'+c.name);
+}
+function serveLinkPick(custNo){
+  const el=document.getElementById('serve-pick-'+custNo);
+  if(!el||el.value===''){showToast('請先選一家店');return;}
+  serveLink(custNo,Number(el.value));
+}
+function serveCreate(custNo){
+  const data=serveData();const o=data&&data.orders.find(x=>x.custNo===String(custNo));if(!o)return;
+  const c={id:genId(),name:o.name,contact:'',phone:/\d/.test(o.phone)?o.phone:'',regNo:'',addr:'',type:'',segment:'街邊店',status:STATUS.PLAN,custNo:o.custNo,
+    nextdate:'',env:'',note:'',trials:[],contractedItems:[],todos:[],visits:[],updatedAt:Date.now()};
+  DB.clients.push(c);saveLocal();autoSync('save',{client:c});
+  renderServe();renderClients();
+  showToast('✓ 已建立「'+c.name+'」，下面逐筆補上它的試用');
+}
+function openServeModal(){document.getElementById('serve-modal').style.display='block';renderServe();}
+function closeServeModal(){document.getElementById('serve-modal').style.display='none';}
+async function serveImportFile(input){
+  const f=input.files&&input.files[0];input.value='';
+  if(!f)return;
+  try{
+    const X=await loadXLSX();
+    const wb=X.read(await f.arrayBuffer(),{type:'array'});
+    const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+    const data=parseServeRows(rows);
+    data.at=Date.now();data.file=f.name;
+    localStorage.setItem('duskin_serve',JSON.stringify(data));
+    renderServe();
+    showToast('✓ 已讀入 '+data.orders.length+' 張試用單');
+  }catch(e){logErr('serveImport',e);appAlert('讀不了這個檔案：'+(e.message||e),'公司試用表');}
+}
+function renderServe(){
+  const sum=document.getElementById('serve-summary'),list=document.getElementById('serve-list');
+  if(!sum||!list)return;
+  const data=serveData();
+  if(!data){sum.textContent='還沒匯入過。';list.innerHTML='';return;}
+  const r=serveDiff(data),d=new Date(data.at||0);
+  const total=data.orders.reduce((a,o)=>a+serveAmt4w(o),0),open=data.orders.filter(o=>o.status==='未回收');
+  sum.innerHTML='公司表（'+escHtml(data.from||'?')+' ～ '+escHtml(data.to||'?')+'，'+fmtDate(d)+' 匯入）：<b class="num">'+data.orders.length+'</b> 張試用單、<b class="num">'+r.shops+'</b> 家、4W 試用金額 <b class="num">$'+total.toLocaleString()+'</b>；其中未回收 <b class="num">'+open.length+'</b> 張 <b class="num">$'+open.reduce((a,o)=>a+serveAmt4w(o),0).toLocaleString()+'</b>（含稅）。'+
+    '<br>落差 <b class="num">'+r.issues.length+'</b> 筆；完全一致 <b class="num">'+r.okShops+'</b> 家。';
+  if(!r.issues.length){list.innerHTML='<div class="empty">兩邊完全一致 ✓</div>';return;}
+  const itemsTxt=o=>escHtml(servePaidKey(o)||'（無品項）');
+  const card=(tone,title,body,btns)=>`<div class="card" style="border-left:4px solid var(--${tone});margin-bottom:10px"><div style="font-weight:700;margin-bottom:4px">${title}</div><div style="font-size:13px;color:var(--text2);line-height:1.7">${body}</div>${btns?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${btns}</div>`:''}</div>`;
+  const sec=(title,items)=>items.length?`<div class="gt-sec">${title} <span class="gt-count">${items.length}</span></div>`+items.join(''):'';
+  const by=k=>r.issues.filter(i=>i.kind===k);
+  const opts=(DB.clients||[]).map((c,i)=>({c,i})).filter(x=>x.c).sort((a,b)=>a.c.name.localeCompare(b.c.name,'zh-Hant')).map(x=>`<option value="${x.i}">${escHtml(x.c.name)}</option>`).join('');
+  list.innerHTML=
+    sec('配不上店（先指定是哪一家）',by('nomatch').map(i=>{
+      const o=i.orders[0],no=escHtml(i.custNo);
+      return card('amber',escHtml(o.name),'公司顧客編號 '+no+'・電話 '+escHtml(o.phone||'無')+'・'+i.orders.length+' 張試用單（'+i.orders.map(x=>escHtml(x.start)).join('、')+'）',
+        i.cands.map(c=>`<button class="btn btn-outline btn-xs" onclick="serveLink('${no}',${DB.clients.indexOf(c)})">就是「${escHtml(c.name)}」</button>`).join('')+
+        `<select id="serve-pick-${no}" style="width:auto;max-width:200px"><option value="">選其他店…</option>${opts}</select><button class="btn btn-outline btn-xs" onclick="serveLinkPick('${no}')">配對</button>`+
+        `<button class="btn btn-outline btn-xs" onclick="serveCreate('${no}')">建立新客戶</button>`);
+    }))+
+    sec('公司有、你沒記',by('missing').map(i=>card('red',escHtml(i.c.name),'試用日 '+escHtml(i.o.start)+'・回收預定 '+escHtml(i.o.due||'—')+'・'+escHtml(i.o.status)+(i.o.marks?'・公司逾期 '+escHtml(i.o.marks):'')+'<br>'+itemsTxt(i.o)+'・4W $'+serveAmt4w(i.o).toLocaleString(),
+      `<button class="btn btn-primary btn-xs" onclick="serveApply('${escHtml(i.o.no)}')">照公司的補上</button>`)))+
+    sec('兩邊都有、內容不一樣',by('diff').map(i=>card('amber',escHtml(i.c.name)+'（第 '+i.t.n+' 次）',i.diffs.map(escHtml).join('<br>')+(i.o.status==='已回收'&&i.t.open?'<br><span style="color:var(--text3)">更新後請到客戶頁補回收結果（成約／報價／擱置）。</span>':''),
+      `<button class="btn btn-primary btn-xs" onclick="serveApply('${escHtml(i.o.no)}')">照公司的更新</button>`)))+
+    sec('你有、公司沒有（請確認公司系統有沒有 key）',by('extra').map(i=>card('blue',escHtml(i.c.name)+'（第 '+i.t.n+' 次）','試用日 '+escHtml(i.t.start)+'・'+(i.t.open?'進行中':'已回收')+'<br>'+escHtml(trialMainKey(i.t)||'（無品項）'),'')));
 }
 // ═══ Google 日曆同步 ═══ 把「有日期的下一步」整份對齊到專用日曆（後端 syncCalendar：缺的補、多的刪）。
 // 標題用「評價｜店名：事項」，日曆與小工具裡同一天的事項就會照評價排；逾期的移到今天並標（逾期）。
@@ -6190,6 +6428,8 @@ function rptVisitsInRange(c,from,to){
 
 // 大客戶門檻：4W ≥ 3000
 const RPT_VIP_THRESHOLD=3000;
+// 使用者指定：週報上已成約／解約用除稅後金額（含稅 ÷ 1.05），試用中用含稅金額
+const RPT_TAX=1.05;
 // 單筆 visit 對應日報動作代號：拒／報／試／初／複。
 // 初與複不再是狀態，而是「這家店的第幾次拜訪」：最早那筆是初，之後都是複
 function rptVisitAction(c,v){
@@ -6218,9 +6458,12 @@ function genReport(){
   //   合併欄位：B-C 客戶 / D-E 窗口 / F-G 商品 / H-M 月份 6 格 / N 進度說明
   //   月份範圍：startMonth, startMonth+1, ..., startMonth+5（不跨年循環）
   // ═════════════════════════════════════════════
+  // 區間內成約的店也要列（公司看的是「這段期間推進出什麼結果」）；金額用除稅後（÷1.05），試用中的維持含稅
+  const dealAmt=c=>Math.round((c.contractedItems||[]).filter(it=>it&&it.product&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to).reduce((x,it)=>x+itemFW4(it),0)/RPT_TAX);
   const picked=DB.clients.filter(c=>{
     // 擱置的客戶視為已無試用品，不出現在推進表
     if(c.status===STATUS.SHELVED) return false;
+    if(c.status===STATUS.DEAL&&dealAmt(c)>0) return true;
     const a=inPipeline(c);
     const mains=openTrialItems(c).filter(it=>it.product&&!it.bundledTo);   // 未回收的試用才算「有試用品項」
     const hasMain=mains.length>0;
@@ -6237,8 +6480,9 @@ function genReport(){
   const rows4w=[];
   const vip4w=[];
   picked.forEach((c,i)=>{
-    const fw=calcReportAmt(c);
-    const prod=rptProd(openTrialItems(c));
+    const deal=c.status===STATUS.DEAL&&dealAmt(c)>0;
+    const fw=deal?dealAmt(c):calcReportAmt(c);
+    const prod=rptProd(deal?c.contractedItems:openTrialItems(c));
     const mon=rptAmountMonth(c,from,to);
     // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
     // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於還在試用／已報價
@@ -6252,7 +6496,7 @@ function genReport(){
     // 14 欄：NO, name, '', contact, '', prod, '', H, I, J, K, L, M, note
     const cols=[String(i+1), c.name, '', c.contact||'', '', prod, '',
                 ...monthCells,
-                (c.note||'').replace(/[\t\n\r]/g,' ')];
+                deal?'成約':(c.note||'').replace(/[\t\n\r]/g,' ')];
     rows4w.push(cols.join('\t'));
     if(fw>=RPT_VIP_THRESHOLD) vip4w.push({row:i+1,name:c.name});
   });
