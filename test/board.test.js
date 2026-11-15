@@ -38,6 +38,7 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   await wait(400);
   const doc = w.document, DB = w.eval('DB');
   const by = id => DB.clients.find(c => c.id === id);
+  const boardTasksOpen = () => w.boardTasks().filter(x => !x.t.done && x.c);
   const key = (id, text) => { const ci = DB.clients.findIndex(c => c.id === id); return 'c:' + ci + ':' + by(id).todos.findIndex(t => t.text === text); };
   const todo = (id, text) => by(id).todos.find(t => t.text === text);
   const shops = sel => [...doc.querySelectorAll(sel + ' .bd-card')].map(c => c.querySelector('.bd-shop').textContent + '/' + c.querySelector('.bd-ttl').textContent);
@@ -119,6 +120,24 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   assert('只記已回收：試用關閉、回收任務完成、階段不動', !by('b').trials[0].open && by('b').trials[0].recovered === D(0) && rb.done && by('b').status === stBefore, JSON.stringify(by('b').trials[0]));
   assert('留在看板（不跳到客戶頁），未排裡不再有這張', doc.getElementById('panel-todos').classList.contains('on') && !shops('.bd-tray').some(x => x.startsWith('快到期店/回收')));
   assert('不再記 X', w.trialXInfo(by('b')) === null);
+
+  console.log('B1 — 看板直接刪除');
+  {
+    const src = (id, source) => by(id).todos.find(t => t.source === source && !t.done);
+    const kOf = (id, t) => 'c:' + DB.clients.findIndex(c => c.id === id) + ':' + by(id).todos.indexOf(t);
+    const sys = boardTasksOpen().find(x => x.t.source === 'auto-recycle' || x.t.source === 'auto-quote');
+    assert('還有系統任務可測', !!sys);
+    w.openBdSheet(sys.k); doc.querySelector('#bd-sheet [data-act="del"]').click();
+    w.renderGT();
+    assert('刪除系統任務：收進已完成、重畫後不會補一張新的', sys.t.done && sys.c.todos.filter(t => t.source === sys.t.source && (t.trialN || 1) === (sys.t.trialN || 1)).length === 1 && !doc.querySelector('.bd-card[data-k="' + sys.k + '"]:not(.done)'));
+    const ho = src('d', 'handoff');
+    if (ho) { w.delGT('c', DB.clients.findIndex(c => c.id === 'd'), by('d').todos.indexOf(ho)); assert('轉交不能刪', !ho.done && by('d').todos.includes(ho)); }
+    const n0 = by('c').todos.length, mine = by('c').todos.find(t => !t.source && !t.done);
+    w.openBdSheet(kOf('c', mine)); doc.querySelector('#bd-sheet [data-act="del"]').click();
+    assert('自己的任務直接移除', by('c').todos.length === n0 - 1 && !by('c').todos.includes(mine));
+    doc.querySelector('#undo-toast button').click();
+    assert('可以復原', by('c').todos.length === n0);
+  }
 
   console.log('B1 — 新增與編輯');
   doc.getElementById('qa-inp').value = '打電話追結果 #成約店'; w.qaSubmit();
