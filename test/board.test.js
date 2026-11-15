@@ -105,6 +105,9 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   assert('點第三天 → 排到那天、面板關閉', todo('c', '做合約').plan === days[2] && !doc.getElementById('bd-sheet'));
 
   console.log('B1 — 回收任務直接在看板按「已回收」');
+  const rcard = [...doc.querySelectorAll('.bd-card')].find(e => e.dataset.k === key('b', rb.text));
+  assert('回收卡片寫出試用品', !!rcard && /×/.test((rcard.querySelector('.bd-items') || {}).textContent || ''), rcard && rcard.textContent);
+  assert('一般任務沒有試用品那一行', ![...doc.querySelectorAll('.bd-card')].find(e => e.dataset.k === key('c', '做合約')).querySelector('.bd-items'));
   w.openBdSheet(key('b', rb.text));
   const rbtn = doc.querySelector('#bd-sheet [data-act="recover"]');
   assert('回收任務的面板有「已回收」鈕；一般任務沒有', !!rbtn && (w.openBdSheet(key('c', '做合約')), !doc.querySelector('#bd-sheet [data-act="recover"]')));
