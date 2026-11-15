@@ -104,6 +104,19 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   sheet.querySelectorAll('.bd-pick button')[2].click();
   assert('點第三天 → 排到那天、面板關閉', todo('c', '做合約').plan === days[2] && !doc.getElementById('bd-sheet'));
 
+  console.log('B1 — 回收任務直接在看板按「已回收」');
+  w.openBdSheet(key('b', rb.text));
+  const rbtn = doc.querySelector('#bd-sheet [data-act="recover"]');
+  assert('回收任務的面板有「已回收」鈕；一般任務沒有', !!rbtn && (w.openBdSheet(key('c', '做合約')), !doc.querySelector('#bd-sheet [data-act="recover"]')));
+  doc.getElementById('bd-sheet').remove();
+  w.openBdSheet(key('b', rb.text)); doc.querySelector('#bd-sheet [data-act="recover"]').click();
+  assert('跳出回收視窗，標題帶店名', doc.getElementById('trial-recover-modal').classList.contains('on') && /快到期店・第 1 次試用回收/.test(doc.getElementById('tr-title').textContent), doc.getElementById('tr-title').textContent);
+  const stBefore = by('b').status;
+  w.finishRecover('');
+  assert('只記已回收：試用關閉、回收任務完成、階段不動', !by('b').trials[0].open && by('b').trials[0].recovered === D(0) && rb.done && by('b').status === stBefore, JSON.stringify(by('b').trials[0]));
+  assert('留在看板（不跳到客戶頁），未排裡不再有這張', doc.getElementById('panel-todos').classList.contains('on') && !shops('.bd-tray').some(x => x.startsWith('快到期店/回收')));
+  assert('不再記 X', w.trialXInfo(by('b')) === null);
+
   console.log('B1 — 新增與編輯');
   doc.getElementById('qa-inp').value = '打電話追結果 #成約店'; w.qaSubmit();
   const nt = todo('d', '打電話追結果');
