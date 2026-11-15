@@ -85,11 +85,10 @@ const aoa = [
 
   const data = w.parseServeRows(rows);
   assert('對象期間', data.from === '2026-10-01' && data.to === '2026-11-30', data.from + '~' + data.to);
-  assert('6 張試用單、5 家（合計列與業務小計列不算）', data.orders.length === 6 && new Set(data.orders.map(o => o.custNo)).size === 5);
-  assert('4W 合計對得上表尾', data.orders.reduce((a, o) => a + w.serveAmt4w(o), 0) === 1770);
+  assert('只擷取未回收：5 張試用單、4 家（已回收 1 張略過；合計列與業務小計列不算）', data.orders.length === 5 && data.skipped === 1 && new Set(data.orders.map(o => o.custNo)).size === 4 && data.orders.every(o => o.status === '未回收'));
+  assert('未回收的 4W 合計（表尾 1770 − 已回收 440）', data.orders.reduce((a, o) => a + w.serveAmt4w(o), 0) === 1330);
   const o3 = data.orders.find(o => o.custNo === '1000003');
   assert('一張單多個商品、逾期記號、日期轉成 YYYY-MM-DD', o3.items.length === 3 && o3.marks === 'XX' && o3.start === '2026-10-08' && o3.due === '2026-10-22', JSON.stringify(o3));
-  assert('已回收的單帶回收日', data.orders.find(o => o.custNo === '1000002').items[0].recovered === '2026-11-02');
   let threw = '';
   try { w.parseServeRows([['隨便一張表'], ['a', 'b']]); } catch (e) { threw = e.message; }
   assert('不是這種報表 → 明確報錯', /找不到「試用單號」/.test(threw), threw);
@@ -98,20 +97,32 @@ const aoa = [
   data.at = Date.now(); ls.duskin_serve = JSON.stringify(data);
   let r = w.serveDiff(data);
   const kinds = () => r.issues.map(i => i.kind + ':' + (i.c ? i.c.id : i.custNo)).sort().join(',');
-  assert('電話（不同寫法）配到甲、名稱去字尾配到乙、顧客編號配到丙', w.serveFindClient(data.orders[0]) === by('a') && w.serveFindClient(data.orders[1]) === by('b') && w.serveFindClient(o3) === by('c'));
-  assert('乙完全一致、丙（芳香機：公司記口味／你記機台）也視為一致', r.okShops === 2 && !r.issues.some(i => i.c === by('b') || i.c === by('c')), kinds());
+  assert('電話（不同寫法）配到甲、名稱去字尾配到乙、顧客編號配到丙', w.serveFindClient(data.orders[0]) === by('a') && w.serveFindClient({ custNo: '1000002', name: '乙乙診所', phone: '06-2222222' }) === by('b') && w.serveFindClient(o3) === by('c'));
+  assert('公司已回收的乙不列入任何落差；丙（芳香機：公司記口味／你記機台）視為一致', r.okShops === 1 && !r.issues.some(i => i.c === by('b') || i.c === by('c')), kinds());
   const ia = r.issues.find(i => i.c === by('a'));
   assert('甲：兩邊都有但不一樣（回收狀態＋品項）', ia && ia.kind === 'diff' && ia.diffs.some(x => /公司：未回收／你：已回收/.test(x)) && ia.diffs.some(x => /品項：公司 DECSR×1／你 DECLR×1/.test(x)), ia && ia.diffs.join(' | '));
   const id = r.issues.filter(i => i.c === by('d'));
-  assert('丁：10/20 那張你沒記（missing）、11/01 與你的 11/03 視為同一筆但日期不同（diff）、你的 10/03 公司沒有（extra）',
+  assert('丁：10/20 那張你沒記（missing）、11/01 與你的 11/03 視為同一筆但日期不同（diff）、你還在試用的 10/03 公司未回收清單沒有（extra）',
     id.map(i => i.kind).sort().join(',') === 'diff,extra,missing' && id.find(i => i.kind === 'missing').o.start === '2026-10-20' && id.find(i => i.kind === 'extra').t.start === '2026-10-03', id.map(i => i.kind + (i.o ? i.o.start : i.t.start)).join(','));
-  assert('戊：公司表沒有這家，但你期間內有試用 → extra', r.issues.some(i => i.kind === 'extra' && i.c === by('e')));
+  assert('戊：公司未回收清單沒有這家，但你期間內還在試用 → extra', r.issues.some(i => i.kind === 'extra' && i.c === by('e')));
+  assert('你已回收的試用不會被列成 extra', !r.issues.some(i => i.kind === 'extra' && !i.t.open));
   assert('陌生的新店 → 配不上', r.issues.some(i => i.kind === 'nomatch' && i.custNo === '1000005'));
 
   console.log('R1 — 逐筆「照公司的」：只動那一筆');
   const before = JSON.stringify(DB.clients.filter(c => c.id !== 'a'));
   w.openServeModal();
-  assert('畫面列出四種落差', ['配不上店', '公司有、你沒記', '兩邊都有、內容不一樣', '你有、公司沒有'].every(t => w.document.getElementById('serve-list').textContent.includes(t)));
+  assert('畫面列出四種落差', ['配不上店', '公司有、你沒記', '兩邊都有、內容不一樣', '你這邊還在試用'].every(t => w.document.getElementById('serve-list').textContent.includes(t)));
+  assert('摘要只算未回收並說明略過幾張', /未回收 5 張試用單/.test(w.document.getElementById('serve-summary').textContent) && /已回收的 1 張不列入/.test(w.document.getElementById('serve-summary').textContent), w.document.getElementById('serve-summary').textContent);
+  const q = w.document.getElementById('serve-q-1000005'), box = () => w.document.getElementById('serve-r-1000005');
+  assert('配不上的店有搜尋框（不是下拉清單）', !!q && !w.document.querySelector('#serve-list select'));
+  q.value = '只有我'; w.serveSearch('1000005');
+  assert('打店名搜尋 → 出現可點的結果', box().querySelectorAll('button').length === 1 && /只有我記的店/.test(box().textContent), box().textContent);
+  q.value = '4444'; w.serveSearch('1000005');
+  assert('也能用電話搜尋', /丁丁/.test(box().textContent));
+  q.value = '沒有這家店zzz'; w.serveSearch('1000005');
+  assert('找不到 → 提示換關鍵字或建立新客戶', /找不到/.test(box().textContent) && !box().querySelector('button'));
+  q.value = ''; w.serveSearch('1000005');
+  assert('清空 → 結果收起來', box().innerHTML === '');
   w.serveApply(ia.o.no);
   const a = by('a');
   assert('甲更新：品項換成公司的、改回進行中、回收日清掉、記下顧客編號', a.trials[0].items[0].product === 'DECSR' && a.trials[0].open && !a.trials[0].recovered && a.custNo === '1000001', JSON.stringify(a.trials[0]));

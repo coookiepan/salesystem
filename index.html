@@ -1113,7 +1113,7 @@ details.trial-card .trial-body{margin-top:8px}
       <button class="btn btn-outline btn-sm" onclick="closeServeModal()">關閉</button>
     </div>
     <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px">
-      選公司系統下載的「SERVE別試用顧客一覽表」（.xlsx）。App 只會<b>列出落差</b>，不會自動改你的資料；每一筆由你按「照公司的」才會更新。檔案只在這台手機上讀，不會上傳。
+      選公司系統下載的「SERVE別試用顧客一覽表」（.xlsx）。只比<b>未回收</b>的試用，已回收的不列入。App 只會<b>列出落差</b>，不會自動改你的資料；每一筆由你按「照公司的」才會更新。檔案只在這台手機上讀，不會上傳。
     </div>
     <label class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;cursor:pointer">選擇檔案<input type="file" id="serve-file" accept=".xlsx,.xls" onchange="serveImportFile(this)" style="display:none"></label>
     <div id="serve-summary" style="font-size:13px;color:var(--text2);margin:10px 0"></div>
@@ -1678,7 +1678,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-r1';
+const APP_VERSION='v2026.11.15-r2';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2253,7 +2253,7 @@ function markQuoted(c,date){
 }
 // ═══ 公司試用表比對 ═══ 匯入公司系統的「SERVE別試用顧客一覽表」，和本機的試用紀錄逐筆對照。
 // 原則：只列落差、不自動改資料；每筆由使用者按「照公司的」才寫入（serveApply）。
-// 公司表：一張試用單＝一次試用（同店可多張）；單頭列有單號／顧客編號／全名／電話／狀態／日期，其下每商品一列。
+// 只擷取公司表上「未回收」的試用單（已回收的不比）。公司表：一張試用單＝一次試用（同店可多張）；單頭列有單號／顧客編號／全名／電話／狀態／日期，其下每商品一列。
 // 匯入結果只存本機 localStorage.duskin_serve（每週重匯）；配對成功後把公司顧客編號記在 c.custNo，下次直接對上。
 function loadXLSX(){
   if(window.XLSX)return Promise.resolve(window.XLSX);
@@ -2293,7 +2293,9 @@ function parseServeRows(rows){
     cur.items.push({code,qty:num(r[col['試用數']]),amt:num(r[col['試用金額']]),amt4w:num(r[col['4W試用金額']]),recovered:serveDate(r[col['回收日']]),contract:num(r[col['契約數']]),n:num(r[col['次數']])||1});
   });
   if(!orders.length)throw new Error('表格裡沒有試用單');
-  return {from:pm?serveDate(pm[1]):'',to:pm?serveDate(pm[2]):'',orders};
+  // 使用者指定：只擷取「未回收」的試用；已回收的不列入比對（skipped 只給摘要顯示略過了幾張）
+  const open=orders.filter(o=>o.status==='未回收');
+  return {from:pm?serveDate(pm[1]):'',to:pm?serveDate(pm[2]):'',orders:open,skipped:orders.length-open.length};
 }
 function serveData(){try{return JSON.parse(localStorage.getItem('duskin_serve')||'null');}catch(e){return null;}}
 function serveAmt4w(o){return (o.items||[]).reduce((a,it)=>a+(it.amt4w||0),0);}
@@ -2326,8 +2328,7 @@ function serveCompare(o,t){
   const d=[];
   if(o.start!==t.start)d.push('試用日：公司 '+o.start+'／你 '+(t.start||'沒填'));
   if(o.due&&o.due!==t.due)d.push('回收預定日：公司 '+o.due+'／你 '+(t.due||'沒填'));
-  const coOpen=o.status==='未回收';
-  if(coOpen!==!!t.open)d.push(coOpen?'公司：未回收／你：已回收':'公司：已回收／你：還在試用');
+  if(!t.open)d.push('公司：未回收／你：已回收');
   const a=servePaidKey(o),b=trialMainKey(t);
   if(a!==b)d.push('品項：公司 '+(a||'（無）')+'／你 '+(b||'（無）'));
   else{
@@ -2336,7 +2337,7 @@ function serveCompare(o,t){
   }
   return d;
 }
-// 整份對照 → 落差清單。kind：nomatch 配不上店｜missing 公司有你沒記｜diff 兩邊都有但不一樣｜extra 你有公司沒有
+// 整份對照 → 落差清單。kind：nomatch 配不上店｜missing 公司有你沒記｜diff 兩邊都有但不一樣｜extra 你這邊還在試用、公司未回收清單上沒有
 function serveDiff(data){
   const out={issues:[],okShops:0,shops:0};
   if(!data||!data.orders)return out;
@@ -2356,11 +2357,11 @@ function serveDiff(data){
       const diffs=serveCompare(o,t);
       if(diffs.length)out.issues.push({kind:'diff',c,o,t,diffs});
     });
-    ts.forEach(t=>{if(!used.has(t)&&serveInPeriod(data,t.start))out.issues.push({kind:'extra',c,t});});
+    ts.forEach(t=>{if(!used.has(t)&&t.open&&serveInPeriod(data,t.start))out.issues.push({kind:'extra',c,t});});
     if(out.issues.length===before)out.okShops++;
   });
-  // 公司表上完全沒有這家店，但你在同一期間記了試用
-  (DB.clients||[]).forEach(c=>{if(!c||seen.has(c))return;trialsOf(c).forEach(t=>{if(serveInPeriod(data,t.start))out.issues.push({kind:'extra',c,t});});});
+  // 公司的未回收清單上沒有這家店，但你在同一期間有還沒回收的試用
+  (DB.clients||[]).forEach(c=>{if(!c||seen.has(c))return;trialsOf(c).forEach(t=>{if(t.open&&serveInPeriod(data,t.start))out.issues.push({kind:'extra',c,t});});});
   return out;
 }
 function serveInPeriod(data,d){return !!(d&&data.from&&data.to&&d>=data.from&&d<=data.to);}
@@ -2384,20 +2385,18 @@ function serveItems(o,old){
 function serveApply(no){
   const data=serveData();const is=serveDiff(data).issues.find(i=>(i.kind==='missing'||i.kind==='diff')&&i.o.no===String(no));
   if(!is)return;
-  const c=is.c,o=is.o,open=o.status==='未回收';
+  const c=is.c,o=is.o;   // 公司單一律是未回收（已回收的匯入時就略過了）
   c.trials=trialsOf(c);
   let t=is.t;
   if(!t){t={n:0,start:'',due:'',items:[],open:false,recovered:'',result:''};c.trials.push(t);}
   t.start=o.start;t.due=o.due||addDays(o.start,TRIAL_DEFAULT_DAYS);t.items=serveItems(o,t.items);
-  if(open){t.open=true;t.recovered='';}
-  else{t.open=false;t.recovered=(o.items||[]).map(it=>it.recovered).filter(Boolean).sort().pop()||t.recovered||today();}
+  t.open=true;t.recovered='';t.result='';
   // 補進來的可能比現有的早：依試用日重排並重編「第幾次」，待辦上的 trialN 跟著換
   const oldN=new Map();c.trials.forEach(x=>oldN.set(x,x.n));
   c.trials.sort((a,b)=>(a.start||'')<(b.start||'')?-1:(a.start||'')>(b.start||'')?1:0);
   const remap={};c.trials.forEach((x,i)=>{if(oldN.get(x))remap[oldN.get(x)]=i+1;x.n=i+1;});
   (c.todos||[]).forEach(td=>{if(td&&td.trialN&&remap[td.trialN])td.trialN=remap[td.trialN];});
-  if(!open)(c.todos||[]).forEach(td=>{if(td&&!td.done&&td.source==='auto-recycle'&&td.trialN===t.n)td.done=true;});
-  if(open&&c.status!==STATUS.TRIAL&&c.status!==STATUS.DEAL){
+  if(c.status!==STATUS.TRIAL&&c.status!==STATUS.DEAL){
     c.status=STATUS.TRIAL;c.wakeDate='';
     (c.visits=c.visits||[]).push({date:o.start,mood:0,note:'',insight:'公司試用表補登：第 '+t.n+' 次試用',statusChange:STATUS.TRIAL,nextdate:c.nextdate||null});
   }
@@ -2414,10 +2413,16 @@ function serveLink(custNo,ci){
   saveLocal();autoSync('save',{client:c});renderServe();
   showToast('✓ 已配對：'+c.name);
 }
-function serveLinkPick(custNo){
-  const el=document.getElementById('serve-pick-'+custNo);
-  if(!el||el.value===''){showToast('請先選一家店');return;}
-  serveLink(custNo,Number(el.value));
+// 配不上的店：打字搜尋自己的客戶（店名／地址／電話／窗口），點結果就配對。只重畫這張卡的結果區，輸入框不會失焦
+function serveSearch(custNo){
+  const q=(document.getElementById('serve-q-'+custNo)||{}).value||'',box=document.getElementById('serve-r-'+custNo);
+  if(!box)return;
+  const k=normalizeName(q).replace(/\s/g,''),kp=normPhone(q);
+  if(!k){box.innerHTML='';return;}
+  const hits=(DB.clients||[]).map((c,i)=>({c,i})).filter(({c})=>c&&(normalizeName([c.name,c.addr,c.contact].join('')).replace(/\s/g,'').includes(k)||(kp.length>=3&&normPhone(c.phone).includes(kp))));
+  box.innerHTML=hits.length
+    ?hits.slice(0,8).map(({c,i})=>`<button class="btn btn-outline btn-xs" style="height:auto;min-height:40px;text-align:left;white-space:normal" onclick="serveLink('${escHtml(String(custNo))}',${i})">${escHtml(c.name)}${c.addr?`<span style="color:var(--text3);font-weight:400">・${escHtml(String(c.addr).slice(0,14))}</span>`:''}</button>`).join('')+(hits.length>8?`<span style="font-size:12.5px;color:var(--text3);align-self:center">還有 ${hits.length-8} 家，再多打幾個字</span>`:'')
+    :'<span style="font-size:12.5px;color:var(--text3)">找不到，換個關鍵字或按「建立新客戶」</span>';
 }
 function serveCreate(custNo){
   const data=serveData();const o=data&&data.orders.find(x=>x.custNo===String(custNo));if(!o)return;
@@ -2440,7 +2445,7 @@ async function serveImportFile(input){
     data.at=Date.now();data.file=f.name;
     localStorage.setItem('duskin_serve',JSON.stringify(data));
     renderServe();
-    showToast('✓ 已讀入 '+data.orders.length+' 張試用單');
+    showToast('✓ 已讀入 '+data.orders.length+' 張未回收的試用單');
   }catch(e){logErr('serveImport',e);appAlert('讀不了這個檔案：'+(e.message||e),'公司試用表');}
 }
 function renderServe(){
@@ -2449,28 +2454,27 @@ function renderServe(){
   const data=serveData();
   if(!data){sum.textContent='還沒匯入過。';list.innerHTML='';return;}
   const r=serveDiff(data),d=new Date(data.at||0);
-  const total=data.orders.reduce((a,o)=>a+serveAmt4w(o),0),open=data.orders.filter(o=>o.status==='未回收');
-  sum.innerHTML='公司表（'+escHtml(data.from||'?')+' ～ '+escHtml(data.to||'?')+'，'+fmtDate(d)+' 匯入）：<b class="num">'+data.orders.length+'</b> 張試用單、<b class="num">'+r.shops+'</b> 家、4W 試用金額 <b class="num">$'+total.toLocaleString()+'</b>；其中未回收 <b class="num">'+open.length+'</b> 張 <b class="num">$'+open.reduce((a,o)=>a+serveAmt4w(o),0).toLocaleString()+'</b>（含稅）。'+
+  const total=data.orders.reduce((a,o)=>a+serveAmt4w(o),0);
+  sum.innerHTML='公司表（'+escHtml(data.from||'?')+' ～ '+escHtml(data.to||'?')+'，'+fmtDate(d)+' 匯入）：未回收 <b class="num">'+data.orders.length+'</b> 張試用單、<b class="num">'+r.shops+'</b> 家、4W 試用金額 <b class="num">$'+total.toLocaleString()+'</b>（含稅）。'+(data.skipped?'已回收的 '+data.skipped+' 張不列入。':'')+
     '<br>落差 <b class="num">'+r.issues.length+'</b> 筆；完全一致 <b class="num">'+r.okShops+'</b> 家。';
   if(!r.issues.length){list.innerHTML='<div class="empty">兩邊完全一致 ✓</div>';return;}
   const itemsTxt=o=>escHtml(servePaidKey(o)||'（無品項）');
   const card=(tone,title,body,btns)=>`<div class="card" style="border-left:4px solid var(--${tone});margin-bottom:10px"><div style="font-weight:700;margin-bottom:4px">${title}</div><div style="font-size:13px;color:var(--text2);line-height:1.7">${body}</div>${btns?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${btns}</div>`:''}</div>`;
   const sec=(title,items)=>items.length?`<div class="gt-sec">${title} <span class="gt-count">${items.length}</span></div>`+items.join(''):'';
   const by=k=>r.issues.filter(i=>i.kind===k);
-  const opts=(DB.clients||[]).map((c,i)=>({c,i})).filter(x=>x.c).sort((a,b)=>a.c.name.localeCompare(b.c.name,'zh-Hant')).map(x=>`<option value="${x.i}">${escHtml(x.c.name)}</option>`).join('');
   list.innerHTML=
     sec('配不上店（先指定是哪一家）',by('nomatch').map(i=>{
       const o=i.orders[0],no=escHtml(i.custNo);
       return card('amber',escHtml(o.name),'公司顧客編號 '+no+'・電話 '+escHtml(o.phone||'無')+'・'+i.orders.length+' 張試用單（'+i.orders.map(x=>escHtml(x.start)).join('、')+'）',
         i.cands.map(c=>`<button class="btn btn-outline btn-xs" onclick="serveLink('${no}',${DB.clients.indexOf(c)})">就是「${escHtml(c.name)}」</button>`).join('')+
-        `<select id="serve-pick-${no}" style="width:auto;max-width:200px"><option value="">選其他店…</option>${opts}</select><button class="btn btn-outline btn-xs" onclick="serveLinkPick('${no}')">配對</button>`+
-        `<button class="btn btn-outline btn-xs" onclick="serveCreate('${no}')">建立新客戶</button>`);
+        `<button class="btn btn-outline btn-xs" onclick="serveCreate('${no}')">建立新客戶</button>`+
+        `<div style="flex-basis:100%"><input id="serve-q-${no}" placeholder="搜尋你的客戶（店名／地址／電話／窗口）" oninput="serveSearch('${no}')" autocomplete="off"><div id="serve-r-${no}" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>`);
     }))+
     sec('公司有、你沒記',by('missing').map(i=>card('red',escHtml(i.c.name),'試用日 '+escHtml(i.o.start)+'・回收預定 '+escHtml(i.o.due||'—')+'・'+escHtml(i.o.status)+(i.o.marks?'・公司逾期 '+escHtml(i.o.marks):'')+'<br>'+itemsTxt(i.o)+'・4W $'+serveAmt4w(i.o).toLocaleString(),
       `<button class="btn btn-primary btn-xs" onclick="serveApply('${escHtml(i.o.no)}')">照公司的補上</button>`)))+
-    sec('兩邊都有、內容不一樣',by('diff').map(i=>card('amber',escHtml(i.c.name)+'（第 '+i.t.n+' 次）',i.diffs.map(escHtml).join('<br>')+(i.o.status==='已回收'&&i.t.open?'<br><span style="color:var(--text3)">更新後請到客戶頁補回收結果（成約／報價／擱置）。</span>':''),
+    sec('兩邊都有、內容不一樣',by('diff').map(i=>card('amber',escHtml(i.c.name)+'（第 '+i.t.n+' 次）',i.diffs.map(escHtml).join('<br>'),
       `<button class="btn btn-primary btn-xs" onclick="serveApply('${escHtml(i.o.no)}')">照公司的更新</button>`)))+
-    sec('你有、公司沒有（請確認公司系統有沒有 key）',by('extra').map(i=>card('blue',escHtml(i.c.name)+'（第 '+i.t.n+' 次）','試用日 '+escHtml(i.t.start)+'・'+(i.t.open?'進行中':'已回收')+'<br>'+escHtml(trialMainKey(i.t)||'（無品項）'),'')));
+    sec('你這邊還在試用、公司的未回收清單沒有（公司可能已記回收，或沒 key）',by('extra').map(i=>card('blue',escHtml(i.c.name)+'（第 '+i.t.n+' 次）','試用日 '+escHtml(i.t.start)+'・'+(i.t.open?'進行中':'已回收')+'<br>'+escHtml(trialMainKey(i.t)||'（無品項）'),'')));
 }
 // ═══ Google 日曆同步 ═══ 把「有日期的下一步」整份對齊到專用日曆（後端 syncCalendar：缺的補、多的刪）。
 // 標題用「評價｜店名：事項」，日曆與小工具裡同一天的事項就會照評價排；逾期的移到今天並標（逾期）。
@@ -8001,6 +8005,8 @@ const MIGRATIONS=[
     if(packAllStages(DB.clients))saveLocal();
     try{localStorage.removeItem('status_filter');}catch(e){}
   }},
+  // 公司試用表改成只擷取未回收：舊的匯入結果還含已回收的單，直接清掉，請使用者重新匯入
+  {v:14, desc:'drop old serve import', fn:function(){try{localStorage.removeItem('duskin_serve');}catch(e){}}},
 ];
 function applyPriceSheet2026(){
   const REMAP={'NFM-DS':'NH-S','NH-S-4W':'NH-S','FSSR':'FSSK','FFSR':'FFSK','FFSLR':'FFSLK','FFLR':'FFLK','FFMR':'FFMK'};
