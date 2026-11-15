@@ -272,7 +272,7 @@ const stChip=c=>{
   const s=stageOf(c);
   if(s==='試用')return [c.quoted?'試用（已報價）':'試用（未報價）',c.quoted?'c-amber':'c-blue'];
   if(s==='開發中')return [c.quoted?'開發中（已報價）':s,c.quoted?'c-amber':'c-blue'];
-  if(s==='成約')return c.handoff==='done'?['成約（已轉交）','c-green']:['成約（待轉交）','c-amber'];
+  if(s==='成約')return c.handoff==='done'?['成約（已轉交）','c-green']:[c.handoff==='blocked'?'成約（無法轉交）':'成約（待轉交）','c-amber'];
   return [s,'c-gray'];
 };
 const trips=clients.filter(c=>c.nextdate===TODAY);

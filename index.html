@@ -782,7 +782,10 @@ details.trial-card .trial-body{margin-top:8px}
       </div>
       <div class="f" style="display:flex;gap:20px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer"><input type="checkbox" id="cf-quoted" style="width:20px;height:20px;accent-color:var(--green)"> 已報價</label>
-        <label style="display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer"><input type="checkbox" id="cf-handoff" style="width:20px;height:20px;accent-color:var(--green)"> 已轉交</label>
+      </div>
+      <div class="g3" id="cf-handoff-box" style="display:none">
+        <div class="f"><label class="lbl">轉交</label><select id="cf-handoff" onchange="cfStageChanged()"><option value="">待轉交</option><option value="done">已轉交</option><option value="blocked">無法轉交</option></select></div>
+        <div class="f" id="cf-handoff-reason-box"><label class="lbl">無法轉交的理由</label><input id="cf-handoff-reason" placeholder="例：客戶指定要我送"></div>
       </div>
       <div class="g3" id="cf-shelve-box" style="display:none">
         <div class="f"><label class="lbl">擱置理由</label><select id="cf-shelve-reason"></select></div>
@@ -1536,6 +1539,18 @@ details.trial-card .trial-body{margin-top:8px}
   </div>
 </div>
 
+<!-- ═══ 無法轉交：一定要有理由 ═══ -->
+<div class="modal-bg" id="handoff-modal" onclick="if(event.target===this)closeHandoffBlock()">
+  <div class="modal" role="dialog" aria-labelledby="hb-title">
+    <div class="modal-title" id="hb-title">無法轉交</div>
+    <div class="f"><label class="lbl" for="hb-reason">為什麼不能轉交？（之後每 14 天會問你這個理由還在不在）</label><input id="hb-reason" placeholder="例：客戶指定要我送"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveHandoffBlock()">儲存</button>
+      <button class="btn btn-outline" onclick="closeHandoffBlock()">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 試用回收結果 ═══ -->
 <div class="modal-bg" id="trial-recover-modal" onclick="if(event.target===this)closeRecoverModal()">
   <div class="modal" role="dialog" aria-labelledby="tr-title">
@@ -1636,7 +1651,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-s1';
+const APP_VERSION='v2026.11.15-s2';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2121,7 +2136,7 @@ const SEED=[
 // ═══════════════════════════════════════════════════════════
 // 狀態常數表 — 唯一 source of truth，所有狀態判定皆查此表。
 // 階段只有五個；「已報價／已轉交／需求／評價／擱置理由」是掛在客戶上的獨立欄位，不是階段：
-//   c.quoted   已報價（試用、開發中都可能）      c.handoff  'done'＝已轉交（成約才有意義）
+//   c.quoted   已報價（試用、開發中都可能）      c.handoff  ''待轉交｜'done'已轉交｜'blocked'無法轉交（＋c.handoffReason）
 //   c.need     ''|'有'|'無'|'未定'（拜訪後的判斷）  c.tier     0 未評｜1｜2｜3（重視程度，1 最重）
 //   c.shelveReason／c.shelvedAt／c.wakeDate       擱置理由、擱置日、喚醒日（到了自動回待拜訪）
 const STATUS={PLAN:'待拜訪', DEV:'開發中', TRIAL:'試用', DEAL:'成約', SHELVED:'擱置'};
@@ -2154,7 +2169,7 @@ function statusLabel(c){
   const s=displayStatus(c&&c.status);
   if(s===STATUS.TRIAL)return s+(c.quoted?'（已報價）':'（未報價）');
   if(s===STATUS.DEV)return s+(c.quoted?'（已報價）':'');
-  if(s===STATUS.DEAL)return s+(c.handoff==='done'?'（已轉交）':'（待轉交）');
+  if(s===STATUS.DEAL)return s+(c.handoff==='done'?'（已轉交）':c.handoff==='blocked'?'（無法轉交）':'（待轉交）');
   return s;
 }
 // 在推進中的案子：有試用、或還沒試用但已報價——日報推進表與長官儀表板的「試用」口徑
@@ -2177,6 +2192,54 @@ function markQuoted(c,date){
   c.todos.forEach(t=>{if(t&&!t.done&&t.source==='auto-quote')t.done=true;});
   if(!c.todos.some(t=>t&&!t.done&&t.source==='quote-followup'))
     c.todos.push({text:'報價追蹤（報價後一週，問結果）',dueDate:addDays(date||today(),7),done:false,source:'quote-followup'});
+}
+// ═══ 轉交 ═══ 成約（＝首次更換完成）後 HANDOFF_DAYS 天內要轉交；轉不出去就得自己送貨，
+// 所以「無法轉交」一定要有理由，並每 HANDOFF_RECHECK_DAYS 天提醒一次：該送貨了、理由還在嗎。
+// 轉交待辦的唯一入口（冪等）：依 c.handoff 開／關兩種系統待辦（source: 'handoff'｜'handoff-check'）。回傳是否有改。
+const HANDOFF_DAYS=10, HANDOFF_RECHECK_DAYS=14;
+function syncHandoffTodo(c){
+  if(!c)return false;
+  const todos=c.todos=c.todos||[];let ch=false;
+  const open=src=>todos.some(t=>t&&!t.done&&t.source===src);
+  const close=src=>todos.forEach(t=>{if(t&&!t.done&&t.source===src){t.done=true;ch=true;}});
+  if(c.status!==STATUS.DEAL||c.handoff==='done'){close('handoff');close('handoff-check');return ch;}
+  if(c.handoff==='blocked'){
+    close('handoff');
+    if(!open('handoff-check')){todos.push({text:'自己送貨＋確認能不能轉交了（'+(c.handoffReason||'理由未填')+'）',dueDate:addDays(today(),HANDOFF_RECHECK_DAYS),done:false,source:'handoff-check'});ch=true;}
+    return ch;
+  }
+  close('handoff-check');
+  if(!open('handoff')){todos.push({text:'轉交（成約後 '+HANDOFF_DAYS+' 天內）',dueDate:addDays(c.handoffFrom||dealDate(c)||today(),HANDOFF_DAYS),done:false,source:'handoff'});ch=true;}
+  return ch;
+}
+function syncAllHandoffTodos(){let n=0;(DB.clients||[]).forEach(c=>{if(syncHandoffTodo(c))n++;});if(n)saveLocal();return n;}
+// 勾掉「轉交」待辦＝已轉交；勾掉「自己送貨」＝這次送完了，補下一次（14 天後）
+function onTodoToggled(c,t){
+  if(!c||!t)return;
+  if(t.done&&t.source==='handoff'&&c.status===STATUS.DEAL&&c.handoff!=='blocked')c.handoff='done';
+  syncHandoffTodo(c);
+}
+function setHandoff(c,state,reason){
+  if(state==='blocked'){c.handoff='blocked';c.handoffReason=reason;}
+  else{
+    if(state===''&&c.handoff==='blocked')c.handoffFrom=today();   // 理由消失 → 從今天重新算 10 天
+    c.handoff=state;c.handoffReason='';
+  }
+  syncHandoffTodo(c);
+}
+// 無法轉交的定期確認：到期就問理由還在不在（還在 → 14 天後再問；不在了 → 回到待轉交）
+async function checkHandoffRechecks(){
+  const t=today();let touched=false;
+  for(const c of (DB.clients||[])){
+    if(!c||c.status!==STATUS.DEAL||c.handoff!=='blocked')continue;
+    const td=(c.todos||[]).find(x=>x&&!x.done&&x.source==='handoff-check'&&x.dueDate&&x.dueDate<=t);
+    if(!td)continue;
+    const gone=await appConfirm('「'+c.name+'」還沒轉交，這段時間要自己送貨。\n\n無法轉交的理由：'+(c.handoffReason||'（未填）')+'\n\n這個理由還在嗎？',{title:'轉交追蹤',okText:'可以轉交了',cancelText:'還在，'+HANDOFF_RECHECK_DAYS+' 天後再問'});
+    if(gone){td.done=true;setHandoff(c,'');}
+    else td.dueDate=addDays(t,HANDOFF_RECHECK_DAYS);
+    c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});touched=true;
+  }
+  if(touched)renderClients();
 }
 // 舊九狀態 → 五階段＋欄位。冪等；用在 migration v13 與所有資料進入點（雲端拉取、備份匯入、長官快照），
 // 其他裝置未升級時雲端仍可能是舊狀態。必須排在 packTrials 之後（要看有沒有試用紀錄）。回傳是否有改。
@@ -2290,6 +2353,8 @@ function clientClockLabel(c){
     const left=td?daysUntil(td.dueDate):null;
     if(left!==null)return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:${left<=0?'var(--red)':'var(--amber)'}">${left<=0?'該追報價結果了':`追報價還剩 ${left} 天`}</span>`;
   }
+  if(c.status===STATUS.DEAL&&c.handoff==='blocked')
+    return`<span style="font-size:var(--fs-meta);font-weight:600;color:var(--amber)">自己送貨・${escHtml(c.handoffReason||'理由未填')}</span>`;
   if(c.status===STATUS.DEAL)
     return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:var(--green-d)">成約${dealDate(c)?' '+dealDate(c):''}</span>`;
   if(displayStatus(c.status)===STATUS.PLAN&&c.wokeAt)
@@ -4937,7 +5002,8 @@ function openCF(idx){
   document.getElementById('cf-tier').value=String(c&&TIERS.includes(c.tier)?c.tier:0);
   document.getElementById('cf-need').value=c&&NEEDS.includes(c.need)?c.need:'';
   document.getElementById('cf-quoted').checked=!!(c&&c.quoted);
-  document.getElementById('cf-handoff').checked=!!(c&&c.handoff==='done');
+  document.getElementById('cf-handoff').value=(c&&c.handoff)||'';
+  document.getElementById('cf-handoff-reason').value=(c&&c.handoffReason)||'';
   document.getElementById('cf-shelve-reason').value=(c&&c.shelveReason)||'';
   document.getElementById('cf-wake').value=(c&&c.wakeDate)||'';
   cfStageChanged();
@@ -4965,6 +5031,8 @@ function fillJudgeSelects(){
 function cfStageChanged(){
   const st=document.getElementById('cf-status').value;
   document.getElementById('cf-shelve-box').style.display=st===STATUS.SHELVED?'':'none';
+  document.getElementById('cf-handoff-box').style.display=st===STATUS.DEAL?'':'none';
+  document.getElementById('cf-handoff-reason-box').style.display=document.getElementById('cf-handoff').value==='blocked'?'':'none';
 }
 // 表單的試用區塊：有進行中試用 → 顯示日期＋品項；沒有 → 只剩「開始第 N 次試用」鈕
 function renderCFTrialBox(c){
@@ -5258,7 +5326,8 @@ async function saveClient(){
       tier:Number(document.getElementById('cf-tier').value)||0,
       need:document.getElementById('cf-need').value,
       quoted:document.getElementById('cf-quoted').checked,
-      handoff:document.getElementById('cf-handoff').checked?'done':'',
+      handoff:document.getElementById('cf-handoff').value,
+      handoffReason:document.getElementById('cf-handoff-reason').value.trim(),
       shelveReason:document.getElementById('cf-shelve-reason').value,
       wakeDate:document.getElementById('cf-wake').value,
       nextdate:document.getElementById('cf-nextdate').value,
@@ -5298,6 +5367,11 @@ async function saveClient(){
     }
     // 擱置：記擱置日；喚醒日沒填就依評價算。不是擱置就不留喚醒日
     const prevC=isEdit?DB.clients[S.editIdx]:null;
+    if(c.status===STATUS.DEAL&&c.handoff==='blocked'&&!c.handoffReason){showToast('請填無法轉交的理由');return;}
+    if(c.status!==STATUS.DEAL||c.handoff!=='blocked')c.handoffReason='';
+    if(prevC&&prevC.handoffFrom)c.handoffFrom=prevC.handoffFrom;
+    if(prevC&&prevC.handoff==='blocked'&&c.handoff==='')c.handoffFrom=today();
+    syncHandoffTodo(c);
     if(c.status===STATUS.SHELVED){
       c.shelvedAt=(prevC&&prevC.status===STATUS.SHELVED&&prevC.shelvedAt)||today();
       if(!c.wakeDate||(prevC&&prevC.tier!==c.tier))c.wakeDate=wakeDateFor(c);
@@ -5383,7 +5457,7 @@ function openCD(i){
     trialXBadge(c)+tierMark(c)+
     (c.status===STATUS.DEV&&NEED_LABEL[c.need]?`<span class="badge" style="background:var(--bg3);color:var(--text2)">${NEED_LABEL[c.need]}</span>`:'')+
     (inPipeline(c)&&!c.quoted?`<button class="btn btn-outline btn-xs" onclick="cdMarkQuoted()">標記已報價</button>`:'')+
-    (c.status===STATUS.DEAL&&c.handoff!=='done'?`<button class="btn btn-outline btn-xs" onclick="cdMarkHandoff()">標記已轉交</button>`:'')+
+    (c.status===STATUS.DEAL&&c.handoff!=='done'?`<button class="btn btn-outline btn-xs" onclick="cdMarkHandoff()">標記已轉交</button><button class="btn btn-outline btn-xs" onclick="openHandoffBlock()">${c.handoff==='blocked'?'改理由':'無法轉交'}</button>`:'')+
     (fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:'')+
     ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
@@ -5465,7 +5539,22 @@ function renderCDTrials(c){
 }
 function cdTouch(c){c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});renderClients();openCD(S.curIdx);}
 function cdMarkQuoted(){const c=DB.clients[S.curIdx];if(!c)return;markQuoted(c);cdTouch(c);showToast('✓ 已報價，一週後提醒追結果');}
-function cdMarkHandoff(){const c=DB.clients[S.curIdx];if(!c)return;c.handoff='done';cdTouch(c);showToast('✓ 已轉交');}
+function cdMarkHandoff(){const c=DB.clients[S.curIdx];if(!c)return;setHandoff(c,'done');cdTouch(c);showToast('✓ 已轉交');}
+function openHandoffBlock(){
+  const c=DB.clients[S.curIdx];if(!c)return;
+  document.getElementById('hb-reason').value=c.handoffReason||'';
+  document.getElementById('handoff-modal').classList.add('on');
+  setTimeout(()=>{try{document.getElementById('hb-reason').focus();}catch(_){}},30);
+}
+function closeHandoffBlock(){document.getElementById('handoff-modal').classList.remove('on');}
+function saveHandoffBlock(){
+  const c=DB.clients[S.curIdx];if(!c)return;
+  const r=document.getElementById('hb-reason').value.trim();
+  if(!r){showToast('請填無法轉交的理由');return;}
+  setHandoff(c,'blocked',r);
+  (c.todos||[]).forEach(t=>{if(t&&!t.done&&t.source==='handoff-check')t.text='自己送貨＋確認能不能轉交了（'+r+'）';});
+  closeHandoffBlock();cdTouch(c);showToast('已記下理由，每 '+HANDOFF_RECHECK_DAYS+' 天提醒你一次');
+}
 // ＋ 新一次試用：品項從空的開始；超過 3 次或還有進行中的都會先提醒
 async function startTrial(){
   if(S.curIdx<0)return;
@@ -5558,7 +5647,7 @@ function finishRecover(result){
   (c.todos||[]).forEach(x=>{if(x&&x.source==='auto-recycle'&&(x.trialN||1)===t.n)x.done=true;});
   if(result==='成約'){
     (t.items||[]).forEach(it=>{if(it&&it.product){const k=JSON.parse(JSON.stringify(it));k.contractDate=date;(c.contractedItems=c.contractedItems||[]).push(k);}});
-    c.status=STATUS.DEAL;c.handoff='';
+    c.status=STATUS.DEAL;c.handoff='';c.handoffReason='';c.handoffFrom='';
   }else if(result==='報價中'){
     c.status=STATUS.TRIAL;
     (c.todos||[]).forEach(x=>{if(x&&!x.done&&x.source==='quote-followup')x.done=true;});   // 追蹤日從回收日重新起算
@@ -5570,6 +5659,7 @@ function finishRecover(result){
     shelveClient(c,'',date);
   }
   (c.visits=c.visits||[]).push({date,mood:0,note:'',insight:'第 '+t.n+' 次試用回收：'+result,statusChange:c.status,nextdate:c.nextdate||null});
+  syncHandoffTodo(c);
   c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
   closeRecoverModal();renderClients();openCD(RECOVER.ci);
   const n=trialsOf(c).length;
@@ -5636,6 +5726,7 @@ function saveCDItems(){
     }
     c.contractedItems=JSON.parse(JSON.stringify(S.cfContracted||[]));
     if(S.cdmStatusOverride)c.status=S.cdmStatusOverride;
+    syncHandoffTodo(c);
     c.updatedAt=Date.now();
     saveLocal();
     autoSync('save',{client:c});
@@ -5675,7 +5766,7 @@ function renderCDTodos(){
       </div>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦（點「+ 新增待辦」或直接點待辦文字可編輯）</div>';
 }
-function togCDTodo(i){DB.clients[S.curIdx].todos[i].done=!DB.clients[S.curIdx].todos[i].done;DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});renderCDTodos();renderClients();}
+function togCDTodo(i){const c=DB.clients[S.curIdx],t=c.todos[i];t.done=!t.done;onTodoToggled(c,t);c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});renderClients();openCD(S.curIdx);}
 let TM_PRI=0;
 let TM_EDIT=null; // null=新增（掛在 S.curIdx 客戶）；{src:'c'|'g',ci,ti}=編輯既有待辦
 function _tmSetup(mode){ // mode: 'add'|'edit'
@@ -5856,6 +5947,7 @@ function saveVL(){
       else if(c.status===STATUS.SHELVED)c.wakeDate=wakeDateFor(c);   // 評價可能改了
     }
     if(quoted)markQuoted(c,selDate);
+    syncHandoffTodo(c);
     c.updatedAt=Date.now();saveLocal();
     autoSync('save',{client:c});
     document.getElementById('vl-form').style.display='none';
@@ -6423,6 +6515,7 @@ function _gtRefresh(){
 function togGT(src,ci,ti){
   const arr=_gtArr(src,ci);if(!arr[ti])return;
   arr[ti].done=!arr[ti].done;
+  if(src==='c')onTodoToggled(DB.clients[ci],arr[ti]);
   _gtSync(src,ci);_gtRefresh();
 }
 function delGT(src,ci,ti){
@@ -7589,10 +7682,11 @@ function applyPriceSheet2026(){
     }
   }
 })();
-autoAddRecycleTodos();validateClients();wakeShelved();consumeIzHandoff();consumeSiteHandoff();renderClients();
+autoAddRecycleTodos();validateClients();wakeShelved();syncAllHandoffTodos();consumeIzHandoff();consumeSiteHandoff();renderClients();
 // 等畫面先出來：先問報價追蹤，再跳補資料（缺評價／需求判斷／擱置理由的店，直到填完）
-setTimeout(()=>{checkQuoteFollowups().catch(()=>{}).then(()=>openFill());},800);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkQuoteFollowups().catch(()=>{});});
+const checkFollowups=()=>checkQuoteFollowups().catch(()=>{}).then(()=>checkHandoffRechecks()).catch(()=>{});
+setTimeout(()=>{checkFollowups().then(()=>openFill());},800);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkFollowups();});
 // ═══ 首頁深連結（home.html 樞紐 → index.html#daily / #trip / #new …）═══
 (function(){
   let h=(location.hash||'').replace('#','');

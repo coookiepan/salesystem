@@ -153,7 +153,8 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 {
   id,                    // UUID（crypto.randomUUID，雲端 upsert 的 key）
   name, addr, type, status,        // status ∈ STATUS 常數表：待拜訪｜開發中｜試用｜成約｜擱置（見下方「階段與判斷」）
-  quoted, handoff,                 // 已報價（bool）、'done'＝已轉交
+  quoted,                          // 已報價（bool）
+  handoff, handoffReason, handoffFrom,   // ''待轉交｜'done'已轉交｜'blocked'無法轉交＋理由；handoffFrom＝重新起算 10 天的日期
   need, tier,                      // 需求判斷 ''|'有'|'無'|'未定'、評價 0|1|2|3
   shelveReason, shelvedAt, wakeDate, wokeAt,   // 擱置理由／擱置日／喚醒日／上次被喚醒的日期
   contact, phone, regNo,           // regNo＝統一編號（工業區名單身分鍵）
@@ -178,7 +179,7 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 | 待拜訪 | — | 進排程池（清單依區域 → 評價排序）|
 | 開發中 | `need`、`quoted` | 記拜訪自動排下次（＋7 天）；`need='無'` → 轉擱置；已報價 → `quote-followup` |
 | 試用 | `quoted` | 回收待辦（`auto-recycle`）；未報價 → `auto-quote`「安排報價」；已報價 → `quote-followup` |
-| 成約 | `handoff` | 「待轉交」分類（`handoff!=='done'`），依成約日排序 |
+| 成約 | `handoff`、`handoffReason` | 待轉交 → `handoff` 待辦（成約日＋10 天）；無法轉交 → `handoff-check` 待辦（每 14 天：自己送貨＋理由還在嗎）。「待轉交」分類＝`handoff!=='done'`，依成約日排序 |
 | 擱置 | `shelveReason`、`wakeDate` | `wakeShelved()`：喚醒日到了改回待拜訪（記 `wokeAt`）|
 
 | 入口 | 語意 |
@@ -188,6 +189,9 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 | `markQuoted(c,date)` | 設 `quoted`、關掉 `auto-quote`、補一筆一週後的 `quote-followup`（已有未完成的不重複）|
 | `shelveClient(c,reason,date)` | 轉擱置：理由、擱置日、`wakeDate=wakeDateFor(c)`（`WAKE_MONTHS={1:4,2:8}`，三級不提醒）、清下次拜訪日、關掉報價類待辦 |
 | `checkQuoteFollowups()` | 已報價且追蹤到期 → 問要不要擱置（每週一次）；**還有進行中的試用就不問**（由回收流程收尾）|
+| `syncHandoffTodo(c)`／`setHandoff(c,state,reason)` | 轉交待辦的唯一入口（冪等）：依 `c.handoff` 開關 `handoff`／`handoff-check` 兩種系統待辦。啟動時 `syncAllHandoffTodos()` 全掃，各轉換點（回收成約、存表單、記拜訪、勾待辦）單筆呼叫。`HANDOFF_DAYS=10`、`HANDOFF_RECHECK_DAYS=14` |
+| `onTodoToggled(c,t)` | 勾掉 `handoff` 待辦＝已轉交；勾掉 `handoff-check`＝這次送完，自動補下一次 |
+| `checkHandoffRechecks()` | 無法轉交的確認到期 → 問理由還在不在：還在 → 14 天後再問；不在了 → 回待轉交，10 天從當天重算 |
 | `missingFields(c)` | 還缺的判斷：非待拜訪都要 `tier`；開發中要 `need`；擱置要 `shelveReason` |
 | `openFill(only?)`／`fillNext()`／`renderFillBanner()` | 補資料視窗：啟動 0.8 秒後自動跳出、一家一家問；可稍後再填，清單上方留提示條。填 `need='無'` 的開發中會直接轉擱置 |
 | `packStage(c)`／`packAllStages(list)` | 舊九狀態 → 五階段＋欄位，連同 `visits[].statusChange`（舊「報價」變成 `visit.quoted`）。冪等；migration v13、`validateClients()` 與所有資料進入點都呼叫，**必須排在 `packTrials` 之後**（要看有沒有試用紀錄）。不重推上雲、不動 `updatedAt` |

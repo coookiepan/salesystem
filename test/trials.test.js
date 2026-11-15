@@ -153,6 +153,27 @@ function boot(store, url) {
   assert('品項（含配件）轉成約、帶成約日、保留議價', D.contractedItems.length === 3 && D.contractedItems.every(it => it.contractDate === TODAY) && D.contractedItems[0].quoted === 720);
   eq('狀態成約（待轉交）', w.statusLabel(D), '成約（待轉交）');
   eq('成約後 4W 用成約品項', w.calcFW4(D), 720 + 200);
+
+  console.log('T2 — 轉交：成約後 10 天內的固定待辦／無法轉交要理由、每 14 天確認');
+  const ho = src => D.todos.filter(t => t.source === src && !t.done);
+  assert('成約 → 自動多一筆「轉交」待辦，到期＝成約日＋10 天', ho('handoff').length === 1 && ho('handoff')[0].dueDate === w.addDays(TODAY, 10), JSON.stringify(D.todos));
+  eq('重跑不重複產生', (w.syncHandoffTodo(D), ho('handoff').length), 1);
+  w.openHandoffBlock(); w.document.getElementById('hb-reason').value = ''; w.saveHandoffBlock();
+  assert('無法轉交沒填理由不能存', D.handoff !== 'blocked');
+  w.document.getElementById('hb-reason').value = '客戶指定要我送'; w.saveHandoffBlock();
+  assert('填理由 → 成約（無法轉交）、轉交待辦關閉、改成 14 天後的「自己送貨＋確認」', w.statusLabel(D) === '成約（無法轉交）' && ho('handoff').length === 0 && ho('handoff-check').length === 1 && ho('handoff-check')[0].dueDate === w.addDays(TODAY, 14) && /客戶指定要我送/.test(ho('handoff-check')[0].text), JSON.stringify(D.todos));
+  ho('handoff-check')[0].dueDate = TODAY;
+  w.eval('appConfirm=async()=>false');   // 理由還在
+  await w.checkHandoffRechecks();
+  assert('到期問理由 → 還在：14 天後再問、仍是無法轉交', D.handoff === 'blocked' && ho('handoff-check')[0].dueDate === w.addDays(TODAY, 14));
+  w.togCDTodo(D.todos.indexOf(ho('handoff-check')[0]));
+  assert('勾掉「自己送貨」→ 自動補下一次', ho('handoff-check').length === 1 && D.handoff === 'blocked');
+  ho('handoff-check')[0].dueDate = TODAY;
+  w.eval('appConfirm=async()=>true');    // 可以轉交了
+  await w.checkHandoffRechecks();
+  assert('理由消失 → 回到待轉交、轉交待辦從今天重新算 10 天', w.statusLabel(D) === '成約（待轉交）' && !D.handoffReason && ho('handoff-check').length === 0 && ho('handoff')[0].dueDate === w.addDays(TODAY, 10), JSON.stringify(D.todos));
+  w.togCDTodo(D.todos.indexOf(ho('handoff')[0]));
+  assert('勾掉「轉交」待辦 → 成約（已轉交）、不再產生轉交待辦', w.statusLabel(D) === '成約（已轉交）' && ho('handoff').length === 0 && ho('handoff-check').length === 0);
   const B2 = byId('B');
   B2.trials.push(w.newTrial(B2, [{ product: 'DOME', qty: 1, cycle: '4W', quoted: 0 }])); B2.status = '試用';
   w.openCD(DB.clients.indexOf(B2));
