@@ -1366,6 +1366,16 @@ details.trial-card .trial-body{margin-top:8px}
     </div>
   </div>
   <div class="card">
+    <div class="form-section">Google 日曆同步</div>
+    <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      把<b>待辦、下次拜訪日、試用回收日</b>同步到你 Google 帳號裡的「DUSKIN 業務提醒」日曆（會自動建立），iPhone 的日曆通知與桌面小工具就看得到。
+      只會動這一個日曆，請不要在裡面手動加事件。逾期的會自動移到今天。
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer"><input type="checkbox" id="cal-sync-on" onchange="setCalSync(this.checked)" style="width:20px;height:20px;accent-color:var(--green)"> 開啟日曆同步</label>
+    <div id="cal-status" style="font-size:12.5px;color:var(--text2);margin:6px 0 10px"></div>
+    <button class="btn btn-outline btn-sm" onclick="calSyncNow()">立即同步</button>
+  </div>
+  <div class="card">
     <div class="form-section">診斷紀錄</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">遇到問題時，按下方按鈕可複製最近的錯誤紀錄，回報給維護人員協助排查。</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1651,9 +1661,9 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-s2';
+const APP_VERSION='v2026.11.15-s3';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
-const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
+const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1669,7 +1679,7 @@ function handleRequest(e){
     const body=e.postData?JSON.parse(e.postData.contents):{};
     // H1 並發鎖：寫入類動作序列化，避免兩位使用者同時寫同一份試算表時，
     // 「找列→寫列」交錯造成 lost update 或 appendRow 撞列。讀取不需鎖。
-    const WRITE_ACTIONS={save:1,delete:1,deleteByName:1,saveInventory:1,saveProducts:1};
+    const WRITE_ACTIONS={save:1,delete:1,deleteByName:1,saveInventory:1,saveProducts:1,syncCalendar:1};
     if(WRITE_ACTIONS[action]){
       lock=LockService.getScriptLock();
       if(!lock.tryLock(20000)){
@@ -1693,6 +1703,7 @@ function handleRequest(e){
       case 'ping':          result={ok:true,ver:BACKEND_VER};break;
       case 'geocode':       result=geocodeAddr(body.addr);break;
       case 'geocodeBatch':  result=geocodeBatchAddrs(body.addrs);break;
+      case 'syncCalendar':  result=syncCalendar(body.events,body.from,body.to);break;
       default:              result={error:'Unknown action'};
     }
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
@@ -1872,6 +1883,36 @@ function getProducts(){
   catch(e){return{products:null,error:'products JSON 解析失敗'};}
 }
 function saveProducts(products){getProdSheet().getRange(2,1).setValue(JSON.stringify(products));return{ok:true};}
+
+// Google 日曆同步：把前端算好的「未來的提醒清單」對齊到專用日曆（整份對齊：缺的補、多的刪）。
+// 只動名為 CAL_NAME 的那一個日曆、只動整天事件；以「日期＋標題」辨識同一筆，所以重跑不會重複。
+// 範圍＝from 往前 60 天（清掉過期的舊提醒）到 to。單筆失敗不擋其他筆，回報 failed 讓前端下次重試。
+const CAL_NAME='DUSKIN 業務提醒';
+function syncCalendar(events,from,to){
+  if(!from||!to)return{error:'缺少日期範圍'};
+  const tz=Session.getScriptTimeZone();
+  const day=function(s){const p=String(s).split('-');return new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));};
+  const cals=CalendarApp.getCalendarsByName(CAL_NAME);
+  const cal=cals.length?cals[0]:CalendarApp.createCalendar(CAL_NAME);
+  const want={};
+  (events||[]).slice(0,300).forEach(function(e){if(e&&e.date&&e.title)want[e.date+'|'+e.title]=e;});
+  const start=day(from);start.setDate(start.getDate()-60);
+  const end=day(to);end.setDate(end.getDate()+1);
+  let created=0,deleted=0,failed=0;
+  cal.getEvents(start,end).forEach(function(ev){
+    if(!ev.isAllDayEvent())return;
+    const k=Utilities.formatDate(ev.getAllDayStartDate(),tz,'yyyy-MM-dd')+'|'+ev.getTitle();
+    if(want[k]){delete want[k];return;}
+    try{ev.deleteEvent();deleted++;}catch(err){failed++;}
+  });
+  Object.keys(want).forEach(function(k){
+    const e=want[k];
+    try{cal.createAllDayEvent(e.title,day(e.date),{description:e.desc||''});created++;}catch(err){failed++;}
+  });
+  return{ok:true,calendar:CAL_NAME,created:created,deleted:deleted,failed:failed};
+}
+// 第一次用日曆同步前，在 Apps Script 編輯器選這個函式按「執行」一次，Google 會跳出日曆授權畫面
+function authorizeCalendar(){return CalendarApp.getDefaultCalendar().getName();}
 
 function getShopsSheet(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();
@@ -2193,6 +2234,81 @@ function markQuoted(c,date){
   if(!c.todos.some(t=>t&&!t.done&&t.source==='quote-followup'))
     c.todos.push({text:'報價追蹤（報價後一週，問結果）',dueDate:addDays(date||today(),7),done:false,source:'quote-followup'});
 }
+// ═══ Google 日曆同步 ═══ 把「有日期的下一步」整份對齊到專用日曆（後端 syncCalendar：缺的補、多的刪）。
+// 標題用「評價｜店名：事項」，日曆與小工具裡同一天的事項就會照評價排；逾期的移到今天並標（逾期）。
+// 開關與上次同步結果只存這台手機（localStorage cal_sync／cal_sig／cal_last），不進 duskin_v2。
+const CAL_WINDOW_DAYS=60, CAL_BACKEND_VER=4;
+function calEnabled(){try{return localStorage.getItem('cal_sync')==='1';}catch(e){return false;}}
+function calendarItems(base){
+  const td=base||today(),end=addDays(td,CAL_WINDOW_DAYS),out=[],seen=new Set();
+  const add=(date,title,desc)=>{
+    if(!date||date>end)return;
+    const od=date<td,d=od?td:date,t=title+(od?'（逾期）':''),k=d+'|'+t;
+    if(seen.has(k))return;seen.add(k);out.push({date:d,title:t,desc:desc||''});
+  };
+  (DB.clients||[]).forEach(c=>{
+    if(!c)return;
+    const head=(TIERS.includes(c.tier)?c.tier+'級｜':'')+(c.name||'')+'：';
+    const desc=[statusLabel(c),c.addr,c.phone].filter(Boolean).join('\n');
+    // 回收待辦（auto-recycle）要試用開始 7 天後才產生，日曆直接用試用的回收日，兩者不重複列
+    (c.todos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate&&t.source!=='auto-recycle')add(t.dueDate,head+t.text,desc);});
+    openTrials(c).forEach(t=>{if(t.due)add(t.due,head+'回收試用品（第 '+t.n+' 次）',desc);});
+    if(c.nextdate&&c.status!==STATUS.SHELVED)add(c.nextdate,head+'拜訪',desc);
+  });
+  (DB.gtodos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate)add(t.dueDate,t.text,'');});
+  return out.sort((a,b)=>a.date!==b.date?(a.date<b.date?-1:1):a.title.localeCompare(b.title,'zh-Hant'));
+}
+function calSig(td,items){let h=5381;const s=td+JSON.stringify(items);for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return td+':'+items.length+':'+h;}
+let _calTimer=null,_calBusy=false;
+// 資料一有變動（saveLocal）就排一次，4 秒內的連續變動合併；內容沒變不會打後端
+function scheduleCalSync(){
+  if(!calEnabled()||!SHEET_URL)return;
+  clearTimeout(_calTimer);
+  _calTimer=setTimeout(()=>{syncCalendar().catch(e=>logErr('syncCalendar',e));},4000);
+}
+async function syncCalendar(force){
+  if(!SHEET_URL||_calBusy)return null;
+  const td=today(),items=calendarItems(td),sig=calSig(td,items);
+  if(!force&&localStorage.getItem('cal_sig')===sig)return null;
+  _calBusy=true;
+  try{
+    const r=await api({action:'syncCalendar',events:items,from:td,to:addDays(td,CAL_WINDOW_DAYS)});
+    if(!r.failed)localStorage.setItem('cal_sig',sig);   // 有失敗的就不記，下次變動或下次開啟再對齊一次
+    localStorage.setItem('cal_last',JSON.stringify({at:Date.now(),total:items.length,created:r.created||0,deleted:r.deleted||0,failed:r.failed||0}));
+    renderCalStatus();
+    return r;
+  }finally{_calBusy=false;}
+}
+function renderCalStatus(){
+  const box=document.getElementById('cal-sync-on'),el=document.getElementById('cal-status');
+  if(!box||!el)return;
+  box.checked=calEnabled();
+  let last=null;try{last=JSON.parse(localStorage.getItem('cal_last')||'null');}catch(e){}
+  if(!calEnabled()){el.textContent='尚未開啟。';return;}
+  if(!last){el.textContent='已開啟，尚未同步過。';return;}
+  const d=new Date(last.at);
+  el.textContent='上次同步 '+fmtDate(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'：日曆上共 '+last.total+' 筆（新增 '+last.created+'、移除 '+last.deleted+(last.failed?'、失敗 '+last.failed+'，下次會再補':'')+'）';
+}
+async function setCalSync(on){
+  if(!on){localStorage.removeItem('cal_sync');localStorage.removeItem('cal_sig');renderCalStatus();showToast('已關閉日曆同步（日曆上已有的提醒不會自動刪除）');return;}
+  if(!SHEET_URL){renderCalStatus();appAlert('請先在上方完成 Google Sheets 連線，日曆同步用的是同一個後端。','日曆同步');return;}
+  try{
+    const ping=await api({action:'ping'});
+    if(!(ping.ver>=CAL_BACKEND_VER)){renderCalStatus();appAlert('你的後端是舊版，還沒有日曆功能。\n\n請照「設定 → 複製 Apps Script 程式碼」重新貼上並部署新版本，再在 Apps Script 編輯器執行一次 authorizeCalendar 完成日曆授權（步驟見 GUIDE「Google 日曆同步」）。','需要更新後端');return;}
+    localStorage.setItem('cal_sync','1');
+    const r=await syncCalendar(true);
+    showToast('✓ 日曆同步已開啟'+(r?'，新增 '+(r.created||0)+' 筆':''));
+  }catch(e){
+    localStorage.removeItem('cal_sync');logErr('setCalSync',e);
+    appAlert('日曆同步失敗：'+(e.message||e)+'\n\n最常見的原因是還沒授權日曆：請在 Apps Script 編輯器執行一次 authorizeCalendar，並重新部署新版本。','日曆同步');
+  }
+  renderCalStatus();
+}
+async function calSyncNow(){
+  if(!calEnabled()){showToast('請先開啟日曆同步');return;}
+  try{const r=await syncCalendar(true);showToast(r?'✓ 已同步：新增 '+(r.created||0)+'、移除 '+(r.deleted||0)+(r.failed?'、失敗 '+r.failed:''):'同步進行中，請稍候');}
+  catch(e){logErr('calSyncNow',e);appAlert('日曆同步失敗：'+(e.message||e),'日曆同步');}
+}
 // ═══ 轉交 ═══ 成約（＝首次更換完成）後 HANDOFF_DAYS 天內要轉交；轉不出去就得自己送貨，
 // 所以「無法轉交」一定要有理由，並每 HANDOFF_RECHECK_DAYS 天提醒一次：該送貨了、理由還在嗎。
 // 轉交待辦的唯一入口（冪等）：依 c.handoff 開／關兩種系統待辦（source: 'handoff'｜'handoff-check'）。回傳是否有改。
@@ -2385,6 +2501,7 @@ function saveLocal(){
   try{
     localStorage.setItem('duskin_v2',JSON.stringify({clients:DB.clients,inventory:DB.inventory,products:DB.products,gtodos:DB.gtodos||[],profile:DB.profile,profileAcked:DB.profileAcked,sheetUrl:SHEET_URL,lastSyncAt:SYNC.lastSyncAt,lastPullAt:SYNC.lastPullAt,pending:SYNC.pending}));
     _quotaWarned=false;
+    scheduleCalSync();
   }catch(e){
     // M5：本機空間滿屬靜默失敗最危險（使用者以為存了）。明確提示一次，引導先推雲端。
     const quota=e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014);
@@ -6424,9 +6541,12 @@ function qaSubmit(){
 
 // ── 分區清單：逾期／今天／即將（7天內）／之後／未排日期／已完成 ──
 let GT_SHOW_DONE=false;
+// 區塊（逾期／今天／即將…）已經按日期分好；區塊內先看你手動標的 P 旗標，再看這家店的評價（1 級最前、沒評價與一般待辦最後），最後才比日期
 function gtSort(a,b){
   const pa=a.priority||9,pb=b.priority||9;
   if(pa!==pb)return pa-pb;
+  const ta=a.tier||9,tb=b.tier||9;
+  if(ta!==tb)return ta-tb;
   if(a.dueDate!==b.dueDate)return (a.dueDate||'9999')<(b.dueDate||'9999')?-1:1;
   return 0;
 }
@@ -6435,7 +6555,7 @@ function gtRow(t){
   const od=isOD(t);
   const cnHtml=t.src==='c'
     ?`<span style="font-size:12.5px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
-        onclick="event.stopPropagation();navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>`
+        onclick="event.stopPropagation();navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>${t.tier?`<span class="badge num" style="background:var(--bg3);color:var(--text2);margin-left:5px">${t.tier} 級</span>`:''}`
     :`<span style="font-size:12.5px;color:var(--text3);margin-left:5px">一般</span>`;
   return`<div class="todo-row">
     <input type="checkbox" ${t.done?'checked':''} onchange="togGT('${t.src}',${t.ci},${t.ti})">
@@ -6467,7 +6587,7 @@ function gtTrialSection(){
 function renderGT(){
   const q=(document.getElementById('ts').value||'').toLowerCase();
   let all=[];
-  DB.clients.forEach((c,ci)=>(c.todos||[]).forEach((t,ti)=>all.push({...t,cn:c.name,src:'c',ci,ti})));
+  DB.clients.forEach((c,ci)=>(c.todos||[]).forEach((t,ti)=>all.push({...t,cn:c.name,tier:TIERS.includes(c.tier)?c.tier:0,src:'c',ci,ti})));
   (DB.gtodos||[]).forEach((t,ti)=>all.push({...t,cn:'',src:'g',ci:-1,ti}));
   if(q)all=all.filter(t=>t.text.toLowerCase().includes(q)||t.cn.toLowerCase().includes(q));
   const tog=document.getElementById('gt-done-toggle');
@@ -7684,6 +7804,7 @@ function applyPriceSheet2026(){
 })();
 autoAddRecycleTodos();validateClients();wakeShelved();syncAllHandoffTodos();consumeIzHandoff();consumeSiteHandoff();renderClients();
 // 等畫面先出來：先問報價追蹤，再跳補資料（缺評價／需求判斷／擱置理由的店，直到填完）
+renderCalStatus();scheduleCalSync();
 const checkFollowups=()=>checkQuoteFollowups().catch(()=>{}).then(()=>checkHandoffRechecks()).catch(()=>{});
 setTimeout(()=>{checkFollowups().then(()=>openFill());},800);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkFollowups();});

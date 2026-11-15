@@ -200,6 +200,18 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 記錄拜訪（`saveVL`）先驗證再動資料：一定要有評價；結果是開發中就要有需求判斷；選擱置要有理由。待拜訪的店記了拜訪自動變開發中。
 `home.html` 讀的是同一份 localStorage；主系統更新後還沒開過時資料仍是舊狀態，首頁只在記憶體裡換算一次、不寫回。
 
+### Google 日曆同步（提醒走出 App）
+
+PWA 在 iOS 沒有排程通知也做不出小工具，所以把「有日期的下一步」放進使用者自己的 Google 日曆，通知與小工具交給日曆 App。
+
+- **前端 `calendarItems(base)`**：未完成且有到期日的待辦（客戶＋一般）、進行中試用的回收日、下次拜訪日（擱置不列）→ `[{date,title,desc}]`。
+  標題＝`評價｜店名：事項`（同一天依評價排，與待辦清單同一把尺）；逾期的移到今天並加「（逾期）」；只取未來 60 天（`CAL_WINDOW_DAYS`）。
+  `auto-recycle` 待辦不列——它要試用開始 7 天後才產生，日曆直接用試用的回收日。
+- **觸發**：`saveLocal()` 成功後 `scheduleCalSync()`（4 秒防抖）＋啟動時一次（把逾期的滾到今天）。`calSig` 雜湊沒變就不打後端。
+- **後端 `syncCalendar(events,from,to)`**：只動名為 `CAL_NAME`（DUSKIN 業務提醒）的日曆、只動整天事件；以「日期＋標題」辨識，缺的建、多的刪，範圍＝`from` 往前 60 天到 `to`。單筆失敗計入 `failed`，前端不記雜湊、下次重試。進 `WRITE_ACTIONS` 取鎖。
+- **開關只存本機**：`localStorage.cal_sync／cal_sig／cal_last`，不進 `duskin_v2`。開啟時 `ping` 檢查 `ver>=CAL_BACKEND_VER(4)`；`REQUIRED_BACKEND_VER` 仍是 3（不用日曆的人不必重新部署）。
+- **限制**：整份對齊的來源是「這台手機的資料」，兩台手機都開會互相覆蓋成各自的清單（資料已同步時結果相同）。通知時間由 Google 日曆的「整天活動通知」設定決定，App 不指定。尚未對真實 Google 日曆做過端對端驗證（測試用假的 `CalendarApp`）。
+
 ### 商品主檔（唯一來源：`DB.products`）
 
 **全系統只有一份商品清單**：主系統客戶卡、報價精靈、合約精靈、庫存、工業區CRM 的品名與價格都來自 `DB.products`
@@ -263,7 +275,7 @@ Item:    { name(=product code), stock, std(標準配備數), cat }
 **`Product.price` 是該商品「自身週期」（`Product.cycle`）下的每次更換單價（含稅）**：地墊／拖把多為 2W 價、芳香（DOME、AFDW…）為 4W 價。
 **`Product.price4w`（選填）是 2W 商品表定的 4 週換單價**：拖把照 2026-09 價格表（S-20 160、SHH 140、NH-S 140、SSS-R 272、LALA-R 304、NSAC 200 特價、N-AC 336、M-90 352、M-120 448）；地墊沒有此欄，4W 原價＝2W 價 ×2。
 唯一換算入口 `unitPriceAt(p, cycle)`（主系統）＝ `HOST.unitAt`（報價／合約精靈），`effCycle` 把 4W 商品的所選週期一律視為 4W。
-定價來源以 App「商品」頁（`DB.products`，同步到 Sheet `products` 分頁）為準；ContractMaker 內建的 `CM_CATALOG` 只補品名／分類／不在主系統的品項（HPL/HPS 訂做地墊）與後援價。
+定價來源只有 App「商品」頁（`DB.products`，同步到 Sheet `products` 分頁）；ContractMaker 不自帶商品清單。
 
 | 場景 | 入口 | 規則 |
 |------|------|------|
@@ -333,6 +345,7 @@ sequenceDiagram
 | `saveInventory` / `getInventory` | 庫存整包讀寫 |
 | `saveProducts` / `getProducts` | 商品整包讀寫 |
 | `getShops` | 查詢頁的公司既有客戶名單 |
+| `syncCalendar` (`events`, `from`, `to`) | Google 日曆整份對齊（後端 v4；需日曆授權，見下方「Google 日曆同步」） |
 | `geocode` | Google Geocoder 代理（地圖定位主來源，免金鑰；失敗退 Nominatim） |
 
 > ⚠ 後端程式碼變動屬「需要使用者重新部署」的更新——CHANGELOG 必須標註，並附 GUIDE.md 的重新部署步驟連結。

@@ -1,5 +1,5 @@
 // C5 — 商品價格邏輯（報價精靈／合約精靈共用入口）＋ 合約精靈輸入不失焦 ＋ 工業區對話框疊層
-//   規則：Product.price＝商品自身週期下的每次更換單價；定價以主系統商品庫（DB.products）為準，CM_CATALOG 後援。
+//   規則：Product.price＝商品自身週期下的每次更換單價；定價只來自主系統商品庫（DB.products）。
 //   換得比商品週期更久（2W 商品選 4W）→ ×倍數；一樣或更勤 → 單價不變。4W 金額＝單價 × 次數 × 數量。
 const fs = require('fs');
 const path = require('path');
