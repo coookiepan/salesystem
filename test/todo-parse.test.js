@@ -73,7 +73,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('#王記 唯一比對 → 掛到王記餐廳', c1.length === 1, JSON.stringify(c1));
   assert('待辦文字已剝除 token', c1.length === 1 && c1[0].text === '回收');
   assert('優先級寫入', c1.length === 1 && c1[0].priority === 1);
-  assert('日期寫入', c1.length === 1 && !!c1[0].dueDate);
+  assert('日期寫入排定日（plan），期限留空，並自動分類', c1.length === 1 && !!c1[0].plan && !c1[0].dueDate && ['visit', 'online', 'misc'].includes(c1[0].type), JSON.stringify(c1[0]));
   w.document.getElementById('qa-inp').value = '買咖啡濾紙';
   w.qaOnInput(); w.qaSubmit();
   const g = JSON.parse(w.eval('JSON.stringify(DB.gtodos)'));
@@ -92,7 +92,7 @@ function assert(name, cond, extra) { console.log((cond ? '  ✓ ' : '  ✗ ') + 
   assert('滿 28 天 → XXX', xi('2026-06-29').marks === 'XXX');
   assert('滿 35 天 → XXXX（業助提醒等級）', xi('2026-07-06').marks === 'XXXX');
   assert('超過 35 天封頂 XXXX', xi('2026-08-01').marks === 'XXXX');
-  assert('非試用階段 → null', w.trialXInfo({ status: '成約', trials: xc.trials }, '2026-06-29') === null);
+  assert('階段不是試用但試用品還沒回收 → 一樣記 X（不看階段）', w.trialXInfo({ status: '成約', trials: xc.trials }, '2026-06-29').marks === w.trialXInfo(xc, '2026-06-29').marks);
   assert('已回收的試用 → null', w.trialXInfo({ status: '試用', trials: [{ n: 1, start: '2026-06-01', due: '2026-06-15', items: [], open: false, recovered: '2026-06-15', result: '' }] }, '2026-06-29') === null);
   assert('無試用日 → null', w.trialXInfo({ status: '試用' }, '2026-06-29') === null);
 

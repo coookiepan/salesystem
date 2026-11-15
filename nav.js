@@ -1,42 +1,44 @@
-/* ═══ 全域底部導覽（四頁共用，與 tokens.css 同級的共用檔） ═══
-   使用：<script src="nav.js" data-page="home|clients|trip|site|iz"></script>
-   - 五格固定：首頁／客戶／行程／工地／工業區，走到哪都一樣（單色線條圖示，無 emoji）
-   - 在主系統內點「客戶/行程」走頁內切換（不重載）；其他頁用連結
-   - index.html 可呼叫 window.setGlobalTab('clients'|'trip') 動態更新高亮 */
+/* ═══ 全域底部導覽（主系統與工地地圖共用，與 tokens.css 同級的共用檔） ═══
+   使用：<script src="nav.js" data-page="main|site"></script>
+   - 三格固定：待辦／客戶／工地，走到哪都一樣（單色線條圖示，無 emoji）
+   - 在主系統內點「待辦/客戶」走頁內切換（不重載）；其他頁用連結
+   - index.html 的 navTo() 會呼叫 window.setGlobalTab(分頁 id) 更新高亮
+     （待辦、客戶以外的分頁——日報、查詢、庫存、設定——底部不亮任何一格） */
 (function(){
-  var PAGE=(document.currentScript&&document.currentScript.dataset.page)||'home';
+  var PAGE=(document.currentScript&&document.currentScript.dataset.page)||'main';
   var IC={
-    home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+    todos:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
     clients:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
-    trip:'<circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 0 0-8-8z"/>',
-    site:'<path d="M2 20h20"/><path d="M4 20V9l6-4v15"/><path d="M10 9h6l4 4v7"/><line x1="13" y1="13" x2="13" y2="13.01"/><line x1="16" y1="16" x2="16" y2="16.01"/>',
-    iz:'<path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/><line x1="17" y1="20" x2="17" y2="16"/><line x1="7" y1="20" x2="7" y2="16"/><line x1="12" y1="20" x2="12" y2="16"/>'
+    site:'<path d="M2 20h20"/><path d="M4 20V9l6-4v15"/><path d="M10 9h6l4 4v7"/><line x1="13" y1="13" x2="13" y2="13.01"/><line x1="16" y1="16" x2="16" y2="16.01"/>'
   };
   var TABS=[
-    {id:'home',    label:'首頁',   href:'home.html'},
-    {id:'clients', label:'客戶',   href:'index.html#clients'},
-    {id:'trip',    label:'行程',   href:'index.html#trip'},
-    {id:'site',    label:'工地',   href:'sitemap.html'},
-    {id:'iz',      label:'工業區', href:'izcrm.html'}
+    {id:'todos',   label:'待辦', href:'index.html'},
+    {id:'clients', label:'客戶', href:'index.html#clients'},
+    {id:'site',    label:'工地', href:'sitemap.html'}
   ];
+  // 主系統：亮的是目前開著的分頁（nav.js 是 defer，載入時主系統已依網址決定好分頁）
+  function current(){
+    if(PAGE!=='main')return PAGE;
+    var p=document.querySelector('.panel.on');
+    return p?p.id.replace('panel-',''):'todos';
+  }
   function build(){
+    var cur=current();
     var nav=document.createElement('nav');
     nav.id='global-nav';
     nav.setAttribute('aria-label','系統切換');
     nav.innerHTML=TABS.map(function(t){
-      return '<a href="'+t.href+'" data-tab="'+t.id+'" class="gn-btn'+(t.id===PAGE?' on':'')+'">'+
+      return '<a href="'+t.href+'" data-tab="'+t.id+'" class="gn-btn'+(t.id===cur?' on':'')+'">'+
         '<svg aria-hidden="true" viewBox="0 0 24 24">'+IC[t.id]+'</svg>'+t.label+'</a>';
     }).join('');
-    // 主系統頁內：客戶/行程 直接切分頁，不重載
+    // 主系統頁內：待辦/客戶 直接切分頁，不重載（navTo 會順手更新高亮）
     nav.addEventListener('click',function(e){
       var a=e.target.closest?e.target.closest('a'):null;
       if(!a)return;
       var tab=a.dataset.tab;
-      if((tab==='clients'||tab==='trip')&&PAGE==='clients'&&typeof window.navTo==='function'){ // 只在主系統做頁內切換；其他頁走連結
+      if((tab==='todos'||tab==='clients')&&PAGE==='main'&&typeof window.navTo==='function'){ // 只在主系統做頁內切換；其他頁走連結
         e.preventDefault();
-        if(tab==='trip'){window.navTo('todos',document.getElementById('nav-todos'));if(typeof window.setTodosMode==='function')window.setTodosMode('trip');}
-        else{window.navTo('clients',document.getElementById('nav-clients'));}
-        setTab(tab);
+        window.navTo(tab,document.getElementById('nav-'+tab));
       }
     });
     var css=document.createElement('style');

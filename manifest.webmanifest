@@ -1,7 +1,7 @@
 {
   "name": "DUSKIN 銷售系統",
   "short_name": "DUSKIN",
-  "start_url": "./home.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

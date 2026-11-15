@@ -13,7 +13,7 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 
 | 檔案 | 代號 | 驗什麼 |
 |------|------|--------|
-| `syntax-check.js` | — | 解析 inline `<script>`、內嵌 `APPS_SCRIPT_CODE`／`IZ_GAS_CODE` 後端、`sw.js`、`izcrm.html`，擋語法錯誤（最快的守門，放第一個） |
+| `syntax-check.js` | — | 解析 inline `<script>`、內嵌 `APPS_SCRIPT_CODE` 後端、`sw.js`，擋語法錯誤（最快的守門，放第一個） |
 | `xss-guard.test.js` | M1/M5 | 掃描未經 `escHtml` 直出 HTML 的使用者欄位（`${c.name}` 這類腳印）；localStorage 配額滿的提示 |
 | `gas-getall.test.js` | C4/H1 | 後端逐列容錯：clients 分頁某列 JSON 壞掉要跳過該列並回報列號，不能整批失敗 |
 | `outbox.test.js` | C2 | 待推送佇列：斷網入列→持久化→重開 App 自動補送→佇列清空；待推送時拉取要被擋下 |
@@ -22,22 +22,20 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 | `validate.test.js` | L2 | 客戶欄位輕量檢查（統編 8 碼、電話異常字元、空名稱警告） |
 | `todo-parse.test.js` | T1 | 待辦自然語言解析 29 案例：日期規則（含跨年／跨月進位、同曜日）、p1–p3 邊界、token 剝除、#客戶比對、一般待辦落點 |
 | `a11y.test.js` | L4 | 無障礙底線：`lang`、viewport、img alt、icon-only 按鈕要有標籤、裝飾 SVG aria-hidden |
-| `pwa.test.js` | H2 | Service Worker 行為：預快取、離線退回外殼、HTML 網路優先、POST 不攔、Leaflet CDN 快取優先 |
-| `izcrm.test.js` | Z1 | 工業區CRM：主檔載入與渲染（XSS）、聚落規則 zoneOf、報價 fw4、LWW 同步合併、CSV 跳脫、seed 匯入冪等、建檔 handoff 寫入＋鏡射 |
-| `trip-handoff.test.js` | Z2 | 行程規劃：走廊順路、今天/逾期/未來分組、批次移到今天；主系統消化 handoff 建檔（冪等、進 outbox） |
+| `pwa.test.js` | H2 | Service Worker 行為：預快取、離線退回外殼、HTML 網路優先、POST 不攔、Leaflet CDN 快取優先；`start_url`＝index.html、預快取清單的檔案都存在、底部導覽三格 |
 | `client-views.test.js` | Z3 | 客戶列表視圖：試用分組排序、待轉交、排序誠實化、五階段換算與藥丸數量、補資料提示條；記錄拜訪的判斷（評價必填、沒需求→擱置＋喚醒日、已報價→一週追蹤、擱置到期喚醒） |
 | `sitemap.test.js` | S1/S2 | 工地地圖：語法（含 GAS_CODE）、登記/60m 重複/離線佇列/LWW/tombstone/XSS、📇 建檔交接端對端（工地→主系統、冪等） |
-| `home.test.js` | H3 | 首頁樞紐：接點靜態檢查（start_url/sw/🏠 鈕/#place）、三系統數字鏡射正確性、空狀態、深連結（#daily/#trip/#new） |
 | `map-place.test.js` | P1 | 主系統工地地圖模式：FAB→GPS 抓點→拖圖釘→建檔表單→manual 座標入庫；取消路徑與暫存座標不外洩 |
-| `products.test.js` | P2 | 商品主檔單一化：migration v12 自癒、雲端整包覆蓋洗不掉、精靈商品庫＝主檔同一物件、基準不可刪只能停用、系列/規格/訂製年數、商品頁管庫存、工業區CRM 讀同一份；訂製地墊試算（面積分級、制式 vs 自由尺寸、四週＝單價×2、不帶特製費、分類與命名、商品庫內排序、抄表遞增防呆、超限報錯、加入商品庫只多一筆） |
-| `trials.test.js` | T2 | 每次試用一筆：migration v11 打包、migration v13 啟動跳補資料（缺評價／理由）、進行中／已回收語意（推進表只算未回收）、回收日 X 分級、各次回收待辦、新一次試用與 3 次提醒、回收結果四選一（已報價一週追蹤、有進行中試用不問、拒絕→擱置＋補理由與喚醒日）、轉交（成約＋10 天待辦、無法轉交必填理由、14 天確認循環、勾待辦＝已轉交）、表單本次試用、首頁／長官快照 |
+| `products.test.js` | P2 | 商品主檔單一化：migration v12 自癒、雲端整包覆蓋洗不掉、精靈商品庫＝主檔同一物件、基準不可刪只能停用、系列/規格/訂製年數、商品頁管庫存；訂製地墊試算（面積分級、制式 vs 自由尺寸、四週＝單價×2、不帶特製費、分類與命名、商品庫內排序、抄表遞增防呆、超限報錯、加入商品庫只多一筆） |
+| `trials.test.js` | T2 | 每次試用一筆：migration v11 打包、migration v13 啟動跳補資料（缺評價／理由）、進行中／已回收語意（推進表只算未回收）、回收日 X 分級、各次回收待辦、新一次試用與 3 次提醒、回收結果四選一（已報價一週追蹤、有進行中試用不問、拒絕→擱置＋補理由與喚醒日）、轉交（成約＋10 天待辦、無法轉交必填理由、14 天確認循環、勾待辦＝已轉交）、表單本次試用、長官快照 |
 | `field-ops.test.js` | F2 | 外勤：工地快拍（存 draft／待補提示條與篩選／補資料清旗標／調整位置）、定位追蹤（藍點更新、跟隨、拖地圖取消）、日報納入拒絕（動作「拒」、4W 空） |
-| `contract-pricing.test.js` | C5 | 商品價格邏輯：`cmCatalogUnit`／`cmCatalogInfo`（主系統商品庫優先）／`cmItemCycle`、DOME 等 4W 商品不加倍、客戶卡帶入報價與合約精靈一致；合約精靈輸入單價不失焦；工業區對話框疊在底部導覽之上 |
-| `design-tokens.test.js` | D1 | 設計語彙「量尺」紅線：退役 token 不得殘留、四頁不得寫死 UI 色（白名單＝文件輸出／logo／地圖圖磚分類色／getComputedStyle 退路）、淺＋深色模式所有文字/底色組合 ≥4.5:1、急迫度三級亮度分明、狀態＝點＋粗字、階段軌九格、量尺語意（沒有時鐘＝空軌，不編造） |
+| `contract-pricing.test.js` | C5 | 商品價格邏輯：`cmCatalogUnit`／`cmCatalogInfo`（主系統商品庫優先）／`cmItemCycle`、DOME 等 4W 商品不加倍、客戶卡帶入報價與合約精靈一致；合約精靈輸入單價不失焦 |
+| `design-tokens.test.js` | D1 | 設計語彙「量尺」紅線：退役 token 不得殘留、兩頁（index／sitemap）不得寫死 UI 色（白名單＝文件輸出／logo／地圖圖磚分類色／getComputedStyle 退路）、淺＋深色模式所有文字/底色組合 ≥4.5:1、急迫度三級亮度分明、狀態＝點＋粗字、階段軌九格、量尺語意（沒有時鐘＝空軌，不編造） |
 | `calendar.test.js` | G1 | Google 日曆同步：後端 `syncCalendar` 整份對齊（假的 CalendarApp：不重複、改日期、清過期、單筆失敗）、前端 `calendarItems`（評價前綴、逾期移今天、擱置不列、內容沒變不打後端、後端過舊不開啟）、待辦清單 P 旗標→評價→日期 |
+| `board.test.js` | B1 | 待辦看板：今天＋四個工作天、舊待辦換算（plan／期限／類型）、回收任務試用一開始就有且不看階段、自動結算、未排排序、X 階梯、`placeTask`（排日期＋當天順序）、勾完成、排程面板、新增與編輯 |
 | `serve.test.js` | R1 | 公司試用表比對：用真的 SheetJS 寫出再讀回自編假報表驗證解析；只擷取未回收、配對（顧客編號／電話／名稱／搜尋）、四種落差、芳香機計價行差異視為一致、逐筆「照公司的」只動那一筆（重排第幾次、配件歸位）、建立／改配對；週報成約列 ÷1.05、試用列含稅 |
 | `batch-quote.test.js` | Q1 | 批次報價單（主程式這一半）：挑店規則（試用未報價／報價類待辦；已報價、擱置、已完成不列）、出不了的原因、勾選數量、交給 `ContractMaker.saveQuotes` 的店與檔名、不改資料、失敗可重試 |
-| `fusion.test.js` | F1 | 深度融合：segment 遷移/視角、自訂類別選項、統一行程（工地/工業區的今天）、主系統端轉為客戶＋回執信箱、首頁融合數字 |
+| `fusion.test.js` | F1 | 工地 ↔ 主系統：開啟就是待辦分頁／`#clients` 深連結、migration v15 清掉已移除功能的本機資料、segment 遷移/視角、自訂類別選項、主系統端轉為客戶＋回執信箱 |
 
 ## 寫新測試的慣例
 

@@ -1117,7 +1117,7 @@ async function pushAll(){
   setSyncBar(''); updateSyncBox();
 }
 
-/* ══════ 主系統交接（單向信箱，與工業區CRM 同模式） ══════
+/* ══════ 主系統交接（單向信箱） ══════
    按「建檔到主系統」→ 把基本資料＋預產的 client id 寫進
    localStorage.duskin_site_handoff；主系統回前景時以正規建檔流程消化並上雲。
    本檔永不直接碰主系統的 duskin_v2 / outbox。連結記在 s.main（隨雲端同步），
@@ -1205,7 +1205,7 @@ window.addEventListener('online',()=>{ flushQueue(); pullAll(true); });
 setInterval(()=>{ if(CFG.url&&navigator.onLine) pullAll(true); },180000);
 
 // ══ 主系統回執信箱（單向：main → sitemap）══
-// 主系統行程頁「轉為客戶」後寫 duskin_site_ack；這裡消化並把工地標記
+// 主系統地圖的工地圖層按「轉為客戶」後寫 duskin_site_ack；這裡消化並把工地標記
 // s.main={clientId}（隨雲端同步，同事看得到「已建檔」）。冪等：已標記者跳過。
 function consumeMainAck(){
   let ack=[];
@@ -1227,12 +1227,6 @@ window.addEventListener('storage',e=>{ if(e.key==='duskin_site_ack'&&e.newValue)
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') consumeMainAck(); });
 window.addEventListener('pageshow',consumeMainAck);
 window.addEventListener('focus',consumeMainAck);
-
-// 首頁深連結：home.html「登記工地」→ sitemap.html#place 直接進 GPS 放點
-if(location.hash==='#place'){
-  setTimeout(()=>{ try{ startPlaceGPS(); }catch(e){} },900);
-  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-}
 </script>
 
 </body>

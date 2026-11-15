@@ -97,7 +97,7 @@ index.html
     CLIENT FORM / DETAIL  建檔表單精靈、詳情頁（拜訪/品項/待辦）
     DAILY / REPORT        日報與 4W 推進表產生器
     GLOBAL TODOS          Todoist 式：parseQuickTodo 解析器＋分區清單
-    TRIP PLANNER          行程規劃（nextdate 機制＋走廊順路）＋IZ HANDOFF 消化
+    SITE HANDOFF          工地地圖交接信箱消化（consumeSiteHandoff）＋主系統端「轉為客戶」（mainConvertSite）
     EXPORT / VERSION      JSON 備份、版本檢查（輪詢線上 APP_VERSION）
     ADMIN DASHBOARD       ?admin=1 長官唯讀彙總
     INIT                  啟動序：載資料→migration→render→自動同步
@@ -157,7 +157,7 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
   handoff, handoffReason, handoffFrom,   // ''待轉交｜'done'已轉交｜'blocked'無法轉交＋理由；handoffFrom＝重新起算 10 天的日期
   need, tier,                      // 需求判斷 ''|'有'|'無'|'未定'、評價 0|1|2|3
   shelveReason, shelvedAt, wakeDate, wokeAt,   // 擱置理由／擱置日／喚醒日／上次被喚醒的日期
-  contact, phone, regNo,           // regNo＝統一編號（工業區名單身分鍵）
+  contact, phone, regNo,           // regNo＝統一編號（去重時的身分鍵）
   nextdate, env, note,
   lat, lng, geocodeSource,         // 地圖定位（manual / geocode_ok / failed）
   trials: [{ n, start, due, items:[{product, qty, cycle, quoted, bundledTo?, bundleRole?}],
@@ -198,7 +198,6 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 | `rptVisitAction(c,v)` | 日報動作代號：擱置＝拒、`v.quoted`＝報、試用／成約＝試；其餘看是不是這家店最早的一筆拜訪（初／複）|
 
 記錄拜訪（`saveVL`）先驗證再動資料：一定要有評價；結果是開發中就要有需求判斷；選擱置要有理由。待拜訪的店記了拜訪自動變開發中。
-`home.html` 讀的是同一份 localStorage；主系統更新後還沒開過時資料仍是舊狀態，首頁只在記憶體裡換算一次、不寫回。
 
 ### 批次報價單
 
@@ -254,7 +253,7 @@ PWA 在 iOS 沒有排程通知也做不出小工具，所以把「有日期的�
 
 ### 商品主檔（唯一來源：`DB.products`）
 
-**全系統只有一份商品清單**：主系統客戶卡、報價精靈、合約精靈、庫存、工業區CRM 的品名與價格都來自 `DB.products`
+**全系統只有一份商品清單**：主系統客戶卡、報價精靈、合約精靈、庫存的品名與價格都來自 `DB.products`
 （同步到 Sheet `products` 分頁）。`ContractMaker` 舊有的第二份 `CM_CATALOG` 已移除——模組經
 `HOST.getProduct()`／`HOST.listProducts()` 讀主檔，`cmProduct()`／`cmSellable()` 是模組內僅有的兩個存取器
 （`cmSellable`＝`active && price>0 && note∉{配件,口味}`，即商品選擇器可選的品項）。
@@ -279,7 +278,7 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 
 | 入口 | 語意 |
 |------|------|
-| `openTrials(c)`／`openTrialItems(c)` | 進行中（未回收）——**推進表、長官儀表板、首頁試用總額只算這些**（`calcReportAmt`） |
+| `openTrials(c)`／`openTrialItems(c)` | 進行中（未回收）——**推進表、長官儀表板的試用總額只算這些**（`calcReportAmt`） |
 | `currentTrial(c)`／`trialItemsOf(c)` | 進行中優先，否則最近一次——客戶卡 4W 估算、提案商品、報價／合約匯入（`HOST.trialItems`） |
 | `trialXInfo(c)` | 以進行中那次的 `due` 分級：到回收日 X、之後每 7 天多一個 X |
 | `autoAddRecycleTodos()` | 每次進行中的試用開始＋7 天後各自加「回收試用品（第 N 次）」，到期＝回收日，`todo.trialN` 對應 |
@@ -289,13 +288,41 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 
 編輯客戶表單只編「進行中的那次」（沒有就提供「開始第 N 次試用」）；過去的試用一律從詳情頁的試用卡進出（`openCDItems(n)`，可改日期、品項、刪除整筆）。
 
-### Todo（待辦）
+### Todo（待辦＝看板上的一張任務卡）
 
 ```js
-{ text, dueDate:'YYYY-MM-DD'|'', done, priority?:1|2|3 }
+{ text, done, type:'visit'|'online'|'misc',   // 到場｜線上｜雜事
+  plan:'YYYY-MM-DD'|'',     // 排在哪一天做（''＝未排）——使用者拖拉決定
+  dueDate:'YYYY-MM-DD'|'',  // 期限（''＝沒有）——系統任務的固定期限，不因改排而變
+  order, bumped,            // 當天順序；沒做完被自動結算回未排的次數
+  priority?:1|2|3, source?, trialN? }
 ```
 
 掛在客戶下的 todo 隨客戶同步雲端；**未掛客戶**的存 `DB.gtodos`（僅本機，含於 JSON 匯出）。
+
+**排定日和期限是兩件事**：`plan` 是「我哪天去做」，`dueDate` 是「最晚什麼時候」。系統任務（`source`）的 `dueDate` 是固定的——
+`auto-recycle` 回收日、`auto-quote` 回收日、`handoff` 成約日＋10 天、`handoff-check`／`quote-followup` 下次確認日——使用者只決定 `plan`。
+舊資料由 `packTodo(t)` 換算（冪等，以 `t.type` 有沒有值判斷）：補類型（`guessTodoType`：系統任務看 `TODO_SOURCE_TYPE`，其餘看文字關鍵字）；
+使用者自己訂的日期原本是「哪天做」→ 搬到 `plan`。在 `validateClients()`（啟動／雲端拉取／備份匯入）與一般待辦載入時呼叫。
+
+### 待辦看板（`renderGT`／`bd*`）
+
+待辦頁是一塊看板：日期軌（**今天＋接下來四個工作天**，`boardDays()` 跳過六日）→ 當天主角區 → 當天清單 → 未排池 →「已排在其他日期」。寬螢幕五天並排。
+
+| 入口 | 語意 |
+|------|------|
+| `boardTasks()`／`boardFind(k)` | 全部任務（客戶的＋一般的），每筆帶所屬客戶與位置；卡片的 `data-k`＝`src:ci:ti` |
+| `placeTask(k,date,idx)` | 排到某天第 `idx` 位（`''`＝放回未排）。只有 `order` 真的變了的任務才寫回並同步。拖放與排程面板都走這裡 |
+| 拖曳 | 按住卡片的 `.bd-grip`（`touch-action:none`，Pointer Events）。`body.bd-dragging` 時日期軌長高成投放區；停在某天 0.6 秒會切到那天，可接著拖進清單插到指定位置（＝當天順序）。日期軌 sticky 在分頁列正下方（`--bd-top` 由 `renderGT` 量出） |
+| `openBdSheet(k)` | 點卡片的備用方式：五天按鈕、其他日期、放回未排、編輯、開啟客戶 |
+| `settleTodos()` | **自動結算**：`plan` 早於今天且沒做完 → `plan=''`、`bumped+1`。啟動與回到前景時跑。完成的留在當天 |
+| `traySortKey(x,td)`／`TRAY_SORT_RULES` | **未排的排序依據**（使用者確認；要改只改這裡，畫面「排序依據」讀同一份文字）：① 回收任務最前（X 等級高 → 離下一個 X 近）② 有期限的（期限近）③ 沒期限的；同組內 P 旗標 → 評價 → 順延次數 |
+| `taskRecycleDue(x)`／`xLevelOn(due,on)`／`xDaysToNext` | 回收任務的回收日與公司逾期等級：到回收日 X、之後每 7 天多一個 X（與 `trialXInfo` 同一條規則）。卡片上的四格階梯以「排定那天」計，第四格 XXXX 是禁區；排到會 XXX 以上或超過期限的日子，投放區與面板按鈕轉紅 |
+
+- 回收任務在**試用一開始**就產生（`autoAddRecycleTodos`，`renderGT` 開頭會呼叫），才排得進看板；`auto-quote` 仍是開始 7 天後。
+- **X 不看階段**：`trialXInfo` 與回收任務都只看「有沒有還沒回收的試用」，階段被改掉但東西還在客戶那邊一樣記 X。
+- 當天清單依 `order`；到場任務的編號就是路線順序。看板只在同一天內排序，不跨天自動排。
+- Google 日曆同步用 `plan || dueDate`：排了哪天放哪天，沒排的用期限。
 
 ### Product／Inventory
 
@@ -416,7 +443,7 @@ sequenceDiagram
 全系統只有一個進度元件，量的是**「現在走到這個時鐘的哪裡」**。五條規則：
 
 1. **墨與紙** — 暖紙 `--bg2` 當頁底、`--bg` 當卡片；分層靠細線不靠陰影（`--shadow-sm`／`--shadow` 已經是 `none`，陰影只留給浮層）
-2. **永遠有一個主角** — 每頁最上面一塊 `.slab`（深墨綠 `--theme`），只放今天唯一重要的那個數字。目前在 home.html 與主系統行程頁
+2. **一頁最多一個主角** — 主角區塊（深墨綠 `--theme` 底）只放今天唯一重要的那個數字。目前沒有頁面使用（原本的 `.slab` 隨首頁與行程頁一起移除）
 3. **時間要看得見** — `.gauge` 是唯一的進度元件，`gaugeHtml(pct, tone, ticks, head)` 產生
 4. **顏色管急迫度，文字管階段** — 見下表
 5. **數字用等寬** — `.num` ＋ `--font-num`（系統等寬字，**不載 webfont**：PWA 要能離線、野外首次開啟不等字型）
@@ -449,7 +476,7 @@ sequenceDiagram
 
 ### 紅線
 
-- **設計 tokens 唯一來源＝`tokens.css`**：四個頁面（index/home/izcrm/sitemap）共用引入，深色模式以 `prefers-color-scheme` 覆寫同名變數；頁面專屬變數（index 字級表、sitemap radius 別名）留在各自檔內。**JS 產生的 HTML 也必須引用變數**，不可寫死 hex——`test/design-tokens.test.js` 會掃四頁的 `#rrggbb`，白名單只放「產出文件的顏色（docx/xlsx/canvas 不吃 var()）、品牌標誌 SVG、疊在地圖圖磚上的分類色、getComputedStyle 的退路值」
+- **設計 tokens 唯一來源＝`tokens.css`**：兩個頁面（index/sitemap）共用引入，深色模式以 `prefers-color-scheme` 覆寫同名變數；頁面專屬變數（index 字級表、sitemap radius 別名）留在各自檔內。**JS 產生的 HTML 也必須引用變數**，不可寫死 hex——`test/design-tokens.test.js` 會掃兩頁的 `#rrggbb`，白名單只放「產出文件的顏色（docx/xlsx/canvas 不吃 var()）、品牌標誌 SVG、疊在地圖圖磚上的分類色、getComputedStyle 的退路值」
 - **對比門檻 4.5:1**：淺色與深色模式所有「文字／底色」組合都由測試驗算（WCAG relative luminance）。深色模式主鈕必須用 `--on-green`（亮綠底配白字只有 2.4:1）
 - **字級地板**：一般 meta 12.5px、微標籤 12px，顏色不低於 `--text3`（對紙 4.51:1）
 - **觸控目標**：`.btn` 48px、`.btn-sm` 44px、`.btn-xs` 40px
@@ -483,103 +510,17 @@ sequenceDiagram
 
 ---
 
-## 工業區CRM 子系統（izcrm.html）
+## 工地 ↔ 主系統：轉為客戶與回執信箱
 
-獨立單檔子系統，與主系統**僅三個柔性接點**（拆卸＝刪 izcrm.html、izdata.json、查詢頁入口按鈕與 sw.js 兩行快取）：
+融合「視圖」不融合「資料庫」（個人/共享權限邊界不動）：
 
-1. 查詢頁／設定頁的入口按鈕（`<a href="izcrm.html">`）。
-2. **商品庫唯讀共享**：報價試算直接讀 `localStorage.duskin_v2.products`（只讀不寫；不存在時顯示提示）。
-3. `sw.js` 預快取 `izcrm.html` 與 `izdata.json`（離線可用）。
-4. **建檔交接信箱**（單向）：izcrm「建檔到主系統」把工廠基本資料＋預產 client id 寫進
-   `localStorage.duskin_iz_handoff`；主系統啟動（或 storage 事件）時以自己的正規流程
-   `consumeIzHandoff()` 建檔（階段＝開發中，自帶一筆 visit 滿足不變式）並上主系統雲端。
-   izcrm 永不直接碰 DB/outbox。冪等（同 id 跳過）。狀態改「已電訪」時若尚未建檔會主動提醒。
-   連結記在 izcrm 紀錄 `r.main={clientId}`（隨 izcrm 雲端同步），詳情頁據此**現場唯讀讀取**
-   `duskin_v2.clients` 顯示主系統狀態（鏡射，不複製資料——與商品庫同一模式）。
-5. **更新訊息**（同一信箱）：已建檔工廠每次修改（窗口/備註/話題/反應…）由 `touch()` 排
-   `{up:1,clientId,contact,phone,note}` 進 `duskin_iz_handoff`（同客戶合併為最新一筆）；
-   `consumeIzHandoff()` 套用到客戶卡並上雲端——note **首行**為工業區開發摘要區塊（固定前綴
-   `（由工業區CRM` 辨識，強制單行），其餘行是主系統自行補記、更新時保留。客戶尚未從主系統
-   雲端同步到本機時，更新訊息留在信箱（30 天內）等下次消化。
-
-### 資料兩層
-
-| 層 | 檔案/位置 | 內容 | 同步 |
-|----|----------|------|------|
-| 主檔（唯讀） | `izdata.json`（repo，1.3MB） | 5,673 家工廠：id/編號/行政區/里/路/園區/業種/電話/地址 | 隨 App 發版；App 端快取於 `localStorage.izcrm_master` |
-| 紀錄層（個人） | `localStorage.izcrm_v1` | 狀態/窗口/話題/check points/標籤/拜訪/報價/待訪/聚落規則 | 獨立 Apps Script（LWW 合併） |
-
-- **id**＝`sha1(工廠名稱|地址)` 前 10 碼——名單改版重轉時紀錄不會對不上（見 `tools/build_izdata.py`）。
-- **業務敏感資料不進 repo**：成交狀態、對應客戶等由 seed 檔（`iz-seed.json`，不 commit）一次性匯入使用者自己的雲端。
-
-### 同步協定（與主系統不同，刻意較簡單）
-
-單一 `sync` action：client 送 dirty 紀錄＋`since`，server 逐筆 **LWW upsert**（incoming.updatedAt 較新才寫），回傳 `updatedAt > since` 的紀錄；client 同樣以較新者為準合併。單人多裝置場景下不需要主系統的 outbox/衝突對話框。後端表：`records`／`meta` 兩張（key/json/updatedAt）。
-
-### 聚落規則
-
-官方園區以主檔 `park` 欄為準；`(非園區)` 的 3,611 家用「里→聚落」規則表分類（存 meta、可在 App 內編輯、跟雲端同步）。種子規則含鹽行、大灣等在地慣稱，`updatedAt=1` 確保使用者的任何修改都蓋過種子。密度 ≥10 家的未涵蓋里會列為候選聚落。
-
-### 儀表板擴充（加新分析）
-
-首頁（`#panel-dash` / `renderDash()`）刻意設計成「加分析很便宜」。核心是共用統計引擎：
-
-```js
-groupStats(f => 分類鍵)   // 依分類鍵把 IZ（5,673 家）分組，
-                          // 每組回 {total, touch, deal, rej}（自動用 statOf 判定狀態）
-pct(a, b)                 // 百分比字串；b=0 回 '—'
-```
-
-現有三張表都只是餵不同分類鍵給同一引擎：`zoneLabel(f)`（園區/聚落）、`f.dist`（行政區）、`f.ind`（業種）。
-
-**新增一個分析＝兩步、不動其他地方：**
-
-1. 在 `#panel-dash` 加容器：
-   ```html
-   <div class="section-t">標題</div>
-   <div class="tbl-wrap"><table class="tbl" id="dash-xxx"></table></div>
-   ```
-2. 在 `renderDash()` 末尾填資料：
-   ```js
-   const g = groupStats(f => f.ind || '未分類');
-   document.getElementById('dash-xxx').innerHTML = head + Object.entries(g)
-     .filter(([,s]) => s.total >= 5)                                   // 過濾樣本太少
-     .sort((a,b) => b[1].deal/b[1].total - a[1].deal/a[1].total)       // 依成交率排序
-     .map(([k,s]) => `<tr><td>${esc(k)}</td><td>${s.total}</td><td>${s.deal}</td><td>${pct(s.deal,s.total)}</td></tr>`).join('');
-   ```
-
-**分析型態與成本**：
-
-| 型態 | 作法 | 成本 |
-|------|------|------|
-| 換分組（業種成交率、有無電話接觸率、各聚落未接觸家數…） | 換 `groupStats` 的分類鍵 | 一行 |
-| 標籤/待訪概況 | 掃 `S.records` 的 `tags`／`visitPlan` | 小迴圈 |
-| 拜訪漏斗（找到窗口→試用→成交） | 累計各 checkpoint 的 `r.cps` | 小迴圈 |
-| 時間趨勢（每月/季拜訪、每季新成交） | 掃 `r.visits[].date`，用 `quarterOf()` 分桶 | 中等 |
-| 報價彙總（家數/4W 金額合計） | 掃 `r.quotes[]`，`fw4()` 已是唯一金額入口 | 小迴圈 |
-
-**規矩**：分類鍵回 `null` 該筆會被略過（`groupStats` 內建）；表格文字一律經 `esc()`（XSS 守門，`izcrm.test.js` 會抓）；顏色用 CSS 變數不寫死 hex（深色模式）；要匯出就仿 `expZoneCsv()` 加一顆按鈕。改完 `izcrm.html` 屬實質改動 → **同步 bump `IZ_VERSION` 與 `sw.js` CACHE**，否則手機拿不到新版。
-
-### 名單更新流程
-
-`python3 tools/build_izdata.py 新名單.xlsx` → 產出新 `izdata.json`（＋seed 檔如有需要）→ bump `sw.js` CACHE（讓快取更新）→ 發版。
-
----
-
-## 深度融合：統一行程與回執信箱
-
-融合「視圖」不融合「資料庫」（個人/共享權限邊界不動）。機制全部是既有模式的複用：
-
-- **統一行程**：`renderTrip()` 尾端以唯讀鏡射列出 `fusionDueSites()`（sitemap_v1 中
-  openDate 到期、未建檔、未刪除的工地）與 `fusionIzDue()`（izcrm_v1 有到期 visitPlan 的
-  工廠，名稱從 izcrm_master 快取解出）。首頁行程卡顯示兩者數量。
 - **主系統端轉為客戶**：`mainConvertSite(siteId)` 走正規建檔流程（segment=街邊店、
   nextdate=openDate、GPS 座標標 manual、srcSiteId 記來源），並寫**回執信箱**
   `duskin_site_ack`；sitemap 以 `consumeMainAck()`（啟動/storage/回前景同組 hook）標記
   `s.main` 並 push 上雲。與 sitemap 端「📇 建檔到主系統」雙路徑互相冪等
   （`s.main` ∪ `srcSiteId` 雙保險）。
 - **客戶分類 segment**（街邊店/工廠）：migration v8 回填（type=工廠→工廠）；
-  IZ 轉入=工廠、工地轉入=街邊店；列表 `SEG_FILTER` 視角、卡片 🏭 徽章。
+  工地轉入=街邊店；列表 `SEG_FILTER` 視角、卡片 🏭 徽章。
 - **類別選項**：`DB.typeOpts`（僅本機、含於 JSON 匯出；空＝`DEFAULT_TYPE_OPTS`），
   設定頁增刪；表單下拉動態填充，舊值不在清單仍可顯示。
 
@@ -587,33 +528,18 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 
 ## 全域導覽與切頁效能
 
-- **`nav.js`**（與 tokens.css 同級共用檔）：四頁注入同一條底部五格導覽
-  （首頁/客戶/行程/工地/工業區，單色 SVG）。在 index 內點「客戶/行程」走頁內切換
-  不重載；`window.setGlobalTab()` 供 index 動態高亮。各頁內部分頁移至**頂部**
-  （index `#app-nav` sticky、izcrm `.navbar` sticky、sitemap 頂部分段鈕）。
+- **`nav.js`**（與 tokens.css 同級共用檔）：主系統與工地地圖注入同一條底部三格導覽
+  （待辦/客戶/工地，單色 SVG）。在 index 內點「待辦/客戶」走頁內切換不重載；
+  `navTo()` 會呼叫 `window.setGlobalTab(分頁 id)` 更新高亮（日報、查詢、庫存、設定不屬於任何一格，
+  底部不亮）。各頁內部分頁在**頂部**（index `#app-nav` sticky、sitemap 頂部分段鈕）。
+- **開啟位置**：PWA `start_url`＝`index.html`，沒帶 hash 就是**待辦**分頁（`#panel-todos` 是預設 `.on`）。
+  深連結 `index.html#clients|#daily|#shops|#inventory|#settings|#new|#map`
+  （INIT 尾端處理，消化後 `history.replaceState` 清掉 hash）。主系統不記上次分頁。
 - **SWR 快取**：`sw.js` HTML 改「快取優先＋背景更新」——切頁不等網路；
   新版背景入快取、下次開啟生效，搭配 App 內版本橫幅提示。
-- **分頁記憶**：`duskin_last_panel`／`sitemap_last_panel`／`izcrm_last_panel`
-  記住各系統上次視圖，重開回到原處（深連結 hash 優先）。
+- **分頁記憶**：`sitemap_last_panel` 記住工地地圖上次的視圖。
 - **圖示規範**：UI 一律無 emoji——導覽/動作用單色 stroke SVG（currentColor），
   其餘純文字；心情用文字標籤（差/普/好/優）。彩色僅來自 tokens 的語意色。
-
----
-
-## 首頁樞紐（home.html）
-
-四系統的入口與每日儀表板。**唯讀鏡射**：直接讀 `duskin_v2` / `duskin_outbox` /
-`sitemap_v1` / `izcrm_v1` 計算數字（今日行程、逾期、試用該收、今日待辦、本週成果、
-各系統同步狀態），只讀不寫、零後端、離線可看；資料不存在時顯示空狀態，永不擋導航。
-
-- **PWA `start_url` 指向 home.html**（manifest）；home 也註冊 sw.js，離線可開。
-- **跨系統切換**：home 底部五格（首頁/客戶/行程/工地/工業區）；三個子系統的底部
-  導覽各加一顆「🏠 首頁」。
-- **深連結**：`index.html#trip|#new|#daily|#clients|#todos|#shops|#inventory|#settings`
-  （INIT 尾端處理，消化後 `history.replaceState` 清掉 hash）；`sitemap.html#place`
-  直接啟動 GPS 放點。首頁所有按鈕靠這些 hash 直達正確分頁。
-- 有自己的 `HOME_VERSION`；改 home.html 屬實質改動 → bump 它與 `sw.js` CACHE。
-- 首頁輸出一律 `esc()`（讀進來的客戶名等自由文字）；問候語用 `textContent`。
 
 ---
 
@@ -632,13 +558,13 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
   （`watchPosition`），`visibilitychange` 背景停／前景續；◎＝`toggleFollow()`（`followMe` 時 `panTo`，`dragstart` 取消）。
   主系統客戶地圖同模式：`ME`／`meUpdate`／`meStart`／`meStop`，`setClientView('map')` 開、離開或背景停。
 
-登記「正在施工裝修的店面」（未來新店＝潛在客戶）。與 izcrm 同樣是**單檔子系統＋柔性接點**：
+登記「正在施工裝修的店面」（未來新店＝潛在客戶）。**單檔子系統＋柔性接點**：
 
 1. 查詢頁／設定頁入口按鈕（`<a href="sitemap.html">`）；sitemap 設定頁有「回主系統」連結。
 2. `sw.js` 預快取 `sitemap.html`；Leaflet 與主系統同一組 unpkg CDN＋SRI 標籤（SW 快取，離線可開）。
 3. **建檔交接信箱**（單向）：popup「📇 建檔到主系統」把基本資料＋預產 client id 寫進
-   `localStorage.duskin_site_handoff`；主系統以 `consumeSiteHandoff()`（與 IZ 同一組
-   INIT／storage／回前景 hook）建檔並上雲。冪等（同 id 跳過）。連結記在工地
+   `localStorage.duskin_site_handoff`；主系統以 `consumeSiteHandoff()`（INIT／storage／回前景
+   都會跑一次）建檔並上雲。冪等（同 id 跳過）。連結記在工地
    `s.main={clientId}`（隨 sitemap 雲端同步，同事也看得到「已建檔」）。
 4. **主系統地圖的工地圖層**：客戶地圖有可複選圖層列（開發客戶／既有客戶／工地，選擇存
    `duskin_map_layers`）。工地層以 `fusionSm()` 唯讀鏡射 sitemap 的點（方形標記、排除已刪除
@@ -648,7 +574,7 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
    重載名單只補新地址。多點以 Leaflet.markercluster 聚合（自架於 `vendor/`、進 SW SHELL
    預快取；套件沒載到時退回逐點直畫）。
    **座標沿用**：工地點是 GPS／拖曳定位 → 建入主系統時 `geocodeSource='manual'`，
-   不會被 geocode 蓋掉；`nextdate`＝預計可拜訪日，到期自然進行程規劃。
+   不會被 geocode 蓋掉；`nextdate`＝預計可拜訪日（下次拜訪日，會進日曆同步）。
 
 ### 與主系統的關鍵差異（刻意設計，勿「統一」）
 
@@ -667,20 +593,3 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 - 前端 POST 刻意不帶 `Content-Type`（維持 simple request 避開 CORS preflight）。
 - 慣例對齊：對話框用 `appAlert`/`appConfirm`（原生已移除）、popup/清單輸出皆經 `esc()`、
   照片 src 僅接受 `data:image/`。改檔屬實質改動 → 同步 bump `APP_VER` 與 `sw.js` CACHE。
-
----
-
-## 行程規劃（主系統，待辦頁「🗓 今日行程」）
-
-三個核心設計決定（程式在 index.html「TRIP PLANNER」區段）：
-
-1. **行程不新增資料結構**：行程＝`nextdate` 為今天的客戶。`nextdate` 本來就隨 client 同步雲端
-   → 多裝置共享行程零後端改動。「拉進行程」＝設 `nextdate=今天`；移出＝清空。
-2. **逾期是常態**：主畫面永遠只放「今天」；逾期收進預設收合區（今天/改期/清除/全部移到今天），
-   不會蓋住今天的行程。未來 7 天另有收合預覽。
-3. **順路＝走廊模型**（`CORRIDORS` 常數）：每條主要路線＝一串有序行政區（縱貫線/山線/關廟線/海線）。
-   `tripOnTheWay()`：行程最遠點之前的區＝「往Ｘ途中」、下一站＝「Ｘ再過去一站」。
-   純查表、離線可算、可讀可改——調整順路判斷直接改 `CORRIDORS` 內容即可。
-   候選（`tripSuggestions()`）限三類：📌 有未完成待辦、⚪ 待拜訪、🤝 成交且有租賃品項。
-
-注意：`parseRegion()` 會先剝「臺南市/台南市」前綴再抓行政區（izcrm 建檔的地址帶完整前綴）。

@@ -1,11 +1,10 @@
-// P2 — 商品主檔單一化：DB.products 是全系統唯一商品來源（主系統／報價合約精靈／庫存／工業區CRM），
+// P2 — 商品主檔單一化：DB.products 是全系統唯一商品來源（主系統／報價合約精靈／庫存），
 //    價格表基準自癒（雲端整包覆蓋也洗不掉）、基準不可刪只能停用、商品頁可直接管庫存。
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const izHtml = fs.readFileSync(path.join(root, 'izcrm.html'), 'utf8');
 
 let failed = 0;
 const assert = (name, cond, extra) => { console.log((cond ? '  ✓ ' : '  ✗ ') + name + (cond ? '' : (extra ? ' — ' + extra : ''))); if (!cond) failed++; };
@@ -13,9 +12,9 @@ const eq = (name, a, b) => assert(name, a === b, 'got ' + JSON.stringify(a) + ',
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 const pushed = [];
-function boot(store, cloudProducts, page) {
+function boot(store, cloudProducts) {
   const vc = new VirtualConsole(); vc.on('jsdomError', () => {});
-  const dom = new JSDOM(page === 'iz' ? izHtml : html, {
+  const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://x.github.io/salesystem/', pretendToBeVisual: true, virtualConsole: vc,
     beforeParse(w) {
       Object.defineProperty(w, 'localStorage', { value: {
@@ -164,13 +163,6 @@ function boot(store, cloudProducts, page) {
   assert('其他商品的順序不受影響、基準的 HPL／HPS 也用新分類', w.eval('DB.products')[0].code === 'DECSR' && w.getProd('HPL').series === '訂製地墊・制式' && w.getProd('HPS').desc === '訂作地墊 2 色 制式 S（75×90 公分）');
   assert('不是訂製地墊的記號不會被誤判', w.ommParse('DECSR') === null && w.ommParse('HP21') === null && w.ommParse('HPL').std === 'L' && w.ommParse('HSO12').n === 12);
   w.closeOmmModal();
-
-  console.log('P2 — 工業區CRM 讀同一份主檔');
-  const izStore = { duskin_v2: store.duskin_v2 };
-  const wz = boot(izStore, null, 'iz');
-  await wait(300);
-  const izProds = wz.eval('products()');
-  assert('工業區報價試算看得到 DWTH（唯讀同一份）', izProds.some(p => p.code === 'DWTH'), '共 ' + izProds.length + ' 筆');
 
   console.log(failed ? 'P2 FAILED ❌ (' + failed + ')' : 'P2 PASSED ✅');
   process.exit(failed ? 1 : 0);

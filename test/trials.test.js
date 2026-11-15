@@ -1,12 +1,11 @@
 // T2 — 每次試用一筆（c.trials）：migration v11 打包舊資料、進行中／已回收語意（推進表只算未回收）、
 //    回收日 X 分級、每次試用各自的回收待辦、新一次試用（空品項、3 次提醒）、回收結果四選一
-//    （成約／報價中＋一週追蹤／再試用複製品項／拒絕）、編輯表單的「本次試用」、首頁與長官快照、報價匯入。
+//    （成約／報價中＋一週追蹤／再試用複製品項／拒絕）、編輯表單的「本次試用」、長官快照、報價匯入。
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const homeHtml = fs.readFileSync(path.join(root, 'home.html'), 'utf8');
 
 let failed = 0;
 const assert = (name, cond, extra) => { console.log((cond ? '  ✓ ' : '  ✗ ') + name + (cond ? '' : (extra ? ' — ' + extra : ''))); if (!cond) failed++; };
@@ -17,7 +16,7 @@ const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return 
 
 function boot(store, url) {
   const vc = new VirtualConsole(); vc.on('jsdomError', () => {});
-  const dom = new JSDOM(url && url.endsWith('home.html') ? homeHtml : html, {
+  const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: url || 'https://x.github.io/salesystem/', pretendToBeVisual: true, virtualConsole: vc,
     beforeParse(w) {
       Object.defineProperty(w, 'localStorage', { value: {
@@ -199,12 +198,7 @@ function boot(store, url) {
   assert('再編輯：帶出進行中的第 1 次', /第 1 次試用（進行中）/.test(w.document.getElementById('cf-trial-title').textContent) && S.cfItems.length === 1);
   w.closeForm();
 
-  console.log('T2 — 首頁與長官快照');
-  DB.clients.push({ id: 'H', name: '該收的店', status: '試用', trials: [{ n: 1, start: daysAgo(15), due: daysAgo(1), items: [{ product: 'S-20', qty: 1 }], open: true, recovered: '', result: '' }], todos: [], visits: [], updatedAt: 1 });
-  w.saveLocal();
-  const wh = boot(store, 'https://x.github.io/salesystem/home.html');
-  await wait(300);
-  eq('首頁「試用該收」只算到了回收日的進行中試用（H），未到期的 A 不算', wh.document.getElementById('s-trial').textContent, '1');
+  console.log('T2 — 長官快照');
   const raw = [{ status: '試用中', trialDate: '2026-08-01', trialItems: [{ product: 'S-20', qty: 1 }] }];
   eq('長官快照舊格式打包', w.packAllTrials(raw) === 1 && raw[0].trials[0].due, '2026-08-15');
 

@@ -1,7 +1,6 @@
-// G1 — Google 日曆同步＋待辦依評價排序。
+// G1 — Google 日曆同步。
 //   後端 syncCalendar：整份對齊（缺的補、多的刪）、重跑不重複、只動整天事件、單筆失敗不擋其他筆。
-//   前端 calendarItems：待辦／回收日／下次拜訪日 → 提醒清單（標題帶評價、逾期移到今天、擱置不列）、內容沒變不打後端。
-//   待辦清單：同一區塊內 P 旗標 → 評價 → 日期。
+//   前端 calendarItems：待辦（排定日優先，沒排用期限）／下次拜訪日 → 提醒清單（標題帶評價、逾期移到今天、擱置不列）、內容沒變不打後端。
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
@@ -58,7 +57,7 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
       todos: [{ text: '送報價單', dueDate: D(1), done: false }, { text: '做完的', dueDate: D(1), done: true }, { text: '太遠的', dueDate: D(90), done: false }] },
     { id: 'b', name: '三級店', addr: '', status: '試用', tier: 3, visits: [{ date: D(-9) }], updatedAt: 1,
       trials: [{ n: 1, start: D(-9), due: D(5), items: [], open: true, recovered: '', result: '' }],
-      todos: [{ text: '回收試用品（第 1 次）', dueDate: D(5), done: false, source: 'auto-recycle', trialN: 1 }, { text: '逾期的事', dueDate: D(-4), done: false }] },
+      todos: [{ text: '回收試用品（第 1 次）', dueDate: D(5), done: false, source: 'auto-recycle', trialN: 1 }, { text: '逾期的事', dueDate: D(-4), done: false, type: 'misc' }] },
     { id: 'c', name: '擱置店', addr: '', status: '擱置', tier: 2, shelveReason: '嫌貴', nextdate: D(1), visits: [{ date: D(-30) }], todos: [], updatedAt: 1 },
     { id: 'd', name: '二級店', addr: '', status: '開發中', tier: 2, need: '未定', visits: [{ date: D(-2) }], updatedAt: 1, todos: [{ text: '回電', dueDate: D(1), done: false }] },
     { id: 'e', name: '有旗標的三級店', addr: '', status: '開發中', tier: 3, need: '有', visits: [{ date: D(-2) }], updatedAt: 1, todos: [{ text: '急件', dueDate: D(1), done: false, priority: 1 }] }
@@ -108,12 +107,6 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   assert('待辦完成 → 重新對齊，少一筆', sent2.length === 2 && sent2[1].events.length === items.length - 1);
   await w.setCalSync(false);
   assert('關閉 → 旗標清掉', ls.cal_sync === undefined && !w.document.getElementById('cal-sync-on').checked);
-
-  w.navTo('todos', w.document.getElementById('nav-todos')); w.renderGT();
-  const rows = [...w.document.querySelectorAll('#gt-list .todo-row')].map(r => r.textContent.replace(/\s+/g, ''));
-  const soon = rows.filter(r => /送報價單|急件|繳停車費/.test(r)).map(r => (/急件/.test(r) ? 'P' : /送報價單/.test(r) ? '1' : 'G')).join('');
-  assert('待辦清單同一區塊：P 旗標 → 評價 1 級 → 沒評價的一般待辦', soon === 'P1G', rows.join(' | '));
-  assert('待辦列上標出評價', rows.some(r => /一級店1級/.test(r)), rows.join(' | '));
 
   console.log(failed ? `G1 FAILED (${failed})` : 'G1 PASSED ✅');
   process.exit(failed ? 1 : 0);
