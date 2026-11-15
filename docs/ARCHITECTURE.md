@@ -204,12 +204,12 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 
 匯入公司系統的「SERVE別試用顧客一覽表」（.xlsx），和本機 `c.trials` 逐筆對照。**只列落差、不自動改資料**；每筆由使用者按「照公司的」才寫入。
 
-- **讀檔**：`loadXLSX()` 首次使用時才載入 `vendor/xlsx.mini.min.js`（SheetJS 0.20.3，已進 `sw.js` 的 SHELL 可離線）。`parseServeRows(rows)` 吃二維陣列（與函式庫無關）：以「試用單號」找表頭列、依欄名定位；單號列開一張單，其下每列一個商品；略過「合計／總合計」。
+- **讀檔**：`loadXLSX()` 首次使用時才載入 `vendor/xlsx.mini.min.js`（SheetJS 0.20.3，已進 `sw.js` 的 SHELL 可離線）。`parseServeRows(rows)` 吃二維陣列（與函式庫無關）：以「試用單號」找表頭列、依欄名定位；單號列開一張單，其下每列一個商品；略過「合計／總合計」。**只回傳狀態「未回收」的單**（使用者指定；`skipped`＝略過的已回收張數）。
 - **資料**：匯入結果只存本機 `localStorage.duskin_serve`（每週重匯）；配對成功後公司顧客編號記在 `c.custNo`（隨客戶同步）。
-- **配對** `serveFindClient(o)`：`custNo` → 電話（只比數字）唯一相同 → 名稱去掉公司字尾後唯一相同。配不上的由使用者指定（`serveLink`）或 `serveCreate` 建新客戶。
-- **落差** `serveDiff(data)`：`nomatch`／`missing`（公司有你沒記）／`diff`（`serveCompare`：試用日、回收預定日、回收狀態、主商品、整單 4W 合計）／`extra`（期間內你有公司沒有）。公司單與本機試用以試用日配對，容許 ±3 天。
+- **配對** `serveFindClient(o)`：`custNo` → 電話（只比數字）唯一相同 → 名稱去掉公司字尾後唯一相同。配不上的由使用者指定（候選按鈕或 `serveSearch` 搜尋店名／地址／電話／窗口 → `serveLink`）或 `serveCreate` 建新客戶。
+- **落差** `serveDiff(data)`：`nomatch`／`missing`（公司有你沒記）／`diff`（`serveCompare`：試用日、回收預定日、回收狀態、主商品、整單 4W 合計）／`extra`（期間內你還在試用、公司未回收清單沒有）。公司單與本機試用以試用日配對，容許 ±3 天。
 - **主商品以本機商品主檔為準**（`serveIsMain`：`note` 不是配件／口味）。公司把芳香機的錢記在口味那行、機台記 0，本機相反，所以品項只比主商品、金額比整張單合計。
-- **寫入** `serveApply(no)`：只動那一筆試用（日期、品項、進行中／已回收），同代號保留原本的議價與週期；補進來的依試用日重排並重編 `n`，待辦的 `trialN` 跟著換；因此變成還在試用的店會轉為試用並補一筆拜訪紀錄。
+- **寫入** `serveApply(no)`：只動那一筆試用（日期、品項、改回進行中），同代號保留原本的議價與週期；補進來的依試用日重排並重編 `n`，待辦的 `trialN` 跟著換；因此變成還在試用的店會轉為試用並補一筆拜訪紀錄。
 - **週報金額規則**（使用者指定）：`genReport()` 推進表現在會列區間內成約的店，金額＝成約品項 4W 合計 ÷ `RPT_TAX`(1.05)、進度說明「成約」；試用中的維持含稅。**解約尚未建模**（等公司成約／解約報表樣本）。
 
 ### Google 日曆同步（提醒走出 App）
