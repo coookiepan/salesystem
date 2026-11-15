@@ -1,4 +1,4 @@
-// C5 — 商品價格邏輯（報價精靈／合約精靈共用入口）＋ 合約精靈輸入不失焦 ＋ 工業區對話框疊層
+// C5 — 商品價格邏輯（報價精靈／合約精靈共用入口）＋ 合約精靈輸入不失焦
 //   規則：Product.price＝商品自身週期下的每次更換單價；定價只來自主系統商品庫（DB.products）。
 //   換得比商品週期更久（2W 商品選 4W）→ ×倍數；一樣或更勤 → 單價不變。4W 金額＝單價 × 次數 × 數量。
 const fs = require('fs');
@@ -218,13 +218,6 @@ function eq(name, actual, expected) { assert(name, actual === expected, 'got ' +
   eq('庫存 NFM-DS → NH-S', w3.eval('DB.inventory').find(i => i.name === 'NH-S').stock, 2);
   const outbox3 = JSON.parse(w3.localStorage.getItem('duskin_outbox') || '[]');
   assert('商品庫、庫存、改碼客戶都進待推送佇列', ['saveProducts', 'saveInventory', 'save'].every(a => outbox3.some(o => o.action === a)), outbox3.map(o => o.action).join(','));
-
-  console.log('C5 — 工業區對話框要疊在全域底部導覽之上（nav.js z-index:120）');
-  const iz = fs.readFileSync(path.join(ROOT, 'izcrm.html'), 'utf8');
-  const nav = fs.readFileSync(path.join(ROOT, 'nav.js'), 'utf8');
-  const navZ = Number((nav.match(/#global-nav\{[^}]*z-index:(\d+)/) || [])[1]);
-  const dlgZ = Number((iz.match(/\.modal-bg\{[^}]*z-index:(\d+)/) || [])[1]);
-  assert('izcrm .modal-bg z-index > #global-nav', dlgZ > navZ, dlgZ + ' vs ' + navZ);
 
   console.log(failed ? 'C5 FAILED ❌ (' + failed + ')' : 'C5 PASSED ✅');
   process.exit(failed ? 1 : 0);

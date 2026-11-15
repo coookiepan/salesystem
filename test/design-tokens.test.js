@@ -11,7 +11,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const tokensCss = read('tokens.css');
-const PAGES = ['index.html', 'home.html', 'izcrm.html', 'sitemap.html'];
+const PAGES = ['index.html', 'sitemap.html'];
 
 let failed = 0;
 function assert(name, cond, extra) {
@@ -73,8 +73,6 @@ function tokensOf(block) {
                    '#085041', '#EF9F27',                                               // logo-mark SVG
                    '#ffffff',                                                          // canvas 圖卡底色
                    '#5E726A'],                                                         // --pin-fallback 退路
-    'home.html': [],
-    'izcrm.html': ['#085041'],
     'sitemap.html': ['#EF7C27', '#E0B21C', '#3C8DD9', '#1D9E75', '#6B6B66', '#B0B0AA', // 工地階段（地圖圖磚上）
                      '#8F1A11', '#175A99']                                             // cssColor 退路
   };

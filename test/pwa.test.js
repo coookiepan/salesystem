@@ -107,6 +107,12 @@ new Function('self', 'caches', 'fetch', 'Response', 'URL', swCode)(self, caches,
   assert('index.html 有 theme-color', /name="theme-color"/.test(html));
   let mani; try { mani = JSON.parse(fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8')); } catch (e) {}
   assert('manifest 為合法 JSON 且含 start_url/display/icons', !!mani && !!mani.start_url && mani.display === 'standalone' && Array.isArray(mani.icons) && mani.icons.length > 0);
+  assert('App 直接開主系統（待辦）', !!mani && mani.start_url === './index.html');
+  const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  const shellFiles = ((sw.match(/const SHELL = \[([\s\S]*?)\];/) || [])[1] || '').match(/'\.\/[^']+'/g) || [];
+  assert('預快取清單裡的檔案都存在（沒有已刪除的頁）', shellFiles.length > 5 && shellFiles.every(f => fs.existsSync(path.join(root, f.slice(1, -1)))));
+  const navJs = fs.readFileSync(path.join(root, 'nav.js'), 'utf8');
+  assert('底部導覽三格：待辦／客戶／工地', (navJs.match(/\{id:'/g) || []).length === 3 && /index\.html'\}/.test(navJs) && /index\.html#clients/.test(navJs) && /sitemap\.html/.test(navJs));
   assert('icon.svg 存在', fs.existsSync(path.join(root, 'icon.svg')));
 
   console.log(failed ? `H2 FAILED (${failed})` : 'H2 PASSED ✅');

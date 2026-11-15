@@ -6,7 +6,6 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const root = path.join(__dirname, '..');
 const smHtml = fs.readFileSync(path.join(root, 'sitemap.html'), 'utf8');
 const mainHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const homeHtml = fs.readFileSync(path.join(root, 'home.html'), 'utf8');
 
 let failed = 0;
 const assert = (name, cond, extra) => { console.log((cond ? '  ✓ ' : '  ✗ ') + name + (cond ? '' : (extra ? ' — ' + extra : ''))); if (!cond) failed++; };
@@ -127,11 +126,6 @@ function boot(html, store, geo, url) {
   assert('提示條剩 1 筆', /<b>1<\/b>/.test(bar.innerHTML));
   w.cancelPlace();
   assert('放點取消也清 placeForId、FAB 列回來', w.eval('placeForId') === null && w.document.getElementById('fabs').style.display === 'flex');
-
-  console.log('F2 — 首頁工地卡顯示快拍待補');
-  const wh = boot(homeHtml, store, null, 'https://x.github.io/salesystem/home.html');
-  await wait(300);
-  assert('首頁工地卡：快拍待補 1', /快拍待補 1/.test(wh.document.getElementById('a-site').textContent), wh.document.getElementById('a-site').textContent);
 
   console.log('F2 — 主系統客戶地圖：定位追蹤只在地圖開著時跑');
   const geo2 = { lat: 23.0, lng: 120.2, acc: 8, watches: 0, cleared: 0, watchCb: null };

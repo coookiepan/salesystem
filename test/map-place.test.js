@@ -116,7 +116,7 @@ const w = dom.window;
     { id: 'sDel', name: '已刪工地', lat: 22.99, lng: 120.21, deleted: true },
     { id: 'sConv', name: '已轉工地', lat: 22.99, lng: 120.21, deleted: false, main: { clientId: 'x1' } }
   ], cfg: {}, queue: [] });
-  w.eval('FUSION_CACHE.sm=null');
+  w.eval('SM_CACHE=null');
   const base = w.eval('MAP_STATE.markers.length');
   w.toggleMapLayer('shops', w.document.getElementById('map-layer-shops')); await wait(50);
   assert('開既有客戶圖層 → 名單店家上圖', w.eval('MAP_STATE.markers.length') === base + 1);
