@@ -1779,7 +1779,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-t3';
+const APP_VERSION='v2026.11.15-t4';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -7298,7 +7298,7 @@ function openBdSheet(k){
     '<div class="bd-pick">'+days.map(d=>{const bad=(due&&xLevelOn(due,d)>=3)||(t.dueDate&&d>t.dueDate);return '<button data-go="'+d+'" class="'+(t.plan===d?'cur':'')+(bad?' bad':'')+'">'+(d===td?'今天':bdWD(d))+'<span class="num">'+bdMD(d)+'</span></button>';}).join('')+'</div>'+
     '<div class="f" style="margin:0"><label class="lbl" for="bd-other">排到其他日期</label><input id="bd-other" type="date" min="'+td+'" value="'+(t.plan&&!days.includes(t.plan)?t.plan:'')+'"></div>'+
     (due?'<button class="btn btn-primary" data-act="recover">已回收</button>':'')+
-    '<div class="bd-row"><button class="btn btn-outline btn-sm" data-go="">放回未排</button><button class="btn btn-outline btn-sm" data-act="edit">編輯</button>'+(x.c?'<button class="btn btn-outline btn-sm" data-act="client">開啟客戶</button>':'')+'<button class="btn btn-outline btn-sm" data-act="close">關閉</button></div></div>';
+    '<div class="bd-row"><button class="btn btn-outline btn-sm" data-go="">放回未排</button><button class="btn btn-outline btn-sm" data-act="edit">編輯</button>'+(x.c?'<button class="btn btn-outline btn-sm" data-act="client">開啟客戶</button>':'')+'<button class="btn btn-danger btn-sm" data-act="del">刪除</button><button class="btn btn-outline btn-sm" data-act="close">關閉</button></div></div>';
   bg.addEventListener('click',ev=>{
     const b=ev.target.closest('button');
     if(ev.target!==bg&&!b)return;
@@ -7306,6 +7306,7 @@ function openBdSheet(k){
     if(!b)return;
     if(b.dataset.go!==undefined)placeTask(k,b.dataset.go,null);
     else if(b.dataset.act==='recover')openRecoverModal(t.trialN||1,x.ci);
+    else if(b.dataset.act==='del')delGT(x.src,x.ci,x.ti);
     else if(b.dataset.act==='edit')gtEdit(x.src,x.ci,x.ti);
     else if(b.dataset.act==='client'){navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(x.ci),50);}
   });
@@ -7331,8 +7332,19 @@ function togGT(src,ci,ti){
   if(src==='c')onTodoToggled(DB.clients[ci],arr[ti]);
   _gtSync(src,ci);_gtRefresh();
 }
+// 系統任務（有 source）不能真的拿掉——拿掉後系統看不到「已產生過」會立刻補一張回來。
+// 所以刪除＝收進已完成（不動客戶的回收／報價狀態）；轉交是固定待辦，只能打勾或到客戶頁填理由
 function delGT(src,ci,ti){
   const arr=_gtArr(src,ci);const t=arr[ti];if(!t)return;
+  if(t.source==='handoff'||t.source==='handoff-check'){showToast('轉交是固定待辦：轉交了就打勾，不能轉交請到客戶頁填理由');return;}
+  if(t.source){
+    if(t.done)return;
+    const plan=t.plan||'';
+    t.done=true;t.plan='';
+    _gtSync(src,ci);_gtRefresh();
+    showUndoToast('已移除「'+t.text.slice(0,12)+(t.text.length>12?'…':'')+'」',()=>{t.done=false;t.plan=plan;_gtSync(src,ci);_gtRefresh();});
+    return;
+  }
   arr.splice(ti,1);
   _gtSync(src,ci);_gtRefresh();
   showUndoToast('已刪除待辦「'+t.text.slice(0,12)+(t.text.length>12?'…':'')+'」',()=>{

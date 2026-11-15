@@ -319,6 +319,7 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 | `traySortKey(x,td)`／`TRAY_SORT_RULES` | **未排的排序依據**（使用者確認；要改只改這裡，畫面「排序依據」讀同一份文字）：① 回收任務最前（X 等級高 → 離下一個 X 近）② 有期限的（期限近）③ 沒期限的；同組內 P 旗標 → 評價 → 順延次數 |
 | `taskRecycleDue(x)`／`xLevelOn(due,on)`／`xDaysToNext` | 回收任務的回收日與公司逾期等級：到回收日 X、之後每 7 天多一個 X（與 `trialXInfo` 同一條規則）。卡片上的四格階梯以「排定那天」計，第四格 XXXX 是禁區；排到會 XXX 以上或超過期限的日子，投放區與面板按鈕轉紅 |
 
+- **刪除（`delGT`）**：使用者自己的任務真的移除；系統任務（有 `source`）改成 `done=true`——產生器靠「這個 source 已存在」判斷，拿掉會立刻補回來；`handoff`／`handoff-check` 不可刪。排程面板有「刪除」鈕，都帶復原。
 - 回收卡片與排程面板會列出要收回的試用品（`taskRecycleItems`：讀該次試用的 `items`，不存進待辦文字）。
 - 回收任務在**試用一開始**就產生（`autoAddRecycleTodos`，`renderGT` 開頭會呼叫），才排得進看板；`auto-quote` 仍是開始 7 天後。
 - **X 不看階段**：`trialXInfo` 與回收任務都只看「有沒有還沒回收的試用」，階段被改掉但東西還在客戶那邊一樣記 X。
