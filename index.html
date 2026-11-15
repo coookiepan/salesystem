@@ -1105,6 +1105,29 @@ details.trial-card .trial-body{margin-top:8px}
   </div>
 </div>
 
+<!-- ═══ 訂製地墊（針織 OMM）試算 ═══ -->
+<div class="modal-bg" id="omm-modal" onclick="if(event.target===this)closeOmmModal()">
+  <div class="modal" role="dialog" aria-labelledby="omm-title">
+    <div class="modal-title" id="omm-title">訂製地墊試算（針織）</div>
+    <div class="f"><label class="lbl" for="omm-size">尺寸</label>
+      <select id="omm-size" onchange="renderOmm()"></select>
+    </div>
+    <div class="g2" id="omm-free">
+      <div class="f"><label class="lbl" for="omm-w">寬（公分）</label><input id="omm-w" type="number" inputmode="decimal" min="1" oninput="renderOmm()"></div>
+      <div class="f"><label class="lbl" for="omm-l">長（公分）</label><input id="omm-l" type="number" inputmode="decimal" min="1" oninput="renderOmm()"></div>
+    </div>
+    <div class="f"><label class="lbl" for="omm-colors">顏色數</label>
+      <select id="omm-colors" onchange="renderOmm()"></select>
+    </div>
+    <div id="omm-result" style="margin:6px 0 4px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="omm-add" onclick="ommAddProduct()">加入商品庫</button>
+      <button class="btn btn-outline" onclick="ommCopy()">複製報價文字</button>
+      <button class="btn btn-outline" onclick="closeOmmModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 公司試用表比對 ═══ -->
 <div id="serve-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:16px">
   <div style="background:var(--bg);max-width:960px;margin:10px auto;border-radius:var(--radius);padding:16px">
@@ -1310,6 +1333,7 @@ details.trial-card .trial-body{margin-top:8px}
     <div id="prod-section" style="display:none;padding:0 16px 16px 16px;border-top:1px solid var(--border)">
       <div class="toolbar" style="padding-top:12px">
         <div style="flex:1"></div>
+        <button class="btn btn-outline btn-sm" onclick="openOmmModal()">訂製地墊試算</button>
         <button class="btn btn-primary btn-sm" onclick="openProdModal(-1)">+ 新增商品</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1678,7 +1702,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-r2';
+const APP_VERSION='v2026.11.15-r3';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2250,6 +2274,96 @@ function markQuoted(c,date){
   c.todos.forEach(t=>{if(t&&!t.done&&t.source==='auto-quote')t.done=true;});
   if(!c.todos.some(t=>t&&!t.done&&t.source==='quote-followup'))
     c.todos.push({text:'報價追蹤（報價後一週，問結果）',dueDate:addDays(date||today(),7),done:false,source:'quote-followup'});
+}
+// ═══ 訂製地墊（針織 OMM）試算 ═══ 價格由「尺寸 × 顏色數」決定（公司「OMM 特製費明細表」2021/03）。
+// 每個系列：制式尺寸 SS／S／SL／L／LL／W 各一個價，自由尺寸依面積分 No.1–20（每 0.6 m² 一級）。
+// 每格＝[標準單價（更換一次，含稅）, 特製費（一次性）]。報價固定用「四週更換兩次」＝標準單價 × 2（使用者指定）。
+// 這是價目規則，不是商品清單：一百多個代號不放進 DB.products（整包存一格，會撐爆 Sheet 儲存格上限），
+// 要用到的那一個才由 ommAddProduct() 寫進商品庫——之後報價／合約／試用仍然只讀 DB.products。
+const OMM_STD={SS:[65,80],S:[75,90],SL:[90,120],L:[90,150],LL:[120,180],W:[150,180]};   // 制式尺寸（有邊，公分）
+const OMM_MAX={w:180,l:1000,area:12};   // 針織完全客製：寬 1.8 m 內、長 10 m 內、12 m² 內
+const OMM_PRICE={
+  HSO:{label:'1 色',name:'訂作地墊1色',
+    std:{SS:[160,390],S:[180,450],SL:[250,670],L:[300,800],LL:[430,1360],W:[520,1740]},
+    no:[[160,520],[270,870],[380,1240],[490,1600],[600,1950],[710,2350],[820,2750],[930,3110],[1040,3590],[1150,3990],[1250,4380],[1365,4750],[1480,5130],[1575,5510],[1645,5880],[1750,6270],[1855,6640],[1985,7110],[2095,7480],[2890,7870]]},
+  HP:{label:'2 色',name:'訂作地墊2色',
+    std:{SS:[200,760],S:[230,840],SL:[290,1110],L:[360,1290],LL:[520,1900],W:[650,2380]},
+    no:[[200,800],[320,1220],[440,1660],[560,2090],[680,2520],[800,2990],[920,3460],[1040,3910],[1160,4460],[1280,4910],[2150,5380],[2450,5830],[2650,6290],[2850,6740],[3050,7200],[3250,7660],[3450,8110],[3600,8590],[3800,9030],[4200,9500]]},
+  HH:{label:'2 色（反轉）',name:'訂作地墊2色反轉',
+    std:{SS:[180,760],S:[200,840],SL:[270,1110],L:[340,1290],LL:[480,1900],W:[580,2380]},
+    no:[[190,800],[300,1220],[430,1660],[510,2090],[620,2520],[730,2990],[840,3460],[950,3910],[1100,4460],[1200,4910],[1700,5380],[1900,5830],[2050,6290],[2200,6740],[2350,7200],[2500,7660],[2650,8110],[2800,8590],[2950,9030],[3550,9500]]},
+  HQ:{label:'3–4 色',name:'訂作地墊3-4色',
+    std:{SS:[210,890],S:[250,970],SL:[330,1240],L:[400,1420],LL:[570,2030],W:[670,2520]},
+    no:[[220,930],[350,1350],[480,1790],[610,2220],[750,2660],[880,3120],[1010,3590],[1140,4040],[1270,4590],[1400,5040],[2600,5510],[3000,5960],[3250,6420],[3480,6880],[3725,7330],[4000,7800],[4200,8240],[4450,8720],[4680,9160],[4900,9630]]},
+  HR:{label:'5–6 色',name:'訂作地墊5-6色',
+    std:{SS:[230,950],S:[270,1040],SL:[350,1310],L:[420,1490],LL:[600,2100],W:[720,2580]},
+    no:[[260,1000],[420,1420],[550,1850],[690,2290],[820,2720],[960,3190],[1100,3650],[1240,4110],[1380,4650],[1530,5110],[2680,5570],[3085,6030],[3330,6480],[3560,6940],[3800,7400],[4080,7860],[4280,8310],[4530,8780],[4760,9230],[4980,9700]]}
+};
+// 尺寸編號：面積（m²）四捨五入到小數第 2 位後，每 0.6 m² 一級（0.60 以下 No.1、0.61–1.20 No.2…11.41–12.00 No.20）
+function ommArea(w,l){return Math.round(w*l/100+1e-9)/100;}
+function ommRank(area){return Math.max(1,Math.ceil(Math.round(area*100)/60-1e-9));}
+// series＝OMM_PRICE 的鍵；size＝制式尺寸代號，或 {w,l}（公分）。回傳試算結果，做不了的放 error
+function ommQuote(series,size){
+  const S=OMM_PRICE[series];if(!S)return {error:'請選顏色數'};
+  let code,desc,cell,dims,area;
+  if(typeof size==='string'){
+    if(!OMM_STD[size])return {error:'請選尺寸'};
+    dims=OMM_STD[size];area=ommArea(dims[0],dims[1]);cell=S.std[size];code=series+size;desc=S.name+' '+size;
+  }else{
+    const w=Number(size&&size.w)||0,l=Number(size&&size.l)||0;
+    if(!(w>0&&l>0))return {error:'請輸入寬和長'};
+    dims=[Math.min(w,l),Math.max(w,l)];area=ommArea(w,l);
+    if(dims[0]>OMM_MAX.w)return {error:'短邊超過 '+OMM_MAX.w+' 公分，針織地墊做不了'};
+    if(dims[1]>OMM_MAX.l)return {error:'長邊超過 '+OMM_MAX.l+' 公分，針織地墊做不了'};
+    if(area>OMM_MAX.area)return {error:'面積 '+area+' m² 超過 '+OMM_MAX.area+' m²，針織地墊做不了'};
+    const n=ommRank(area);cell=S.no[n-1];code=series+n;desc=S.name+' NO.'+n;
+  }
+  return {code,desc,series,dims,area,unit:cell[0],fw4:cell[0]*2,fee:cell[1]};
+}
+function ommCurrent(){
+  const sz=document.getElementById('omm-size').value,se=document.getElementById('omm-colors').value;
+  return ommQuote(se,sz==='free'?{w:document.getElementById('omm-w').value,l:document.getElementById('omm-l').value}:sz);
+}
+function openOmmModal(){
+  const sz=document.getElementById('omm-size'),co=document.getElementById('omm-colors');
+  if(!sz.options.length){
+    sz.innerHTML='<option value="free">自由尺寸（輸入寬、長）</option>'+Object.keys(OMM_STD).map(k=>`<option value="${k}">制式 ${k}（${OMM_STD[k][0]}×${OMM_STD[k][1]} 公分）</option>`).join('');
+    co.innerHTML=Object.keys(OMM_PRICE).map(k=>`<option value="${k}">${OMM_PRICE[k].label}</option>`).join('');
+  }
+  renderOmm();
+  document.getElementById('omm-modal').classList.add('on');
+}
+function closeOmmModal(){document.getElementById('omm-modal').classList.remove('on');}
+function renderOmm(){
+  const free=document.getElementById('omm-size').value==='free';
+  document.getElementById('omm-free').style.display=free?'':'none';
+  const q=ommCurrent(),el=document.getElementById('omm-result'),add=document.getElementById('omm-add');
+  add.disabled=!!q.error;
+  if(q.error){el.innerHTML=`<div style="font-size:13px;color:var(--text2)">${escHtml(q.error)}</div>`;return;}
+  const row=(k,v,strong)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">${k}</span><span class="num" style="font-weight:${strong?700:600}">${v}</span></div>`;
+  el.innerHTML=
+    row('商品記號',escHtml(q.code)+'（'+escHtml(q.desc)+'）')+
+    row('尺寸／面積',q.dims[0]+'×'+q.dims[1]+' 公分・'+q.area.toFixed(2)+' m²')+
+    row('每次更換單價','$'+q.unit.toLocaleString())+
+    row('四週金額（更換兩次）','$'+q.fw4.toLocaleString(),true)+
+    row('特製費（一次性）','$'+q.fee.toLocaleString())+
+    `<div style="font-size:12.5px;color:var(--text3);margin-top:6px">金額含稅，依公司 OMM 特製費明細表（2021/03）。${getProd(q.code)?'這個記號已在商品庫。':''}</div>`;
+}
+function ommText(q){return q.code+' '+q.desc+'（'+q.dims[0]+'×'+q.dims[1]+' 公分）\n每次更換 $'+q.unit.toLocaleString()+'・四週（更換兩次）$'+q.fw4.toLocaleString()+'\n特製費（一次性）$'+q.fee.toLocaleString();}
+async function ommCopy(){
+  const q=ommCurrent();if(q.error){showToast(q.error);return;}
+  try{await navigator.clipboard.writeText(ommText(q));showToast('✓ 已複製');}
+  catch(e){appAlert(ommText(q),'報價文字（請手動複製）');}
+}
+// 把試算出的那一個記號寫進商品庫（已存在就更新價格），之後客戶卡／報價／合約才選得到；訂製品合約 4 年
+function ommAddProduct(){
+  const q=ommCurrent();if(q.error){showToast(q.error);return;}
+  const data={code:q.code,cat:'地墊',series:'訂做系列',desc:q.desc,size:'',price:q.unit,cycle:'2W',note:'訂製品，合約 4 年・特製費 $'+q.fee.toLocaleString(),active:true,contractYears:4};
+  const p=getProd(q.code);
+  if(p)Object.assign(p,data);else DB.products.push(data);
+  saveLocal();autoSync('saveProducts',{products:DB.products});
+  renderProducts();renderOmm();
+  showToast('✓ '+q.code+(p?' 已更新':' 已加入商品庫'));
 }
 // ═══ 公司試用表比對 ═══ 匯入公司系統的「SERVE別試用顧客一覽表」，和本機的試用紀錄逐筆對照。
 // 原則：只列落差、不自動改資料；每筆由使用者按「照公司的」才寫入（serveApply）。
