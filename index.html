@@ -1672,6 +1672,7 @@ body.bd-dragging .bd-extra{display:flex;grid-column:span 5;justify-content:cente
     <div class="modal-title" id="tr-title">試用回收</div>
     <div class="f"><label class="lbl">回收日</label><input id="tr-date" type="date"></div>
     <div class="lbl" style="margin-bottom:8px">回收結果</div>
+    <button class="rc-opt" onclick="finishRecover('')"><b>只記已回收</b><span>東西收回來了，結果之後再補；階段先不動</span></button>
     <button class="rc-opt" onclick="finishRecover('成約')"><b>成約</b><span>這次的品項轉成成約品項，進入「成約（待轉交）」</span></button>
     <button class="rc-opt" onclick="finishRecover('報價中')"><b>報價中</b><span>變成「試用（已報價）」，一週後提醒你追結果</span></button>
     <button class="rc-opt" onclick="finishRecover('再試用')"><b>再試用</b><span>用一模一樣的品項再開一次試用（回收日重新算）</span></button>
@@ -1777,7 +1778,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-t1';
+const APP_VERSION='v2026.11.15-t2';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -6265,9 +6266,12 @@ function fillNext(){
 }
 // 回收完成 → 選結果
 let RECOVER={ci:-1,n:0};
-function openRecoverModal(n){
-  RECOVER={ci:S.curIdx,n};
-  document.getElementById('tr-title').textContent='第 '+n+' 次試用回收';
+// ci 省略＝從客戶詳情頁開（完成後留在詳情頁）；看板傳入 ci（完成後留在看板）
+function openRecoverModal(n,ci){
+  const board=typeof ci==='number';
+  RECOVER={ci:board?ci:S.curIdx,n,board};
+  const c=DB.clients[RECOVER.ci];
+  document.getElementById('tr-title').textContent=(board&&c?c.name+'・':'')+'第 '+n+' 次試用回收';
   document.getElementById('tr-date').value=today();
   document.getElementById('trial-recover-modal').classList.add('on');
 }
@@ -6291,13 +6295,15 @@ function finishRecover(result){
   }else if(result==='拒絕'){
     shelveClient(c,'',date);
   }
-  (c.visits=c.visits||[]).push({date,mood:0,note:'',insight:'第 '+t.n+' 次試用回收：'+result,statusChange:c.status,nextdate:c.nextdate||null});
+  // result ''＝只記已回收：階段不動，結果之後再到客戶頁補
+  (c.visits=c.visits||[]).push({date,mood:0,note:'',insight:'第 '+t.n+' 次試用回收'+(result?'：'+result:''),statusChange:result?c.status:null,nextdate:c.nextdate||null});
   syncHandoffTodo(c);
   c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
-  closeRecoverModal();renderClients();openCD(RECOVER.ci);
+  closeRecoverModal();
+  if(RECOVER.board)_gtRefresh();else{renderClients();openCD(RECOVER.ci);}
   const n=trialsOf(c).length;
   if(result==='再試用'&&n>TRIAL_MAX)showToast('提醒：這家已經第 '+n+' 次試用，超過公司規定的 '+TRIAL_MAX+' 次');
-  else showToast('✓ 第 '+t.n+' 次試用已回收：'+result);
+  else showToast('✓ '+(RECOVER.board?c.name+' ':'')+'第 '+t.n+' 次試用已回收'+(result?'：'+result:''));
   if(missingFields(c).length)openFill(c);   // 擱置要填理由（還沒評價的順便問）
 }
 
@@ -7283,6 +7289,7 @@ function openBdSheet(k){
   bg.innerHTML='<div class="bd-sheet" role="dialog" aria-label="安排日期"><div><div class="bd-shop" style="font-size:17px">'+escHtml(x.c?x.c.name:'一般')+'</div><div class="bd-ttl">'+escHtml(t.text)+'</div><div class="bd-tags">'+bdTags(x,t.plan||td)+'</div></div>'+
     '<div class="bd-pick">'+days.map(d=>{const bad=(due&&xLevelOn(due,d)>=3)||(t.dueDate&&d>t.dueDate);return '<button data-go="'+d+'" class="'+(t.plan===d?'cur':'')+(bad?' bad':'')+'">'+(d===td?'今天':bdWD(d))+'<span class="num">'+bdMD(d)+'</span></button>';}).join('')+'</div>'+
     '<div class="f" style="margin:0"><label class="lbl" for="bd-other">排到其他日期</label><input id="bd-other" type="date" min="'+td+'" value="'+(t.plan&&!days.includes(t.plan)?t.plan:'')+'"></div>'+
+    (due?'<button class="btn btn-primary" data-act="recover">已回收</button>':'')+
     '<div class="bd-row"><button class="btn btn-outline btn-sm" data-go="">放回未排</button><button class="btn btn-outline btn-sm" data-act="edit">編輯</button>'+(x.c?'<button class="btn btn-outline btn-sm" data-act="client">開啟客戶</button>':'')+'<button class="btn btn-outline btn-sm" data-act="close">關閉</button></div></div>';
   bg.addEventListener('click',ev=>{
     const b=ev.target.closest('button');
@@ -7290,6 +7297,7 @@ function openBdSheet(k){
     bg.remove();
     if(!b)return;
     if(b.dataset.go!==undefined)placeTask(k,b.dataset.go,null);
+    else if(b.dataset.act==='recover')openRecoverModal(t.trialN||1,x.ci);
     else if(b.dataset.act==='edit')gtEdit(x.src,x.ci,x.ti);
     else if(b.dataset.act==='client'){navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(x.ci),50);}
   });
