@@ -8005,6 +8005,8 @@ const MIGRATIONS=[
     if(packAllStages(DB.clients))saveLocal();
     try{localStorage.removeItem('status_filter');}catch(e){}
   }},
+  // 公司試用表改成只擷取未回收：舊的匯入結果還含已回收的單，直接清掉，請使用者重新匯入
+  {v:14, desc:'drop old serve import', fn:function(){try{localStorage.removeItem('duskin_serve');}catch(e){}}},
 ];
 function applyPriceSheet2026(){
   const REMAP={'NFM-DS':'NH-S','NH-S-4W':'NH-S','FSSR':'FSSK','FFSR':'FFSK','FFSLR':'FFSLK','FFLR':'FFLK','FFMR':'FFMK'};
