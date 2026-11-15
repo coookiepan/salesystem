@@ -593,6 +593,100 @@ details.trial-card .trial-body{margin-top:8px}
   .cm-item-fields{grid-template-columns:1fr 1fr}
   .cm-prod-list{max-height:none;flex:1}
 }
+/* ═══ 待辦看板（.bd-*）═══ 日期軌貼在上方（拖卡片時長高成投放區）→ 當天主角 → 當天清單 → 未排池。
+   顏色只表示急迫度；任務類型與評價用文字標籤。 */
+.bd-rail{position:sticky;top:var(--bd-top,92px);z-index:40;background:var(--bg2);padding:8px 0;margin:-4px 0 6px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.bd-day{min-width:0;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:var(--r);padding:8px 4px 7px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;cursor:pointer;transition:background .16s var(--ease),border-color .16s var(--ease),padding .2s var(--ease)}
+.bd-day .wd{font-size:12.5px;color:var(--text2);font-weight:600}
+.bd-day .dd{font-size:20px;font-weight:700;line-height:1.1}
+.bd-day .ct{font-size:12px;color:var(--text3);min-height:17px}
+.bd-day .flag{font-size:12px;font-weight:700;color:var(--red);min-height:17px}
+.bd-day.today .wd{color:var(--green-d);font-weight:800}
+.bd-day.sel{background:var(--theme);border-color:var(--theme);color:var(--on-theme)}
+.bd-day.sel .wd,.bd-day.sel .ct{color:var(--on-theme-2)}
+.bd-day.sel.today .wd{color:var(--green-lit)}
+.bd-day.sel .flag{color:var(--on-theme)}
+.bd-extra{display:none}
+body.bd-dragging .bd-rail{box-shadow:0 10px 24px -12px rgba(17,33,28,.35)}
+body.bd-dragging .bd-day{padding-top:16px;padding-bottom:14px;border-style:dashed;border-color:var(--border2)}
+body.bd-dragging .bd-extra{display:flex;grid-column:span 5;justify-content:center;padding:12px 0;font-weight:700;font-size:13px}
+.bd-day.over{background:var(--green);border-color:var(--green);border-style:solid;color:var(--on-green)}
+.bd-day.over .wd,.bd-day.over .ct,.bd-day.over .flag{color:var(--on-green)}
+.bd-day.late-drop.over{background:var(--red);border-color:var(--red);color:var(--bg)}
+.bd-day.late-drop.over .wd,.bd-day.late-drop.over .ct,.bd-day.late-drop.over .flag{color:var(--bg)}
+.bd-slab{background:var(--theme);color:var(--on-theme);border-radius:var(--r-lg);padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end;margin-bottom:14px}
+.bd-slab .lbl{font-size:12.5px;color:var(--on-theme-2);font-weight:600;letter-spacing:.04em}
+.bd-slab .big{font-size:44px;font-weight:700;line-height:1}
+.bd-slab .big small{font-family:var(--font-sans);font-size:15px;font-weight:600;color:var(--on-theme-2);margin-left:6px}
+.bd-slab .meta{font-size:13px;color:var(--on-theme-2);text-align:right}
+.bd-gauge{grid-column:1/-1;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:8px}
+.bd-gauge i{display:block;height:100%;background:var(--green-lit);transition:width .3s var(--ease)}
+.bd-col{display:none}
+.bd-col.sel{display:block}
+.bd-col h2,.bd-tray h2{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:8px}
+.bd-col h2 .n,.bd-tray h2 .n{color:var(--text3);font-weight:600}
+.bd-list{display:flex;flex-direction:column;gap:8px;min-height:56px;border-radius:var(--r)}
+.bd-list.empty::after{content:attr(data-empty);display:block;border:1.5px dashed var(--border2);border-radius:var(--r);padding:16px;text-align:center;color:var(--text3);font-size:13px}
+.bd-list.over{outline:2px dashed var(--green);outline-offset:4px}
+.bd-card{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 6px 10px 10px;transition:opacity .14s var(--ease),border-color .14s}
+.bd-card.done{opacity:.55}
+.bd-card.done .bd-ttl{text-decoration:line-through}
+.bd-card.ghosted{opacity:.25}
+.bd-lead{display:flex;flex-direction:column;align-items:center;gap:2px}
+.bd-ord{font-size:12px;color:var(--text3);line-height:20px}
+.bd-ck{appearance:none;-webkit-appearance:none;width:24px;height:24px;border:2px solid var(--border2);border-radius:7px;background:var(--bg);margin:0;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
+.bd-ck:checked{background:var(--green);border-color:var(--green)}
+.bd-ck:checked::after{content:"";width:6px;height:11px;border:solid var(--on-green);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translateY(-1px)}
+.bd-body{min-width:0;cursor:pointer}
+.bd-shop{font-weight:700;font-size:15px;overflow-wrap:anywhere}
+.bd-ttl{font-size:14px;color:var(--text2);overflow-wrap:anywhere}
+.bd-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center}
+.bd-tag{font-size:12px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--bg3);color:var(--text2);white-space:nowrap}
+.bd-tag.due{background:var(--amber-l);color:var(--amber)}
+.bd-tag.late{background:var(--red-l);color:var(--red)}
+.bd-tag.cool{background:var(--blue-l);color:var(--blue)}
+.bd-grip{touch-action:none;cursor:grab;border:0;background:none;width:40px;height:44px;border-radius:8px;display:grid;place-items:center;color:var(--text3);align-self:center}
+.bd-grip:active{cursor:grabbing;background:var(--bg3)}
+.bd-grip svg{width:18px;height:18px}
+.bd-xl{display:inline-grid;grid-template-columns:repeat(4,auto);gap:2px;vertical-align:middle}
+.bd-xl i{font-style:normal;font-family:var(--font-num);font-size:12px;font-weight:700;letter-spacing:-.04em;padding:1px 4px;border-radius:4px;background:var(--track);color:var(--text2)}
+.bd-xl i.on{background:var(--red);color:var(--bg)}
+.bd-xl i.ban{box-shadow:inset 0 0 0 1.5px var(--red);background:transparent;color:var(--red)}
+.bd-xl i.ban.on{background:var(--red);color:var(--bg)}
+.bd-settle{margin-top:10px;font-size:12.5px;color:var(--text3)}
+.bd-settle b{color:var(--text)}
+.bd-tray{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-top:16px}
+.bd-tray .head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.bd-tray h2{margin:0}
+.bd-chips{display:flex;gap:6px;flex-wrap:wrap}
+.bd-chip{min-height:40px;padding:0 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);font:inherit;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer}
+.bd-chip.on{background:var(--text);border-color:var(--text);color:var(--bg)}
+.bd-tray .bd-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:8px}
+.bd-tray .bd-card,.bd-more .bd-card{background:var(--bg2);grid-template-columns:1fr auto;padding-left:14px}
+.bd-sortnote{font-size:12.5px;color:var(--text3);margin:-2px 0 10px}
+.bd-link{border:0;background:none;font:inherit;font-size:12.5px;color:var(--green-d);font-weight:700;text-decoration:underline;cursor:pointer;padding:6px 2px}
+.bd-more{margin-top:14px}
+.bd-more summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--text2);padding:8px 0}
+.bd-when{font-size:12.5px;color:var(--text3);font-weight:600;margin-top:4px}
+.bd-float{position:fixed;z-index:300;pointer-events:none;box-shadow:var(--shadow-lg);transform:rotate(-1.5deg);border-color:var(--green)}
+.bd-slot{height:6px;border-radius:3px;background:var(--green);margin:-1px 0}
+.bd-sheet-bg{position:fixed;inset:0;background:rgba(6,20,16,.45);z-index:250;display:flex;align-items:flex-end;justify-content:center}
+.bd-sheet{background:var(--bg);width:min(100%,520px);border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.bd-pick{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.bd-pick button{min-height:56px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;cursor:pointer}
+.bd-pick button span{font-size:12px;font-weight:600;color:var(--text3)}
+.bd-pick button.cur{background:var(--theme);border-color:var(--theme);color:var(--on-theme)}
+.bd-pick button.cur span{color:var(--on-theme-2)}
+.bd-pick button.bad{border-color:var(--red-b);color:var(--red)}
+.bd-row{display:flex;gap:8px;flex-wrap:wrap}
+.bd-row .btn{flex:1}
+@media(min-width:960px){
+  .bd-cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;align-items:start}
+  .bd-col{display:block;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:10px}
+  .bd-col.sel{border-color:var(--theme)}
+  .bd-col .bd-card{background:var(--bg2)}
+}
+@media(prefers-reduced-motion:reduce){.bd-day,.bd-card,.bd-gauge i{transition:none}}
 </style>
 </head>
 <body>
@@ -1229,10 +1323,10 @@ details.trial-card .trial-body{margin-top:8px}
 <!-- ═══ TODOS ═══ -->
 <div class="panel on" id="panel-todos">
   <div class="page-title">待辦事項</div>
-  <div class="page-subtitle">快速輸入：「明天回收試用品 #王記餐廳 p1」會自動解析日期、客戶、優先級</div>
+  <div class="page-subtitle">按住卡片右邊的 ⋮⋮ 拖到要做的那一天；點卡片也可以直接選日期。過了當天沒做完的會自動回到未排。</div>
   <div class="qa-wrap">
     <div class="qa-input-row">
-      <input id="qa-inp" placeholder="＋ 新增待辦…（試試「下週三回電 #客戶名 p1」）" autocomplete="off"
+      <input id="qa-inp" placeholder="＋ 新增待辦…（試試「週三回電 #客戶名」，沒寫日期就進未排）" autocomplete="off"
         oninput="qaOnInput()" onkeydown="qaOnKey(event)">
       <button class="btn btn-primary" onclick="qaSubmit()">新增</button>
     </div>
@@ -1240,7 +1334,7 @@ details.trial-card .trial-body{margin-top:8px}
     <div id="qa-suggest" class="qa-suggest" role="listbox"></div>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-    <input id="ts" placeholder="搜尋待辦..." oninput="renderGT()" style="flex:1">
+    <input id="ts" placeholder="搜尋待辦或店名..." oninput="renderGT()" style="flex:1">
     <button class="pill" onclick="openBatchQuote()">批次報價單</button>
     <button id="gt-done-toggle" class="pill" onclick="GT_SHOW_DONE=!GT_SHOW_DONE;renderGT()">已完成</button>
   </div>
@@ -1594,7 +1688,18 @@ details.trial-card .trial-body{margin-top:8px}
       <input id="tm-text" placeholder="例如：明天回收試用品 p1" oninput="tmOnInput()">
       <div id="tm-hint" class="qa-chips" style="display:none;margin-top:6px"></div>
     </div>
-    <div class="f"><label class="lbl">截止日期（選填）</label><input id="tm-due" type="date"></div>
+    <div class="f">
+      <label class="lbl">類型</label>
+      <div class="mood-row" id="tm-type-row">
+        <button type="button" class="pill" data-type="visit" onclick="tmSetType('visit')">到場</button>
+        <button type="button" class="pill" data-type="online" onclick="tmSetType('online')">線上</button>
+        <button type="button" class="pill" data-type="misc" onclick="tmSetType('misc')">雜事</button>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="f"><label class="lbl" for="tm-due">排在哪一天（空白＝未排）</label><input id="tm-due" type="date"></div>
+      <div class="f"><label class="lbl" for="tm-deadline">期限（選填）</label><input id="tm-deadline" type="date"></div>
+    </div>
     <div class="f">
       <label class="lbl">優先級</label>
       <div class="mood-row" id="tm-pri-row">
@@ -1672,7 +1777,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-x1';
+const APP_VERSION='v2026.11.15-t1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2611,12 +2716,11 @@ function calendarItems(base){
     if(!c)return;
     const head=(TIERS.includes(c.tier)?c.tier+'級｜':'')+(c.name||'')+'：';
     const desc=[statusLabel(c),c.addr,c.phone].filter(Boolean).join('\n');
-    // 回收待辦（auto-recycle）要試用開始 7 天後才產生，日曆直接用試用的回收日，兩者不重複列
-    (c.todos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate&&t.source!=='auto-recycle')add(t.dueDate,head+t.text,desc);});
-    openTrials(c).forEach(t=>{if(t.due)add(t.due,head+'回收試用品（第 '+t.n+' 次）',desc);});
+    // 排了哪天就放哪天；還沒排的用期限（回收日、轉交期限…），都沒有就不上日曆
+    (c.todos||[]).forEach(t=>{const d=t&&!t.done&&(t.plan||t.dueDate);if(d)add(d,head+t.text,desc);});
     if(c.nextdate&&c.status!==STATUS.SHELVED)add(c.nextdate,head+'拜訪',desc);
   });
-  (DB.gtodos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate)add(t.dueDate,t.text,'');});
+  (DB.gtodos||[]).forEach(t=>{const d=t&&!t.done&&(t.plan||t.dueDate);if(d)add(d,t.text,'');});
   return out.sort((a,b)=>a.date!==b.date?(a.date<b.date?-1:1):a.title.localeCompare(b.title,'zh-Hant'));
 }
 function calSig(td,items){let h=5381;const s=td+JSON.stringify(items);for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return td+':'+items.length+':'+h;}
@@ -3027,7 +3131,7 @@ if(local){
   DB.products=local.products&&local.products.length?local.products:JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
   ensureProductBaseline();   // 本機那份可能是舊版／被雲端洗過 → 補回價格表缺的代號
   SHEET_URL=local.sheetUrl||'';
-  DB.gtodos=local.gtodos||[];   // 一般待辦（未掛客戶，僅存本機）
+  DB.gtodos=local.gtodos||[];DB.gtodos.forEach(packTodo);   // 一般待辦（未掛客戶，僅存本機）
   DB.profile=local.profile||null;            // 業務個人資料（僅本機；null＝沿用預設）
   DB.profileAcked=!!local.profileAcked;      // 已確認承辦人（不再每次提醒）
   SYNC.lastSyncAt=local.lastSyncAt||0;
@@ -3462,7 +3566,7 @@ function importJSON(input){
       validateClients(); // 匯入的備份可能含舊格式列 → 正規化
       if(data.inventory)DB.inventory=data.inventory;
       if(data.products){DB.products=data.products;ensureProductBaseline();}
-      if(Array.isArray(data.gtodos))DB.gtodos=data.gtodos;
+      if(Array.isArray(data.gtodos)){DB.gtodos=data.gtodos;DB.gtodos.forEach(packTodo);}
       if(data.profile&&typeof data.profile==='object'){DB.profile=data.profile;DB.profileAcked=!!data.profileAcked;}
       saveLocal();renderClients();renderProducts();initSettings();showToast('✓ 匯入成功');
     }catch(err){appAlert('匯入失敗：'+err.message,'無法匯入');}
@@ -3652,6 +3756,8 @@ function validateClients(){
     if(!c)return;
     // 不變式 0：狀態一定是五階段之一（雲端／備份可能還是舊九狀態）
     if(packStage(c))fixed++;
+    // 待辦補上類型，舊的「哪天做」搬到 plan（見 packTodo）
+    (c.todos||[]).forEach(t=>{if(packTodo(t))fixed++;});
     // 不變式 1：status 非待拜訪 → 應有至少一筆 visit → 自動補建
     if(c.status&&c.status!==STATUS.PLAN&&(c.visits||[]).length===0){
       const d=trialStartDate(c)||today();
@@ -4456,7 +4562,7 @@ function dealDate(c){
 // 公司逾期回收分級：以「這次試用的回收日」為準，到回收日記 X、之後每 7 天多一個 X——
 // X、XX、XXX、XXXX（會被業助提醒，極力避免）。回收日預設＝開始＋14 天：6/1 開始 → 6/15 記 X、6/22 記 XX。
 function trialXInfo(c,base){
-  if(!c||c.status!==STATUS.TRIAL)return null;
+  if(!c)return null;   // 只要有還沒回收的試用就算，不看階段（階段被改掉但東西還在客戶那邊，一樣會記 X）
   const t=currentTrial(c);
   if(!t||!t.open||!t.start)return null;
   const d=new Date(t.start+'T00:00:00');
@@ -4475,7 +4581,7 @@ function trialXBadge(c){
   if(!info||info.level<1)return '';
   return `<span class="xbadge x${info.level}" title="試用第 ${info.days} 天，公司逾期等級 ${info.marks}">${info.marks}</span>`;
 }
-// 自動產生回收待辦：每一次進行中的試用，開始 +7 天後自動新增「回收試用品（第 N 次）」，到期日＝回收日
+// 自動產生回收待辦：每一次進行中的試用一開始就有一張「回收試用品（第 N 次）」，期限＝回收日（固定，不因改排而變）
 // 防禦式：整段包 try/catch，任何單筆客戶出錯不影響其他客戶、也不影響 app 啟動
 function autoAddRecycleTodos(){
   try{
@@ -4484,19 +4590,16 @@ function autoAddRecycleTodos(){
     let added=0;
     (DB.clients||[]).forEach(c=>{
       try{
-        if(!c||c.status!==STATUS.TRIAL)return;
+        if(!c)return;
         openTrials(c).forEach(t=>{
           if(!t.start)return;
-          const tsDate=new Date(t.start);
-          if(isNaN(tsDate.getTime()))return;
-          if((todayObj-tsDate)/DAY<7)return;
           if((c.todos||[]).some(x=>x&&x.source==='auto-recycle'&&(x.trialN||1)===t.n))return;   // 已產生過（含已完成）
           if(t.n===1&&(c.todos||[]).some(x=>x&&!x.done&&!x.source&&x.text&&x.text.indexOf('回收')>=0))return;   // 使用者自己寫的回收待辦
           c.todos=c.todos||[];
           c.todos.push({text:'回收試用品（第 '+t.n+' 次）',dueDate:t.due||addDays(t.start,TRIAL_DEFAULT_DAYS),done:false,source:'auto-recycle',trialN:t.n});
           added++;
         });
-        // 試用還沒報價 → 同一個時間點（開始 +7 天）提醒排行程去報價；報價後 markQuoted 會關掉它
+        // 試用還沒報價 → 開始 7 天後提醒排行程去報價；報價後 markQuoted 會關掉它
         if(!c.quoted)openTrials(c).forEach(t=>{
           if(!t.start||(todayObj-new Date(t.start))/DAY<7)return;
           if((c.todos||[]).some(x=>x&&x.source==='auto-quote'&&(x.trialN||1)===t.n))return;
@@ -5818,7 +5921,8 @@ function addTodoField(){
   const p=parseQuickTodo(inp.value);
   const text=stripTokens(inp.value,p.tokens);
   if(!text)return;
-  const todo={text,dueDate:due||p.dueDate||'',done:false};
+  const todo={text,plan:due||p.dueDate||'',dueDate:'',done:false};
+  todo.type=guessTodoType(todo);
   if(p.priority)todo.priority=p.priority;
   S.cfTodos.push(todo);
   inp.value='';document.getElementById('cf-todo-due').value='';renderTodoFields();
@@ -5828,7 +5932,7 @@ function renderTodoFields(){
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <input type="checkbox" ${t.done?'checked':''} style="width:18px;height:18px;accent-color:var(--green)" onchange="S.cfTodos[${i}].done=this.checked">
       <input value="${escHtml(t.text)}" style="flex:1;font-size:13px" oninput="S.cfTodos[${i}].text=this.value">
-      <input type="date" value="${t.dueDate||''}" style="width:140px;font-size:12px" onchange="S.cfTodos[${i}].dueDate=this.value">
+      <input type="date" value="${t.plan||''}" aria-label="排在哪一天" style="width:140px;font-size:12px" onchange="S.cfTodos[${i}].plan=this.value">
       <button onclick="S.cfTodos.splice(${i},1);renderTodoFields()" aria-label="移除待辦" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:20px;padding:0;flex-shrink:0">×</button>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);margin-bottom:8px">尚無待辦</div>';
 }
@@ -6291,7 +6395,7 @@ function renderCDTodos(){
       <input type="checkbox" ${t.done?'checked':''} onchange="togCDTodo(${i})">
       <div style="flex:1;cursor:pointer" onclick="gtEdit('c',${S.curIdx},${i})" title="點擊編輯">
         <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}</div>
-        ${t.dueDate?`<div style="font-size:12.5px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${isOD(t)?'':''}${dueLabel(t.dueDate)}</div>`:''}
+        <div style="font-size:12.5px;color:${isOD(t)?'var(--red)':'var(--text3)'};">${TODO_TYPES[t.type]||''}${t.done?'':t.plan?'・排 '+dueLabel(t.plan):'・未排'}${t.dueDate?'・期限 '+dueLabel(t.dueDate):''}</div>
       </div>
     </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無待辦（點「+ 新增待辦」或直接點待辦文字可編輯）</div>';
 }
@@ -6309,7 +6413,8 @@ function addDetTodo(){
   TM_EDIT=null;
   document.getElementById('tm-text').value='';
   document.getElementById('tm-due').value='';
-  tmSetPri(0);tmOnInput();
+  document.getElementById('tm-deadline').value='';
+  tmSetPri(0);tmSetType('');tmOnInput();
   _tmSetup('add');
 }
 // 從待辦頁或客戶詳情點待辦文字 → 開編輯視窗
@@ -6317,8 +6422,9 @@ function gtEdit(src,ci,ti){
   const t=_gtArr(src,ci)[ti];if(!t)return;
   TM_EDIT={src,ci,ti};
   document.getElementById('tm-text').value=t.text||'';
-  document.getElementById('tm-due').value=t.dueDate||'';
-  tmSetPri(t.priority||0);tmOnInput();
+  document.getElementById('tm-due').value=t.plan||'';
+  document.getElementById('tm-deadline').value=t.dueDate||'';
+  tmSetPri(t.priority||0);tmSetType(t.type||'');tmOnInput();
   _tmSetup('edit');
 }
 function tmDelete(){
@@ -6328,6 +6434,12 @@ function tmDelete(){
   delGT(src,ci,ti); // 含 4 秒復原 toast
 }
 function closeTodoModal(){document.getElementById('todo-modal').classList.remove('on');TM_EDIT=null;}
+// 類型：沒手動選就依文字猜（'' ＝還沒選）
+let TM_TYPE='';
+function tmSetType(k){
+  TM_TYPE=k;
+  document.querySelectorAll('#tm-type-row .pill').forEach(b=>b.classList.toggle('on',b.dataset.type===k));
+}
 function tmSetPri(n){
   TM_PRI=n;
   document.querySelectorAll('#tm-pri-row .pill').forEach(b=>b.classList.toggle('on',+b.dataset.pri===n));
@@ -6348,21 +6460,23 @@ function saveTodoModal(){
   const p=parseQuickTodo(raw);
   const text=stripTokens(raw,p.tokens);
   if(!text){showToast('請輸入待辦內容（不能只有日期/標記）');return;}
-  // 手動填的日期/優先級優先；沒填才用解析結果
-  const due=document.getElementById('tm-due').value||p.dueDate||'';
+  // 手動填的日期/優先級優先；沒填才用解析結果。文字裡的日期＝排在哪一天
+  const plan=document.getElementById('tm-due').value||p.dueDate||'';
+  const deadline=document.getElementById('tm-deadline').value||'';
   const pri=TM_PRI||p.priority||0;
   if(TM_EDIT){
     // 編輯：就地更新，保留 done 與 source（如自動回收標記）等欄位
     const {src,ci,ti}=TM_EDIT;
     const t=_gtArr(src,ci)[ti];
     if(!t){closeTodoModal();return;}
-    t.text=text;t.dueDate=due;
+    t.text=text;t.plan=plan;t.dueDate=deadline;t.type=TM_TYPE||t.type||guessTodoType(t);
     if(pri)t.priority=pri;else delete t.priority;
     _gtSync(src,ci);
     closeTodoModal();_gtRefresh();
     return;
   }
-  const todo={text,dueDate:due,done:false};
+  const todo={text,plan,dueDate:deadline,done:false};
+  todo.type=TM_TYPE||guessTodoType(todo);
   if(pri)todo.priority=pri;
   DB.clients[S.curIdx].todos.push(todo);
   DB.clients[S.curIdx].updatedAt=Date.now();saveLocal();autoSync('save',{client:DB.clients[S.curIdx]});
@@ -6932,7 +7046,8 @@ function qaSubmit(){
   const applied=p.tokens.filter(t=>(t.type==='date'&&!QA.ignore.date)||(t.type==='pri'&&!QA.ignore.pri));
   let text=stripTokens(raw,applied).replace(/#\S*/g,'').replace(/\s{2,}/g,' ').trim();
   if(!text){showToast('請輸入待辦內容（不能只有日期/標記）');return;}
-  const todo={text,dueDate:QA.ignore.date?'':p.dueDate,done:false};
+  const todo={text,plan:QA.ignore.date?'':p.dueDate,dueDate:'',done:false};
+  todo.type=guessTodoType(todo);
   if(p.priority&&!QA.ignore.pri)todo.priority=p.priority;
   // 未從下拉選取但有打 #字 → 嘗試唯一模糊比對
   if(!QA.client){
@@ -6957,85 +7072,229 @@ function qaSubmit(){
   qaReset();renderGT();renderClients();
 }
 
-// ── 分區清單：逾期／今天／即將（7天內）／之後／未排日期／已完成 ──
+// ═══ 待辦看板 ═══ 每筆待辦是一張任務卡：先分類型，再拖到某一天去做。
+//   t.type   'visit' 到場｜'online' 線上｜'misc' 雜事
+//   t.plan   排定哪一天做（''＝未排）—— 使用者拖拉決定
+//   t.dueDate 期限（''＝沒有）—— 系統任務的固定期限（回收日、轉交期限、報價追蹤日），不會因為改排而變
+//   t.order  當天的順序（到場任務的編號就是路線順序）；t.bumped 沒做完被自動結算回未排的次數
+// 看板顯示「今天＋接下來四個工作天」（跳過六日）。過了當天還沒做完的，自動回到未排（settleTodos）。
 let GT_SHOW_DONE=false;
-// 區塊（逾期／今天／即將…）已經按日期分好；區塊內先看你手動標的 P 旗標，再看這家店的評價（1 級最前、沒評價與一般待辦最後），最後才比日期
-function gtSort(a,b){
-  const pa=a.priority||9,pb=b.priority||9;
-  if(pa!==pb)return pa-pb;
-  const ta=a.tier||9,tb=b.tier||9;
-  if(ta!==tb)return ta-tb;
-  if(a.dueDate!==b.dueDate)return (a.dueDate||'9999')<(b.dueDate||'9999')?-1:1;
-  return 0;
+const TODO_TYPES={visit:'到場',online:'線上',misc:'雜事'};
+const TODO_SOURCE_TYPE={'auto-recycle':'visit','auto-quote':'visit','handoff':'visit','handoff-check':'visit','quote-followup':'online'};
+function guessTodoType(t){
+  if(t.source&&TODO_SOURCE_TYPE[t.source])return TODO_SOURCE_TYPE[t.source];
+  const s=String(t.text||'');
+  if(/回收|拜訪|現場|送貨|配送|到店|丈量|安裝|轉交/.test(s))return 'visit';
+  if(/line|電話|打給|回電|聯絡|傳|寄|追|email|信/i.test(s))return 'online';
+  return 'misc';
 }
-// 待辦列：左勾選完成、點文字開編輯視窗（編輯/刪除都在裡面，列上不再放紅叉）
-function gtRow(t){
-  const od=isOD(t);
-  const cnHtml=t.src==='c'
-    ?`<span style="font-size:12.5px;color:var(--green-d);margin-left:5px;cursor:pointer;font-weight:600"
-        onclick="event.stopPropagation();navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${t.ci}),50)">${escHtml(t.cn)}</span>${t.tier?`<span class="badge num" style="background:var(--bg3);color:var(--text2);margin-left:5px">${t.tier} 級</span>`:''}`
-    :`<span style="font-size:12.5px;color:var(--text3);margin-left:5px">一般</span>`;
-  return`<div class="todo-row">
-    <input type="checkbox" ${t.done?'checked':''} onchange="togGT('${t.src}',${t.ci},${t.ti})">
-    <div style="flex:1;cursor:pointer" onclick="gtEdit('${t.src}',${t.ci},${t.ti})" title="點擊編輯">
-      <div class="${t.done?'todo-done':''}">${escHtml(t.text)}${t.priority?`<span class="pflag p${t.priority}">P${t.priority}</span>`:''}${cnHtml}</div>
-      ${t.dueDate?`<div style="font-size:12.5px;color:${od?'var(--red)':'var(--text3)'};">${od?'':''}${dueLabel(t.dueDate)}</div>`:''}
-    </div>
-  </div>`;
+// 舊待辦 → 新欄位（冪等，以 t.type 有沒有值判斷）：補類型；使用者自己訂的日期原本是「哪天做」→ 搬到 plan，
+// 系統任務的日期本來就是期限，留在 dueDate。用在 validateClients（啟動／雲端拉取／備份匯入）與一般待辦載入。
+function packTodo(t){
+  if(!t||t.type)return false;
+  t.type=guessTodoType(t);
+  if(!t.source&&t.dueDate){t.plan=t.dueDate;t.dueDate='';}
+  return true;
 }
-// 試用回收分區：超過預設試用期（14 天）尚未回收的試用中客戶，依公司 X 分級排序
-function gtTrialSection(){
-  const list=(DB.clients||[]).map((c,ci)=>({c,ci,info:trialXInfo(c)}))
-    .filter(x=>x.info&&x.info.level>=1)
-    .sort((a,b)=>b.info.days-a.info.days);
-  if(!list.length)return '';
-  const rows=list.map(({c,ci,info})=>{
-    const items=openTrialItems(c).filter(it=>it.product&&!it.bundledTo);
-    return`<div class="todo-row gt-trial-row" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
-      <div style="flex:1">
-        <div>${escHtml(c.name)}<span class="xbadge x${info.level}">${info.marks}</span></div>
-        <div style="font-size:12.5px;color:${info.level>=3?'var(--red)':'var(--text3)'}">第 ${info.n} 次試用・回收日 ${info.due}${items.length?'・'+items.length+' 個品項待回收':''}${info.level>=4?'・已達業助提醒等級':''}</div>
-      </div>
-      <span style="color:var(--text3);font-size:16px;flex-shrink:0">›</span>
-    </div>`;
-  }).join('');
-  return`<div class="gt-sec overdue">試用回收（超過 ${TRIAL_DEFAULT_DAYS} 天） <span class="gt-count">${list.length}</span></div>`+
-    '<div class="card" style="padding:0 14px">'+rows+'</div>';
+function boardDays(base){
+  const out=[base||today()];let d=out[0];
+  while(out.length<5){d=addDays(d,1);const wd=new Date(d+'T00:00:00').getDay();if(wd!==0&&wd!==6)out.push(d);}
+  return out;
+}
+const _WDN=['日','一','二','三','四','五','六'];
+function bdMD(d){return Number(d.slice(5,7))+'/'+Number(d.slice(8));}
+function bdWD(d){return '週'+_WDN[new Date(d+'T00:00:00').getDay()];}
+// 全部任務（客戶的＋一般的），每筆帶出所屬客戶與在陣列裡的位置
+function boardTasks(){
+  const out=[];
+  (DB.clients||[]).forEach((c,ci)=>{if(c)(c.todos||[]).forEach((t,ti)=>{if(t){packTodo(t);out.push({t,c,ci,ti,src:'c',k:'c:'+ci+':'+ti});}});});
+  (DB.gtodos||[]).forEach((t,ti)=>{if(t){packTodo(t);out.push({t,c:null,ci:-1,ti,src:'g',k:'g:-1:'+ti});}});
+  return out;
+}
+function boardFind(k){const p=String(k).split(':');const ci=Number(p[1]),ti=Number(p[2]);const t=_gtArr(p[0],ci)[ti];return t?{t,c:p[0]==='c'?DB.clients[ci]:null,ci,ti,src:p[0],k}:null;}
+// 回收任務的回收日（＝這次試用的回收日）；不是回收任務回 ''
+function taskRecycleDue(x){
+  if(!x.c||x.t.source!=='auto-recycle')return '';
+  const tr=trialsOf(x.c).find(r=>r.n===(x.t.trialN||1)&&r.open);
+  return tr?(tr.due||addDays(tr.start,TRIAL_DEFAULT_DAYS)):'';
+}
+// 公司逾期分級：到回收日記 X，之後每 7 天多一個 X（與 trialXInfo 同一條規則），on＝看的是哪一天
+function xLevelOn(due,on){const o=daysUntil(on,due);return o>=0?Math.min(4,Math.floor(o/7)+1):0;}
+function xDaysToNext(due,on){const o=daysUntil(on,due);return o<0?-o:7-(o%7);}
+// ── 未排的排序依據（使用者 2026-11 確認；要改就改這裡，畫面上的「排序依據」說明讀 TRAY_SORT_RULES）──
+//   ① 回收任務最前：X 等級高的先，同級裡離下一個 X 最近的先
+//   ② 再來是有期限的：期限近的先
+//   ③ 最後是沒期限的
+//   同一組裡：自己標的 P 旗標 → 店家評價（1 級先）→ 被順延最多次的先
+const TRAY_SORT_RULES=['回收任務排最前：X 等級越高越前面，同級裡離下一個 X 越近越前面','接著是有期限的：期限越近越前面','最後是沒有期限的','同一組裡：你標的 P1–P3 → 店家評價（1 級先）→ 被順延越多次越前面'];
+function traySortKey(x,td){
+  const due=taskRecycleDue(x);
+  const g=due?[0,-xLevelOn(due,td),xDaysToNext(due,td)]:x.t.dueDate?[1,daysUntil(x.t.dueDate,td),0]:[2,0,0];
+  return g.concat([x.t.priority||9,(x.c&&x.c.tier)||9,-(x.t.bumped||0)]);
+}
+function trayCompare(td){return (a,b)=>{const x=traySortKey(a,td),y=traySortKey(b,td);for(let i=0;i<x.length;i++)if(x[i]!==y[i])return x[i]-y[i];return 0;};}
+function showTraySortRules(){appAlert(TRAY_SORT_RULES.map((r,i)=>(i+1)+'. '+r).join('\n'),'未排的排序依據');}
+// 自動結算：過了排定那天還沒做完 → 回到未排，記一次順延。啟動與回到前景時跑
+function settleTodos(){
+  const td=today();let n=0;const touched=new Set();
+  boardTasks().forEach(x=>{const t=x.t;if(t.done||!t.plan||t.plan>=td)return;t.plan='';t.bumped=(t.bumped||0)+1;n++;if(x.c)touched.add(x.c);});
+  if(!n)return 0;
+  touched.forEach(c=>{c.updatedAt=Date.now();autoSync('save',{client:c});});
+  saveLocal();showToast(n+' 件沒做完的待辦回到未排');
+  return n;
+}
+let BD={sel:'',filter:'all'};
+function dayList(all,d){return all.filter(x=>x.t.plan===d).sort((a,b)=>((a.t.done?1:0)-(b.t.done?1:0))||((a.t.order||0)-(b.t.order||0)));}
+// 把任務排到某一天的第 idx 位（date=''＝放回未排）。只有順序真的變了的任務才寫回
+function placeTask(k,date,idx){
+  const x=boardFind(k);if(!x)return;
+  const t=x.t,touched=new Set();
+  t.plan=date||'';
+  if(x.c)touched.add(x.c);
+  if(date){
+    const l=dayList(boardTasks(),date).filter(y=>y.t!==t&&!y.t.done);
+    l.splice(idx==null?l.length:Math.max(0,Math.min(idx,l.length)),0,x);
+    l.forEach((y,i)=>{if(y.t.order!==i){y.t.order=i;if(y.c)touched.add(y.c);}});
+    const due=taskRecycleDue(x),lv=due?xLevelOn(due,date):0;
+    showToast(lv>=1?(lv>=3?'注意：':'')+bdMD(date)+' 去收會是 '+'X'.repeat(lv)+(lv>=4?'（不可以！）':''):!due&&t.dueDate&&date>t.dueDate?'注意：這天已經超過期限 '+bdMD(t.dueDate):'排到 '+bdWD(date)+' '+bdMD(date));
+  }else showToast('放回未排');
+  touched.forEach(c=>{c.updatedAt=Date.now();autoSync('save',{client:c});});
+  saveLocal();_gtRefresh();
+}
+function bdXLadder(due,on){
+  const lv=xLevelOn(due,on);
+  return '<span class="bd-xl" role="img" aria-label="回收逾期等級 '+lv+' / 4">'+[1,2,3,4].map(i=>'<i class="'+(i<=lv?'on':'')+(i===4?' ban':'')+'">'+'X'.repeat(i)+'</i>').join('')+'</span>';
+}
+function bdTags(x,on){
+  const t=x.t,out=[],reg=x.c&&t.type==='visit'?parseRegion(x.c.addr):'';
+  out.push('<span class="bd-tag">'+TODO_TYPES[t.type]+(reg?'・'+escHtml(reg):'')+'</span>');
+  if(x.c&&TIERS.includes(x.c.tier))out.push('<span class="bd-tag num">'+x.c.tier+' 級</span>');
+  if(t.priority)out.push('<span class="pflag p'+t.priority+'">P'+t.priority+'</span>');
+  const due=taskRecycleDue(x);
+  if(due){
+    const lv=xLevelOn(due,on),left=xDaysToNext(due,on);
+    out.push(bdXLadder(due,on));
+    out.push('<span class="bd-tag '+(lv>=1?'late':left<=2?'due':'cool')+'">'+(lv===0?'回收日 '+bdMD(due)+'・再 '+left+' 天記 X':lv>=3?'再 '+left+' 天就是 XXXX':'再 '+left+' 天變 '+'X'.repeat(lv+1))+'</span>');
+  }else if(t.dueDate){
+    const left=daysUntil(t.dueDate,on);
+    out.push('<span class="bd-tag '+(left<0?'late':left<=2?'due':'')+'">期限 '+bdMD(t.dueDate)+(left<0?'・已過 '+(-left)+' 天':'')+'</span>');
+  }
+  if(t.bumped)out.push('<span class="bd-tag due">順延 '+t.bumped+' 次</span>');
+  return out.join('');
+}
+function bdCard(x,ord,inDay,on){
+  const t=x.t,who=x.c?x.c.name:'一般';
+  return '<div class="bd-card'+(t.done?' done':'')+'" data-k="'+x.k+'">'+
+    (inDay?'<div class="bd-lead"><input type="checkbox" class="bd-ck" '+(t.done?'checked':'')+' onchange="togGT(\''+x.src+'\','+x.ci+','+x.ti+')" aria-label="完成 '+escHtml(who)+' '+escHtml(t.text)+'">'+(ord?'<span class="bd-ord num" title="當天順序">'+ord+'</span>':'')+'</div>':'')+
+    '<div class="bd-body" tabindex="0" role="button" aria-label="安排 '+escHtml(who)+' '+escHtml(t.text)+'"><div class="bd-shop">'+escHtml(who)+'</div><div class="bd-ttl">'+escHtml(t.text)+'</div><div class="bd-tags">'+bdTags(x,on)+'</div></div>'+
+    '<button class="bd-grip" aria-label="拖曳 '+escHtml(who)+'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button></div>';
 }
 function renderGT(){
-  const q=(document.getElementById('ts').value||'').toLowerCase();
-  let all=[];
-  DB.clients.forEach((c,ci)=>(c.todos||[]).forEach((t,ti)=>all.push({...t,cn:c.name,tier:TIERS.includes(c.tier)?c.tier:0,src:'c',ci,ti})));
-  (DB.gtodos||[]).forEach((t,ti)=>all.push({...t,cn:'',src:'g',ci:-1,ti}));
-  if(q)all=all.filter(t=>t.text.toLowerCase().includes(q)||t.cn.toLowerCase().includes(q));
-  const tog=document.getElementById('gt-done-toggle');
-  if(tog)tog.classList.toggle('on',GT_SHOW_DONE);
-  const td=today();
-  const soonEnd=(()=>{const d=new Date(td+'T00:00:00');d.setDate(d.getDate()+7);return fmtDate(d);})();
-  const pending=all.filter(t=>!t.done);
-  const done=all.filter(t=>t.done);
-  const secs=[
-    {key:'overdue',title:'逾期',cls:' overdue',items:pending.filter(t=>t.dueDate&&t.dueDate<td)},
-    {key:'today',title:'今天',cls:'',items:pending.filter(t=>t.dueDate===td)},
-    {key:'soon',title:'即將（7 天內）',cls:'',items:pending.filter(t=>t.dueDate&&t.dueDate>td&&t.dueDate<=soonEnd)},
-    {key:'later',title:'之後',cls:'',items:pending.filter(t=>t.dueDate&&t.dueDate>soonEnd)},
-    {key:'nodate',title:'未排日期',cls:'',items:pending.filter(t=>!t.dueDate)},
-  ];
-  const el=document.getElementById('gt-list');
-  let html=q?'':gtTrialSection(); // 試用回收置頂（搜尋時不顯示，避免干擾）
-  secs.forEach(s=>{
-    if(!s.items.length)return;
-    s.items.sort(gtSort);
-    html+=`<div class="gt-sec${s.cls}">${s.title} <span class="gt-count">${s.items.length}</span></div>`;
-    html+='<div class="card" style="padding:0 14px">'+s.items.map(gtRow).join('')+'</div>';
+  const root=document.getElementById('gt-list');if(!root)return;
+  autoAddRecycleTodos();
+  const td=today(),days=boardDays(td),q=(document.getElementById('ts').value||'').toLowerCase();
+  if(!days.includes(BD.sel))BD.sel=td;
+  let all=boardTasks();
+  if(q)all=all.filter(x=>(x.t.text+(x.c?x.c.name:'')).toLowerCase().includes(q));
+  const tog=document.getElementById('gt-done-toggle');if(tog)tog.classList.toggle('on',GT_SHOW_DONE);
+  const rail='<div class="bd-rail" id="bd-rail">'+days.map(d=>{
+    const l=dayList(all,d),open=l.filter(x=>!x.t.done).length;
+    const xs=l.filter(x=>!x.t.done&&taskRecycleDue(x)&&xLevelOn(taskRecycleDue(x),d)>=1).length;
+    return '<button class="bd-day'+(d===BD.sel?' sel':'')+(d===td?' today':'')+'" data-drop="'+d+'"><span class="wd">'+(d===td?'今天':bdWD(d))+'</span><span class="dd num">'+Number(d.slice(8))+'</span>'+
+      '<span class="ct">'+(l.length?(open?open+' 件':'完成'):'空')+'</span><span class="flag">'+(xs?'X 回收 '+xs:'')+'</span></button>';
+  }).join('')+'<button class="bd-day bd-extra" data-drop="">放回未排</button></div>';
+  const sl=dayList(all,BD.sel),done=sl.filter(x=>x.t.done).length,visits=sl.filter(x=>x.t.type==='visit'&&!x.t.done);
+  const regs=[...new Set(visits.map(x=>x.c?parseRegion(x.c.addr):'').filter(Boolean))];
+  const slab='<div class="bd-slab"><div><div class="lbl">'+bdWD(BD.sel)+' '+bdMD(BD.sel)+(BD.sel===td?'・今天':'')+'</div><div class="big num">'+(sl.length-done)+'<small>件還沒做</small></div></div>'+
+    '<div class="meta">完成 <span class="num">'+done+' / '+sl.length+'</span><br>要到場 <span class="num">'+visits.length+'</span> 家'+(regs.length?'：'+escHtml(regs.join('、')):'')+'</div>'+
+    '<div class="bd-gauge"><i style="width:'+(sl.length?done/sl.length*100:0)+'%"></i></div></div>';
+  const cols='<div class="bd-cols">'+days.map(d=>{
+    const l=dayList(all,d),open=l.filter(x=>!x.t.done).length;let vi=0;
+    return '<section class="bd-col'+(d===BD.sel?' sel':'')+'"><h2>'+(d===td?'今天':bdWD(d))+' '+bdMD(d)+' <span class="n num">'+l.length+'</span></h2>'+
+      '<div class="bd-list'+(l.length?'':' empty')+'" data-list="'+d+'" data-empty="這天還沒排，從下面把任務拖上來">'+l.map(x=>bdCard(x,x.t.type==='visit'&&!x.t.done?++vi:0,true,d)).join('')+'</div>'+
+      '<div class="bd-settle">'+(l.length?'完成 <b class="num">'+(l.length-open)+'</b>・沒做完 <b class="num">'+open+'</b>。過了這天還沒做完的，會自動回到未排。':'')+'</div></section>';
+  }).join('')+'</div>';
+  const unp=all.filter(x=>!x.t.done&&!x.t.plan),tray=unp.filter(x=>BD.filter==='all'||x.t.type===BD.filter).sort(trayCompare(td));
+  const later=all.filter(x=>!x.t.done&&x.t.plan&&!days.includes(x.t.plan)).sort((a,b)=>a.t.plan<b.t.plan?-1:1);
+  const chips=[['all','全部']].concat(Object.keys(TODO_TYPES).map(k=>[k,TODO_TYPES[k]])).map(([k,n])=>'<button class="bd-chip'+(BD.filter===k?' on':'')+'" onclick="BD.filter=\''+k+'\';renderGT()">'+n+' <span class="num">'+unp.filter(x=>k==='all'||x.t.type===k).length+'</span></button>').join('');
+  const trayHtml='<div class="bd-tray"><div class="head"><h2>未排 <span class="n num">'+unp.length+'</span></h2><div class="bd-chips">'+chips+'</div></div>'+
+    '<div class="bd-sortnote">回收最接近下一個 X 的在最前，再來是有期限的。<button class="bd-link" onclick="showTraySortRules()">排序依據</button></div>'+
+    '<div class="bd-list'+(tray.length?'':' empty')+'" data-list="" data-empty="'+(q?'沒有符合的待辦':'沒有未排的任務')+'">'+tray.map(x=>bdCard(x,0,false,td)).join('')+'</div></div>';
+  const laterHtml=later.length?'<details class="bd-more"><summary>已排在其他日期 <span class="num">'+later.length+'</span></summary><div class="bd-list">'+later.map(x=>'<div class="bd-when num">'+bdWD(x.t.plan)+' '+bdMD(x.t.plan)+'</div>'+bdCard(x,0,false,x.t.plan)).join('')+'</div></details>':'';
+  const dn=all.filter(x=>x.t.done);
+  const doneHtml=GT_SHOW_DONE?'<details class="bd-more" open><summary>已完成 <span class="num">'+dn.length+'</span></summary><div class="card" style="padding:0 14px">'+(dn.length?dn.map(x=>'<div class="todo-row"><input type="checkbox" checked onchange="togGT(\''+x.src+'\','+x.ci+','+x.ti+')"><div style="flex:1;cursor:pointer" onclick="gtEdit(\''+x.src+'\','+x.ci+','+x.ti+')"><div class="todo-done">'+escHtml(x.t.text)+'<span style="font-size:12.5px;color:var(--text3);margin-left:5px">'+escHtml(x.c?x.c.name:'一般')+'</span></div></div></div>').join(''):'<div class="empty">還沒有完成的待辦</div>')+'</div></details>':'';
+  root.innerHTML=rail+slab+cols+trayHtml+laterHtml+doneHtml;
+  // 日期軌要貼在 App 上方分頁列的正下方（分頁列自己也是 sticky，高度隨裝置不同，所以量出來）
+  const nav=document.getElementById('app-nav');
+  if(nav){const r=nav.getBoundingClientRect();if(r.height)root.style.setProperty('--bd-top',Math.round((parseFloat(getComputedStyle(nav).top)||0)+r.height)+'px');}
+}
+// ── 拖曳：按住卡片右邊的 ⋮⋮。日期軌貼在畫面上方、拖的時候長高當投放區；拖進某天的清單可以插到指定位置（＝當天順序）──
+let BD_DRAG=null;
+function bdClearMarks(){document.querySelectorAll('#panel-todos .over').forEach(x=>x.classList.remove('over','late-drop'));document.querySelectorAll('#panel-todos .bd-slot').forEach(x=>x.remove());}
+function bdGhost(){const d=BD_DRAG;if(!d)return;document.body.classList.add('bd-dragging');const c=document.querySelector('#panel-todos .bd-card[data-k="'+d.k+'"]');if(c)c.classList.add('ghosted');}
+document.addEventListener('pointerdown',e=>{
+  const g=e.target.closest&&e.target.closest('#panel-todos .bd-grip');if(!g)return;
+  const card=g.closest('.bd-card'),r=card.getBoundingClientRect();
+  e.preventDefault();try{g.setPointerCapture(e.pointerId);}catch(_){}
+  const f=card.cloneNode(true);f.classList.add('bd-float');f.style.width=r.width+'px';f.style.left=r.left+'px';f.style.top=r.top+'px';document.body.appendChild(f);
+  BD_DRAG={k:card.dataset.k,f,dx:e.clientX-r.left,dy:e.clientY-r.top,target:null,idx:null,hover:null,timer:null};
+  bdGhost();
+});
+document.addEventListener('pointermove',e=>{
+  const d=BD_DRAG;if(!d)return;
+  d.f.style.left=(e.clientX-d.dx)+'px';d.f.style.top=(e.clientY-d.dy)+'px';
+  bdClearMarks();
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const tile=el&&el.closest('#panel-todos [data-drop]'),list=el&&el.closest('#panel-todos [data-list]');
+  if(tile){
+    const day=tile.dataset.drop,x=boardFind(d.k);
+    d.target=day;d.idx=null;d.has=true;tile.classList.add('over');
+    if(day&&x){const due=taskRecycleDue(x);if((due&&xLevelOn(due,day)>=3)||(x.t.dueDate&&day>x.t.dueDate))tile.classList.add('late-drop');}
+    // 手機上停在某一天 0.6 秒，下面就切到那一天，可以接著拖進清單裡排順序
+    if(day&&d.hover!==day){d.hover=day;clearTimeout(d.timer);d.timer=setTimeout(()=>{if(BD_DRAG===d&&d.hover===day&&BD.sel!==day){BD.sel=day;renderGT();bdGhost();}},600);}
+  }else if(list){
+    d.hover=null;clearTimeout(d.timer);
+    const day=list.dataset.list;d.target=day;d.has=true;
+    const cards=[...list.querySelectorAll('.bd-card:not(.ghosted):not(.done)')];
+    let i=cards.findIndex(c=>{const r=c.getBoundingClientRect();return e.clientY<r.top+r.height/2;});if(i<0)i=cards.length;
+    d.idx=day?i:null;list.classList.add('over');
+    if(day){const s=document.createElement('div');s.className='bd-slot';list.insertBefore(s,cards[i]||list.querySelector('.bd-card.done')||null);}
+  }else{d.has=false;d.hover=null;clearTimeout(d.timer);}
+});
+function bdEndDrag(apply){
+  const d=BD_DRAG;if(!d)return;BD_DRAG=null;clearTimeout(d.timer);d.f.remove();document.body.classList.remove('bd-dragging');bdClearMarks();
+  if(apply&&d.has)placeTask(d.k,d.target,d.idx);else renderGT();
+}
+document.addEventListener('pointerup',()=>bdEndDrag(true));
+document.addEventListener('pointercancel',()=>bdEndDrag(false));
+document.addEventListener('click',e=>{
+  if(!e.target.closest||!e.target.closest('#panel-todos'))return;
+  const tile=e.target.closest('.bd-day[data-drop]');
+  if(tile&&tile.dataset.drop){BD.sel=tile.dataset.drop;renderGT();return;}
+  const body=e.target.closest('.bd-body');if(body)openBdSheet(body.closest('.bd-card').dataset.k);
+});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('bd-body')){e.preventDefault();openBdSheet(e.target.closest('.bd-card').dataset.k);}});
+// 點卡片：不想拖的時候直接選哪一天（手機上的備用方式），也從這裡進編輯或開客戶
+function openBdSheet(k){
+  const x=boardFind(k);if(!x)return;
+  const td=today(),days=boardDays(td),due=taskRecycleDue(x),t=x.t;
+  const old=document.getElementById('bd-sheet');if(old)old.remove();
+  const bg=document.createElement('div');bg.id='bd-sheet';bg.className='bd-sheet-bg';
+  bg.innerHTML='<div class="bd-sheet" role="dialog" aria-label="安排日期"><div><div class="bd-shop" style="font-size:17px">'+escHtml(x.c?x.c.name:'一般')+'</div><div class="bd-ttl">'+escHtml(t.text)+'</div><div class="bd-tags">'+bdTags(x,t.plan||td)+'</div></div>'+
+    '<div class="bd-pick">'+days.map(d=>{const bad=(due&&xLevelOn(due,d)>=3)||(t.dueDate&&d>t.dueDate);return '<button data-go="'+d+'" class="'+(t.plan===d?'cur':'')+(bad?' bad':'')+'">'+(d===td?'今天':bdWD(d))+'<span class="num">'+bdMD(d)+'</span></button>';}).join('')+'</div>'+
+    '<div class="f" style="margin:0"><label class="lbl" for="bd-other">排到其他日期</label><input id="bd-other" type="date" min="'+td+'" value="'+(t.plan&&!days.includes(t.plan)?t.plan:'')+'"></div>'+
+    '<div class="bd-row"><button class="btn btn-outline btn-sm" data-go="">放回未排</button><button class="btn btn-outline btn-sm" data-act="edit">編輯</button>'+(x.c?'<button class="btn btn-outline btn-sm" data-act="client">開啟客戶</button>':'')+'<button class="btn btn-outline btn-sm" data-act="close">關閉</button></div></div>';
+  bg.addEventListener('click',ev=>{
+    const b=ev.target.closest('button');
+    if(ev.target!==bg&&!b)return;
+    bg.remove();
+    if(!b)return;
+    if(b.dataset.go!==undefined)placeTask(k,b.dataset.go,null);
+    else if(b.dataset.act==='edit')gtEdit(x.src,x.ci,x.ti);
+    else if(b.dataset.act==='client'){navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(x.ci),50);}
   });
-  if(GT_SHOW_DONE&&done.length){
-    done.sort((a,b)=>(b.dueDate||'')<(a.dueDate||'')?-1:1);
-    html+=`<div class="gt-sec">已完成 <span class="gt-count">${done.length}</span></div>`;
-    html+='<div class="card" style="padding:0 14px">'+done.map(gtRow).join('')+'</div>';
-  }
-  if(!html)html='<div class="empty">'+(q?'沒有符合的待辦':'目前沒有待辦事項 <br><span style="font-size:12px;color:var(--text3)">用上方輸入框快速新增，例如「明天回收試用品 #客戶名 p1」</span>')+'</div>';
-  el.innerHTML=html;
+  bg.querySelector('#bd-other').addEventListener('change',ev=>{if(ev.target.value){bg.remove();placeTask(k,ev.target.value,null);}});
+  document.body.appendChild(bg);
 }
 function _gtArr(src,ci){return src==='g'?(DB.gtodos||[]):(DB.clients[ci]?DB.clients[ci].todos||[]:[]);}
 function _gtSync(src,ci){
@@ -7911,12 +8170,12 @@ function applyPriceSheet2026(){
     }
   }
 })();
-autoAddRecycleTodos();validateClients();wakeShelved();syncAllHandoffTodos();consumeSiteHandoff();renderClients();
+autoAddRecycleTodos();validateClients();wakeShelved();syncAllHandoffTodos();settleTodos();consumeSiteHandoff();renderClients();
 // 等畫面先出來：先問報價追蹤，再跳補資料（缺評價／需求判斷／擱置理由的店，直到填完）
 renderCalStatus();scheduleCalSync();
 const checkFollowups=()=>checkQuoteFollowups().catch(()=>{}).then(()=>checkHandoffRechecks()).catch(()=>{});
 setTimeout(()=>{checkFollowups().then(()=>openFill());},800);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkFollowups();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(settleTodos())renderGT();checkFollowups();}});
 // ═══ 開啟位置：預設就是待辦；底部導覽與連結可用 #clients / #daily / #new / #map … 指定 ═══
 (function(){
   const h=(location.hash||'').replace('#','');

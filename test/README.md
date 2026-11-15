@@ -32,6 +32,7 @@ npm test      # 全套，提交前必須全綠；CI 也跑同一套
 | `contract-pricing.test.js` | C5 | 商品價格邏輯：`cmCatalogUnit`／`cmCatalogInfo`（主系統商品庫優先）／`cmItemCycle`、DOME 等 4W 商品不加倍、客戶卡帶入報價與合約精靈一致；合約精靈輸入單價不失焦 |
 | `design-tokens.test.js` | D1 | 設計語彙「量尺」紅線：退役 token 不得殘留、兩頁（index／sitemap）不得寫死 UI 色（白名單＝文件輸出／logo／地圖圖磚分類色／getComputedStyle 退路）、淺＋深色模式所有文字/底色組合 ≥4.5:1、急迫度三級亮度分明、狀態＝點＋粗字、階段軌九格、量尺語意（沒有時鐘＝空軌，不編造） |
 | `calendar.test.js` | G1 | Google 日曆同步：後端 `syncCalendar` 整份對齊（假的 CalendarApp：不重複、改日期、清過期、單筆失敗）、前端 `calendarItems`（評價前綴、逾期移今天、擱置不列、內容沒變不打後端、後端過舊不開啟）、待辦清單 P 旗標→評價→日期 |
+| `board.test.js` | B1 | 待辦看板：今天＋四個工作天、舊待辦換算（plan／期限／類型）、回收任務試用一開始就有且不看階段、自動結算、未排排序、X 階梯、`placeTask`（排日期＋當天順序）、勾完成、排程面板、新增與編輯 |
 | `serve.test.js` | R1 | 公司試用表比對：用真的 SheetJS 寫出再讀回自編假報表驗證解析；只擷取未回收、配對（顧客編號／電話／名稱／搜尋）、四種落差、芳香機計價行差異視為一致、逐筆「照公司的」只動那一筆（重排第幾次、配件歸位）、建立／改配對；週報成約列 ÷1.05、試用列含稅 |
 | `batch-quote.test.js` | Q1 | 批次報價單（主程式這一半）：挑店規則（試用未報價／報價類待辦；已報價、擱置、已完成不列）、出不了的原因、勾選數量、交給 `ContractMaker.saveQuotes` 的店與檔名、不改資料、失敗可重試 |
 | `fusion.test.js` | F1 | 工地 ↔ 主系統：開啟就是待辦分頁／`#clients` 深連結、migration v15 清掉已移除功能的本機資料、segment 遷移/視角、自訂類別選項、主系統端轉為客戶＋回執信箱 |

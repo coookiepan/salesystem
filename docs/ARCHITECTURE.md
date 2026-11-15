@@ -288,13 +288,41 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 
 編輯客戶表單只編「進行中的那次」（沒有就提供「開始第 N 次試用」）；過去的試用一律從詳情頁的試用卡進出（`openCDItems(n)`，可改日期、品項、刪除整筆）。
 
-### Todo（待辦）
+### Todo（待辦＝看板上的一張任務卡）
 
 ```js
-{ text, dueDate:'YYYY-MM-DD'|'', done, priority?:1|2|3 }
+{ text, done, type:'visit'|'online'|'misc',   // 到場｜線上｜雜事
+  plan:'YYYY-MM-DD'|'',     // 排在哪一天做（''＝未排）——使用者拖拉決定
+  dueDate:'YYYY-MM-DD'|'',  // 期限（''＝沒有）——系統任務的固定期限，不因改排而變
+  order, bumped,            // 當天順序；沒做完被自動結算回未排的次數
+  priority?:1|2|3, source?, trialN? }
 ```
 
 掛在客戶下的 todo 隨客戶同步雲端；**未掛客戶**的存 `DB.gtodos`（僅本機，含於 JSON 匯出）。
+
+**排定日和期限是兩件事**：`plan` 是「我哪天去做」，`dueDate` 是「最晚什麼時候」。系統任務（`source`）的 `dueDate` 是固定的——
+`auto-recycle` 回收日、`auto-quote` 回收日、`handoff` 成約日＋10 天、`handoff-check`／`quote-followup` 下次確認日——使用者只決定 `plan`。
+舊資料由 `packTodo(t)` 換算（冪等，以 `t.type` 有沒有值判斷）：補類型（`guessTodoType`：系統任務看 `TODO_SOURCE_TYPE`，其餘看文字關鍵字）；
+使用者自己訂的日期原本是「哪天做」→ 搬到 `plan`。在 `validateClients()`（啟動／雲端拉取／備份匯入）與一般待辦載入時呼叫。
+
+### 待辦看板（`renderGT`／`bd*`）
+
+待辦頁是一塊看板：日期軌（**今天＋接下來四個工作天**，`boardDays()` 跳過六日）→ 當天主角區 → 當天清單 → 未排池 →「已排在其他日期」。寬螢幕五天並排。
+
+| 入口 | 語意 |
+|------|------|
+| `boardTasks()`／`boardFind(k)` | 全部任務（客戶的＋一般的），每筆帶所屬客戶與位置；卡片的 `data-k`＝`src:ci:ti` |
+| `placeTask(k,date,idx)` | 排到某天第 `idx` 位（`''`＝放回未排）。只有 `order` 真的變了的任務才寫回並同步。拖放與排程面板都走這裡 |
+| 拖曳 | 按住卡片的 `.bd-grip`（`touch-action:none`，Pointer Events）。`body.bd-dragging` 時日期軌長高成投放區；停在某天 0.6 秒會切到那天，可接著拖進清單插到指定位置（＝當天順序）。日期軌 sticky 在分頁列正下方（`--bd-top` 由 `renderGT` 量出） |
+| `openBdSheet(k)` | 點卡片的備用方式：五天按鈕、其他日期、放回未排、編輯、開啟客戶 |
+| `settleTodos()` | **自動結算**：`plan` 早於今天且沒做完 → `plan=''`、`bumped+1`。啟動與回到前景時跑。完成的留在當天 |
+| `traySortKey(x,td)`／`TRAY_SORT_RULES` | **未排的排序依據**（使用者確認；要改只改這裡，畫面「排序依據」讀同一份文字）：① 回收任務最前（X 等級高 → 離下一個 X 近）② 有期限的（期限近）③ 沒期限的；同組內 P 旗標 → 評價 → 順延次數 |
+| `taskRecycleDue(x)`／`xLevelOn(due,on)`／`xDaysToNext` | 回收任務的回收日與公司逾期等級：到回收日 X、之後每 7 天多一個 X（與 `trialXInfo` 同一條規則）。卡片上的四格階梯以「排定那天」計，第四格 XXXX 是禁區；排到會 XXX 以上或超過期限的日子，投放區與面板按鈕轉紅 |
+
+- 回收任務在**試用一開始**就產生（`autoAddRecycleTodos`，`renderGT` 開頭會呼叫），才排得進看板；`auto-quote` 仍是開始 7 天後。
+- **X 不看階段**：`trialXInfo` 與回收任務都只看「有沒有還沒回收的試用」，階段被改掉但東西還在客戶那邊一樣記 X。
+- 當天清單依 `order`；到場任務的編號就是路線順序。看板只在同一天內排序，不跨天自動排。
+- Google 日曆同步用 `plan || dueDate`：排了哪天放哪天，沒排的用期限。
 
 ### Product／Inventory
 
