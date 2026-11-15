@@ -105,8 +105,8 @@ const D = (off) => { const d = new Date(Date.now() + off * 86400000); return d.g
   await wait(400);
   assert('新工廠建檔成功', w.eval('DB.clients.some(c=>c.id==="iz-new-1"&&c.name==="新工廠甲")'));
   assert('帶入電話與窗口', w.eval('DB.clients.find(c=>c.id==="iz-new-1").phone') === '06-1234567' && w.eval('DB.clients.find(c=>c.id==="iz-new-1").contact') === '王窗口');
-  assert('型態=工廠、狀態=初訪（電訪過才建檔）', w.eval('DB.clients.find(c=>c.id==="iz-new-1").type') === '工廠' && w.eval('DB.clients.find(c=>c.id==="iz-new-1").status') === '初訪');
-  assert('自帶一筆拜訪紀錄（滿足 status≠未拜訪 ⇒ 有 visit 不變式）', w.eval('DB.clients.find(c=>c.id==="iz-new-1").visits.length') === 1);
+  assert('型態=工廠、狀態=開發中（電訪過才建檔）', w.eval('DB.clients.find(c=>c.id==="iz-new-1").type') === '工廠' && w.eval('DB.clients.find(c=>c.id==="iz-new-1").status') === '開發中');
+  assert('自帶一筆拜訪紀錄（滿足 status≠待拜訪 ⇒ 有 visit 不變式）', w.eval('DB.clients.find(c=>c.id==="iz-new-1").visits.length') === 1);
   assert('同 id 冪等：既有客戶未被覆蓋', w.eval('DB.clients.filter(c=>c.id==="exist1").length') === 1 && w.eval('DB.clients.find(c=>c.id==="exist1").name') === '既有客戶');
   assert('信箱消化後清空', w._store.duskin_iz_handoff === undefined);
   assert('建檔進入待推送佇列（斷網不丟）', w.eval('OUTBOX.some(op=>op.payload&&op.payload.client&&op.payload.client.id==="iz-new-1")'));

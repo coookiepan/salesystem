@@ -152,7 +152,11 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 ```js
 {
   id,                    // UUID（crypto.randomUUID，雲端 upsert 的 key）
-  name, addr, type, status,        // status ∈ STATUS 常數表（未拜訪…拒絕）
+  name, addr, type, status,        // status ∈ STATUS 常數表：待拜訪｜開發中｜試用｜成約｜擱置（見下方「階段與判斷」）
+  quoted,                          // 已報價（bool）
+  handoff, handoffReason, handoffFrom,   // ''待轉交｜'done'已轉交｜'blocked'無法轉交＋理由；handoffFrom＝重新起算 10 天的日期
+  need, tier,                      // 需求判斷 ''|'有'|'無'|'未定'、評價 0|1|2|3
+  shelveReason, shelvedAt, wakeDate, wokeAt,   // 擱置理由／擱置日／喚醒日／上次被喚醒的日期
   contact, phone, regNo,           // regNo＝統一編號（工業區名單身分鍵）
   nextdate, env, note,
   lat, lng, geocodeSource,         // 地圖定位（manual / geocode_ok / failed）
@@ -165,6 +169,48 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
   srvAt                  // 雲端已確認版本的時間戳（同步基準）
 }
 ```
+
+### 階段與判斷（五階段＋獨立欄位）
+
+舊的九個狀態把三件事塞在同一欄：走到哪了（階段）、值得花多少力氣（評價）、下一步是什麼（提醒）。現在拆開：
+
+| 階段 `status` | 子狀態（獨立欄位） | 系統給的下一步 |
+|---|---|---|
+| 待拜訪 | — | 進排程池（清單依區域 → 評價排序）|
+| 開發中 | `need`、`quoted` | 記拜訪自動排下次（＋7 天）；`need='無'` → 轉擱置；已報價 → `quote-followup` |
+| 試用 | `quoted` | 回收待辦（`auto-recycle`）；未報價 → `auto-quote`「安排報價」；已報價 → `quote-followup` |
+| 成約 | `handoff`、`handoffReason` | 待轉交 → `handoff` 待辦（成約日＋10 天）；無法轉交 → `handoff-check` 待辦（每 14 天：自己送貨＋理由還在嗎）。「待轉交」分類＝`handoff!=='done'`，依成約日排序 |
+| 擱置 | `shelveReason`、`wakeDate` | `wakeShelved()`：喚醒日到了改回待拜訪（記 `wokeAt`）|
+
+| 入口 | 語意 |
+|------|------|
+| `statusLabel(c)`／`clientPill(c)`／`clientTone(c)` | 客戶的狀態文字（含括號子狀態）、圓點＋粗字、急迫度色。**顯示客戶狀態一律走這三個**，`statusStyle(t)` 只給純階段字串（拜訪紀錄的徽章）|
+| `inPipeline(c)` | 試用、或開發中但已報價——日報推進表與長官儀表板「試用」的口徑 |
+| `markQuoted(c,date)` | 設 `quoted`、關掉 `auto-quote`、補一筆一週後的 `quote-followup`（已有未完成的不重複）|
+| `shelveClient(c,reason,date)` | 轉擱置：理由、擱置日、`wakeDate=wakeDateFor(c)`（`WAKE_MONTHS={1:4,2:8}`，三級不提醒）、清下次拜訪日、關掉報價類待辦 |
+| `checkQuoteFollowups()` | 已報價且追蹤到期 → 問要不要擱置（每週一次）；**還有進行中的試用就不問**（由回收流程收尾）|
+| `syncHandoffTodo(c)`／`setHandoff(c,state,reason)` | 轉交待辦的唯一入口（冪等）：依 `c.handoff` 開關 `handoff`／`handoff-check` 兩種系統待辦。啟動時 `syncAllHandoffTodos()` 全掃，各轉換點（回收成約、存表單、記拜訪、勾待辦）單筆呼叫。`HANDOFF_DAYS=10`、`HANDOFF_RECHECK_DAYS=14` |
+| `onTodoToggled(c,t)` | 勾掉 `handoff` 待辦＝已轉交；勾掉 `handoff-check`＝這次送完，自動補下一次 |
+| `checkHandoffRechecks()` | 無法轉交的確認到期 → 問理由還在不在：還在 → 14 天後再問；不在了 → 回待轉交，10 天從當天重算 |
+| `missingFields(c)` | 還缺的判斷：非待拜訪都要 `tier`；開發中要 `need`；擱置要 `shelveReason` |
+| `openFill(only?)`／`fillNext()`／`renderFillBanner()` | 補資料視窗：啟動 0.8 秒後自動跳出、一家一家問；可稍後再填，清單上方留提示條。填 `need='無'` 的開發中會直接轉擱置 |
+| `packStage(c)`／`packAllStages(list)` | 舊九狀態 → 五階段＋欄位，連同 `visits[].statusChange`（舊「報價」變成 `visit.quoted`）。冪等；migration v13、`validateClients()` 與所有資料進入點都呼叫，**必須排在 `packTrials` 之後**（要看有沒有試用紀錄）。不重推上雲、不動 `updatedAt` |
+| `rptVisitAction(c,v)` | 日報動作代號：擱置＝拒、`v.quoted`＝報、試用／成約＝試；其餘看是不是這家店最早的一筆拜訪（初／複）|
+
+記錄拜訪（`saveVL`）先驗證再動資料：一定要有評價；結果是開發中就要有需求判斷；選擱置要有理由。待拜訪的店記了拜訪自動變開發中。
+`home.html` 讀的是同一份 localStorage；主系統更新後還沒開過時資料仍是舊狀態，首頁只在記憶體裡換算一次、不寫回。
+
+### Google 日曆同步（提醒走出 App）
+
+PWA 在 iOS 沒有排程通知也做不出小工具，所以把「有日期的下一步」放進使用者自己的 Google 日曆，通知與小工具交給日曆 App。
+
+- **前端 `calendarItems(base)`**：未完成且有到期日的待辦（客戶＋一般）、進行中試用的回收日、下次拜訪日（擱置不列）→ `[{date,title,desc}]`。
+  標題＝`評價｜店名：事項`（同一天依評價排，與待辦清單同一把尺）；逾期的移到今天並加「（逾期）」；只取未來 60 天（`CAL_WINDOW_DAYS`）。
+  `auto-recycle` 待辦不列——它要試用開始 7 天後才產生，日曆直接用試用的回收日。
+- **觸發**：`saveLocal()` 成功後 `scheduleCalSync()`（4 秒防抖）＋啟動時一次（把逾期的滾到今天）。`calSig` 雜湊沒變就不打後端。
+- **後端 `syncCalendar(events,from,to)`**：只動名為 `CAL_NAME`（DUSKIN 業務提醒）的日曆、只動整天事件；以「日期＋標題」辨識，缺的建、多的刪，範圍＝`from` 往前 60 天到 `to`。單筆失敗計入 `failed`，前端不記雜湊、下次重試。進 `WRITE_ACTIONS` 取鎖。
+- **開關只存本機**：`localStorage.cal_sync／cal_sig／cal_last`，不進 `duskin_v2`。開啟時 `ping` 檢查 `ver>=CAL_BACKEND_VER(4)`；`REQUIRED_BACKEND_VER` 仍是 3（不用日曆的人不必重新部署）。
+- **限制**：整份對齊的來源是「這台手機的資料」，兩台手機都開會互相覆蓋成各自的清單（資料已同步時結果相同）。通知時間由 Google 日曆的「整天活動通知」設定決定，App 不指定。尚未對真實 Google 日曆做過端對端驗證（測試用假的 `CalendarApp`）。
 
 ### 商品主檔（唯一來源：`DB.products`）
 
@@ -197,9 +243,9 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 | `currentTrial(c)`／`trialItemsOf(c)` | 進行中優先，否則最近一次——客戶卡 4W 估算、提案商品、報價／合約匯入（`HOST.trialItems`） |
 | `trialXInfo(c)` | 以進行中那次的 `due` 分級：到回收日 X、之後每 7 天多一個 X |
 | `autoAddRecycleTodos()` | 每次進行中的試用開始＋7 天後各自加「回收試用品（第 N 次）」，到期＝回收日，`todo.trialN` 對應 |
-| `startTrial()`／`cfStartTrial()` | 新一次試用：**品項從空的開始**、開始日今天、回收日＋14；狀態自動試用中；還有進行中或已達 3 次會先確認 |
-| `finishRecover(result)` | 回收結果四選一：成約（品項含配件轉 `contractedItems`、狀態已成約）／報價中（狀態報價＋`quote-followup` 待辦一週後由 `checkQuoteFollowups` 問是否改拒絕，每週再問）／再試用（複製同品項開下一次）／拒絕。每次回收補一筆拜訪紀錄 |
-| `packTrials(c)` | 舊格式 `trialDate`＋`trialItems` → 第 1 次（試用中＝進行中、其餘＝已回收、回收日不明）。migration v11 與所有資料進入點（雲端拉取、備份匯入、長官快照）都呼叫，其他裝置未升級時雲端仍可能是舊格式 |
+| `startTrial()`／`cfStartTrial()` | 新一次試用：**品項從空的開始**、開始日今天、回收日＋14；階段自動變試用；還有進行中或已達 3 次會先確認 |
+| `finishRecover(result)` | 回收結果四選一：成約（品項含配件轉 `contractedItems`、階段成約＝待轉交）／報價中（留在試用、`markQuoted` → 一週後 `checkQuoteFollowups` 問是否擱置，每週再問）／再試用（複製同品項開下一次）／拒絕（`shelveClient`，接著 `openFill` 問理由）。每次回收補一筆拜訪紀錄 |
+| `packTrials(c)` | 舊格式 `trialDate`＋`trialItems` → 第 1 次（舊狀態「試用中」＝進行中、其餘＝已回收、回收日不明）。migration v11 與所有資料進入點（雲端拉取、備份匯入、長官快照）都呼叫，其他裝置未升級時雲端仍可能是舊格式 |
 
 編輯客戶表單只編「進行中的那次」（沒有就提供「開始第 N 次試用」）；過去的試用一律從詳情頁的試用卡進出（`openCDItems(n)`，可改日期、品項、刪除整筆）。
 
@@ -229,7 +275,7 @@ Item:    { name(=product code), stock, std(標準配備數), cat }
 **`Product.price` 是該商品「自身週期」（`Product.cycle`）下的每次更換單價（含稅）**：地墊／拖把多為 2W 價、芳香（DOME、AFDW…）為 4W 價。
 **`Product.price4w`（選填）是 2W 商品表定的 4 週換單價**：拖把照 2026-09 價格表（S-20 160、SHH 140、NH-S 140、SSS-R 272、LALA-R 304、NSAC 200 特價、N-AC 336、M-90 352、M-120 448）；地墊沒有此欄，4W 原價＝2W 價 ×2。
 唯一換算入口 `unitPriceAt(p, cycle)`（主系統）＝ `HOST.unitAt`（報價／合約精靈），`effCycle` 把 4W 商品的所選週期一律視為 4W。
-定價來源以 App「商品」頁（`DB.products`，同步到 Sheet `products` 分頁）為準；ContractMaker 內建的 `CM_CATALOG` 只補品名／分類／不在主系統的品項（HPL/HPS 訂做地墊）與後援價。
+定價來源只有 App「商品」頁（`DB.products`，同步到 Sheet `products` 分頁）；ContractMaker 不自帶商品清單。
 
 | 場景 | 入口 | 規則 |
 |------|------|------|
@@ -299,6 +345,7 @@ sequenceDiagram
 | `saveInventory` / `getInventory` | 庫存整包讀寫 |
 | `saveProducts` / `getProducts` | 商品整包讀寫 |
 | `getShops` | 查詢頁的公司既有客戶名單 |
+| `syncCalendar` (`events`, `from`, `to`) | Google 日曆整份對齊（後端 v4；需日曆授權，見下方「Google 日曆同步」） |
 | `geocode` | Google Geocoder 代理（地圖定位主來源，免金鑰；失敗退 Nominatim） |
 
 > ⚠ 後端程式碼變動屬「需要使用者重新部署」的更新——CHANGELOG 必須標註，並附 GUIDE.md 的重新部署步驟連結。
@@ -336,29 +383,29 @@ sequenceDiagram
 
 **顏色＝急迫度，不是階段**（`SS_TONE` → `TONE` → `statusStyle()`）：
 
-| 急迫度 | token | 相對亮度 | 對應狀態 |
+| 急迫度 | token | 相對亮度 | 對應狀態（`clientTone`） |
 |---|---|---|---|
-| 逾期／拒絕 | `--red` | 6.6% | 拒絕、試用逾期、報價該追了 |
-| 該你動作 | `--amber` | 9.8%→12.8% | 報價、將成約 |
-| 進行中 | `--blue` | 9.8% | 初訪、複訪、試用中 |
-| 沒有急迫度 | `--text2` | 無彩度 | 未拜訪 |
-| 成約（強調色） | `--green-d` | — | 已成約、已轉交 |
+| 逾期 | `--red` | 6.6% | 試用逾期、報價該追了 |
+| 該你動作 | `--amber` | 9.8%→12.8% | 已報價（試用或開發中）、成約待轉交 |
+| 進行中 | `--blue` | 9.8% | 開發中、試用（未報價） |
+| 沒有急迫度 | `--text2` | 無彩度 | 待拜訪、擱置 |
+| 成約（強調色） | `--green-d` | — | 成約（已轉交） |
 
-三個訊號色的亮度刻意拉開 ≥2 個百分點，灰階列印與紅綠色盲都分得出來。**階段本身**由 `stageRail(status)`（九格，位置＝第幾階段）與文字表示，不靠顏色。
+三個訊號色的亮度刻意拉開 ≥2 個百分點，灰階列印與紅綠色盲都分得出來。**階段本身**由 `stageRail(status)`（五格，位置＝第幾階段）與文字表示，不靠顏色。評價用文字標記（`tierMark`），同樣不佔顏色。
 商品類別是「分類」不是「狀態」，所以保留自己的三個色相（`--purple-*` 拖把／`--blue-*` 地墊／`--green-*` 芳香，見 `CB_STYLE`）。
 
 **量尺量什麼**（`clientGaugeHtml(c)`／`clientClockLabel(c)`）——只量系統真的知道的進度，**沒有時鐘就留空軌，絕不編造**：
 
 | 狀態 | 時鐘 | 刻度 |
 |---|---|---|
-| 試用中（進行中試用） | 試用第幾天 / 回收日 | 14 格，到期前 2 天轉橙、逾期轉紅並滿格 |
-| 報價 | 距離 `quote-followup` 待辦的提醒日 | 7 格，到期轉紅 |
-| 已成約／已轉交 | 走完了 | 滿格綠 |
-| 未拜訪、初訪、複訪、將成約、拒絕 | 沒有 | 空軌 |
+| 試用（有進行中的試用） | 試用第幾天 / 回收日 | 14 格，到期前 2 天轉橙、逾期轉紅並滿格 |
+| 已報價（試用或開發中） | 距離 `quote-followup` 待辦的提醒日 | 7 格，到期轉紅 |
+| 成約 | 走完了 | 滿格綠 |
+| 待拜訪、開發中（未報價）、擱置 | 沒有 | 空軌（擱置只用文字寫理由與喚醒日）|
 
 卡片下緣就是它自己的量尺：`.cc.has-g` 留出 17px，`.cc-gauge` 絕對定位貼底。
 
-**地圖圖釘**也走同一套語彙（`mapColorForClient`）：逾期紅、試用／報價橙、初訪複訪藍、成約綠、未拜訪無彩度。Leaflet 吃不到 `var()`，所以用 `cssVar()` 從 `--*` 解析實際色值，`--pin-fallback` 是唯一的退路值。
+**地圖圖釘**也走同一套語彙（`mapColorForClient`）：逾期紅、試用／已報價橙、開發中藍、成約綠、待拜訪無彩度；擱置不上圖。Leaflet 吃不到 `var()`，所以用 `cssVar()` 從 `--*` 解析實際色值，`--pin-fallback` 是唯一的退路值。
 
 ### 紅線
 
@@ -405,7 +452,7 @@ sequenceDiagram
 3. `sw.js` 預快取 `izcrm.html` 與 `izdata.json`（離線可用）。
 4. **建檔交接信箱**（單向）：izcrm「建檔到主系統」把工廠基本資料＋預產 client id 寫進
    `localStorage.duskin_iz_handoff`；主系統啟動（或 storage 事件）時以自己的正規流程
-   `consumeIzHandoff()` 建檔（狀態＝初訪，自帶一筆 visit 滿足不變式）並上主系統雲端。
+   `consumeIzHandoff()` 建檔（階段＝開發中，自帶一筆 visit 滿足不變式）並上主系統雲端。
    izcrm 永不直接碰 DB/outbox。冪等（同 id 跳過）。狀態改「已電訪」時若尚未建檔會主動提醒。
    連結記在 izcrm 紀錄 `r.main={clientId}`（隨 izcrm 雲端同步），詳情頁據此**現場唯讀讀取**
    `duskin_v2.clients` 顯示主系統狀態（鏡射，不複製資料——與商品庫同一模式）。
@@ -594,6 +641,6 @@ pct(a, b)                 // 百分比字串；b=0 回 '—'
 3. **順路＝走廊模型**（`CORRIDORS` 常數）：每條主要路線＝一串有序行政區（縱貫線/山線/關廟線/海線）。
    `tripOnTheWay()`：行程最遠點之前的區＝「往Ｘ途中」、下一站＝「Ｘ再過去一站」。
    純查表、離線可算、可讀可改——調整順路判斷直接改 `CORRIDORS` 內容即可。
-   候選（`tripSuggestions()`）限三類：📌 有未完成待辦、⚪ 未拜訪、🤝 成交且有租賃品項。
+   候選（`tripSuggestions()`）限三類：📌 有未完成待辦、⚪ 待拜訪、🤝 成交且有租賃品項。
 
 注意：`parseRegion()` 會先剝「臺南市/台南市」前綴再抓行政區（izcrm 建檔的地址帶完整前綴）。

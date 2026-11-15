@@ -101,7 +101,7 @@ function boot(html, store, url) {
   assert('本週成果：拜訪 1・成約 1', txt('w-visits') === '1' && txt('w-deals') === '1');
   assert('問候帶姓名', txt('h-greet').includes('秉均'));
   assert('行程站點轉義 HTML 店名（XSS）', w.document.getElementById('t-stops').innerHTML.includes('&lt;img') && !w.document.getElementById('t-stops').innerHTML.includes('<img src=x'));
-  assert('客戶管理卡：3 位客戶・試用中 1', txt('a-main').includes('3 位客戶') && txt('a-main').includes('試用中 1'));
+  assert('客戶管理卡：3 位客戶・試用 1・待轉交 1（舊九狀態在首頁先換算）', txt('a-main').includes('3 位客戶') && txt('a-main').includes('試用 1') && txt('a-main').includes('待轉交 1'), txt('a-main'));
   assert('工地卡：待開幕 1（tombstone 不計）・本週可拜訪 1', txt('a-site').includes('待開幕 1') && txt('a-site').includes('本週可拜訪 1'));
   assert('工業區卡：有紀錄 2・待訪 1', txt('a-iz').includes('有紀錄 2') && txt('a-iz').includes('待訪 1'));
   assert('同步狀態：主系統 1 筆待推', w.document.getElementById('h-syncs').textContent.includes('1 筆待推'));

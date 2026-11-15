@@ -105,7 +105,7 @@ function boot(html, url) {
   console.log('F1 — 主系統端「📇 轉為客戶」＋回執信箱');
   m.eval('mainConvertSite("sDue")');
   const nc = m.eval('DB.clients.find(c=>c.srcSiteId==="sDue")');
-  assert('客戶卡建立：街邊店/未拜訪/拜訪日=開幕日/GPS manual', !!nc && nc.segment === '街邊店' && nc.status === '未拜訪' && nc.nextdate === daysAgo(1) && nc.geocodeSource === 'manual' && nc.lat === 23.001);
+  assert('客戶卡建立：街邊店/待拜訪/拜訪日=開幕日/GPS manual', !!nc && nc.segment === '街邊店' && nc.status === '待拜訪' && nc.nextdate === daysAgo(1) && nc.geocodeSource === 'manual' && nc.lat === 23.001);
   assert('進待推送佇列', (store['duskin_outbox'] || '').includes(nc.id));
   assert('回執信箱寫入', JSON.parse(store['duskin_site_ack'] || '[]').some(a => a.siteId === 'sDue' && a.clientId === nc.id));
   m.eval('mainConvertSite("sDue")');

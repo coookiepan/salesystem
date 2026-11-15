@@ -160,7 +160,7 @@ function boot(html) {
   await wait(500);
   const got = m.eval('DB.clients.find(c=>c.id==="' + handoffClientId + '")');
   assert('主系統建檔成功（INIT 消化）', !!got);
-  assert('狀態=未拜訪、nextdate=可拜訪日', got && got.status === '未拜訪' && got.nextdate === '2026-08-30');
+  assert('狀態=待拜訪、nextdate=可拜訪日', got && got.status === '待拜訪' && got.nextdate === '2026-08-30');
   assert('GPS 座標沿用且標 manual（不會被 geocode 蓋掉）', got && got.lat === 23.02 && got.lng === 120.25 && got.geocodeSource === 'manual');
   assert('名稱與備註帶入（含工地地圖轉入標記）', got && got.name === '同事改過的名字' && /工地地圖轉入/.test(got.note));
   assert('信箱消化後清空', !store['duskin_site_handoff']);

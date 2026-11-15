@@ -230,6 +230,18 @@ const W0=ymd(monday),W1=ymd(sunday);
 /* ── 讀三個系統 ── */
 const main=readJSON('duskin_v2',null);
 const clients=(main&&Array.isArray(main.clients))?main.clients.filter(Boolean):[];
+// 階段只有五個（待拜訪／開發中／試用／成約／擱置）。主系統更新後還沒開過時，本機資料仍是舊九狀態，
+// 這裡只在記憶體裡換算一次（不寫回——轉換與補資料是主系統 migration v13 的事）
+const OLD_STAGE={'未拜訪':'待拜訪','初訪':'開發中','複訪':'開發中','試用中':'試用','將成約':'試用','已成約':'成約','已轉交':'成約','拒絕':'擱置','已結案':'擱置'};
+clients.forEach(c=>{
+  const o=c.status||'';
+  if(['待拜訪','開發中','試用','成約','擱置'].includes(o))return;
+  c._old=o;
+  if(o==='報價'||o==='將成約'){c.quoted=true;c.status=((c.trials||c.trialItems||[]).length||c.trialDate)?'試用':'開發中';}
+  else c.status=OLD_STAGE[o]||'待拜訪';
+  if(o==='已轉交')c.handoff='done';
+});
+function stageOf(c){return c.status||'待拜訪';}
 const gtodos=(main&&Array.isArray(main.gtodos))?main.gtodos:[];
 const outbox=readJSON('duskin_outbox',[]);
 const sm=readJSON('sitemap_v1',null);
@@ -255,13 +267,13 @@ document.getElementById('h-syncs').innerHTML=
   syncRow('工業區', iz&&iz.gasUrl?true:null, iz&&iz.dirty?Object.keys(iz.dirty).length:0);
 
 /* ── 今日行程 ── */
-// 狀態色＝急迫度（與主系統 tokens.css 同一套語彙）：進行中藍、該你動作橙、成約綠、拒絕紅、未開始無彩度
-const stChip=s=>{
-  if(s==='初訪'||s==='複訪'||s==='試用中')return [s,'c-blue'];
-  if(s==='報價'||s==='將成約')return [s,'c-amber'];
-  if(s==='已成約'||s==='已轉交')return [s,'c-green'];
-  if(s==='拒絕')return [s,'c-red'];
-  return [s||'未拜訪','c-gray'];
+// 狀態色＝急迫度（與主系統 tokens.css 同一套語彙）：進行中藍、該你動作橙（已報價／成約待轉交）、已轉交綠、其餘無彩度
+const stChip=c=>{
+  const s=stageOf(c);
+  if(s==='試用')return [c.quoted?'試用（已報價）':'試用（未報價）',c.quoted?'c-amber':'c-blue'];
+  if(s==='開發中')return [c.quoted?'開發中（已報價）':s,c.quoted?'c-amber':'c-blue'];
+  if(s==='成約')return c.handoff==='done'?['成約（已轉交）','c-green']:[c.handoff==='blocked'?'成約（無法轉交）':'成約（待轉交）','c-amber'];
+  return [s,'c-gray'];
 };
 const trips=clients.filter(c=>c.nextdate===TODAY);
 const overdue=clients.filter(c=>c.nextdate&&c.nextdate<TODAY);
@@ -291,7 +303,7 @@ if(!clients.length){
 }else{
   stopsEl.innerHTML=trips.slice(0,3).map((c,i)=>{
     const done=isDone(c);
-    const [label,cls]=done?['已拜訪','c-green']:stChip(c.status);
+    const [label,cls]=done?['已拜訪','c-green']:stChip(c);
     const region=parseRegion(c.addr);
     return '<div class="stop"><span class="seq num '+(done?'on':'')+'" style="--tone:var(--text3)">'+(done?'✓':(i+1))+'</span>'+
       '<span class="nm">'+esc(c.name||'-')+'<small>'+esc(region||c.addr||'')+'</small></span>'+
@@ -329,10 +341,10 @@ document.getElementById('s-od').textContent=overdue.length;
 // 試用該收：進行中的試用到了回收日（主系統還沒開過新版時舊格式只有 trialDate，視為開始＋14 天）
 function openTrialsOf(c){
   if(Array.isArray(c.trials))return c.trials.filter(t=>t&&t.open);
-  if(c.status==='試用中'&&c.trialDate){const d=new Date(c.trialDate);d.setDate(d.getDate()+14);return [{start:c.trialDate,due:ymd(d),open:true}];}
+  if(c._old==='試用中'&&c.trialDate){const d=new Date(c.trialDate);d.setDate(d.getDate()+14);return [{start:c.trialDate,due:ymd(d),open:true}];}
   return [];
 }
-const trialDue=clients.filter(c=>c.status==='試用中'&&openTrialsOf(c).some(t=>t.due&&t.due<=TODAY));
+const trialDue=clients.filter(c=>stageOf(c)==='試用'&&openTrialsOf(c).some(t=>t.due&&t.due<=TODAY));
 document.getElementById('s-trial').textContent=trialDue.length;
 let todoN=0;
 clients.forEach(c=>(c.todos||[]).forEach(t=>{if(t&&!t.done&&t.dueDate&&t.dueDate<=TODAY)todoN++;}));
@@ -354,9 +366,9 @@ document.getElementById('w-trials').textContent=wTrials;
 
 /* ── 系統卡活資訊 ── */
 if(clients.length){
-  const trial=clients.filter(c=>c.status==='試用中').length;
-  const closing=clients.filter(c=>c.status==='將成約').length;
-  document.getElementById('a-main').textContent=clients.length+' 位客戶 · 試用中 '+trial+(closing?' · 將成約 '+closing:'');
+  const trial=clients.filter(c=>stageOf(c)==='試用').length;
+  const handoff=clients.filter(c=>stageOf(c)==='成約'&&c.handoff!=='done').length;
+  document.getElementById('a-main').textContent=clients.length+' 位客戶 · 試用 '+trial+(handoff?' · 待轉交 '+handoff:'');
 }
 if(sites.length){
   const openSoon=sites.filter(s=>['施工中','裝潢收尾','完工待開幕'].indexOf(s.stage)>=0).length;
