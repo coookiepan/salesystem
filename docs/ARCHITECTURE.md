@@ -200,6 +200,14 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 記錄拜訪（`saveVL`）先驗證再動資料：一定要有評價；結果是開發中就要有需求判斷；選擱置要有理由。待拜訪的店記了拜訪自動變開發中。
 `home.html` 讀的是同一份 localStorage；主系統更新後還沒開過時資料仍是舊狀態，首頁只在記憶體裡換算一次、不寫回。
 
+### 批次報價單
+
+待辦頁「批次報價單」：把該報價的店一次產成**一個 Word 檔、一家一頁**，傳到電腦列印。職責照模組邊界切兩半：
+
+- **主程式挑店**：`quoteNeeded(c)`＝試用且未報價，或有未完成的報價類待辦（`source:'auto-quote'`，或文字含「報價」；`quote-followup` 不算；擱置與成約不列）。`batchQuoteList()` 逐家向模組要內容，出不了的帶原因（多半是客戶卡沒有品項）；依評價排序。
+- **模組出內容**：`ContractMaker.quoteInfo(c)`（品項＋四週合計，出不了 throw）與 `ContractMaker.saveQuotes(clients, filename)`（`CM_builder.buildBatchBlob`：每份報價單一個 section，內容與單張共用 `quoteChildren`；存檔走既有的 `cmTriggerSave`，iOS 是分享面板）。
+- **只產檔、不改資料**：印出來不等於交給客戶，「已報價」仍由使用者自己標；也不補拜訪紀錄。
+
 ### 訂製地墊試算（`omm*`）
 
 針織訂製地墊（OMM）的價格由「尺寸 × 顏色數」決定。`OMM_PRICE` 是公司「OMM 特製費明細表」（2021/03）的針織部分：
