@@ -130,6 +130,41 @@ function boot(store, cloudProducts, page) {
   w.document.getElementById('im-name').value = 'NOPE'; w.renderInvNameHint();
   assert('打錯代號 → 提醒商品庫沒有', /商品庫沒有/.test(w.document.getElementById('im-hint').textContent));
 
+  console.log('P2 — 訂製地墊（針織）試算：尺寸 × 顏色數');
+  const q = (se, sz) => w.ommQuote(se, sz);
+  assert('面積分級：0.60 m² 以下 No.1、0.61 起 No.2、12.00 是 No.20', w.ommRank(0.6) === 1 && w.ommRank(0.61) === 2 && w.ommRank(1.2) === 2 && w.ommRank(1.21) === 3 && w.ommRank(12) === 20);
+  assert('面積四捨五入到小數第 2 位（0.604→0.60、0.605→0.61）', w.ommArea(60.4, 100) === 0.6 && w.ommArea(60.5, 100) === 0.61);
+  let r = q('HQ', { w: 240, l: 180 });
+  assert('240×180、3-4 色 → HQ8：每次 1,140、四週（兩次）2,280；不帶特製費', r.code === 'HQ8' && r.area === 4.32 && r.unit === 1140 && r.fw4 === 2280 && !('fee' in r), JSON.stringify(r));
+  assert('分類與名稱：訂製地墊・3-4 色／訂作地墊 3-4 色 NO.8（4.21–4.80 m²）', r.category === '訂製地墊・3-4 色' && r.desc === '訂作地墊 3-4 色 NO.8（4.21–4.80 m²）', JSON.stringify(r));
+  r = q('HP', 'L');
+  assert('制式 L、2 色 → HPL 360（與商品庫既有的 HPL 同價），分類是「制式」', r.code === 'HPL' && r.unit === 360 && r.fw4 === 720 && r.category === '訂製地墊・制式' && r.desc === '訂作地墊 2 色 制式 L（90×150 公分）' && w.getProd('HPL').price === 360, JSON.stringify(r));
+  assert('No.1 的名稱寫「0.60 m² 以下」', q('HSO', { w: 60, l: 100 }).desc === '訂作地墊 1 色 NO.1（0.60 m² 以下）', q('HSO', { w: 60, l: 100 }).desc);
+  assert('同樣 90×150 但走自由尺寸 → 依面積算 HP3（440），和制式價不同', q('HP', { w: 90, l: 150 }).code === 'HP3' && q('HP', { w: 90, l: 150 }).unit === 440);
+  assert('五個系列各 6 個制式＋20 級', Object.keys(w.eval('OMM_PRICE')).join(',') === 'HSO,HP,HH,HQ,HR' && Object.values(w.eval('OMM_PRICE')).every(x => Object.keys(x.std).length === 6 && x.no.length === 20));
+  assert('每個系列的單價都隨尺寸遞增（抄表防呆）', Object.values(w.eval('OMM_PRICE')).every(x => x.no.every((c, i) => i === 0 || c > x.no[i - 1])));
+  assert('超出針織限制 → 報錯不給價', /短邊超過/.test(q('HP', { w: 190, l: 200 }).error) && /面積/.test(q('HP', { w: 180, l: 700 }).error) && /請輸入/.test(q('HP', { w: 0, l: 100 }).error));
+  w.openOmmModal();
+  w.document.getElementById('omm-size').value = 'free'; w.document.getElementById('omm-w').value = '240'; w.document.getElementById('omm-l').value = '180';
+  w.document.getElementById('omm-colors').value = 'HQ'; w.renderOmm();
+  assert('試算視窗顯示分類、記號、四週金額，不顯示特製費', /訂製地墊・3-4 色/.test(w.document.getElementById('omm-result').textContent) && /HQ8/.test(w.document.getElementById('omm-result').textContent) && /\$2,280/.test(w.document.getElementById('omm-result').textContent) && !/特製費/.test(w.document.getElementById('omm-modal').textContent));
+  const nProd = w.eval('DB.products.length');
+  w.ommAddProduct();
+  const hq8 = w.getProd('HQ8');
+  assert('加入商品庫：只多那一個記號，2W 單價 1,140、訂製 4 年，客戶卡四週金額＝2,280', w.eval('DB.products.length') === nProd + 1 && hq8.price === 1140 && hq8.cycle === '2W' && hq8.contractYears === 4 && w.displayFw4('HQ8', 1, '2W') === 2280, JSON.stringify(hq8));
+  w.ommAddProduct();
+  assert('重複加入不會多一筆', w.eval('DB.products.length') === nProd + 1);
+  assert('商品庫裡的分類、規格、備註（不寫特製費）', hq8.series === '訂製地墊・3-4 色' && hq8.size === 'NO.8' && hq8.note === '訂製品，合約 4 年', JSON.stringify(hq8));
+  const addOmm = (se, sz, wl) => { w.document.getElementById('omm-colors').value = se; w.document.getElementById('omm-size').value = sz; if (wl) { w.document.getElementById('omm-w').value = wl[0]; w.document.getElementById('omm-l').value = wl[1]; } w.ommAddProduct(); };
+  addOmm('HQ', 'free', [100, 200]);   // HQ4
+  addOmm('HP', 'free', [240, 180]);   // HP8
+  addOmm('HR', 'W');                  // HRW（制式）
+  const ommCodes = w.eval('DB.products').filter(p => w.ommParse(p.code)).map(p => p.code).join(',');
+  assert('商品庫裡照分類排：制式（小→大）→ 2 色 → 3-4 色（No. 小→大）', ommCodes === 'HPS,HPL,HRW,HP8,HQ4,HQ8', ommCodes);
+  assert('其他商品的順序不受影響、基準的 HPL／HPS 也用新分類', w.eval('DB.products')[0].code === 'DECSR' && w.getProd('HPL').series === '訂製地墊・制式' && w.getProd('HPS').desc === '訂作地墊 2 色 制式 S（75×90 公分）');
+  assert('不是訂製地墊的記號不會被誤判', w.ommParse('DECSR') === null && w.ommParse('HP21') === null && w.ommParse('HPL').std === 'L' && w.ommParse('HSO12').n === 12);
+  w.closeOmmModal();
+
   console.log('P2 — 工業區CRM 讀同一份主檔');
   const izStore = { duskin_v2: store.duskin_v2 };
   const wz = boot(izStore, null, 'iz');
