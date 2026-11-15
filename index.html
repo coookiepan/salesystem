@@ -1779,7 +1779,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-t4';
+const APP_VERSION='v2026.11.15-t5';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -5608,9 +5608,11 @@ function renderClients(){
 // ═══════════════════════════════════════════════════════════
 let S={curIdx:-1,editIdx:-1,cfItems:[],cfTodos:[],curMood:3,editVisitIdx:-1,itemsTarget:'cf-items',contractedTarget:'cf-contracted-list',cdmActive:false,cdmStatusOverride:null};
 
+// 換畫面才回頂部；同一個畫面重畫（勾待辦、改階段後 openCD 重畫客戶頁）留在原本的捲動位置
 function showView(id){
+  const same=document.getElementById(id).style.display==='block';
   ['view-list','view-form','view-detail'].forEach(v=>document.getElementById(v).style.display='none');
-  document.getElementById(id).style.display='block';window.scrollTo(0,0);
+  document.getElementById(id).style.display='block';if(!same)window.scrollTo(0,0);
 }
 function openCF(idx){
   // 進入完整編輯表單前，確保 renderItems/renderContracted 指回原本 form 的容器
