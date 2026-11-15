@@ -2,7 +2,7 @@
 //   ① tokens.css 是顏色唯一來源：退役 token 不得殘留、四頁不得寫死 UI 色
 //   ② 對比門檻：淺色與深色模式所有「文字 / 底色」組合都 ≥ 4.5:1
 //   ③ 急迫度三級的相對亮度要分明（灰階列印、色盲也分得出來）
-//   ④ 狀態＝點＋粗字（不是淡底藥丸）、階段軌有九格
+//   ④ 狀態＝點＋粗字（不是淡底藥丸）、階段軌有五格
 //   ⑤ 量尺只量系統真的知道的進度：沒有時鐘就空軌，絕不編造
 const fs = require('fs');
 const path = require('path');
@@ -177,14 +177,15 @@ function tokensOf(block) {
   assert('未拜訪 → 空軌（系統沒有時鐘，不編造進度）', widthOf(g('nv')) === 0 && !g('nv').includes('class="f"'));
   assert('已成約 → 滿格綠（時鐘走完了）', widthOf(g('dl')) === 100 && g('dl').includes('--tone:var(--green)'));
 
-  assert('階段軌有九格、當前那格是 .o', (() => {
-    const r = w.stageRail('試用中');
-    return (r.match(/<i /g) || []).length === 9 && r.includes('class="o"') && (r.match(/class="p"/g) || []).length === 3;
+  assert('階段軌有五格、當前那格是 .o', (() => {
+    const r = w.stageRail('試用');
+    return (r.match(/<i /g) || []).length === 5 && r.includes('class="o"') && (r.match(/class="p"/g) || []).length === 2;
   })());
-  assert('狀態色＝急迫度：試用中藍、報價橙、成約綠、拒絕紅、未拜訪無彩度', (() => {
-    const t = s => w.statusStyle(s)[1];
-    return t('試用中') === 'var(--blue)' && t('報價') === 'var(--amber)' &&
-      t('已成約') === 'var(--green-d)' && t('拒絕') === 'var(--red)' && t('未拜訪') === 'var(--text2)';
+  assert('狀態色＝急迫度：試用藍、已報價橙、待轉交橙、已轉交綠、擱置與待拜訪無彩度', (() => {
+    const t = c => w.clientTone(c)[1];
+    return t({ status: '試用' }) === 'var(--blue)' && t({ status: '試用', quoted: true }) === 'var(--amber)' &&
+      t({ status: '開發中', quoted: true }) === 'var(--amber)' && t({ status: '成約' }) === 'var(--amber)' &&
+      t({ status: '成約', handoff: 'done' }) === 'var(--green-d)' && t({ status: '擱置' }) === 'var(--text2)' && t({ status: '待拜訪' }) === 'var(--text2)';
   })());
 
   // 客戶卡：底緣就是它自己的量尺

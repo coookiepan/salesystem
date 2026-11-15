@@ -42,7 +42,13 @@ function boot(store, url) {
     ] })
   };
   const w = boot(store);
-  await wait(400);
+  await wait(1000);   // 等啟動後的補資料視窗跳出來（0.8 秒後）
+  console.log('T2 — migration v13：啟動就跳補資料（拜訪過的店都要有評價）');
+  assert('補資料視窗自動跳出、列出缺評價的店', w.document.getElementById('fill-modal').classList.contains('on') && /補資料（還有 3 家）/.test(w.document.getElementById('fill-title').textContent), w.document.getElementById('fill-title').textContent);
+  w.fillNext();
+  assert('沒選完不能下一家', /還有 3 家/.test(w.document.getElementById('fill-title').textContent));
+  w.closeFill();
+  assert('稍後再填 → 清單上方留提示條', /3 家店缺評價/.test(w.document.getElementById('fill-banner').textContent));
   w.eval('appConfirm=async()=>true');
   const DB = w.eval('DB'), S = w.eval('S');
   const byId = id => DB.clients.find(c => c.id === id);
@@ -106,7 +112,7 @@ function boot(store, url) {
   await wait(30);
   assert('第 2 次已回收、結果再試用', !A.trials[1].open && A.trials[1].result === '再試用' && A.trials[1].recovered === TODAY);
   assert('第 3 次進行中、品項複製自第 2 次', A.trials[2].open && A.trials[2].items.length === 1 && A.trials[2].items[0].product === 'S-20' && A.trials[2].items !== A.trials[1].items);
-  eq('狀態維持試用中', A.status, '試用中');
+  eq('狀態維持試用', A.status, '試用');
   eq('次數標示：已達上限', w.document.getElementById('cd-trial-count').textContent, '3／3 次（已達上限）');
   w.eval('window.__c=0');
   await w.startTrial();
@@ -115,23 +121,27 @@ function boot(store, url) {
   eq('仍可開第 4 次', A.trials.length, 4);
   w.closeCDItems();
 
-  console.log('T2 — 回收結果：報價中 → 一週後追蹤問是否拒絕');
+  console.log('T2 — 回收結果：報價中 → 試用（已報價），一週後追蹤問是否擱置');
   A.todos.push({ text: '回收試用品（第 4 次）', dueDate: TODAY, done: false, source: 'auto-recycle', trialN: 4 });
   w.openRecoverModal(4);
   w.finishRecover('報價中');
   await wait(30);
-  eq('狀態改為報價', A.status, '報價');
+  eq('階段留在試用、標記已報價', A.status + '|' + A.quoted + '|' + w.statusLabel(A), '試用|true|試用（已報價）');
   const qf = A.todos.find(t => t.source === 'quote-followup');
   assert('加了一週追蹤待辦', qf && qf.dueDate === w.addDays(TODAY, 7) && !qf.done, JSON.stringify(A.todos));
   assert('這次（第 4 次）的回收待辦被結案，第 1 次還沒回收的不動', A.todos.find(t => t.source === 'auto-recycle' && t.trialN === 4).done && !A.todos.find(t => t.source === 'auto-recycle' && t.trialN === 1).done);
   qf.dueDate = TODAY;   // 模擬一週後
+  w.eval('appConfirm=async()=>{window.__asked=1;return true}');
+  await w.checkQuoteFollowups();
+  assert('試用品還在客戶那邊（還有進行中的試用）→ 不問要不要擱置', !w.eval('window.__asked') && A.status === '試用');
+  A.trials.forEach(t => { t.open = false; });
   w.eval('appConfirm=async()=>false');   // 再等一週
   await w.checkQuoteFollowups();
-  assert('選「再等一週」→ 到期日往後 7 天、狀態不變', qf.dueDate === w.addDays(TODAY, 7) && A.status === '報價');
+  assert('選「再等一週」→ 到期日往後 7 天、狀態不變', qf.dueDate === w.addDays(TODAY, 7) && A.status === '試用');
   qf.dueDate = TODAY;
-  w.eval('appConfirm=async()=>true');    // 改成拒絕
+  w.eval('appConfirm=async()=>true');    // 改成擱置
   await w.checkQuoteFollowups();
-  assert('選「改成拒絕」→ 狀態拒絕、待辦完成、補一筆拜訪', A.status === '拒絕' && qf.done && A.visits.some(v => v.statusChange === '拒絕'));
+  assert('選「改成擱置」→ 狀態擱置＋理由、待辦完成、補一筆拜訪', A.status === '擱置' && A.shelveReason === '報價沒回覆' && qf.done && A.visits.some(v => v.statusChange === '擱置'));
 
   console.log('T2 — 回收結果：成約（品項轉成約）／拒絕');
   const D = byId('D');
@@ -141,21 +151,23 @@ function boot(store, url) {
   await wait(30);
   assert('D 第 1 次已回收、結果成約', !D.trials[0].open && D.trials[0].result === '成約');
   assert('品項（含配件）轉成約、帶成約日、保留議價', D.contractedItems.length === 3 && D.contractedItems.every(it => it.contractDate === TODAY) && D.contractedItems[0].quoted === 720);
-  eq('狀態已成約', D.status, '已成約');
+  eq('狀態成約（待轉交）', w.statusLabel(D), '成約（待轉交）');
   eq('成約後 4W 用成約品項', w.calcFW4(D), 720 + 200);
   const B2 = byId('B');
-  B2.trials.push(w.newTrial(B2, [{ product: 'DOME', qty: 1, cycle: '4W', quoted: 0 }])); B2.status = '試用中';
+  B2.trials.push(w.newTrial(B2, [{ product: 'DOME', qty: 1, cycle: '4W', quoted: 0 }])); B2.status = '試用';
   w.openCD(DB.clients.indexOf(B2));
   w.openRecoverModal(2);
   w.finishRecover('拒絕');
   await wait(30);
-  assert('拒絕 → 狀態拒絕、試用關閉', B2.status === '拒絕' && !B2.trials[1].open && B2.trials[1].result === '拒絕');
+  assert('拒絕 → 狀態擱置、試用關閉、跳補資料問理由', B2.status === '擱置' && !B2.trials[1].open && B2.trials[1].result === '拒絕' && w.document.getElementById('fill-modal').classList.contains('on') && /擱置理由/.test(w.document.getElementById('fill-body').textContent));
+  w.fillPick('tier', 1); w.fillPick('reason', '嫌貴'); w.fillNext();
+  assert('補完 → 評價 1 級、理由寫入、喚醒日＝擱置日＋4 個月、視窗關閉', B2.tier === 1 && B2.shelveReason === '嫌貴' && B2.wakeDate === w.addMonths(B2.shelvedAt, 4) && !w.document.getElementById('fill-modal').classList.contains('on'), JSON.stringify([B2.tier, B2.shelveReason, B2.wakeDate]));
 
   console.log('T2 — 編輯表單：本次試用');
   w.openCF(-1);
   assert('新客戶：沒有試用區塊，只有「開始第 1 次試用」鈕', w.document.getElementById('cf-trial-box').style.display === 'none' && /第 1 次/.test(w.document.getElementById('cf-trial-start-btn').textContent));
   await w.cfStartTrial();
-  assert('開始後：區塊出現、開始日今天、回收日＋14、狀態自動試用中', w.document.getElementById('cf-trial-box').style.display === 'block' && w.document.getElementById('cf-trial-start').value === TODAY && w.document.getElementById('cf-trial-due').value === w.addDays(TODAY, 14) && w.document.getElementById('cf-status').value === '試用中');
+  assert('開始後：區塊出現、開始日今天、回收日＋14、狀態自動試用', w.document.getElementById('cf-trial-box').style.display === 'block' && w.document.getElementById('cf-trial-start').value === TODAY && w.document.getElementById('cf-trial-due').value === w.addDays(TODAY, 14) && w.document.getElementById('cf-status').value === '試用');
   w.document.getElementById('cf-name').value = '表單新店';
   S.cfItems.push({ product: 'DECSR', qty: 2, cycle: '2W', quoted: 0 });
   await w.saveClient();
@@ -167,7 +179,7 @@ function boot(store, url) {
   w.closeForm();
 
   console.log('T2 — 首頁與長官快照');
-  DB.clients.push({ id: 'H', name: '該收的店', status: '試用中', trials: [{ n: 1, start: daysAgo(15), due: daysAgo(1), items: [{ product: 'S-20', qty: 1 }], open: true, recovered: '', result: '' }], todos: [], visits: [], updatedAt: 1 });
+  DB.clients.push({ id: 'H', name: '該收的店', status: '試用', trials: [{ n: 1, start: daysAgo(15), due: daysAgo(1), items: [{ product: 'S-20', qty: 1 }], open: true, recovered: '', result: '' }], todos: [], visits: [], updatedAt: 1 });
   w.saveLocal();
   const wh = boot(store, 'https://x.github.io/salesystem/home.html');
   await wait(300);

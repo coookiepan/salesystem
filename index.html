@@ -685,7 +685,8 @@ details.trial-card .trial-body{margin-top:8px}
         <option value="name">名稱</option>
       </select>
     </div>
-    <div id="clients-list"></div>
+    <div id="fill-banner"></div>
+      <div id="clients-list"></div>
   </div>
 
   <div id="view-map" style="display:none">
@@ -719,10 +720,10 @@ details.trial-card .trial-body{margin-top:8px}
       </div>
       <div class="map-legend">
         <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--red)"></span>逾期該處理</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--amber)"></span>試用／報價</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--blue)"></span>初訪/複訪</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--green)"></span>已成約</span>
-        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--text3)"></span>未拜訪</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--amber)"></span>試用／已報價</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--blue)"></span>開發中</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--green)"></span>成約</span>
+        <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--text3)"></span>待拜訪</span>
         <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--pin-shop)"></span>既有客戶</span>
         <span class="map-legend-item"><span class="map-legend-dot" style="background:var(--pin-site);border-radius:3px"></span>工地</span>
         <span class="map-legend-item" style="margin-left:auto"><span id="map-count">0</span> 點</span>
@@ -770,10 +771,22 @@ details.trial-card .trial-body{margin-top:8px}
         </div>
       </div>
       <div class="g3">
-        <div class="f"><label class="lbl">狀態</label>
-          <select id="cf-status"><option>未拜訪</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已轉交</option><option>拒絕</option></select>
+        <div class="f"><label class="lbl">階段</label>
+          <select id="cf-status" onchange="cfStageChanged()"></select>
         </div>
         <div class="f"><label class="lbl">下次拜訪日</label><input id="cf-nextdate" type="date"></div>
+      </div>
+      <div class="g3">
+        <div class="f"><label class="lbl">評價（重視程度）</label><select id="cf-tier"></select></div>
+        <div class="f"><label class="lbl">需求判斷</label><select id="cf-need"></select></div>
+      </div>
+      <div class="f" style="display:flex;gap:20px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer"><input type="checkbox" id="cf-quoted" style="width:20px;height:20px;accent-color:var(--green)"> 已報價</label>
+        <label style="display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer"><input type="checkbox" id="cf-handoff" style="width:20px;height:20px;accent-color:var(--green)"> 已轉交</label>
+      </div>
+      <div class="g3" id="cf-shelve-box" style="display:none">
+        <div class="f"><label class="lbl">擱置理由</label><select id="cf-shelve-reason"></select></div>
+        <div class="f"><label class="lbl">喚醒日（空白＝依評價自動算）</label><input id="cf-wake" type="date"></div>
       </div>
       <div class="f"><label class="lbl">提案商品（自動帶入）</label><input id="cf-product" readonly style="background:var(--bg2);color:var(--text2)"></div>
       <div class="g2">
@@ -871,9 +884,13 @@ details.trial-card .trial-body{margin-top:8px}
         <div class="f"><label class="lbl">拜訪日期</label><input id="vl-date" type="date" onchange="updVLMode()"></div>
         <div id="vl-future-hint" style="display:none;font-size:13px;color:var(--green-d);background:var(--green-l);border-radius:6px;padding:8px 12px;margin-bottom:10px">未來日期 → 將設為下次拜訪日</div>
         <div id="vl-extra">
-          <div class="f"><label class="lbl">狀態更新</label>
-            <select id="vl-status"><option value="">不更新</option><option>初訪</option><option>複訪</option><option>試用中</option><option>報價</option><option>將成約</option><option>已成約</option><option>已轉交</option><option>拒絕</option></select>
+          <div class="f"><label class="lbl">拜訪後的判斷：有沒有需求</label><div id="vl-need" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>
+          <div class="f"><label class="lbl">評價（重視程度）</label><div id="vl-tier" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>
+          <div class="f"><label class="lbl">階段更新</label>
+            <select id="vl-status" onchange="vlStageChanged()"></select>
           </div>
+          <div class="f" id="vl-reason-box" style="display:none"><label class="lbl">擱置理由</label><select id="vl-reason"></select></div>
+          <div class="f"><label style="display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer"><input type="checkbox" id="vl-quoted" style="width:20px;height:20px;accent-color:var(--green)"> 這次有報價（一週後提醒追結果）</label></div>
           <div class="f"><label class="lbl" style="margin-bottom:6px">心情</label>
             <div class="mood-row">
               <button class="mood-btn" id="vm1" onclick="setMood(1)">差</button>
@@ -1130,7 +1147,7 @@ details.trial-card .trial-body{margin-top:8px}
       <div id="rpt-4w-vip" style="font-size:12.5px;color:var(--red);margin:4px 0 14px 0;font-weight:600"></div>
 
       <div class="form-section" style="margin-bottom:6px">
-        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（貼到 A74，未拜訪的客戶清單，最多 35 列）</span>
+        ② 未來兩週拜訪規劃 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（貼到 A74，待拜訪的客戶清單，最多 35 列）</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
         <button class="btn btn-outline btn-xs" onclick="copyRpt('rpt-plan')">複製</button>
@@ -1378,7 +1395,7 @@ details.trial-card .trial-body{margin-top:8px}
     <div class="form-section">工地地圖</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
       「工地地圖」子系統（查詢頁右上角進入）：登記正在施工裝修的店面，和同事共享避免重複拜訪。
-      工地按「建檔到主系統」會自動帶進客戶清單（狀態＝未拜訪、座標沿用）。
+      工地按「建檔到主系統」會自動帶進客戶清單（階段＝待拜訪、座標沿用）。
       共享同步設定在該頁的「設定」（獨立試算表，與主系統資料分開）。
     </div>
     <a class="btn btn-outline btn-sm" href="sitemap.html" style="text-decoration:none">開啟工地地圖</a>
@@ -1507,16 +1524,28 @@ details.trial-card .trial-body{margin-top:8px}
   </div>
 </div>
 
+<!-- ═══ 補資料：缺評價／需求判斷／擱置理由的店，一家一家問到填完 ═══ -->
+<div class="modal-bg" id="fill-modal">
+  <div class="modal" role="dialog" aria-labelledby="fill-title">
+    <div class="modal-title" id="fill-title">補資料</div>
+    <div id="fill-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="fillNext()">儲存，下一家</button>
+      <button class="btn btn-outline" onclick="closeFill()">稍後再填</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 試用回收結果 ═══ -->
 <div class="modal-bg" id="trial-recover-modal" onclick="if(event.target===this)closeRecoverModal()">
   <div class="modal" role="dialog" aria-labelledby="tr-title">
     <div class="modal-title" id="tr-title">試用回收</div>
     <div class="f"><label class="lbl">回收日</label><input id="tr-date" type="date"></div>
     <div class="lbl" style="margin-bottom:8px">回收結果</div>
-    <button class="rc-opt" onclick="finishRecover('成約')"><b>成約</b><span>這次的品項轉成成約品項，狀態改為「已成約」</span></button>
-    <button class="rc-opt" onclick="finishRecover('報價中')"><b>報價中</b><span>狀態改為「報價」，一週後提醒你：還沒回覆要不要改成拒絕</span></button>
+    <button class="rc-opt" onclick="finishRecover('成約')"><b>成約</b><span>這次的品項轉成成約品項，進入「成約（待轉交）」</span></button>
+    <button class="rc-opt" onclick="finishRecover('報價中')"><b>報價中</b><span>變成「試用（已報價）」，一週後提醒你追結果</span></button>
     <button class="rc-opt" onclick="finishRecover('再試用')"><b>再試用</b><span>用一模一樣的品項再開一次試用（回收日重新算）</span></button>
-    <button class="rc-opt" onclick="finishRecover('拒絕')"><b>拒絕</b><span>狀態改為「拒絕」</span></button>
+    <button class="rc-opt" onclick="finishRecover('拒絕')"><b>拒絕</b><span>改為「擱置」，接著填理由；依評價決定多久後再提醒</span></button>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeRecoverModal()">取消</button></div>
   </div>
 </div>
@@ -1607,7 +1636,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.10.01-d1';
+const APP_VERSION='v2026.11.15-s1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=3;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2079,36 +2108,125 @@ const INV_INIT=[{name:'S-20',stock:5,std:5},{name:'SHH',stock:10,std:10},{name:'
 
 // ── SEED CLIENTS（範例資料，首次開啟時顯示）──────────────
 const SEED=[
-  {name:'範例-陽光餐廳',addr:'中正區忠孝東路100號',type:'餐廳',status:'試用中',contact:'王老闆',nextdate:'2026-05-01',fw4:1620,env:'門口菜口飲料機',note:'範例客戶：試用中的餐廳',trials:[{n:1,start:'2026-04-15',due:'2026-04-29',items:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],open:true,recovered:'',result:''}],todos:[{text:'追蹤試用狀況',dueDate:'2026-05-01',done:false}],visits:[{date:'2026-04-15',mood:3,note:'老闆對地墊有興趣',insight:'試用DWLH DOME',statusChange:'試用中',nextdate:'2026-05-01'}],updatedAt:1712476800000},
-  {name:'範例-快樂補習班',addr:'大安區和平東路50號',type:'補習班',status:'試用中',contact:'李主任',nextdate:'2026-04-28',fw4:480,env:'門口無，教室約十人大小',note:'範例客戶：補習班試用中',trials:[{n:1,start:'2026-04-10',due:'2026-04-24',items:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],open:true,recovered:'',result:''}],todos:[],visits:[{date:'2026-04-10',mood:4,note:'主任很滿意試用效果',insight:'試用SHH',statusChange:'試用中',nextdate:'2026-04-28'}],updatedAt:1743562800000},
-  {name:'範例-美美沙龍',addr:'信義區松仁路88號',type:'美容美甲',status:'已成約',contact:'陳小姐',nextdate:'2026-05-10',fw4:280,env:'門口無，店內裝潢精美',note:'範例客戶：已成約的美容店',trials:[{n:1,start:'2026-03-20',due:'2026-04-03',items:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],open:false,recovered:'2026-04-05',result:'成約'}],todos:[{text:'準備合約書',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-05',mood:4,note:'老闆決定簽約',insight:'成約FSSK',statusChange:'已成約',nextdate:'2026-05-10'}],updatedAt:1741783108000},
-  {name:'範例-永和早餐店',addr:'永和區中正路200號',type:'餐廳',status:'未拜訪',contact:'',nextdate:'',fw4:0,env:'',note:'範例客戶：尚未拜訪',trials:[],todos:[],visits:[],updatedAt:1712476000000},
-  {name:'範例-大樓管委會',addr:'板橋區文化路300號',type:'接待中心',status:'複訪',contact:'張經理',nextdate:'2026-04-20',fw4:0,env:'門口有舊地墊',note:'範例客戶：需要複訪',trials:[],todos:[{text:'帶DM再去拜訪',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-01',mood:2,note:'經理在忙，下次再來',insight:'',statusChange:'複訪',nextdate:'2026-04-20'}],updatedAt:1743476400000},
-  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'拒絕',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已拒絕',trials:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'拒絕',nextdate:null}],updatedAt:1741478143000},
+  {name:'範例-陽光餐廳',addr:'中正區忠孝東路100號',type:'餐廳',status:'試用',tier:1,contact:'王老闆',nextdate:'2026-05-01',fw4:1620,env:'門口菜口飲料機',note:'範例客戶：試用中的餐廳',trials:[{n:1,start:'2026-04-15',due:'2026-04-29',items:[{product:'DWLH',qty:1,cycle:'2W',quoted:0},{product:'DOME',qty:1,cycle:'4W',quoted:0}],open:true,recovered:'',result:''}],todos:[{text:'追蹤試用狀況',dueDate:'2026-05-01',done:false}],visits:[{date:'2026-04-15',mood:3,note:'老闆對地墊有興趣',insight:'試用DWLH DOME',statusChange:'試用',nextdate:'2026-05-01'}],updatedAt:1712476800000},
+  {name:'範例-快樂補習班',addr:'大安區和平東路50號',type:'補習班',status:'試用',tier:1,contact:'李主任',nextdate:'2026-04-28',fw4:480,env:'門口無，教室約十人大小',note:'範例客戶：補習班試用中',trials:[{n:1,start:'2026-04-10',due:'2026-04-24',items:[{product:'SHH',qty:1,cycle:'4W',quoted:0},{product:'SHB',qty:1,cycle:'2W',quoted:0}],open:true,recovered:'',result:''}],todos:[],visits:[{date:'2026-04-10',mood:4,note:'主任很滿意試用效果',insight:'試用SHH',statusChange:'試用',nextdate:'2026-04-28'}],updatedAt:1743562800000},
+  {name:'範例-美美沙龍',addr:'信義區松仁路88號',type:'美容美甲',status:'成約',tier:2,contact:'陳小姐',nextdate:'2026-05-10',fw4:280,env:'門口無，店內裝潢精美',note:'範例客戶：成約的美容店',trials:[{n:1,start:'2026-03-20',due:'2026-04-03',items:[{product:'FSSK',qty:1,cycle:'2W',quoted:0}],open:false,recovered:'2026-04-05',result:'成約'}],todos:[{text:'準備合約書',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-05',mood:4,note:'老闆決定簽約',insight:'成約FSSK',statusChange:'成約',nextdate:'2026-05-10'}],updatedAt:1741783108000},
+  {name:'範例-永和早餐店',addr:'永和區中正路200號',type:'餐廳',status:'待拜訪',contact:'',nextdate:'',fw4:0,env:'',note:'範例客戶：尚未拜訪',trials:[],todos:[],visits:[],updatedAt:1712476000000},
+  {name:'範例-大樓管委會',addr:'板橋區文化路300號',type:'接待中心',status:'開發中',tier:2,need:'有',contact:'張經理',nextdate:'2026-04-20',fw4:0,env:'門口有舊地墊',note:'範例客戶：開發中，有需求',trials:[],todos:[{text:'帶DM再去拜訪',dueDate:'2026-04-20',done:false}],visits:[{date:'2026-04-01',mood:2,note:'經理在忙，下次再來',insight:'',statusChange:'開發中',nextdate:'2026-04-20'}],updatedAt:1743476400000},
+  {name:'範例-精密工廠',addr:'中壢區工業路500號',type:'工廠',status:'擱置',tier:3,shelveReason:'沒需求',shelvedAt:'2026-03-15',contact:'',nextdate:'',fw4:0,env:'門口無',note:'範例客戶：已擱置',trials:[],todos:[],visits:[{date:'2026-03-15',mood:1,note:'老闆覺得不需要',insight:'',statusChange:'擱置',nextdate:null}],updatedAt:1741478143000},
 ];
 
 // ═══════════════════════════════════════════════════════════
 // STATE & PERSISTENCE
 // ═══════════════════════════════════════════════════════════
-// 狀態常數表 — 唯一 source of truth，所有狀態判定皆查此表
-const STATUS={
-  UNVISITED:'未拜訪', FIRST:'初訪', REVISIT:'複訪',
-  TRIAL:'試用中', QUOTE:'報價', CLOSING:'將成約',
-  DEAL:'已成約', TRANSFER:'已轉交', REFUSE:'拒絕'
-};
-const SO=[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING,STATUS.DEAL,STATUS.TRANSFER,STATUS.REFUSE];
+// 狀態常數表 — 唯一 source of truth，所有狀態判定皆查此表。
+// 階段只有五個；「已報價／已轉交／需求／評價／擱置理由」是掛在客戶上的獨立欄位，不是階段：
+//   c.quoted   已報價（試用、開發中都可能）      c.handoff  'done'＝已轉交（成約才有意義）
+//   c.need     ''|'有'|'無'|'未定'（拜訪後的判斷）  c.tier     0 未評｜1｜2｜3（重視程度，1 最重）
+//   c.shelveReason／c.shelvedAt／c.wakeDate       擱置理由、擱置日、喚醒日（到了自動回待拜訪）
+const STATUS={PLAN:'待拜訪', DEV:'開發中', TRIAL:'試用', DEAL:'成約', SHELVED:'擱置'};
+const SO=[STATUS.PLAN,STATUS.DEV,STATUS.TRIAL,STATUS.DEAL,STATUS.SHELVED];
+const NEEDS=['有','無','未定'];
+const NEED_LABEL={'有':'有需求','無':'沒需求','未定':'還看不出來'};
+const TIERS=[1,2,3];
+const TIER_HINT={1:'被拒絕也要追',2:'中間',3:'小店・不急'};
+const WAKE_MONTHS={1:4,2:8};   // 擱置後幾個月喚醒；三級不主動提醒
+const SHELVE_REASONS=['沒需求','嫌貴','已有同業','決策者沒見到','時機不對','報價沒回覆','其他'];
 const MOODS=['','差','普','好','優'];
 // 狀態配色＝「急迫度」，不是階段。三級明度分明（red 6.6% → blue 9.8% → amber 12.8%）＋
 // 無急迫度用無彩度 --text2 ＋成約用唯一的強調綠；階段本身由文字與階段軌（stageRail）表示。
-// 原本九階段各配一個淡底色，七個底色彼此明度只差 2%，在陽光下分不出來。
 const _T=k=>['var(--'+k+'-l)','var(--'+k+')'];
 const TONE={quiet:['var(--bg3)','var(--text2)'],cool:_T('blue'),due:_T('amber'),late:_T('red'),won:['var(--green-l)','var(--green-d)']};
-const SS_TONE={'未拜訪':'quiet','初訪':'cool','複訪':'cool','試用中':'cool','報價':'due','將成約':'due','已成約':'won','已轉交':'won','拒絕':'late'};
+const SS_TONE={'待拜訪':'quiet','開發中':'cool','試用':'cool','成約':'won','擱置':'quiet'};
 // [淡底, 墨色] — 淡底只給徽章與提示條，狀態本身只用墨色
 function statusStyle(t){return TONE[SS_TONE[t]]||TONE.quiet;}
-// 舊狀態顯示文字對應（新舊並存）
-// 未設定狀態一律視為「未拜訪」（舊「已結案」由 migration v3 與 validateClients 轉為「拒絕」，程式內不再映射）
-function displayStatus(s){return s||STATUS.UNVISITED;}
+// 未設定狀態一律視為「待拜訪」
+function displayStatus(s){return s||STATUS.PLAN;}
+// 客戶的急迫度：已報價（等你追結果）與成約未轉交（等你轉交）都是「該你動作」
+function clientTone(c){
+  const s=displayStatus(c&&c.status);
+  if((s===STATUS.TRIAL||s===STATUS.DEV)&&c.quoted)return TONE.due;
+  if(s===STATUS.DEAL&&c.handoff!=='done')return TONE.due;
+  return statusStyle(s);
+}
+// 客戶的狀態文字：階段＋括號裡的子狀態
+function statusLabel(c){
+  const s=displayStatus(c&&c.status);
+  if(s===STATUS.TRIAL)return s+(c.quoted?'（已報價）':'（未報價）');
+  if(s===STATUS.DEV)return s+(c.quoted?'（已報價）':'');
+  if(s===STATUS.DEAL)return s+(c.handoff==='done'?'（已轉交）':'（待轉交）');
+  return s;
+}
+// 在推進中的案子：有試用、或還沒試用但已報價——日報推進表與長官儀表板的「試用」口徑
+function inPipeline(c){return !!c&&(c.status===STATUS.TRIAL||(c.status===STATUS.DEV&&!!c.quoted));}
+function addMonths(ymd,n){const d=new Date(String(ymd||'')+'T00:00:00');if(isNaN(d.getTime()))return '';d.setMonth(d.getMonth()+n);return fmtDate(d);}
+function wakeDateFor(c){const m=WAKE_MONTHS[c&&c.tier];return m?addMonths(c.shelvedAt||today(),m):'';}
+// 擱置：記理由與日期，依評價算喚醒日；下次拜訪日清掉（喚醒日才是它的下一步）
+function shelveClient(c,reason,date){
+  c.status=STATUS.SHELVED;
+  c.shelveReason=reason||'';
+  c.shelvedAt=date||today();
+  c.wakeDate=wakeDateFor(c);
+  c.nextdate='';
+  (c.todos||[]).forEach(t=>{if(t&&!t.done&&(t.source==='quote-followup'||t.source==='auto-quote'))t.done=true;});
+}
+// 標記已報價：關掉「安排報價」提醒，補一筆一週後的報價追蹤（已有未完成的就不重複）
+function markQuoted(c,date){
+  c.quoted=true;
+  c.todos=c.todos||[];
+  c.todos.forEach(t=>{if(t&&!t.done&&t.source==='auto-quote')t.done=true;});
+  if(!c.todos.some(t=>t&&!t.done&&t.source==='quote-followup'))
+    c.todos.push({text:'報價追蹤（報價後一週，問結果）',dueDate:addDays(date||today(),7),done:false,source:'quote-followup'});
+}
+// 舊九狀態 → 五階段＋欄位。冪等；用在 migration v13 與所有資料進入點（雲端拉取、備份匯入、長官快照），
+// 其他裝置未升級時雲端仍可能是舊狀態。必須排在 packTrials 之後（要看有沒有試用紀錄）。回傳是否有改。
+const OLD_STAGE={'未拜訪':'待拜訪','初訪':'開發中','複訪':'開發中','試用中':'試用','將成約':'試用','已成約':'成約','已轉交':'成約','拒絕':'擱置','已結案':'擱置'};
+function packStage(c){
+  if(!c)return false;
+  let ch=false;
+  const old=c.status||'';
+  if(!SO.includes(old)){
+    const tried=trialsOf(c).length>0;
+    if(old==='報價'||old==='將成約'){c.status=tried?STATUS.TRIAL:STATUS.DEV;markQuoted(c);}   // 已報價一定要有收尾提醒
+    else c.status=OLD_STAGE[old]||STATUS.PLAN;
+    if(old==='已轉交')c.handoff='done';
+    if(c.status===STATUS.SHELVED&&!c.shelvedAt){
+      const vs=(c.visits||[]).filter(v=>v&&v.date).map(v=>v.date).sort();
+      c.shelvedAt=vs.length?vs[vs.length-1]:today();
+      c.wakeDate=wakeDateFor(c);
+    }
+    ch=true;
+  }
+  (c.visits||[]).forEach(v=>{
+    if(!v||!v.statusChange||SO.includes(v.statusChange))return;
+    if(v.statusChange==='報價'){v.quoted=true;v.statusChange=null;}
+    else v.statusChange=OLD_STAGE[v.statusChange]||null;
+    ch=true;
+  });
+  return ch;
+}
+function packAllStages(list){let n=0;(list||[]).forEach(c=>{if(packStage(c))n++;});return n;}
+// 還缺哪些判斷（補資料視窗一家一家問，直到填完）：
+//   拜訪過的店都要有評價；開發中要有需求判斷；擱置要有理由
+function missingFields(c){
+  const m=[];
+  if(!c||displayStatus(c.status)===STATUS.PLAN)return m;
+  if(!TIERS.includes(c.tier))m.push('tier');
+  if(c.status===STATUS.DEV&&!NEEDS.includes(c.need))m.push('need');
+  if(c.status===STATUS.SHELVED&&!c.shelveReason)m.push('reason');
+  return m;
+}
+// 擱置到期 → 回到待拜訪（保留擱置理由當背景；不補拜訪紀錄，因為沒有真的去）
+function wakeShelved(){
+  const t=today();let n=0;
+  (DB.clients||[]).forEach(c=>{
+    if(!c||c.status!==STATUS.SHELVED||!c.wakeDate||c.wakeDate>t)return;
+    c.status=STATUS.PLAN;c.wokeAt=t;c.wakeDate='';c.updatedAt=Date.now();n++;
+    autoSync('save',{client:c});
+  });
+  if(n){saveLocal();showToast(n+' 家擱置到期，回到「待拜訪」');}
+  return n;
+}
 // ── 客戶分類（街邊店/工廠）：同一系統管理、可切視角；工業區轉入=工廠、工地轉入=街邊店 ──
 function segOf(c){return c&&c.segment?c.segment:((c&&c.type)==='工廠'?'工廠':'街邊店');}
 let CF_SEGMENT='街邊店';
@@ -2130,9 +2248,12 @@ const CB_STYLE={'拖把':['var(--purple-l)','var(--purple-d)'],'地墊':_T('blue
 function bdg(t,c){const[bg,fg]=c||statusStyle(t);return`<span class="badge" style="background:${bg};color:${fg}">${t}</span>`;}
 // 狀態＝一個點＋粗字（不用淡底藥丸）：對比 5.9–9.0:1，陽光下也讀得到
 function statusPill(t){return`<span class="cc-status" style="color:${statusStyle(t)[1]}"><span class="sdot"></span>${t}</span>`;}
-// 階段軌：九階段＝九格，位置說階段、顏色說急迫度，兩件事分開編碼
+// 客戶版：文字帶子狀態、顏色是這家店的急迫度；評價用文字標記（顏色留給急迫度）
+function clientPill(c){return`<span class="cc-status" style="color:${clientTone(c)[1]}"><span class="sdot"></span>${statusLabel(c)}</span>`;}
+function tierMark(c){return TIERS.includes(c&&c.tier)?`<span class="badge num" style="background:var(--bg3);color:var(--text2)" title="評價 ${c.tier} 級：${TIER_HINT[c.tier]}">${c.tier} 級</span>`:'';}
+// 階段軌：五階段＝五格，位置說階段、顏色說急迫度，兩件事分開編碼
 function stageRail(t){
-  const i=SO.indexOf(displayStatus(t)),tone=statusStyle(t)[1];
+  const i=SO.indexOf(displayStatus(t)),tone=statusStyle(displayStatus(t))[1];
   return`<span class="rail" style="--tone:${tone}" role="img" aria-label="階段 ${i<0?'-':i+1} / ${SO.length}：${escHtml(displayStatus(t))}">`+
     SO.map((_,k)=>`<i class="${k<i?'p':k===i?'o':''}"></i>`).join('')+'</span>';
 }
@@ -2151,9 +2272,10 @@ function daysUntil(ymd,base){
 }
 // 客戶的「時鐘」—— 只量系統真的知道的進度：
 //   進行中試用 → 試用第幾天 / 回收日（14 刻度）；到期前 2 天轉橙、逾期轉紅
-//   報價       → 距離「報價追蹤」提醒日還剩幾天（7 刻度）
-//   已成約/已轉交 → 滿格（這個時鐘走完了）
-//   其餘（未拜訪、初訪、複訪、將成約、拒絕）→ 空軌
+//   已報價     → 距離「報價追蹤」提醒日還剩幾天（7 刻度）
+//   成約       → 滿格（這個時鐘走完了）
+//   擱置       → 有喚醒日就寫出來（不畫量尺：沒有可信的起點比例）
+//   其餘 → 空軌
 // 時鐘的文字說明：量尺旁邊一定要有字，不能只靠圖形傳達
 function clientClockLabel(c){
   if(!c)return '';
@@ -2163,13 +2285,17 @@ function clientClockLabel(c){
     const tail=x.left<0?`逾期 ${-x.left} 天`:x.left===0?'今天回收':`剩 ${x.left} 天`;
     return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:${tone}">試用第 ${x.days} / ${TRIAL_DEFAULT_DAYS} 天 · ${tail}</span>`;
   }
-  if(c.status===STATUS.QUOTE){
+  if(inPipeline(c)&&c.quoted){
     const td=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
     const left=td?daysUntil(td.dueDate):null;
     if(left!==null)return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:${left<=0?'var(--red)':'var(--amber)'}">${left<=0?'該追報價結果了':`追報價還剩 ${left} 天`}</span>`;
   }
-  if(c.status===STATUS.DEAL||c.status===STATUS.TRANSFER)
+  if(c.status===STATUS.DEAL)
     return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:var(--green-d)">成約${dealDate(c)?' '+dealDate(c):''}</span>`;
+  if(displayStatus(c.status)===STATUS.PLAN&&c.wokeAt)
+    return`<span style="font-size:var(--fs-meta);font-weight:600;color:var(--text2)">擱置到期回來的${c.shelveReason?'（上次：'+escHtml(c.shelveReason)+'）':''}</span>`;
+  if(c.status===STATUS.SHELVED)
+    return`<span class="num" style="font-size:var(--fs-meta);font-weight:600;color:var(--text2)">${escHtml(c.shelveReason||'理由待補')} · ${c.wakeDate?'喚醒 '+c.wakeDate:'不主動提醒'}</span>`;
   return '';
 }
 function clientGaugeHtml(c){
@@ -2179,12 +2305,12 @@ function clientGaugeHtml(c){
     const tone=x.level>=1?'var(--red)':(x.left<=2?'var(--amber)':'var(--blue)');
     return gaugeHtml(x.days/TRIAL_DEFAULT_DAYS*100,tone,TRIAL_DEFAULT_DAYS,true);
   }
-  if(c.status===STATUS.QUOTE){
+  if(inPipeline(c)&&c.quoted){
     const td=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
     const left=td?daysUntil(td.dueDate):null;
     if(left!==null)return gaugeHtml((7-Math.max(0,Math.min(7,left)))/7*100,left<=0?'var(--red)':'var(--amber)',7,true);
   }
-  if(c.status===STATUS.DEAL||c.status===STATUS.TRANSFER)return gaugeHtml(100,'var(--green)');
+  if(c.status===STATUS.DEAL)return gaugeHtml(100,'var(--green)');
   return gaugeHtml(0);
 }
 
@@ -2591,6 +2717,7 @@ async function syncFromSheet(silent){
       DB.clients=(res.clients||[]).map(c=>{if(c)c.srvAt=c.updatedAt;return c;});  // M3 標記雲端版本
     }
     packAllTrials(DB.clients);   // 其他裝置還沒升級時雲端仍是舊格式（trialItems）→ 邊界打包
+    packAllStages(DB.clients);   // 同理：舊九狀態 → 五階段
     validateClients(); // 雲端可能仍有 migration 前的舊列（如已結案）→ 在資料邊界正規化
     const skipped=(res.skipped&&res.skipped.length)?res.skipped:null;
     const inv=await api({action:'getInventory'});if(inv.inventory)DB.inventory=inv.inventory;
@@ -2736,7 +2863,7 @@ function importJSON(input){
       if(!Array.isArray(data.clients))throw new Error('格式不正確（缺少 clients 陣列）');
       if(!await appConfirm('匯入 '+data.clients.length+' 筆資料？\n\n這會覆蓋目前本機的所有資料。',{title:'匯入備份',okText:'匯入',danger:true}))return;
       DB.clients=data.clients;
-      packAllTrials(DB.clients);
+      packAllTrials(DB.clients);packAllStages(DB.clients);
       validateClients(); // 匯入的備份可能含舊格式列 → 正規化
       if(data.inventory)DB.inventory=data.inventory;
       if(data.products){DB.products=data.products;ensureProductBaseline();}
@@ -2929,17 +3056,13 @@ function validateClients(){
   let fixed=0;
   (DB.clients||[]).forEach((c,i)=>{
     if(!c)return;
-    // 不變式 1：status 非未拜訪 → 應有至少一筆 visit → 自動補建
-    if(c.status&&c.status!==STATUS.UNVISITED&&(c.visits||[]).length===0){
+    // 不變式 0：狀態一定是五階段之一（雲端／備份可能還是舊九狀態）
+    if(packStage(c))fixed++;
+    // 不變式 1：status 非待拜訪 → 應有至少一筆 visit → 自動補建
+    if(c.status&&c.status!==STATUS.PLAN&&(c.visits||[]).length===0){
       const d=trialStartDate(c)||today();
       c.visits=[{date:d,mood:0,note:'',insight:'(系統補建)',statusChange:c.status,nextdate:c.nextdate||null}];
       console.warn('[validateClients] 自動補建 visit: #'+i+' '+c.name);
-      fixed++;
-    }
-    // 不變式 2：已結案 → 轉為拒絕（migration v3 應已處理，此為二次防禦）
-    if(c.status==='已結案'){
-      c.status=STATUS.REFUSE;
-      console.warn('[validateClients] 自動轉換已結案→拒絕: #'+i+' '+c.name);
       fixed++;
     }
   });
@@ -2947,18 +3070,6 @@ function validateClients(){
   return fixed;
 }
 
-// 已結案 → 拒絕：消除隱性映射，統一為單一狀態值
-function normalizeClosed(){
-  let count=0;
-  (DB.clients||[]).forEach(c=>{
-    if(c.status==='已結案'){c.status=STATUS.REFUSE;count++;}
-    (c.visits||[]).forEach(v=>{
-      if(v.statusChange==='已結案')v.statusChange=STATUS.REFUSE;
-    });
-  });
-  if(count)saveLocal();
-  return count;
-}
 
 // v4: 為所有客戶補上唯一 id（取代陣列 index 作為雲端同步 key）
 function backfillClientIds(){
@@ -3125,13 +3236,13 @@ function normalizeInventory(){
   });
   saveLocal();
 }
-// 歷史補建：所有 status≠未拜訪/空 且 visits 空的客戶，依 trialDate / note SERVE / 其他推算補一筆 visit
+// 歷史補建：所有 status≠待拜訪/空 且 visits 空的客戶，依 trialDate / note SERVE / 其他推算補一筆 visit
 function backfillVisits(){
   try{
     let added=0;
     (DB.clients||[]).forEach(c=>{
       try{
-        if(!c||!c.status||c.status===STATUS.UNVISITED)return;
+        if(!c||!c.status||c.status===STATUS.PLAN||c.status==='未拜訪')return;
         if((c.visits||[]).length>0)return;
         // 推算日期
         let d=c.trialDate||'';
@@ -3566,9 +3677,9 @@ function renderShops(query){
 // STATUS PILLS
 // ═══════════════════════════════════════════════════════════
 // 分類定義（新系統）
-const CATEGORIES=['已拜訪','未拜訪','試用回收','成約待轉交','全部'];
-let activeCat='已拜訪';
-let activeRegion=''; // 「未拜訪」分類時的區域篩選
+const CATEGORIES=['待拜訪','開發中','試用','待轉交','全部'];
+let activeCat='開發中';
+let activeRegion=''; // 「待拜訪」分類時的區域篩選
 let activeStatusSub=''; // 「全部」分類時的狀態子篩選
 // M2 效能：客戶清單分頁渲染。初次只畫前 N 筆，按「載入更多」再加一頁，
 // 篩選條件改變時自動歸零。避免數百筆客戶時整碗渲染拖慢手機。
@@ -3595,26 +3706,23 @@ function parseRegion(addr){
   const m=String(addr).replace(/^[臺台]南市/,'').match(/([\u4e00-\u9fa5]{1,3}區)/);
   return m?m[1]:'';
 }
-// 蒐集「未拜訪」分類客戶的區域清單
+// 蒐集「待拜訪」分類客戶的區域清單
 function collectRegions(){
   const regions=new Set();
   DB.clients.forEach(c=>{
-    if((c.visits||[]).length>0)return;
-    const mains=trialItemsOf(c).filter(it=>it.product&&!it.bundledTo);
-    if(mains.length>0)return;
-    if(c.status===STATUS.REFUSE)return;
+    if(!c||displayStatus(c.status)!==STATUS.PLAN)return;
     const r=parseRegion(c.addr);
     if(r)regions.add(r);
   });
   return [...regions].sort();
 }
 // 渲染分類底下的 sub-bar：
-//   - 未拜訪：區域 pills
+//   - 待拜訪：區域 pills
 //   - 全部：狀態下拉
 function renderRegionBar(){
   const bar=document.getElementById('region-bar');
   if(!bar)return;
-  if(activeCat===STATUS.UNVISITED){
+  if(activeCat===STATUS.PLAN){
     const regions=collectRegions();
     if(!regions.length){bar.style.display='none';bar.innerHTML='';return;}
     bar.style.display='flex';
@@ -3627,7 +3735,7 @@ function renderRegionBar(){
     bar.style.alignItems='center';
     const opts=SO.map(s=>`<option value="${s}"${s===activeStatusSub?' selected':''}>${s}</option>`).join('');
     const cnt=activeStatusSub
-      ? DB.clients.filter(c=>activeStatusSub===STATUS.REFUSE?c.status===STATUS.REFUSE:(c.status||STATUS.UNVISITED)===activeStatusSub).length
+      ? DB.clients.filter(c=>displayStatus(c.status)===activeStatusSub).length
       : DB.clients.length;
     bar.innerHTML=`<span style="font-size:13px;color:var(--text2)">狀態：</span>`
       +`<select onchange="setStatusSub(this.value)" style="width:auto;padding:4px 8px;font-size:13px">`
@@ -3680,8 +3788,8 @@ function calcFW4(c){
 // - 只算「正在進行、尚未回收」的試用（回收後的不再是潛在試用額）
 function calcReportAmt(c){
   if(!c) return 0;
-  // 拒絕視為已無試用商品，保留歷史紀錄但不計入報表金額
-  if(c.status===STATUS.REFUSE) return 0;
+  // 擱置視為已無試用商品，保留歷史紀錄但不計入報表金額
+  if(c.status===STATUS.SHELVED) return 0;
   return openTrialItems(c).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
 }
 // 4W 推進表月份欄位：區間內最早成約月 > 區間內首訪月 > null（該列不填月欄）
@@ -3719,7 +3827,7 @@ function packTrials(c){
   const items=Array.isArray(c.trialItems)?c.trialItems.filter(Boolean):[];
   const start=c.trialDate||legacyTrialStart(c);
   const had=!!(items.length||c.trialDate);
-  c.trials=had?[{n:1,start:start||'',due:start?addDays(start,TRIAL_DEFAULT_DAYS):'',items,open:c.status===STATUS.TRIAL,recovered:'',result:''}]:[];
+  c.trials=had?[{n:1,start:start||'',due:start?addDays(start,TRIAL_DEFAULT_DAYS):'',items,open:c.status==='試用中',recovered:'',result:''}]:[];
   delete c.trialItems;delete c.trialDate;
   return had;
 }
@@ -3727,7 +3835,7 @@ function packAllTrials(list){let n=0;(list||[]).forEach(c=>{if(packTrials(c))n++
 // 沒有試用紀錄的舊客戶：依「狀態變為試用的拜訪 → SERVE 註記」推算真試用日；都沒有回 ''
 function legacyTrialStart(c){
   const vs=(c.visits||[]).filter(v=>v&&v.date).slice().sort((a,b)=>a.date<b.date?-1:1);
-  const trial=vs.find(v=>v.statusChange===STATUS.TRIAL);
+  const trial=vs.find(v=>v.statusChange===STATUS.TRIAL||v.statusChange==='試用中');
   if(trial)return trial.date;
   const m=(c.note||'').match(/SERVE\s*(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
   if(m)return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
@@ -3794,6 +3902,13 @@ function autoAddRecycleTodos(){
           c.todos.push({text:'回收試用品（第 '+t.n+' 次）',dueDate:t.due||addDays(t.start,TRIAL_DEFAULT_DAYS),done:false,source:'auto-recycle',trialN:t.n});
           added++;
         });
+        // 試用還沒報價 → 同一個時間點（開始 +7 天）提醒排行程去報價；報價後 markQuoted 會關掉它
+        if(!c.quoted)openTrials(c).forEach(t=>{
+          if(!t.start||(todayObj-new Date(t.start))/DAY<7)return;
+          if((c.todos||[]).some(x=>x&&x.source==='auto-quote'&&(x.trialN||1)===t.n))return;
+          (c.todos=c.todos||[]).push({text:'安排報價（第 '+t.n+' 次試用還沒報價）',dueDate:t.due||addDays(t.start,TRIAL_DEFAULT_DAYS),done:false,source:'auto-quote',trialN:t.n});
+          added++;
+        });
       }catch(inner){}
     });
     if(added>0)saveLocal();
@@ -3802,18 +3917,18 @@ function autoAddRecycleTodos(){
     return 0;
   }
 }
-// 回收結果「報價中」：一週後提醒問要不要改成拒絕（每週問一次，直到改狀態或選拒絕）
+// 已報價收尾：報價追蹤到期就問要不要擱置（每週問一次，直到有結果）。試用品還在客戶那邊時不問——那由回收流程收尾
 async function checkQuoteFollowups(){
   const t=today();
   let touched=false;
   for(const c of (DB.clients||[])){
-    if(!c||c.status!==STATUS.QUOTE)continue;
+    if(!c||!inPipeline(c)||!c.quoted||openTrials(c).length)continue;
     const td=(c.todos||[]).find(x=>x&&!x.done&&x.source==='quote-followup'&&x.dueDate&&x.dueDate<=t);
     if(!td)continue;
-    const refuse=await appConfirm('「'+c.name+'」報價已經一週沒有回覆。要改成「拒絕」嗎？',{title:'報價追蹤',okText:'改成拒絕',cancelText:'再等一週',danger:true});
+    const refuse=await appConfirm('「'+c.name+'」報價已經一週沒有回覆。要改成「擱置」嗎？',{title:'報價追蹤',okText:'改成擱置',cancelText:'再等一週',danger:true});
     if(refuse){
-      c.status=STATUS.REFUSE;td.done=true;
-      (c.visits=c.visits||[]).push({date:t,mood:0,note:'',insight:'報價一週未回覆，改為拒絕',statusChange:STATUS.REFUSE,nextdate:null});
+      td.done=true;shelveClient(c,'報價沒回覆',t);
+      (c.visits=c.visits||[]).push({date:t,mood:0,note:'',insight:'報價一週未回覆，改為擱置',statusChange:STATUS.SHELVED,nextdate:null});
     }else{
       td.dueDate=addDays(t,7);
     }
@@ -3826,7 +3941,7 @@ async function checkQuoteFollowups(){
 let statusFilter={};
 function defaultStatusFilter(){
   const f={};
-  SO.forEach(s=>{f[s]=(s!==STATUS.REFUSE);});
+  SO.forEach(s=>{f[s]=(s!==STATUS.SHELVED);});
   return f;
 }
 function loadStatusFilter(){
@@ -3843,8 +3958,7 @@ function saveStatusFilter(){
   try{localStorage.setItem('status_filter',JSON.stringify(statusFilter));}catch(e){}
 }
 function statusVisible(status){
-  // 未設定狀態 視為「未拜訪」
-  const s=status||STATUS.UNVISITED;
+  const s=displayStatus(status);
   return statusFilter[s]!==false;
 }
 function openStatusFilterModal(){
@@ -3855,7 +3969,7 @@ function openStatusFilterModal(){
     return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--bg2)">
       <input type="checkbox" ${checked?'checked':''} onchange="toggleStatusFilter('${s}',this.checked)" style="width:18px;height:18px;cursor:pointer">
       <span class="badge" style="background:${bg};color:${fg}">${s}</span>
-      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>(c.status||STATUS.UNVISITED)===s).length} 筆</span>
+      <span style="font-size:12px;color:var(--text3);margin-left:auto">${DB.clients.filter(c=>displayStatus(c.status)===s).length} 筆</span>
     </label>`;
   }).join('');
   document.getElementById('status-filter-modal').classList.add('on');
@@ -3869,7 +3983,7 @@ function toggleStatusFilter(status,on){
   saveStatusFilter();
 }
 async function resetStatusFilter(){
-  if(!await appConfirm('重設為預設（只隱藏「拒絕」）？',{okText:'重設'}))return;
+  if(!await appConfirm('重設為預設（只隱藏「擱置」）？',{okText:'重設'}))return;
   statusFilter=defaultStatusFilter();
   saveStatusFilter();
   openStatusFilterModal();
@@ -3878,38 +3992,25 @@ async function resetStatusFilter(){
 // 分類篩選判定：純分類歸屬（不含 activeRegion/activeStatusSub 子篩選），
 // 供列表過濾與藥丸數量共用
 function matchCategoryFor(c,cat){
-  const visitsN=(c.visits||[]).length;
-  const mains=trialItemsOf(c).filter(it=>it.product&&!it.bundledTo);
-  const contractedN=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;
-  const isRefused=c.status===STATUS.REFUSE;
+  const st=displayStatus(c.status);
   switch(cat){
-    // 已拜訪＝有任何互動（拜訪過／有試用品項／有成約品項）——
-    // 含品項是為了不漏掉「直接成約、沒補拜訪紀錄」的客戶
-    case '已拜訪': return visitsN>0||mains.length>0||contractedN>0;
-    case '未拜訪': {
-      if(visitsN>0)return false;
-      if(mains.length>0)return false;
-      if(isRefused)return false;
-      return true;
-    }
-    case '試用回收': return c.status===STATUS.TRIAL;
-    case '成約待轉交': return c.status===STATUS.DEAL;   // 已成約但尚未「已轉交」
+    case '待拜訪': return st===STATUS.PLAN;
+    case '開發中': return st===STATUS.DEV;
+    case '試用': return st===STATUS.TRIAL;
+    case '待轉交': return st===STATUS.DEAL&&c.handoff!=='done';
     case '全部': return true;
   }
   return true;
 }
 function matchCategory(c){
   if(!matchCategoryFor(c,activeCat))return false;
-  if(activeCat==='未拜訪'&&activeRegion)return parseRegion(c.addr)===activeRegion;
-  if(activeCat==='全部'&&activeStatusSub){
-    if(activeStatusSub===STATUS.REFUSE)return c.status===STATUS.REFUSE;
-    return (c.status||STATUS.UNVISITED)===activeStatusSub;
-  }
+  if(activeCat==='待拜訪'&&activeRegion)return parseRegion(c.addr)===activeRegion;
+  if(activeCat==='全部'&&activeStatusSub)return displayStatus(c.status)===activeStatusSub;
   return true;
 }
 // 藥丸數量：與該分類實際會顯示的一致（單一狀態分類不受 狀態篩選影響）
 function categoryCount(cat){
-  const skip=(cat==='試用回收'||cat==='成約待轉交');
+  const skip=(cat!=='全部');   // 單一階段的分類不受「狀態篩選」影響
   return DB.clients.filter(c=>c&&matchCategoryFor(c,cat)&&(skip||statusVisible(c.status))).length;
 }
 // ═══════════════════════════════════════════════════════════
@@ -3991,28 +4092,28 @@ const MAP_PIN={late:'--red',due:'--amber',cool:'--blue',won:'--green',quiet:'--t
 function pinColor(k){return cssVar(MAP_PIN[k]||'--text3','')||cssVar('--pin-fallback','#5E726A');}
 function mapColorForStatus(s){
   s=displayStatus(s);
-  if(s===STATUS.QUOTE||s===STATUS.CLOSING) return pinColor('due');       // 橙：該你動作
-  if(s===STATUS.TRIAL) return pinColor('due');                            // 橙：試用要回收
-  if(s===STATUS.DEAL||s===STATUS.TRANSFER) return pinColor('won');        // 綠：已成約
-  if(s===STATUS.FIRST||s===STATUS.REVISIT) return pinColor('cool');       // 藍：進行中
-  return pinColor('quiet');                                               // 無彩度：未拜訪
+  if(s===STATUS.TRIAL) return pinColor('due');                            // 橙：試用要回收／等報價結果
+  if(s===STATUS.DEAL) return pinColor('won');                             // 綠：成約
+  if(s===STATUS.DEV) return pinColor('cool');                             // 藍：進行中
+  return pinColor('quiet');                                               // 無彩度：待拜訪
 }
 // 逾期的（試用過回收日、報價該追了）直接轉紅，比只看 status 更有用
 function mapColorForClient(c){
   if(!c)return pinColor('quiet');
   const x=trialXInfo(c);
   if(x&&x.level>=1)return pinColor('late');
-  if(c.status===STATUS.QUOTE){
+  if(inPipeline(c)&&c.quoted){
     const td=(c.todos||[]).find(t=>t&&!t.done&&t.source==='quote-followup'&&t.dueDate);
     if(td&&daysUntil(td.dueDate)<=0)return pinColor('late');
+    return pinColor('due');
   }
   return mapColorForStatus(c.status);
 }
 
-// 是否該在地圖上顯示（排除 拒絕/結案）
+// 是否該在地圖上顯示（排除擱置）
 function mapShouldShow(c){
   if(!c) return false;
-  if(c.status===STATUS.REFUSE) return false;
+  if(c.status===STATUS.SHELVED) return false;
   return true;
 }
 
@@ -4452,7 +4553,7 @@ function buildMapPopup(c,idx){
     const navAddr=ensureCityPrefix(c.addr);
     if(navAddr) navUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(navAddr);
   }
-  const badges=bdg(displayStatus(c.status||STATUS.UNVISITED))
+  const badges=bdg(statusLabel(c),clientTone(c))+tierMark(c)
     +(fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:'')
     +(todos>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${todos}待辦</span>`:'');
   return `<div class="map-popup">
@@ -4674,6 +4775,7 @@ function setSegFilter(v,btn){
   renderClients();
 }
 function renderClients(){
+  renderFillBanner();
   initPills();   // 藥丸數量隨資料即時更新
   const q=(document.getElementById('csearch').value||'').toLowerCase();
   const sort=document.getElementById('csort').value;
@@ -4683,8 +4785,8 @@ function renderClients(){
   // 狀態開關過濾（所有分類都生效；但已明確鎖定單一狀態的視角要跳過，
   // 否則使用者在 隱藏了該狀態時，這些分類會整頁空白、令人困惑）：
   //   - 「全部」已選特定狀態子篩選
-  //   - 「試用回收」（固定＝試用中）、「成約待轉交」（固定＝已成約）
-  const skipStatusFilter=(activeCat==='全部'&&activeStatusSub)||activeCat==='試用回收'||activeCat==='成約待轉交';
+  //   - 單一階段的分類（待拜訪／開發中／試用／待轉交）
+  const skipStatusFilter=activeCat!=='全部'||!!activeStatusSub;
   if(!skipStatusFilter){
     list=list.filter(({c})=>statusVisible(c.status));
   }
@@ -4701,20 +4803,24 @@ function renderClients(){
   const useDefault=(sort==='default');
   list.sort((a,b)=>{
     if(useDefault){
-      if(activeCat==='已拜訪'){
-        // 最後動態在最上（有新拜訪/修改的客戶浮上來）
+      if(activeCat==='開發中'){
+        // 評價重的在上（未評的排最後）→ 最後動態在最上
+        const ta=a.c.tier||9,tb=b.c.tier||9;
+        if(ta!==tb)return ta-tb;
         return(b.c.updatedAt||0)-(a.c.updatedAt||0);
       }
-      if(activeCat==='未拜訪'){
-        // 區域 → 名稱（掃區用）
+      if(activeCat==='待拜訪'){
+        // 區域 → 評價 → 名稱（掃區用）
         const ra=parseRegion(a.c.addr),rb=parseRegion(b.c.addr);
         if(ra!==rb){
           if(!ra)return 1;if(!rb)return -1;           // 無地址區沉底
           return ra.localeCompare(rb,'zh-Hant');
         }
+        const ta=a.c.tier||9,tb=b.c.tier||9;
+        if(ta!==tb)return ta-tb;
         return a.c.name.localeCompare(b.c.name,'zh-Hant');
       }
-      if(activeCat==='試用回收'){
+      if(activeCat==='試用'){
         // 回收動線：同區放一起（區內逾期最久的最上面）→ 名稱
         const ra=parseRegion(a.c.addr),rb=parseRegion(b.c.addr);
         if(ra!==rb){
@@ -4725,7 +4831,7 @@ function renderClients(){
         if(da!==db)return da<db?-1:1;                 // 試用日越早＝逾期越久 → 越上面
         return a.c.name.localeCompare(b.c.name,'zh-Hant');
       }
-      if(activeCat==='成約待轉交'){
+      if(activeCat==='待轉交'){
         // 成約日越早＝等轉交越久 → 越上面；無成約日沉底
         const da=dealDate(a.c)||'9999',db=dealDate(b.c)||'9999';
         if(da!==db)return da<db?-1:1;
@@ -4741,7 +4847,6 @@ function renderClients(){
       return na<nb?-1:na>nb?1:0;
     }
     if(sort==='status'){
-      // 未設狀態視為未拜訪、已結案併入拒絕，不在 SO 裡的沉底（舊版 indexOf=-1 會反而排最前）
       const ia=SO.indexOf(displayStatus(a.c.status)),ib=SO.indexOf(displayStatus(b.c.status));
       return(ia<0?SO.length:ia)-(ib<0?SO.length:ib);
     }
@@ -4751,13 +4856,13 @@ function renderClients(){
   const el=document.getElementById('clients-list');
   if(!list.length){el.innerHTML='<div class="empty">尚無符合的客戶</div>';return;}
   // 篩選條件變了就把分頁歸零，避免停留在上一個清單的「載入更多」進度
-  // （activeRegion 也要進簽章：未拜訪分類切換區域時同樣該歸零）
+  // （activeRegion 也要進簽章：待拜訪分類切換區域時同樣該歸零）
   const sig=q+'|'+sort+'|'+activeCat+'|'+activeStatusSub+'|'+activeRegion;
   if(sig!==_clientFilterSig){_clientFilterSig=sig;_clientShowN=INITIAL_CLIENT_N;}
   const total=list.length;
   const shown=list.slice(0,_clientShowN);
-  // 試用回收（推薦排序）＝依區分組，插入區域標頭方便同區串路線
-  const groupByRegion=(activeCat==='試用回收'&&sort==='default');
+  // 試用（推薦排序）＝依區分組，插入區域標頭方便同區串路線
+  const groupByRegion=(activeCat==='試用'&&sort==='default');
   let _lastRegion=null;
   el.innerHTML=shown.map(({c,i})=>{
     let regionHead='';
@@ -4771,17 +4876,17 @@ function renderClients(){
     const prod=autoProd(trialItemsOf(c))||'';
     const tdInfo=trialDateInfo(c);
     const td=tdInfo.date;
-    const xinfo=activeCat==='試用回收'?trialXInfo(c):null;
-    const dd=activeCat==='成約待轉交'?dealDate(c):'';
+    const xinfo=activeCat==='試用'?trialXInfo(c):null;
+    const dd=activeCat==='待轉交'?dealDate(c):'';
     const geoWarn=mapShouldShow(c)&&c.addr&&(!c.lat||!c.lng)&&c.geocodeSource==='failed';
     const hasCoord=c.lat&&c.lng&&mapShouldShow(c);
     const mapBtn=hasCoord?`<button class="cc-map-btn" onclick="jumpToMap(${i},event)" title="在地圖上查看" aria-label="在地圖上查看"><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`:'';
-    const _extraBadges=`${trialXBadge(c)}${fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${pTodos}待辦</span>`:''}`;
+    const _extraBadges=`${trialXBadge(c)}${tierMark(c)}${c.status===STATUS.DEV&&NEED_LABEL[c.need]?`<span class="badge" style="background:var(--bg3);color:var(--text2)">${NEED_LABEL[c.need]}</span>`:''}${fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:''}${pTodos>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${pTodos}待辦</span>`:''}`;
     return`${regionHead}<div class="cc has-g${mapBtn?' cc-mapped':''}" onclick="openCD(${i})">
       ${mapBtn}
       <div class="cc-head">
         <div class="cc-name">${segOf(c)==='工廠'?'<svg class="seg-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20h20"/><path d="M4 20V8l5 3V8l5 3V8l5 3v9"/></svg> ':''}${escHtml(c.name)}${c.type?` <span style="font-size:12.5px;color:var(--text2);font-weight:400">${escHtml(c.type)}</span>`:''}${geoWarn?' <span title="地圖上無法定位" style="font-size:12px;color:var(--amber);margin-left:2px"></span>':''}</div>
-        ${statusPill(displayStatus(c.status))}
+        ${clientPill(c)}
       </div>
       <div class="cc-sub">${escHtml([c.contact,c.addr].filter(Boolean).join(' · '))}</div>
       ${_extraBadges?`<div class="cc-badges">${_extraBadges}</div>`:''}
@@ -4827,7 +4932,15 @@ function openCF(idx){
   document.getElementById('cf-addr').value=c?.addr||'';
   fillTypeOpts(c?.type||'');
   setCFSegment(c?segOf(c):'街邊店');
-  document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.UNVISITED;
+  fillJudgeSelects();
+  document.getElementById('cf-status').value=c?displayStatus(c.status):STATUS.PLAN;
+  document.getElementById('cf-tier').value=String(c&&TIERS.includes(c.tier)?c.tier:0);
+  document.getElementById('cf-need').value=c&&NEEDS.includes(c.need)?c.need:'';
+  document.getElementById('cf-quoted').checked=!!(c&&c.quoted);
+  document.getElementById('cf-handoff').checked=!!(c&&c.handoff==='done');
+  document.getElementById('cf-shelve-reason').value=(c&&c.shelveReason)||'';
+  document.getElementById('cf-wake').value=(c&&c.wakeDate)||'';
+  cfStageChanged();
   document.getElementById('cf-nextdate').value=c?.nextdate||'';
   document.getElementById('cf-env').value=c?.env||'';
   document.getElementById('cf-note').value=c?.note||'';
@@ -4837,6 +4950,21 @@ function openCF(idx){
   S.cfTodos=JSON.parse(JSON.stringify(c?.todos||[]));
   renderItems();renderContracted();renderTodoFields();updProd();
   showView('view-form');
+}
+// 階段／評價／需求／擱置理由的下拉選項：一律由常數表產生（表單與拜訪紀錄共用）
+function fillJudgeSelects(){
+  const opt=(v,t,sel)=>`<option value="${escHtml(String(v))}">${escHtml(t)}</option>`;
+  const set=(id,html)=>{const el=document.getElementById(id);if(el&&!el.options.length)el.innerHTML=html;};
+  set('cf-status',SO.map(x=>opt(x,x)).join(''));
+  set('vl-status',opt('','不更新')+SO.filter(x=>x!==STATUS.PLAN).map(x=>opt(x,x)).join(''));
+  set('cf-tier',opt(0,'未評')+TIERS.map(t=>opt(t,t+' 級｜'+TIER_HINT[t])).join(''));
+  set('cf-need',opt('','未判斷')+NEEDS.map(n=>opt(n,NEED_LABEL[n])).join(''));
+  const rs=opt('','（請選擇）')+SHELVE_REASONS.map(r=>opt(r,r)).join('');
+  set('cf-shelve-reason',rs);set('vl-reason',rs);
+}
+function cfStageChanged(){
+  const st=document.getElementById('cf-status').value;
+  document.getElementById('cf-shelve-box').style.display=st===STATUS.SHELVED?'':'none';
 }
 // 表單的試用區塊：有進行中試用 → 顯示日期＋品項；沒有 → 只剩「開始第 N 次試用」鈕
 function renderCFTrialBox(c){
@@ -4860,7 +4988,7 @@ async function cfStartTrial(){
   S.cfTrial=newTrial(c||{},[]);S.cfItems=[];S._prevTrialItems=[];
   renderCFTrialBox(c);renderItems();updProd();
   const st=document.getElementById('cf-status');
-  if(st&&[STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.QUOTE,STATUS.CLOSING,STATUS.REFUSE].includes(st.value))st.value=STATUS.TRIAL;
+  if(st&&st.value!==STATUS.DEAL){st.value=STATUS.TRIAL;cfStageChanged();}
 }
 function cfTrialStartChanged(){
   const s=document.getElementById('cf-trial-start').value;
@@ -5127,6 +5255,12 @@ async function saveClient(){
       type:document.getElementById('cf-type').value,
       segment:CF_SEGMENT,
       status:document.getElementById('cf-status').value,
+      tier:Number(document.getElementById('cf-tier').value)||0,
+      need:document.getElementById('cf-need').value,
+      quoted:document.getElementById('cf-quoted').checked,
+      handoff:document.getElementById('cf-handoff').checked?'done':'',
+      shelveReason:document.getElementById('cf-shelve-reason').value,
+      wakeDate:document.getElementById('cf-wake').value,
       nextdate:document.getElementById('cf-nextdate').value,
       env:document.getElementById('cf-env').value,
       note:document.getElementById('cf-note').value,
@@ -5162,9 +5296,18 @@ async function saveClient(){
         }
       }
     }
-    // 自動寫 visit：status 從「未拜訪/空」變成其他
+    // 擱置：記擱置日；喚醒日沒填就依評價算。不是擱置就不留喚醒日
+    const prevC=isEdit?DB.clients[S.editIdx]:null;
+    if(c.status===STATUS.SHELVED){
+      c.shelvedAt=(prevC&&prevC.status===STATUS.SHELVED&&prevC.shelvedAt)||today();
+      if(!c.wakeDate||(prevC&&prevC.tier!==c.tier))c.wakeDate=wakeDateFor(c);
+      c.nextdate='';
+    }else c.wakeDate='';
+    if(prevC&&prevC.wokeAt)c.wokeAt=prevC.wokeAt;
+    if(c.quoted&&!(prevC&&prevC.quoted))markQuoted(c);
+    // 自動寫 visit：status 從「待拜訪/空」變成其他
     const oldStatus=isEdit?(DB.clients[S.editIdx]?.status||''):'';
-    const isLeaving=(!oldStatus||oldStatus===STATUS.UNVISITED)&&c.status&&c.status!==STATUS.UNVISITED;
+    const isLeaving=(!oldStatus||oldStatus===STATUS.PLAN)&&c.status&&c.status!==STATUS.PLAN;
     let autoVisits=[];
     if(isLeaving){
       const td=today();
@@ -5232,21 +5375,24 @@ function openCD(i){
   document.getElementById('cd-name').textContent=c.name;
   // 狀態＝點＋粗字，旁邊是階段軌（位置說階段），底下 cd-clock 是這個客戶的時鐘
   document.getElementById('cd-stage').innerHTML=
-    statusPill(displayStatus(c.status))+stageRail(c.status)+clientClockLabel(c);
+    clientPill(c)+stageRail(c.status)+clientClockLabel(c);
   const cdClock=document.getElementById('cd-clock');
   if(cdClock)cdClock.innerHTML=clientGaugeHtml(c);
   document.getElementById('cd-sub').textContent=[c.contact,c.type?`[${c.type}]`:''].filter(Boolean).join(' · ');
   document.getElementById('cd-badges').innerHTML=
-    trialXBadge(c)+
+    trialXBadge(c)+tierMark(c)+
+    (c.status===STATUS.DEV&&NEED_LABEL[c.need]?`<span class="badge" style="background:var(--bg3);color:var(--text2)">${NEED_LABEL[c.need]}</span>`:'')+
+    (inPipeline(c)&&!c.quoted?`<button class="btn btn-outline btn-xs" onclick="cdMarkQuoted()">標記已報價</button>`:'')+
+    (c.status===STATUS.DEAL&&c.handoff!=='done'?`<button class="btn btn-outline btn-xs" onclick="cdMarkHandoff()">標記已轉交</button>`:'')+
     (fw>0?`<span class="badge" style="background:var(--green-l);color:var(--green-d)">4W $${fw.toLocaleString()}</span>`:'')+
     ((c.todos||[]).filter(t=>!t.done).length>0?`<span class="badge" style="background:var(--amber-l);color:var(--amber)">${c.todos.filter(t=>!t.done).length}待辦</span>`:'');
   document.getElementById('cd-product').textContent=prod;
   document.getElementById('cd-fw4').textContent=fw>0?'$'+fw.toLocaleString():'-';
   document.getElementById('cd-fw4-src').textContent=fw>0?fwSrc:'';
-  // 若狀態是試用中但成約區有殘留，顯示警告
+  // 若還在試用階段但成約區有殘留，顯示警告
   const srcW=document.getElementById('cd-fw4-src');
-  if(srcW&&fwContractSum>0&&(c.status===STATUS.TRIAL||c.status===STATUS.QUOTE)){
-    srcW.textContent='來自成約（狀態為'+c.status+'，可能有殘留）';
+  if(srcW&&fwContractSum>0&&c.status===STATUS.TRIAL){
+    srcW.textContent='來自成約（狀態為'+statusLabel(c)+'，可能有殘留）';
     srcW.style.color='var(--yellow)';
   }else if(srcW){
     srcW.style.color='var(--text3)';
@@ -5317,6 +5463,9 @@ function renderCDTrials(c){
   document.getElementById('vl-form').style.display='none';
   renderCDTodos();renderVisits();showView('view-detail');
 }
+function cdTouch(c){c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});renderClients();openCD(S.curIdx);}
+function cdMarkQuoted(){const c=DB.clients[S.curIdx];if(!c)return;markQuoted(c);cdTouch(c);showToast('✓ 已報價，一週後提醒追結果');}
+function cdMarkHandoff(){const c=DB.clients[S.curIdx];if(!c)return;c.handoff='done';cdTouch(c);showToast('✓ 已轉交');}
 // ＋ 新一次試用：品項從空的開始；超過 3 次或還有進行中的都會先提醒
 async function startTrial(){
   if(S.curIdx<0)return;
@@ -5327,13 +5476,70 @@ async function startTrial(){
   if(cnt>=TRIAL_MAX&&!await appConfirm('公司規定每家最多 '+TRIAL_MAX+' 次試用，這家已經 '+cnt+' 次。仍要開第 '+(cnt+1)+' 次？',{title:'試用次數提醒',okText:'仍要新增',danger:true}))return;
   const t=newTrial(c,[]);
   (c.trials=c.trials||[]).push(t);
-  if([STATUS.UNVISITED,STATUS.FIRST,STATUS.REVISIT,STATUS.QUOTE,STATUS.CLOSING,STATUS.REFUSE].includes(c.status||STATUS.UNVISITED)){
-    c.status=STATUS.TRIAL;
+  if(c.status!==STATUS.TRIAL&&c.status!==STATUS.DEAL){
+    c.status=STATUS.TRIAL;c.wakeDate='';
     (c.visits=c.visits||[]).push({date:t.start,mood:0,note:'',insight:'開始第 '+t.n+' 次試用',statusChange:STATUS.TRIAL,nextdate:c.nextdate||null});
   }
   c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
   renderClients();openCD(S.curIdx);
   openCDItems(t.n);
+}
+// ═══ 補資料 ═══ 缺評價／需求判斷／擱置理由的店一家一家問，直到填完（啟動時自動跳出，可稍後再填，下次還會跳）
+let FILL={ids:[],draft:{}};
+function fillQueue(){return (DB.clients||[]).filter(c=>c&&c.id&&missingFields(c).length);}
+function renderFillBanner(){
+  const el=document.getElementById('fill-banner');if(!el)return;
+  const n=fillQueue().length;
+  el.innerHTML=n?`<button class="alert alert-warn" style="display:block;width:100%;text-align:left;cursor:pointer;font:inherit;font-size:13px;min-height:44px" onclick="openFill()">還有 <b class="num">${n}</b> 家店缺評價／需求判斷／擱置理由 → 點這裡補</button>`:'';
+}
+function openFill(only){
+  const list=only?[only]:fillQueue();
+  if(!list.length)return;
+  FILL={ids:list.map(c=>c.id),draft:{}};
+  renderFill();
+  document.getElementById('fill-modal').classList.add('on');
+}
+function closeFill(){document.getElementById('fill-modal').classList.remove('on');renderClients();}
+function fillCurrent(){
+  while(FILL.ids.length){
+    const c=(DB.clients||[]).find(x=>x&&x.id===FILL.ids[0]);
+    if(c&&missingFields(c).length)return c;
+    FILL.ids.shift();FILL.draft={};
+  }
+  return null;
+}
+function renderFill(){
+  const c=fillCurrent();
+  if(!c){closeFill();return;}
+  const miss=missingFields(c),d=FILL.draft;
+  const lastV=(c.visits||[]).filter(v=>v&&v.date).slice().sort((a,b)=>a.date<b.date?1:-1)[0];
+  const row=(label,key,opts)=>`<div class="f"><label class="lbl">${label}</label><div style="display:flex;gap:6px;flex-wrap:wrap">`+
+    opts.map(([v,t])=>`<button type="button" class="pill${d[key]===v?' on':''}" onclick="fillPick('${key}',${typeof v==='number'?v:"'"+v+"'"})">${escHtml(t)}</button>`).join('')+'</div></div>';
+  document.getElementById('fill-title').textContent='補資料（還有 '+FILL.ids.length+' 家）';
+  document.getElementById('fill-body').innerHTML=
+    `<div style="font-size:var(--fs-title,17px);font-weight:700;margin-bottom:4px">${escHtml(c.name||'')}</div>`+
+    `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">${clientPill(c)}</div>`+
+    `<div style="font-size:13px;color:var(--text2);margin-bottom:10px">${escHtml(c.addr||'')}${lastV?'<br>最後拜訪 '+escHtml(lastV.date)+(lastV.note?'：'+escHtml(String(lastV.note).slice(0,60)):''):''}${c.note?'<br>備註：'+escHtml(String(c.note).slice(0,60)):''}</div>`+
+    (miss.includes('tier')?row('評價：這家店值得花多少力氣','tier',TIERS.map(t=>[t,t+' 級・'+TIER_HINT[t]])):'')+
+    (miss.includes('need')?row('拜訪後的判斷：有沒有需求（選沒需求會轉為擱置）','need',NEEDS.map(n=>[n,NEED_LABEL[n]])):'')+
+    (miss.includes('reason')?row('擱置理由','reason',SHELVE_REASONS.map(r=>[r,r])):'');
+}
+function fillPick(k,v){FILL.draft[k]=v;renderFill();}
+function fillNext(){
+  const c=fillCurrent();if(!c){closeFill();return;}
+  const miss=missingFields(c),d=FILL.draft;
+  if(miss.some(k=>d[k]===undefined)){showToast('這家還有沒選的項目');return;}
+  if(d.tier)c.tier=d.tier;
+  if(d.need)c.need=d.need;
+  if(d.reason)c.shelveReason=d.reason;
+  if(c.status===STATUS.DEV&&c.need==='無'){
+    const vs=(c.visits||[]).filter(v=>v&&v.date).map(v=>v.date).sort();
+    shelveClient(c,'沒需求',vs.length?vs[vs.length-1]:today());
+  }else if(c.status===STATUS.SHELVED)c.wakeDate=wakeDateFor(c);
+  c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
+  FILL.ids.shift();FILL.draft={};
+  if(fillCurrent())renderFill();
+  else{closeFill();wakeShelved();renderClients();showToast('✓ 資料都補齊了');}
 }
 // 回收完成 → 選結果
 let RECOVER={ci:-1,n:0};
@@ -5352,15 +5558,16 @@ function finishRecover(result){
   (c.todos||[]).forEach(x=>{if(x&&x.source==='auto-recycle'&&(x.trialN||1)===t.n)x.done=true;});
   if(result==='成約'){
     (t.items||[]).forEach(it=>{if(it&&it.product){const k=JSON.parse(JSON.stringify(it));k.contractDate=date;(c.contractedItems=c.contractedItems||[]).push(k);}});
-    c.status=STATUS.DEAL;
+    c.status=STATUS.DEAL;c.handoff='';
   }else if(result==='報價中'){
-    c.status=STATUS.QUOTE;
-    (c.todos=c.todos||[]).push({text:'報價追蹤（第 '+t.n+' 次試用回收後一週未回覆，問是否改拒絕）',dueDate:addDays(date,7),done:false,source:'quote-followup',trialN:t.n});
+    c.status=STATUS.TRIAL;
+    (c.todos||[]).forEach(x=>{if(x&&!x.done&&x.source==='quote-followup')x.done=true;});   // 追蹤日從回收日重新起算
+    markQuoted(c,date);
   }else if(result==='再試用'){
     c.trials.push(newTrial(c,t.items,date));
     c.status=STATUS.TRIAL;
   }else if(result==='拒絕'){
-    c.status=STATUS.REFUSE;
+    shelveClient(c,'',date);
   }
   (c.visits=c.visits||[]).push({date,mood:0,note:'',insight:'第 '+t.n+' 次試用回收：'+result,statusChange:c.status,nextdate:c.nextdate||null});
   c.updatedAt=Date.now();saveLocal();autoSync('save',{client:c});
@@ -5368,6 +5575,7 @@ function finishRecover(result){
   const n=trialsOf(c).length;
   if(result==='再試用'&&n>TRIAL_MAX)showToast('提醒：這家已經第 '+n+' 次試用，超過公司規定的 '+TRIAL_MAX+' 次');
   else showToast('✓ 第 '+t.n+' 次試用已回收：'+result);
+  if(missingFields(c).length)openFill(c);   // 擱置要填理由（還沒評價的順便問）
 }
 
 // 客戶卡 → 編輯品項 modal（共用編輯表單的 renderItems/renderContracted 邏輯）
@@ -5545,21 +5753,27 @@ function saveTodoModal(){
 function showVLForm(visitIdx){
   S.editVisitIdx=(typeof visitIdx==='number'&&visitIdx>=0)?visitIdx:-1;
   const c=DB.clients[S.curIdx];
+  fillJudgeSelects();
+  S.vlNeed=(c&&NEEDS.includes(c.need))?c.need:'';
+  S.vlTier=(c&&TIERS.includes(c.tier))?c.tier:0;
+  document.getElementById('vl-reason').value=(c&&c.status===STATUS.SHELVED&&c.shelveReason)||'';
   if(S.editVisitIdx>=0&&c&&c.visits&&c.visits[S.editVisitIdx]){
     const v=c.visits[S.editVisitIdx];
     document.getElementById('vl-date').value=v.date||today();
-    document.getElementById('vl-status').value=v.statusChange||'';
+    document.getElementById('vl-status').value=SO.includes(v.statusChange)?v.statusChange:'';
+    document.getElementById('vl-quoted').checked=!!v.quoted;
     document.getElementById('vl-note').value=v.note||'';
     document.getElementById('vl-ins').value=v.insight||'';
     S.curMood=v.mood||3;
   }else{
     document.getElementById('vl-date').value=today();
     document.getElementById('vl-status').value='';
+    document.getElementById('vl-quoted').checked=false;
     document.getElementById('vl-note').value='';
     document.getElementById('vl-ins').value='';
     S.curMood=3;
   }
-  updMoodUI();
+  updMoodUI();renderVLJudge();vlStageChanged();
   document.getElementById('vl-form').style.display='block';
   updVLMode();
   setTimeout(()=>{document.getElementById('vl-form').scrollIntoView({behavior:'smooth',block:'center'});},50);
@@ -5570,6 +5784,23 @@ function updVLMode(){
   const isFuture=d&&d>today();
   document.getElementById('vl-extra').style.display=isFuture?'none':'block';
   document.getElementById('vl-future-hint').style.display=isFuture?'block':'none';
+}
+// 拜訪後的兩個判斷：需求（這次看到的）與評價（這家店的份量）。用藥丸一點就好
+function renderVLJudge(){
+  document.getElementById('vl-need').innerHTML=NEEDS.map(n=>`<button type="button" class="pill${S.vlNeed===n?' on':''}" onclick="vlPickNeed('${n}')">${NEED_LABEL[n]}</button>`).join('');
+  document.getElementById('vl-tier').innerHTML=TIERS.map(t=>`<button type="button" class="pill${S.vlTier===t?' on':''}" onclick="vlPickTier(${t})">${t} 級・${TIER_HINT[t]}</button>`).join('');
+}
+function vlPickTier(t){S.vlTier=t;renderVLJudge();}
+// 沒需求 → 預設帶到「擱置・沒需求」（還在試用／已成約的不動，那要走回收流程）
+function vlPickNeed(n){
+  S.vlNeed=n;renderVLJudge();
+  const c=DB.clients[S.curIdx],st=document.getElementById('vl-status');
+  if(n==='無'&&c&&c.status!==STATUS.TRIAL&&c.status!==STATUS.DEAL){st.value=STATUS.SHELVED;document.getElementById('vl-reason').value='沒需求';}
+  else if(n!=='無'&&st.value===STATUS.SHELVED&&document.getElementById('vl-reason').value==='沒需求'){st.value='';}
+  vlStageChanged();
+}
+function vlStageChanged(){
+  document.getElementById('vl-reason-box').style.display=document.getElementById('vl-status').value===STATUS.SHELVED?'':'none';
 }
 function setMood(n){S.curMood=n;updMoodUI();}
 function updMoodUI(){for(let i=1;i<=4;i++)document.getElementById('vm'+i).classList.toggle('on',i===S.curMood);}
@@ -5594,30 +5825,37 @@ function saveVL(){
       showVerToast('已設下次拜訪日為 '+selDate);
       return;
     }
-    const ns=document.getElementById('vl-status').value;
+    let ns=document.getElementById('vl-status').value;
     const noteVal=document.getElementById('vl-note').value;
     const insVal=document.getElementById('vl-ins').value;
+    const quoted=document.getElementById('vl-quoted').checked;
+    const reason=document.getElementById('vl-reason').value;
+    // 去過了就不再是「待拜訪」
+    if(!ns&&displayStatus(c.status)===STATUS.PLAN)ns=STATUS.DEV;
+    // 每家拜訪過的店都要有判斷：先檢查、再動資料
+    const after=ns||c.status;
+    if(!S.vlTier){showToast('請選這家店的評價（1／2／3 級）');return;}
+    if(after===STATUS.DEV&&!S.vlNeed){showToast('請選拜訪後的判斷：有沒有需求');return;}
+    if(ns===STATUS.SHELVED&&!reason){showToast('請選擇擱置理由');return;}
+    c.tier=S.vlTier;
+    if(S.vlNeed)c.need=S.vlNeed;
     if(!c.visits)c.visits=[];
+    const v={date:selDate,mood:S.curMood,note:noteVal,insight:insVal,statusChange:ns||null};
+    if(quoted)v.quoted=true;
     if(isEdit){
-      const orig=c.visits[S.editVisitIdx]||{};
-      c.visits[S.editVisitIdx]={
-        date:selDate,
-        mood:S.curMood,
-        note:noteVal,
-        insight:insVal,
-        statusChange:ns||null,
-        nextdate:orig.nextdate||null
-      };
-      if(ns)c.status=ns;
+      v.nextdate=(c.visits[S.editVisitIdx]||{}).nextdate||null;
+      c.visits[S.editVisitIdx]=v;
     }else{
-      const base=new Date(selDate+'T00:00:00');
-      base.setDate(base.getDate()+7);
-      const nd=fmtDate(base);
-      const v={date:selDate,mood:S.curMood,note:noteVal,insight:insVal,statusChange:ns||null,nextdate:nd};
+      v.nextdate=ns===STATUS.SHELVED?null:addDays(selDate,7);
       c.visits.push(v);
-      if(ns)c.status=ns;
-      c.nextdate=nd;
+      if(v.nextdate)c.nextdate=v.nextdate;
     }
+    if(ns===STATUS.SHELVED)shelveClient(c,reason,selDate);
+    else{
+      if(ns){c.status=ns;c.wakeDate='';}
+      else if(c.status===STATUS.SHELVED)c.wakeDate=wakeDateFor(c);   // 評價可能改了
+    }
+    if(quoted)markQuoted(c,selDate);
     c.updatedAt=Date.now();saveLocal();
     autoSync('save',{client:c});
     document.getElementById('vl-form').style.display='none';
@@ -5640,7 +5878,7 @@ function renderVisits(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <span style="font-weight:600;font-size:14px">${v.date} ${MOODS[v.mood]||''}</span>
         <div style="display:flex;align-items:center;gap:6px">
-          ${v.statusChange?bdg(v.statusChange):''}
+          ${v.statusChange?bdg(v.statusChange):''}${v.quoted?bdg('報價',TONE.due):''}
           <button class="vl-edit-btn" onclick="showVLForm(${i})" title="編輯" aria-label="編輯拜訪"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         </div>
       </div>
@@ -5669,7 +5907,7 @@ function renderDaily(){
     return`<div class="cc" onclick="navTo('clients',document.getElementById('nav-clients'));setTimeout(()=>openCD(${ci}),50)">
       <div class="cc-name">${escHtml(c.name)} ${v?MOODS[v.mood]||'':''}</div>
       <div class="cc-sub">${escHtml(c.contact||'')}</div>
-      <div class="cc-badges">${bdg(displayStatus(c.status))}${v?.statusChange?bdg(v.statusChange):''}</div>
+      <div class="cc-badges">${bdg(statusLabel(c),clientTone(c))}${v?.statusChange?bdg(v.statusChange):''}${v?.quoted?bdg('報價',TONE.due):''}</div>
       ${v?.note?`<div style="font-size:13px;color:var(--text2)">${escHtml(v.note)}</div>`:''}
       ${v?.insight?`<div style="font-size:12px;color:var(--blue);background:var(--blue-l);border-radius:var(--r-sm);padding:4px 8px;margin-top:4px">${escHtml(v.insight)}</div>`:''}
     </div>`;
@@ -5743,14 +5981,16 @@ function rptVisitsInRange(c,from,to){
 
 // 大客戶門檻：4W ≥ 3000
 const RPT_VIP_THRESHOLD=3000;
-// 單筆 visit 對應日報動作代號：初/複/報/試/約/拒
-function rptVisitAction(sc){
-  if(sc===STATUS.REFUSE) return '拒';
-  if(sc===STATUS.FIRST) return '初';
-  if(sc===STATUS.REVISIT) return '複';
-  if(sc===STATUS.QUOTE) return '報';
-  if(sc===STATUS.TRIAL||sc===STATUS.CLOSING||sc===STATUS.DEAL) return '試';
-  return '約';
+// 單筆 visit 對應日報動作代號：拒／報／試／初／複。
+// 初與複不再是狀態，而是「這家店的第幾次拜訪」：最早那筆是初，之後都是複
+function rptVisitAction(c,v){
+  const sc=v&&v.statusChange;
+  if(sc===STATUS.SHELVED) return '拒';
+  if(v&&v.quoted) return '報';
+  if(sc===STATUS.TRIAL||sc===STATUS.DEAL) return '試';
+  const vs=(c&&c.visits||[]).filter(x=>x&&x.date);
+  const first=vs.reduce((m,x)=>(!m||x.date<m.date)?x:m,null);
+  return first===v?'初':'複';
 }
 // 大客戶提示文字：依列號排序、附客戶名
 function rptVipHint(list){
@@ -5769,11 +6009,10 @@ function genReport(){
   //   合併欄位：B-C 客戶 / D-E 窗口 / F-G 商品 / H-M 月份 6 格 / N 進度說明
   //   月份範圍：startMonth, startMonth+1, ..., startMonth+5（不跨年循環）
   // ═════════════════════════════════════════════
-  const STATUS_A=new Set([STATUS.TRIAL,STATUS.QUOTE,STATUS.CLOSING]);
   const picked=DB.clients.filter(c=>{
-    // 拒絕的客戶視為已無試用品，不出現在推進表
-    if(c.status===STATUS.REFUSE) return false;
-    const a=STATUS_A.has(c.status);
+    // 擱置的客戶視為已無試用品，不出現在推進表
+    if(c.status===STATUS.SHELVED) return false;
+    const a=inPipeline(c);
     const mains=openTrialItems(c).filter(it=>it.product&&!it.bundledTo);   // 未回收的試用才算「有試用品項」
     const hasMain=mains.length>0;
     if(a) return true;
@@ -5793,7 +6032,7 @@ function genReport(){
     const prod=rptProd(openTrialItems(c));
     const mon=rptAmountMonth(c,from,to);
     // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
-    // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於 status=試用中/報價/將成約
+    // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於還在試用／已報價
     // 但本期間沒新動作的客戶），改填到「報表結束日月份」，讓金額不至於漏掉
     const monthCells=['','','','','',''];
     if(fw>0){
@@ -5815,13 +6054,15 @@ function genReport(){
 
   // ═════════════════════════════════════════════
   // ② 未來兩週拜訪規劃（A74:N108，14 欄，最多 35 列）
-  //   來源：c.status === STATUS.UNVISITED（含 status 未設值，視為未拜訪）
+  //   來源：階段＝待拜訪（含 status 未設值）；評價重的排前面
   //   合併：B-E 客戶 / F-G 商品 / H-M 備註 / N 預估 4W
   // ═════════════════════════════════════════════
-  const isUnvisited=c=>!c.status||c.status===STATUS.UNVISITED;
+  const isUnvisited=c=>displayStatus(c.status)===STATUS.PLAN;
   const planList=DB.clients.filter(isUnvisited);
-  // 排序：有預估 4W 的優先（金額大→小），其次按名稱
+  // 排序：評價 → 有預估 4W 的優先（金額大→小）→ 名稱
   planList.sort((a,b)=>{
+    const ta=a.tier||9, tb=b.tier||9;
+    if(ta!==tb) return ta-tb;
     const fa=calcReportAmt(a), fb=calcReportAmt(b);
     if(fa!==fb) return fb-fa;
     return (a.name||'').localeCompare(b.name||'');
@@ -5879,7 +6120,7 @@ function genReport(){
   visitRows.forEach((r,i)=>{
     const c=r.c, v=r.v;
     const prod=rptProd(trialItemsOf(c));
-    const action=rptVisitAction(v.statusChange);
+    const action=rptVisitAction(c,v);
     const isTrial=action==='試';
     const fwClient=calcReportAmt(c);
     const fwCell=(isTrial&&fwClient>0)?String(fwClient):'';
@@ -6496,16 +6737,15 @@ function closeAdminModal(){
   document.getElementById('admin-modal').classList.remove('on');
 }
 // 計算指標（與 4W 推進表口徑一致）
-const STATUS_TRIAL_SET=['試用中','報價','將成約'];
 function calcAdminMetrics(clients){
   let trialAmount=0,trialShop=0,contractAmount=0,contractShop=0;
   (clients||[]).forEach(c=>{
     if(!c)return;
-    if(STATUS_TRIAL_SET.includes(c.status)){
+    if(inPipeline(c)){
       trialShop++;
       // 4W 推進表口徑：試用品項以 2W 預設原價加總
       trialAmount+=openTrialItems(c).reduce((s,it)=>s+displayFw4(it.product,it.qty||1,'2W'),0);
-    }else if(c.status==='已成約'){
+    }else if(c.status===STATUS.DEAL&&c.handoff!=='done'){
       contractShop++;
       // 成約金額：成約品項以 itemFW4 加總（quoted 優先，否則原價）
       contractAmount+=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
@@ -6542,7 +6782,7 @@ async function loadAdminSnapshot(){
         }
         snap={ok:true,clients:fb.clients,sheetName:'業務'+(i+1)+'（請更新 Apps Script 以顯示姓名）'};
       }
-      packAllTrials(snap.clients);   // 業務員的雲端可能還是舊格式（trialItems）
+      packAllTrials(snap.clients);packAllStages(snap.clients);   // 業務員的雲端可能還是舊格式（trialItems／舊九狀態）
       results[i]={sheetName:snap.sheetName||('業務'+(i+1)),clients:snap.clients,generatedAt:snap.generatedAt,url};
     }catch(e){
       results[i]={sheetName:'(URL'+(i+1)+')',clients:[],error:e.message||String(e),url};
@@ -6711,7 +6951,7 @@ function filterAdminRepList(){
           const visitCnt=(c.visits||[]).filter(v=>v.date).length;
           return `<tr onclick="adminSelectClient(${i})" style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:6px 8px;font-weight:500">${escHtml(c.name||'(未命名)')}</td>
-            <td style="padding:6px 8px">${escHtml(c.status||'-')}</td>
+            <td style="padding:6px 8px">${escHtml(statusLabel(c))}</td>
             <td style="padding:6px 8px">${escHtml(c.contact||'-')}</td>
             <td style="padding:6px 8px;color:var(--text2)">${escHtml((c.addr||'-').slice(0,40))}</td>
             <td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">${trialAmt>0?'$'+trialAmt.toLocaleString():'-'}</td>
@@ -6754,7 +6994,7 @@ function renderAdminClientDetailHTML(s,idx){
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <button class="btn btn-outline btn-sm" onclick="adminBackToList()">← 回列表</button>
       <div style="font-size:16px;font-weight:700;flex:1">${escHtml(c.name||'(未命名)')}</div>
-      <span class="badge">${escHtml(c.status||'-')}</span>
+      <span class="badge">${escHtml(statusLabel(c))}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;font-size:12px;background:var(--bg2);padding:10px;border-radius:6px;margin-bottom:10px">
       <div><div style="color:var(--text3)">聯絡人</div><div>${escHtml(c.contact||'-')}</div></div>
@@ -6803,7 +7043,7 @@ function exportAdminRepCSV(){
     const trialSummary=trialItemsOf(c).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；')+(trialsOf(c).length?'（第 '+trialsOf(c).length+' 次）':'');
     const dealSummary=(c.contractedItems||[]).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；');
     rows.push([
-      c.name||'',c.status||'',c.contact||'',c.addr||'',c.type||'',
+      c.name||'',statusLabel(c),c.contact||'',c.addr||'',c.type||'',
       trialAmt,dealAmt,visits.length,(c.todos||[]).filter(t=>!t.done).length,
       lastVisit,c.nextdate||'',trialSummary,dealSummary,
       (c.note||'').replace(/[\r\n]+/g,' ')
@@ -6930,7 +7170,7 @@ function tripCard(it,actions){
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openCD(${it.i})">
         <div style="display:flex;align-items:flex-start;gap:10px">
           <div style="flex:1;min-width:0;font-size:var(--fs-card-name);font-weight:var(--fw-card-name);letter-spacing:var(--tr-card-name)">${escHtml(c.name)}</div>
-          ${statusPill(displayStatus(c.status||STATUS.UNVISITED))}
+          ${clientPill(c)}
         </div>
         <div style="font-size:var(--fs-sub);color:var(--text2);margin-top:3px">${escHtml(region)}・${escHtml(c.addr||'')}</div>
         ${undone.length?`<div style="font-size:var(--fs-meta);color:var(--amber);margin-top:4px;font-weight:600">${escHtml(undone[0].text)}${undone.length>1?'（＋'+(undone.length-1)+' 項）':''}</div>`:''}
@@ -7069,7 +7309,7 @@ function tripPickDist(r){
   renderTrip();
 }
 // 候選：未排行程(無 nextdate)且在「同區」或「順路走廊」上的
-//   ①有未完成待辦 ②未拜訪 ③成交客戶(有租賃品項，可能有配送/關懷需求)
+//   ①有未完成待辦 ②待拜訪 ③成交客戶(有租賃品項，可能有配送/關懷需求)
 function tripSuggestions(tripDists){
   if(!tripDists.size)return [];
   const onway=tripOnTheWay(tripDists);
@@ -7084,7 +7324,7 @@ function tripSuggestions(tripDists){
     const undone=tripUndoneTodos(c);
     let why,whyIcon,pri;
     if(undone.length){why='有待辦';whyIcon='';pri=0;}
-    else if(!c.status||c.status===STATUS.UNVISITED){why='未拜訪';whyIcon='';pri=1;}
+    else if(displayStatus(c.status)===STATUS.PLAN){why='待拜訪';whyIcon='';pri=1;}
     else if(c.status===STATUS.DEAL&&(c.contractedItems||[]).length){why='成交客戶';whyIcon='';pri=2;}
     else return;
     out.push({c,i,region,where,why,whyIcon,pri});
@@ -7121,11 +7361,11 @@ function consumeIzHandoff(){
     }
     if(!h.id||!h.name)return;
     if(DB.clients.some(c=>c&&c.id===h.id))return;
-    // 從 izcrm 建檔的客戶已電訪過 → 狀態＝初訪，並補一筆拜訪紀錄滿足不變式（status≠未拜訪 ⇒ 有 visit）
+    // 從 izcrm 建檔的客戶已電訪過 → 階段＝開發中，並補一筆拜訪紀錄滿足不變式（status≠待拜訪 ⇒ 有 visit）
     const c={id:h.id,name:String(h.name),contact:String(h.contact||''),phone:String(h.phone||''),
-      addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.FIRST,regNo:'',nextdate:'',env:'',
+      addr:String(h.addr||''),type:'工廠',segment:'工廠',status:STATUS.DEV,regNo:'',nextdate:'',env:'',
       note:String(h.note||''),trials:[],contractedItems:[],todos:[],
-      visits:[{date:today(),mood:0,note:'',insight:'(工業區CRM 轉入)',statusChange:STATUS.FIRST,nextdate:null}],
+      visits:[{date:today(),mood:0,note:'',insight:'(工業區CRM 轉入)',statusChange:STATUS.DEV,nextdate:null}],
       lat:null,lng:null,geocodeSource:null,updatedAt:Date.now()};
     DB.clients.push(c);n++;
     autoSync('save',{client:c});
@@ -7152,7 +7392,7 @@ function consumeSiteHandoff(){
     if(h.siteId&&DB.clients.some(c=>c&&c.srcSiteId===h.siteId))return; // 主系統端已轉過同一工地
     const hasGeo=(typeof h.lat==='number'&&typeof h.lng==='number');
     const c={id:h.id,name:String(h.name||h.addr),contact:'',phone:'',
-      addr:String(h.addr||''),type:String(h.type||''),segment:'街邊店',srcSiteId:String(h.siteId||''),status:STATUS.UNVISITED,regNo:'',
+      addr:String(h.addr||''),type:String(h.type||''),segment:'街邊店',srcSiteId:String(h.siteId||''),status:STATUS.PLAN,regNo:'',
       nextdate:String(h.nextdate||''),env:'',note:String(h.note||''),
       trials:[],contractedItems:[],todos:[],visits:[],
       lat:hasGeo?h.lat:null,lng:hasGeo?h.lng:null,
@@ -7226,7 +7466,7 @@ function mainConvertSite(siteId){
   const hasGeo=(typeof s.lat==='number'&&typeof s.lng==='number');
   const c={id:genId(),name:s.name||addr||'工地新店',contact:'',phone:'',
     addr,type:(s.type&&s.type!=='不確定')?s.type:'',segment:'街邊店',srcSiteId:siteId,
-    status:STATUS.UNVISITED,regNo:'',nextdate:s.openDate||'',env:'',
+    status:STATUS.PLAN,regNo:'',nextdate:s.openDate||'',env:'',
     note:['（工地地圖轉入）',s.stage||'',s.note||''].filter(Boolean).join('　'),
     trials:[],contractedItems:[],todos:[],visits:[],
     lat:hasGeo?s.lat:null,lng:hasGeo?s.lng:null,
@@ -7274,7 +7514,7 @@ function prepareGeocodeFields(){
 const MIGRATIONS=[
   {v:1, desc:'backfill visits', fn:backfillVisits},
   {v:2, desc:'normalize inventory schema', fn:normalizeInventory},
-  {v:3, desc:'normalize 已結案→拒絕', fn:normalizeClosed},
+  {v:3, desc:'normalize 已結案（已併入 v13 packStage）', fn:function(){}},
   {v:4, desc:'backfill client ids', fn:backfillClientIds},
   {v:5, desc:'backfill inventory cat', fn:backfillInventoryCat},
   {v:6, desc:'remove deprecated fw4 field', fn:removeDeprecatedFw4},
@@ -7296,6 +7536,13 @@ const MIGRATIONS=[
     const added=ensureProductBaseline();
     saveLocal();autoSync('saveProducts',{products:DB.products});
     if(added.length)console.info('[migration v12] 補回商品：'+added.join('、'));
+  }},
+  // 九狀態 → 五階段（待拜訪／開發中／試用／成約／擱置）＋已報價／已轉交欄位。不重推上雲、不動 updatedAt：
+  // 每個資料進入點都會做同樣的轉換（packStage），雲端那份會隨著補資料與日常編輯逐筆更新
+  {v:13, desc:'five stages', fn:function(){
+    packAllTrials(DB.clients);
+    if(packAllStages(DB.clients))saveLocal();
+    try{localStorage.removeItem('status_filter');}catch(e){}
   }},
 ];
 function applyPriceSheet2026(){
@@ -7342,8 +7589,9 @@ function applyPriceSheet2026(){
     }
   }
 })();
-autoAddRecycleTodos();validateClients();consumeIzHandoff();consumeSiteHandoff();renderClients();
-setTimeout(()=>{checkQuoteFollowups().catch(()=>{});},800);   // 報價一週未回覆的提醒（等畫面先出來）
+autoAddRecycleTodos();validateClients();wakeShelved();consumeIzHandoff();consumeSiteHandoff();renderClients();
+// 等畫面先出來：先問報價追蹤，再跳補資料（缺評價／需求判斷／擱置理由的店，直到填完）
+setTimeout(()=>{checkQuoteFollowups().catch(()=>{}).then(()=>openFill());},800);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkQuoteFollowups().catch(()=>{});});
 // ═══ 首頁深連結（home.html 樞紐 → index.html#daily / #trip / #new …）═══
 (function(){
@@ -9267,7 +9515,7 @@ if(location.search.includes('test=1')){
   // 地墊不論 cycle 一律算 2W 原價（公司預設客戶 2W 換）
   const rc4={trials:T([{product:'DECSR',qty:2,cycle:'4W'}])};
   assert('calcReportAmt 地墊強制 2W 不打折', calcReportAmt(rc4), 340*2);
-  assert('calcReportAmt 已回收的試用不算', calcReportAmt({status:'報價',trials:T([{product:'S-20',qty:1,cycle:'2W'}],false)}), 0);
+  assert('calcReportAmt 已回收的試用不算', calcReportAmt({status:'試用',quoted:true,trials:T([{product:'S-20',qty:1,cycle:'2W'}],false)}), 0);
   assert('trialItemsOf 已回收仍回最近一次（客戶卡估算用）', trialItemsOf({trials:T([{product:'S-20',qty:1,cycle:'2W'}],false)}).length, 1);
   assert('openTrialItems 只回進行中', openTrialItems({trials:T([{product:'S-20',qty:1}],false)}).length, 0);
   assert('currentTrial 進行中優先', currentTrial({trials:[{n:1,open:false,items:[]},{n:2,open:true,items:[]}]}).n, 2);
@@ -9288,12 +9536,12 @@ if(location.search.includes('test=1')){
 
   // --- calcAdminMetrics ---
   const adminClients=[
-    {status:'試用中',trials:T([{product:'S-20',qty:1,cycle:'2W'}]),contractedItems:[]},   // 試用 200
-    {status:'報價',trials:T([{product:'DECSR',qty:1,cycle:'4W'}]),contractedItems:[]},     // 試用 340（進行中）
-    {status:'已成約',trials:[],contractedItems:[{product:'S-20',qty:1,quoted:500}]},     // 成約 500
-    {status:'已成約',trials:[],contractedItems:[{product:'S-20',qty:2,quoted:0}]},       // 成約 fallback 200*2=400
-    {status:'未拜訪',trials:[],contractedItems:[]},                                       // 不算
-    {status:'拒絕',trials:T([{product:'S-20',qty:5}]),contractedItems:[]}                   // 不算
+    {status:'試用',trials:T([{product:'S-20',qty:1,cycle:'2W'}]),contractedItems:[]},   // 試用 200
+    {status:'試用',quoted:true,trials:T([{product:'DECSR',qty:1,cycle:'4W'}]),contractedItems:[]},     // 試用 340（進行中）
+    {status:'成約',trials:[],contractedItems:[{product:'S-20',qty:1,quoted:500}]},     // 成約 500
+    {status:'成約',trials:[],contractedItems:[{product:'S-20',qty:2,quoted:0}]},       // 成約 fallback 200*2=400
+    {status:'待拜訪',trials:[],contractedItems:[]},                                       // 不算
+    {status:'擱置',trials:T([{product:'S-20',qty:5}]),contractedItems:[]}                   // 不算
   ];
   const m=calcAdminMetrics(adminClients);
   assert('calcAdminMetrics 試用軒數', m.trialShop, 2);
@@ -9415,8 +9663,38 @@ if(location.search.includes('test=1')){
 
 
   // --- displayStatus ---
-  assert('displayStatus 空→未拜訪', displayStatus(''), STATUS.UNVISITED);
-  assert('displayStatus 試用中→試用中', displayStatus(STATUS.TRIAL), STATUS.TRIAL);
+  assert('displayStatus 空→待拜訪', displayStatus(''), STATUS.PLAN);
+  assert('displayStatus 試用→試用', displayStatus(STATUS.TRIAL), STATUS.TRIAL);
+  // --- packStage：舊九狀態 → 五階段＋欄位 ---
+  {
+    const mk=(status,extra)=>{const c=Object.assign({status,trials:[],visits:[]},extra||{});packStage(c);return c;};
+    assert('packStage 未拜訪→待拜訪', mk('未拜訪').status, '待拜訪');
+    assert('packStage 空→待拜訪', mk('').status, '待拜訪');
+    assert('packStage 初訪→開發中', mk('初訪').status, '開發中');
+    assert('packStage 複訪→開發中', mk('複訪').status, '開發中');
+    const q1=mk('報價',{trials:T([{product:'S-20',qty:1}],false)});
+    assert('packStage 報價（有試用）→試用＋已報價', q1.status+'|'+q1.quoted, '試用|true');
+    const q2=mk('報價');
+    assert('packStage 報價（沒試用）→開發中＋已報價', q2.status+'|'+q2.quoted, '開發中|true');
+    assert('packStage 試用中→試用未報價', statusLabel(mk('試用中')), '試用（未報價）');
+    assert('packStage 已成約→待轉交', statusLabel(mk('已成約')), '成約（待轉交）');
+    assert('packStage 已轉交→已轉交', statusLabel(mk('已轉交')), '成約（已轉交）');
+    const r=mk('拒絕',{visits:[{date:'2026-01-10',statusChange:'初訪'},{date:'2026-02-01',statusChange:'拒絕'}]});
+    assert('packStage 拒絕→擱置，擱置日＝最後拜訪', r.status+'|'+r.shelvedAt, '擱置|2026-02-01');
+    assert('packStage 拜訪紀錄一併轉換', r.visits.map(v=>v.statusChange).join(','), '開發中,擱置');
+    const qv=mk('複訪',{visits:[{date:'2026-01-10',statusChange:'報價'}]});
+    assert('packStage 拜訪紀錄 報價→quoted 記號', String(qv.visits[0].quoted)+'|'+qv.visits[0].statusChange, 'true|null');
+    assert('packStage 冪等', packStage(r), false);
+    assert('missingFields 待拜訪不用填', missingFields(mk('未拜訪')).join(','), '');
+    assert('missingFields 開發中缺評價與需求', missingFields(mk('初訪')).join(','), 'tier,need');
+    assert('missingFields 擱置缺評價與理由', missingFields(r).join(','), 'tier,reason');
+    assert('missingFields 填完就不缺', missingFields({status:'開發中',tier:2,need:'未定'}).join(','), '');
+    assert('wakeDateFor 一級 4 個月', wakeDateFor({tier:1,shelvedAt:'2026-01-15'}), '2026-05-15');
+    assert('wakeDateFor 二級 8 個月', wakeDateFor({tier:2,shelvedAt:'2026-01-15'}), '2026-09-15');
+    assert('wakeDateFor 三級不提醒', wakeDateFor({tier:3,shelvedAt:'2026-01-15'}), '');
+    const cv={visits:[{date:'2026-01-05'},{date:'2026-01-12',quoted:true},{date:'2026-01-20',statusChange:'試用'},{date:'2026-02-01',statusChange:'擱置'},{date:'2026-01-08'}]};
+    assert('rptVisitAction 初複報試拒', cv.visits.map(v=>rptVisitAction(cv,v)).join(''), '初報試拒複');
+  }
 
   // --- trialStartDate ---
   assert('trialStartDate 有進行中試用 → 其開始日', trialStartDate({trials:[{n:1,start:'2026-01-15',open:true,items:[]}]}), '2026-01-15');
@@ -9440,30 +9718,33 @@ if(location.search.includes('test=1')){
   assert('calcReportAmt 只看試用 - 忽略 quoted', calcReportAmt(testClient2), 200);
   const testClient3={trials:[],fw4:500};
   assert('calcReportAmt 只看試用 - 不用 c.fw4', calcReportAmt(testClient3), 0);
-  const testClient4={status:STATUS.REFUSE,trials:T([{product:'S-20',qty:1}])};
+  const testClient4={status:STATUS.SHELVED,trials:T([{product:'S-20',qty:1}])};
   assert('calcReportAmt 拒絕→0（不算試用）', calcReportAmt(testClient4), 0);
 
   // --- matchCategory ---
   const mcTrial={status:STATUS.TRIAL,visits:[{date:'2026-01-01'}],trials:T([{product:'S-20',qty:1,quoted:0}]),contractedItems:[]};
-  const mcUnvisited={status:STATUS.UNVISITED,visits:[],trials:[],contractedItems:[]};
+  const mcUnvisited={status:STATUS.PLAN,visits:[],trials:[],contractedItems:[]};
   const mcDeal={status:STATUS.DEAL,visits:[{date:'2026-01-01'}],trials:[],contractedItems:[{product:'S-20',qty:1}]};
-  const mcRefuse={status:STATUS.REFUSE,visits:[{date:'2026-01-01'}],trials:[],contractedItems:[]};
+  const mcRefuse={status:STATUS.SHELVED,visits:[{date:'2026-01-01'}],trials:[],contractedItems:[]};
   const origCat=activeCat;const origRegion=activeRegion;const origSub=activeStatusSub;
-  activeCat='試用回收';activeStatusSub='';
-  assert('matchCategory 試用回收-是(試用中)',matchCategory(mcTrial),true);
-  assert('matchCategory 試用回收-不是(未拜訪)',matchCategory(mcUnvisited),false);
-  assert('matchCategory 試用回收-不是(已成約)',matchCategory(mcDeal),false);
-  activeCat='未拜訪';activeRegion='';
-  assert('matchCategory 未拜訪-是',matchCategory(mcUnvisited),true);
-  assert('matchCategory 未拜訪-不是(有visit)',matchCategory(mcTrial),false);
+  activeCat='試用';activeStatusSub='';
+  assert('matchCategory 試用-是',matchCategory(mcTrial),true);
+  assert('matchCategory 試用-不是(待拜訪)',matchCategory(mcUnvisited),false);
+  assert('matchCategory 試用-不是(成約)',matchCategory(mcDeal),false);
+  activeCat='待拜訪';activeRegion='';
+  assert('matchCategory 待拜訪-是',matchCategory(mcUnvisited),true);
+  assert('matchCategory 待拜訪-不是(試用)',matchCategory(mcTrial),false);
+  activeCat='待轉交';
+  assert('matchCategory 待轉交-是',matchCategory(mcDeal),true);
+  assert('matchCategory 待轉交-已轉交不算',matchCategory({status:STATUS.DEAL,handoff:'done'}),false);
   activeCat='全部';activeStatusSub='';
   assert('matchCategory 全部-無 sub-成約',matchCategory(mcDeal),true);
-  assert('matchCategory 全部-無 sub-拒絕',matchCategory(mcRefuse),true);
+  assert('matchCategory 全部-無 sub-擱置',matchCategory(mcRefuse),true);
   activeStatusSub=STATUS.DEAL;
-  assert('matchCategory 全部+sub=已成約-是',matchCategory(mcDeal),true);
-  assert('matchCategory 全部+sub=已成約-不是',matchCategory(mcTrial),false);
-  activeStatusSub=STATUS.REFUSE;
-  assert('matchCategory 全部+sub=拒絕',matchCategory(mcRefuse),true);
+  assert('matchCategory 全部+sub=成約-是',matchCategory(mcDeal),true);
+  assert('matchCategory 全部+sub=成約-不是',matchCategory(mcTrial),false);
+  activeStatusSub=STATUS.SHELVED;
+  assert('matchCategory 全部+sub=擱置',matchCategory(mcRefuse),true);
   activeCat=origCat;activeRegion=origRegion;activeStatusSub=origSub;
 
   // --- getInventoryDiffs ---

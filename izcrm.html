@@ -743,7 +743,7 @@ window.delVisit=async i=>{
 
 /* ═══ 主系統連結 — 單向建檔＋更新同步＋唯讀鏡射 ═══
    建檔：把工廠基本資料（含預產 client id）寫進交接信箱 duskin_iz_handoff，
-   主系統啟動時用它自己的正規流程建客戶（狀態＝初訪）並上主系統雲端——izcrm 永不直接碰 DB/outbox。
+   主系統啟動時用它自己的正規流程建客戶（階段＝開發中）並上主系統雲端——izcrm 永不直接碰 DB/outbox。
    更新：已建檔工廠每次修改（窗口/備註/話題/反應…）排 {up:1,clientId,contact,phone,note}
    進同一信箱（同客戶合併為最新一筆），主系統消化後套用到客戶卡並上雲端。
    連結記在 r.main={clientId,at}（跟 izcrm 雲端同步 → 三裝置都知道已建檔）。
@@ -767,7 +767,7 @@ function mainLinkHtml(f,r){
   const undone=(c.todos||[]).filter(t=>!t.done).length;
   return '<div class="card" style="border-left:3px solid var(--green-b)">'+
     '<div class="rowline"><div class="grow" style="font-weight:600;font-size:13.5px">主系統客戶（唯讀鏡射）</div>'+
-    '<span class="badge" style="background:var(--green-l);color:var(--green-d)">'+esc(c.status||'未拜訪')+'</span></div>'+
+    '<span class="badge" style="background:var(--green-l);color:var(--green-d)">'+esc(c.status||'待拜訪')+'</span></div>'+
     '<div class="meta-line">'+
       (c.contact?'窗口 '+esc(c.contact)+'　':'')+(c.phone?''+esc(c.phone)+'　':'')+
       (lastV?'最近拜訪 '+esc(lastV.date):'尚未拜訪')+(undone?'　待辦 '+undone+' 項':'')+
@@ -807,7 +807,7 @@ window.linkToMain=async reason=>{
   const f=FID[CUR];if(!f)return;
   const r=recW(CUR);
   if(r.main&&r.main.clientId)return;
-  const ok=await appConfirm((reason||'')+'把「'+f.name+'」建檔到主系統？\n會帶入：名稱、地址、電話、窗口（前兩位）與開發摘要，狀態＝初訪。\n下次開啟主系統時自動完成建檔並上主系統雲端。',{okText:'建檔'});
+  const ok=await appConfirm((reason||'')+'把「'+f.name+'」建檔到主系統？\n會帶入：名稱、地址、電話、窗口（前兩位）與開發摘要，階段＝開發中。\n下次開啟主系統時自動完成建檔並上主系統雲端。',{okText:'建檔'});
   if(!ok)return;
   const cid=(crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const p=buildMainPayload(f,r);
