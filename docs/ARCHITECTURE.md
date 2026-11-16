@@ -295,6 +295,7 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
   plan:'YYYY-MM-DD'|'',     // 排在哪一天做（''＝未排）——使用者拖拉決定
   dueDate:'YYYY-MM-DD'|'',  // 期限（''＝沒有）——系統任務的固定期限，不因改排而變
   order, bumped,            // 當天順序；沒做完被自動結算回未排的次數
+  slot?:'am'|'noon'|'pm', time?:'HH:MM',   // 當日時間軸：在哪一段；使用者指定的時間（見「當日時間軸」）
   priority?:1|2|3, source?, trialN? }
 ```
 
@@ -321,6 +322,12 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 | `taskRecycleDue(x)`／`xLevelOn(due,on)`／`xDaysToNext` | 回收任務的回收日與公司逾期等級：到回收日 X、之後每 7 天多一個 X（與 `trialXInfo` 同一條規則）。卡片上的四格階梯以「排定那天」計，第四格 XXXX 是禁區；排到會 XXX 以上或超過期限的日子，投放區與面板按鈕轉紅 |
 
 - **刪除（`delGT`）**：使用者自己的任務真的移除；系統任務（有 `source`）改成 `done=true`——產生器靠「這個 source 已存在」判斷，拿掉會立刻補回來；`handoff`／`handoff-check` 不可刪。排程面板有「刪除」鈕，都帶復原。
+- **當日時間軸**（使用者 2026-11 指定）：當天那一欄是 `.bd-tl`——上班線 `DAY_START` 08:30 → 上午 → 午休區間 `NOON_START`–`NOON_END`（橘色 `--noon*`，可排任務）→ 下午 → 下班線 `DAY_END` 17:30；**線上只有時間、不寫字**。三段各是一個 `[data-list][data-slot=am|noon|pm]`。
+  - 任務多兩個欄位：`slot`（在哪一段，沒有＝上午）與 `time`（`'HH:MM'`，使用者指定才有）。一律經 `todoSlot(t)` 讀：有 `time` 時段由時間決定。
+  - `placeTask(k,date,idx,slot,msg)`：`idx` 是**段內**位置；`order` 仍是整天的連續順序（上午→午休→下午串起來重編）。有 `time` 的任務用 `timedIndex` 決定位置（有時間的之間照時間先後），不能拖（卡片是 `.timed`，把手換成 `.bd-pin` 時鐘鈕）。
+  - `setTaskTime(k,tm)`：指定／取消（`''`）；只收上班時間內。放回未排與 `settleTodos` 會清掉 `time`。
+  - 五天並排（≥960px）欄位太窄，收掉刻度欄（`--bd-gut:0`），時間看卡片上的「指定」標籤。
+  - 尚未做：指定時間同步成 Google 日曆的時段（目前仍是整天事件）。
 - 回收卡片與排程面板會列出要收回的試用品（`taskRecycleItems`：讀該次試用的 `items`，不存進待辦文字）。
 - 回收任務在**試用一開始**就產生（`autoAddRecycleTodos`，`renderGT` 開頭會呼叫），才排得進看板；`auto-quote` 仍是開始 7 天後。
 - **X 不看階段**：`trialXInfo` 與回收任務都只看「有沒有還沒回收的試用」，階段被改掉但東西還在客戶那邊一樣記 X。

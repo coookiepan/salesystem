@@ -625,6 +625,32 @@ body.bd-dragging .bd-extra{display:flex;grid-column:span 5;justify-content:cente
 .bd-col.sel{display:block}
 .bd-col h2,.bd-tray h2{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:8px}
 .bd-col h2 .n,.bd-tray h2 .n{color:var(--text3);font-weight:600}
+/* 當日時間軸：上班線 → 上午 → 午休（橘色區間，上下各一條線）→ 下午 → 下班線。不寫字，只用線和顏色表示。
+   左邊窄欄（--bd-gut）是刻度：指定時間的任務顯示時間並釘在軸上（綠點），沒指定的只有空心點 */
+.bd-tl{--bd-gut:52px;position:relative;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.bd-tl::before{content:"";position:absolute;left:calc(var(--bd-gut) - 1px);top:0;bottom:0;width:2px;background:var(--track)}
+.bd-mark{position:relative;height:30px;display:flex;align-items:center}
+.bd-mark .t{width:var(--bd-gut);text-align:right;padding-right:11px;font-size:12.5px;font-weight:700;color:var(--text)}
+.bd-mark::after{content:"";position:absolute;left:var(--bd-gut);right:0;top:50%;height:2px;margin-top:-1px;background:var(--text)}
+.bd-mark::before{content:"";position:absolute;left:calc(var(--bd-gut) - 5px);top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--text);z-index:1}
+.bd-noon{background:var(--noon)}
+.bd-noon .bd-mark::after,.bd-noon .bd-mark::before{background:var(--noon-line)}
+.bd-noon .bd-mark .t{color:var(--noon-ink)}
+.bd-tl .bd-list{padding:8px 10px 8px calc(var(--bd-gut) + 12px);min-height:60px;border-radius:0}
+.bd-tl .bd-list.over{outline:0;background:color-mix(in srgb,var(--green) 8%,transparent)}
+.bd-tl .bd-list.empty::after{border:0;padding:12px 0;text-align:left}
+.bd-noon .bd-list.empty::after{color:var(--noon-ink)}
+.bd-tick{position:absolute;left:calc(-12px - var(--bd-gut));width:var(--bd-gut);top:50%;transform:translateY(-50%);text-align:right;padding-right:11px;font-size:12.5px;font-weight:700;color:var(--green-d);pointer-events:none}
+.bd-tick::after{content:"";position:absolute;right:-4px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--bg);border:2px solid var(--border2);box-sizing:border-box}
+.bd-noon .bd-tick::after{background:var(--noon)}
+.bd-card.timed .bd-tick::after{background:var(--green);border-color:var(--green)}
+.bd-card.timed{border-color:var(--green);box-shadow:inset 3px 0 0 var(--green)}
+.bd-pin{border:0;background:none;width:40px;height:44px;border-radius:8px;display:grid;place-items:center;color:var(--green-d);align-self:center;cursor:pointer}
+.bd-pin svg{width:20px;height:20px}
+.bd-tag.pin{background:var(--green-l);color:var(--green-d)}
+.bd-time{display:flex;gap:8px;align-items:flex-end}
+.bd-time .f{flex:1;margin:0}
+.bd-time input{font-family:var(--font-num);font-weight:700}
 .bd-list{display:flex;flex-direction:column;gap:8px;min-height:56px;border-radius:var(--r)}
 .bd-list.empty::after{content:attr(data-empty);display:block;border:1.5px dashed var(--border2);border-radius:var(--r);padding:16px;text-align:center;color:var(--text3);font-size:13px}
 .bd-list.over{outline:2px dashed var(--green);outline-offset:4px}
@@ -688,6 +714,12 @@ body.bd-dragging{-webkit-user-select:none;user-select:none}
   .bd-col{display:block;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:10px}
   .bd-col.sel{border-color:var(--theme)}
   .bd-col .bd-card{background:var(--bg2)}
+  /* 五天並排時欄位太窄，收掉刻度欄：時間改看卡片上的「指定」標籤，線和午休色帶照舊 */
+  .bd-tl{--bd-gut:0px;border:0;border-radius:var(--r);background:none}
+  .bd-tl::before,.bd-tick,.bd-mark::before,.bd-mark .t{display:none}
+  .bd-tl .bd-list{padding:8px 0}
+  .bd-noon{border-radius:var(--r-sm)}
+  .bd-noon .bd-list{padding:8px 6px}
 }
 @media(prefers-reduced-motion:reduce){.bd-day,.bd-card,.bd-gauge i{transition:none}}
 </style>
@@ -1781,7 +1813,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.16-t6';
+const APP_VERSION='v2026.11.16-t7';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -7155,27 +7187,46 @@ function showTraySortRules(){appAlert(TRAY_SORT_RULES.map((r,i)=>(i+1)+'. '+r).j
 // 自動結算：過了排定那天還沒做完 → 回到未排，記一次順延。啟動與回到前景時跑
 function settleTodos(){
   const td=today();let n=0;const touched=new Set();
-  boardTasks().forEach(x=>{const t=x.t;if(t.done||!t.plan||t.plan>=td)return;t.plan='';t.bumped=(t.bumped||0)+1;n++;if(x.c)touched.add(x.c);});
+  boardTasks().forEach(x=>{const t=x.t;if(t.done||!t.plan||t.plan>=td)return;t.plan='';t.time='';t.bumped=(t.bumped||0)+1;n++;if(x.c)touched.add(x.c);});
   if(!n)return 0;
   touched.forEach(c=>{c.updatedAt=Date.now();autoSync('save',{client:c});});
   saveLocal();showToast(n+' 件沒做完的待辦回到未排');
   return n;
 }
 let BD={sel:'',filter:'all'};
+// ── 當日時間軸（使用者 2026-11 指定）：08:30 上班、12:00–13:00 午休（可排任務）、17:30 下班 ──
+// 任務在一天裡分三段（slot：am 上午｜noon 午休｜pm 下午），段內照 order。預設只排順序；
+// 使用者指定了時間（t.time='HH:MM'）才釘在軸上：所在段由時間決定，有時間的任務之間一律照時間先後，不能拖（點卡片改時間）。
+const DAY_START='08:30',NOON_START='12:00',NOON_END='13:00',DAY_END='17:30';
+const DAY_SLOTS=['am','noon','pm'];
+function slotOfTime(tm){return tm<NOON_START?'am':tm<NOON_END?'noon':'pm';}
+function todoSlot(t){return t.time?slotOfTime(t.time):(DAY_SLOTS.includes(t.slot)?t.slot:'am');}
+// 有時間的任務要插在哪：排在第一個「時間比它晚」的前面；沒有就排在最後一個「時間比它早」的後面；段裡沒有別的指定時間就用 fallback
+function timedIndex(l,tm,fallback){
+  const i=l.findIndex(y=>y.t.time&&y.t.time>tm);if(i>=0)return i;
+  let j=-1;l.forEach((y,k)=>{if(y.t.time&&y.t.time<=tm)j=k;});
+  return j>=0?j+1:fallback;
+}
 function dayList(all,d){return all.filter(x=>x.t.plan===d).sort((a,b)=>((a.t.done?1:0)-(b.t.done?1:0))||((a.t.order||0)-(b.t.order||0)));}
 // 把任務排到某一天的第 idx 位（date=''＝放回未排）。只有順序真的變了的任務才寫回
-function placeTask(k,date,idx){
+// slot＝放進哪一段（省略＝維持原本那段，新排進來的放上午）；idx＝段內第幾位（省略＝段尾）。msg＝取代預設提示
+function placeTask(k,date,idx,slot,msg){
   const x=boardFind(k);if(!x)return;
   const t=x.t,touched=new Set();
   t.plan=date||'';
   if(x.c)touched.add(x.c);
   if(date){
-    const l=dayList(boardTasks(),date).filter(y=>y.t!==t&&!y.t.done);
-    l.splice(idx==null?l.length:Math.max(0,Math.min(idx,l.length)),0,x);
-    l.forEach((y,i)=>{if(y.t.order!==i){y.t.order=i;if(y.c)touched.add(y.c);}});
+    const sl=t.time?slotOfTime(t.time):(DAY_SLOTS.includes(slot)?slot:todoSlot(t));
+    t.slot=sl;
+    const rest=dayList(boardTasks(),date).filter(y=>y.t!==t&&!y.t.done);
+    const segs=DAY_SLOTS.map(s=>rest.filter(y=>todoSlot(y.t)===s)),l=segs[DAY_SLOTS.indexOf(sl)];
+    let i=idx==null?l.length:Math.max(0,Math.min(idx,l.length));
+    if(t.time)i=timedIndex(l,t.time,i);
+    l.splice(i,0,x);
+    [].concat(...segs).forEach((y,n)=>{if(y.t.order!==n){y.t.order=n;if(y.c)touched.add(y.c);}});
     const due=taskRecycleDue(x),lv=due?xLevelOn(due,date):0;
-    showToast(lv>=1?(lv>=3?'注意：':'')+bdMD(date)+' 去收會是 '+'X'.repeat(lv)+(lv>=4?'（不可以！）':''):!due&&t.dueDate&&date>t.dueDate?'注意：這天已經超過期限 '+bdMD(t.dueDate):'排到 '+bdWD(date)+' '+bdMD(date));
-  }else showToast('放回未排');
+    showToast(msg?msg:lv>=1?(lv>=3?'注意：':'')+bdMD(date)+' 去收會是 '+'X'.repeat(lv)+(lv>=4?'（不可以！）':''):!due&&t.dueDate&&date>t.dueDate?'注意：這天已經超過期限 '+bdMD(t.dueDate):'排到 '+bdWD(date)+' '+bdMD(date));
+  }else{t.time='';showToast('放回未排');}
   touched.forEach(c=>{c.updatedAt=Date.now();autoSync('save',{client:c});});
   saveLocal();_gtRefresh();
 }
@@ -7183,9 +7234,19 @@ function bdXLadder(due,on){
   const lv=xLevelOn(due,on);
   return '<span class="bd-xl" role="img" aria-label="回收逾期等級 '+lv+' / 4">'+[1,2,3,4].map(i=>'<i class="'+(i<=lv?'on':'')+(i===4?' ban':'')+'">'+'X'.repeat(i)+'</i>').join('')+'</span>';
 }
+// 指定或取消時間（''＝取消）。同一段裡沒有別的指定時間時，留在原本的位置
+function setTaskTime(k,tm){
+  const x=boardFind(k);if(!x||!x.t.plan)return;
+  if(tm&&(tm<DAY_START||tm>DAY_END)){showToast('請選上班時間內（'+DAY_START+'–'+DAY_END+'）');return;}
+  const t=x.t,old=todoSlot(t);
+  const l=dayList(boardTasks(),t.plan).filter(y=>!y.t.done&&todoSlot(y.t)===old),at=l.findIndex(y=>y.t===t);
+  t.time=tm||'';
+  placeTask(k,t.plan,todoSlot(t)===old&&at>=0?at:null,todoSlot(t),tm?'已釘在 '+tm:'已取消指定時間，可以自由拖動');
+}
 function bdTags(x,on){
   const t=x.t,out=[],reg=x.c&&t.type==='visit'?parseRegion(x.c.addr):'';
   out.push('<span class="bd-tag">'+TODO_TYPES[t.type]+(reg?'・'+escHtml(reg):'')+'</span>');
+  if(t.time&&t.plan)out.push('<span class="bd-tag pin num">指定 '+t.time+'</span>');
   if(x.c&&TIERS.includes(x.c.tier))out.push('<span class="bd-tag num">'+x.c.tier+' 級</span>');
   if(t.priority)out.push('<span class="pflag p'+t.priority+'">P'+t.priority+'</span>');
   const due=taskRecycleDue(x);
@@ -7202,10 +7263,13 @@ function bdTags(x,on){
 }
 function bdCard(x,ord,inDay,on){
   const t=x.t,who=x.c?x.c.name:'一般';
-  return '<div class="bd-card'+(t.done?' done':'')+'" data-k="'+x.k+'">'+
+  const pinned=inDay&&t.time&&!t.done;   // 釘在時間軸上：不給拖，點時鐘改時間
+  return '<div class="bd-card'+(t.done?' done':'')+(inDay&&t.time?' timed':'')+'" data-k="'+x.k+'">'+
+    (inDay?'<span class="bd-tick num">'+(t.time||'')+'</span>':'')+
     (inDay?'<div class="bd-lead"><input type="checkbox" class="bd-ck" '+(t.done?'checked':'')+' onchange="togGT(\''+x.src+'\','+x.ci+','+x.ti+')" aria-label="完成 '+escHtml(who)+' '+escHtml(t.text)+'">'+(ord?'<span class="bd-ord num" title="當天順序">'+ord+'</span>':'')+'</div>':'')+
     '<div class="bd-body" tabindex="0" role="button" aria-label="安排 '+escHtml(who)+' '+escHtml(t.text)+'"><div class="bd-shop">'+escHtml(who)+'</div><div class="bd-ttl">'+escHtml(t.text)+'</div>'+bdItems(x)+'<div class="bd-tags">'+bdTags(x,on)+'</div></div>'+
-    '<button class="bd-grip" aria-label="拖曳 '+escHtml(who)+'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button></div>';
+    (pinned?'<button class="bd-pin" aria-label="改時間 '+escHtml(who)+'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button>'
+      :'<button class="bd-grip" aria-label="拖曳 '+escHtml(who)+'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>')+'</div>';
 }
 function renderGT(){
   const root=document.getElementById('gt-list');if(!root)return;
@@ -7229,7 +7293,9 @@ function renderGT(){
   const cols='<div class="bd-cols">'+days.map(d=>{
     const l=dayList(all,d),open=l.filter(x=>!x.t.done).length;let vi=0;
     return '<section class="bd-col'+(d===BD.sel?' sel':'')+'"><h2>'+(d===td?'今天':bdWD(d))+' '+bdMD(d)+' <span class="n num">'+l.length+'</span></h2>'+
-      '<div class="bd-list'+(l.length?'':' empty')+'" data-list="'+d+'" data-empty="這天還沒排，從下面把任務拖上來">'+l.map(x=>bdCard(x,x.t.type==='visit'&&!x.t.done?++vi:0,true,d)).join('')+'</div>'+
+      (()=>{const seg=s=>{const sl=l.filter(x=>todoSlot(x.t)===s);return '<div class="bd-list'+(sl.length?'':' empty')+'" data-list="'+d+'" data-slot="'+s+'" data-empty="'+(!l.length&&s==='am'?'這天還沒排，從下面把任務拖上來':'')+'">'+sl.map(x=>bdCard(x,x.t.type==='visit'&&!x.t.done?++vi:0,true,d)).join('')+'</div>';};
+        const mark=tm=>'<div class="bd-mark"><span class="t num">'+tm+'</span></div>';
+        return '<div class="bd-tl">'+mark(DAY_START)+seg('am')+'<div class="bd-noon">'+mark(NOON_START)+seg('noon')+mark(NOON_END)+'</div>'+seg('pm')+mark(DAY_END)+'</div>';})()+
       '<div class="bd-settle">'+(l.length?'完成 <b class="num">'+(l.length-open)+'</b>・沒做完 <b class="num">'+open+'</b>。過了這天還沒做完的，會自動回到未排。':'')+'</div></section>';
   }).join('')+'</div>';
   const unp=all.filter(x=>!x.t.done&&!x.t.plan),tray=unp.filter(x=>BD.filter==='all'||x.t.type===BD.filter).sort(trayCompare(td));
@@ -7291,10 +7357,11 @@ function bdHit(cx,cy){
   const tile=el&&el.closest('#panel-todos [data-drop]');
   // 放在清單外圍（當天那一欄的標題或最下面的空白）也算放進那個清單——拖到最下面不必瞄準最後一張卡片
   const box=el&&el.closest('#panel-todos .bd-col,#panel-todos .bd-tray');
-  const list=el&&(el.closest('#panel-todos [data-list]')||(box&&box.querySelector('[data-list]')));
+  let list=el&&el.closest('#panel-todos [data-list]');
+  if(!list&&box){const ls=[...box.querySelectorAll('[data-list]')];list=ls.find(q=>e.clientY<=q.getBoundingClientRect().bottom)||ls[ls.length-1]||null;}
   if(tile){
     const day=tile.dataset.drop,x=boardFind(d.k);
-    d.target=day;d.idx=null;d.has=true;tile.classList.add('over');
+    d.target=day;d.idx=null;d.slot=null;d.has=true;tile.classList.add('over');
     if(day&&x){const due=taskRecycleDue(x);if((due&&xLevelOn(due,day)>=3)||(x.t.dueDate&&day>x.t.dueDate))tile.classList.add('late-drop');}
     // 手機上停在某一天 0.6 秒，下面就切到那一天，可以接著拖進清單裡排順序
     if(day&&d.hover!==day){d.hover=day;clearTimeout(d.timer);d.timer=setTimeout(()=>{if(BD_DRAG===d&&d.hover===day&&BD.sel!==day){BD.sel=day;renderGT();bdGhost();}},600);}
@@ -7303,13 +7370,13 @@ function bdHit(cx,cy){
     const day=list.dataset.list;d.target=day;d.has=true;
     const cards=[...list.querySelectorAll('.bd-card:not(.ghosted):not(.done)')];
     let i=cards.findIndex(c=>{const r=c.getBoundingClientRect();return e.clientY<r.top+r.height/2;});if(i<0)i=cards.length;
-    d.idx=day?i:null;list.classList.add('over');
+    d.idx=day?i:null;d.slot=list.dataset.slot||null;list.classList.add('over');
     if(day){const s=document.createElement('div');s.className='bd-slot';list.insertBefore(s,cards[i]||list.querySelector('.bd-card.done')||null);}
   }else{d.has=false;d.hover=null;clearTimeout(d.timer);}
 }
 function bdEndDrag(apply){
   const d=BD_DRAG;if(!d)return;BD_DRAG=null;clearTimeout(d.timer);cancelAnimationFrame(d.raf);d.f.remove();document.body.classList.remove('bd-dragging');bdClearMarks();
-  if(apply&&d.has)placeTask(d.k,d.target,d.idx);else renderGT();
+  if(apply&&d.has)placeTask(d.k,d.target,d.idx,d.slot);else renderGT();
 }
 document.addEventListener('pointerup',()=>bdEndDrag(true));
 document.addEventListener('pointercancel',()=>bdEndDrag(false));
@@ -7317,7 +7384,7 @@ document.addEventListener('click',e=>{
   if(!e.target.closest||!e.target.closest('#panel-todos'))return;
   const tile=e.target.closest('.bd-day[data-drop]');
   if(tile&&tile.dataset.drop){BD.sel=tile.dataset.drop;renderGT();return;}
-  const body=e.target.closest('.bd-body');if(body)openBdSheet(body.closest('.bd-card').dataset.k);
+  const body=e.target.closest('.bd-body,.bd-pin');if(body)openBdSheet(body.closest('.bd-card').dataset.k);
 });
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('bd-body')){e.preventDefault();openBdSheet(e.target.closest('.bd-card').dataset.k);}});
 // 點卡片：不想拖的時候直接選哪一天（手機上的備用方式），也從這裡進編輯或開客戶
@@ -7329,6 +7396,7 @@ function openBdSheet(k){
   bg.innerHTML='<div class="bd-sheet" role="dialog" aria-label="安排日期"><div><div class="bd-shop" style="font-size:17px">'+escHtml(x.c?x.c.name:'一般')+'</div><div class="bd-ttl">'+escHtml(t.text)+'</div>'+bdItems(x)+'<div class="bd-tags">'+bdTags(x,t.plan||td)+'</div></div>'+
     '<div class="bd-pick">'+days.map(d=>{const bad=(due&&xLevelOn(due,d)>=3)||(t.dueDate&&d>t.dueDate);return '<button data-go="'+d+'" class="'+(t.plan===d?'cur':'')+(bad?' bad':'')+'">'+(d===td?'今天':bdWD(d))+'<span class="num">'+bdMD(d)+'</span></button>';}).join('')+'</div>'+
     '<div class="f" style="margin:0"><label class="lbl" for="bd-other">排到其他日期</label><input id="bd-other" type="date" min="'+td+'" value="'+(t.plan&&!days.includes(t.plan)?t.plan:'')+'"></div>'+
+    (t.plan?'<div class="bd-time"><div class="f"><label class="lbl" for="bd-time">指定時間（沒指定就只排順序）</label><input id="bd-time" type="time" min="'+DAY_START+'" max="'+DAY_END+'" step="300" value="'+(t.time||'')+'"></div><button class="btn btn-primary btn-sm" data-act="time">確定</button>'+(t.time?'<button class="btn btn-outline btn-sm" data-act="untime">取消指定</button>':'')+'</div>':'')+
     (due?'<button class="btn btn-primary" data-act="recover">已回收</button>':'')+
     '<div class="bd-row"><button class="btn btn-outline btn-sm" data-go="">放回未排</button><button class="btn btn-outline btn-sm" data-act="edit">編輯</button>'+(x.c?'<button class="btn btn-outline btn-sm" data-act="client">開啟客戶</button>':'')+'<button class="btn btn-danger btn-sm" data-act="del">刪除</button><button class="btn btn-outline btn-sm" data-act="close">關閉</button></div></div>';
   bg.addEventListener('click',ev=>{
@@ -7336,6 +7404,8 @@ function openBdSheet(k){
     if(ev.target!==bg&&!b)return;
     bg.remove();
     if(!b)return;
+    if(b.dataset.act==='time'){const v=bg.querySelector('#bd-time').value;if(v)setTaskTime(k,v);return;}
+    if(b.dataset.act==='untime'){setTaskTime(k,'');return;}
     if(b.dataset.go!==undefined)placeTask(k,b.dataset.go,null);
     else if(b.dataset.act==='recover')openRecoverModal(t.trialN||1,x.ci);
     else if(b.dataset.act==='del')delGT(x.src,x.ci,x.ti);
