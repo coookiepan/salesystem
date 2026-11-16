@@ -295,6 +295,7 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
   plan:'YYYY-MM-DD'|'',     // 排在哪一天做（''＝未排）——使用者拖拉決定
   dueDate:'YYYY-MM-DD'|'',  // 期限（''＝沒有）——系統任務的固定期限，不因改排而變
   order, bumped,            // 當天順序；沒做完被自動結算回未排的次數
+  slot?:'am'|'noon'|'pm', time?:'HH:MM',   // 當日時間軸：在哪一段；使用者指定的時間（見「當日時間軸」）
   priority?:1|2|3, source?, trialN? }
 ```
 
@@ -314,12 +315,19 @@ trial: { n:1, start:'2026-05-10', due:'2026-05-24', items:[…], open:true, reco
 | `boardTasks()`／`boardFind(k)` | 全部任務（客戶的＋一般的），每筆帶所屬客戶與位置；卡片的 `data-k`＝`src:ci:ti` |
 | `placeTask(k,date,idx)` | 排到某天第 `idx` 位（`''`＝放回未排）。只有 `order` 真的變了的任務才寫回並同步。拖放與排程面板都走這裡 |
 | 拖曳 | 按住卡片的 `.bd-grip`（`touch-action:none`，Pointer Events）。`body.bd-dragging` 時日期軌長高成投放區；停在某天 0.6 秒會切到那天，可接著拖進清單插到指定位置（＝當天順序）。日期軌 sticky 在分頁列正下方（`--bd-top` 由 `renderGT` 量出） |
+| 邊緣自動捲動 | 拖曳中 `bdAutoScroll`（rAF）依 `bdScrollSpeed(y)` 捲動頁面：手指進到底部導覽上方 `BD_EDGE` px 內往下、日期軌正下方 `BD_EDGE` px 內往上；捲動後用最後的手指位置重跑 `bdHit` 更新落點。卡片與日期格 `user-select:none`，拖曳不會反白文字 |
 | `openBdSheet(k)` | 點卡片的備用方式：五天按鈕、其他日期、放回未排、編輯、開啟客戶。回收任務多一顆「已回收」→ `openRecoverModal(n, ci)`（帶 `ci` 表示從看板開，完成後留在看板）；回收結果多一個 `''`＝只記已回收、階段不動 |
 | `settleTodos()` | **自動結算**：`plan` 早於今天且沒做完 → `plan=''`、`bumped+1`。啟動與回到前景時跑。完成的留在當天 |
 | `traySortKey(x,td)`／`TRAY_SORT_RULES` | **未排的排序依據**（使用者確認；要改只改這裡，畫面「排序依據」讀同一份文字）：① 回收任務最前（X 等級高 → 離下一個 X 近）② 有期限的（期限近）③ 沒期限的；同組內 P 旗標 → 評價 → 順延次數 |
 | `taskRecycleDue(x)`／`xLevelOn(due,on)`／`xDaysToNext` | 回收任務的回收日與公司逾期等級：到回收日 X、之後每 7 天多一個 X（與 `trialXInfo` 同一條規則）。卡片上的四格階梯以「排定那天」計，第四格 XXXX 是禁區；排到會 XXX 以上或超過期限的日子，投放區與面板按鈕轉紅 |
 
 - **刪除（`delGT`）**：使用者自己的任務真的移除；系統任務（有 `source`）改成 `done=true`——產生器靠「這個 source 已存在」判斷，拿掉會立刻補回來；`handoff`／`handoff-check` 不可刪。排程面板有「刪除」鈕，都帶復原。
+- **當日時間軸**（使用者 2026-11 指定）：當天那一欄是 `.bd-tl`——上班線 `DAY_START` 08:30 → 上午 → 午休區間 `NOON_START`–`NOON_END`（橘色 `--noon*`，可排任務）→ 下午 → 下班線 `DAY_END` 17:30；**線上只有時間、不寫字**。三段各是一個 `[data-list][data-slot=am|noon|pm]`。
+  - 任務多兩個欄位：`slot`（在哪一段，沒有＝上午）與 `time`（`'HH:MM'`，使用者指定才有）。一律經 `todoSlot(t)` 讀：有 `time` 時段由時間決定。
+  - `placeTask(k,date,idx,slot,msg)`：`idx` 是**段內**位置；`order` 仍是整天的連續順序（上午→午休→下午串起來重編）。有 `time` 的任務用 `timedIndex` 決定位置（有時間的之間照時間先後），不能拖（卡片是 `.timed`，把手換成 `.bd-pin` 時鐘鈕）。
+  - `setTaskTime(k,tm)`：指定／取消（`''`）；只收上班時間內。放回未排與 `settleTodos` 會清掉 `time`。
+  - 五天並排（≥960px）欄位太窄，收掉刻度欄（`--bd-gut:0`），時間看卡片上的「指定」標籤。
+  - 尚未做：指定時間同步成 Google 日曆的時段（目前仍是整天事件）。
 - 回收卡片與排程面板會列出要收回的試用品（`taskRecycleItems`：讀該次試用的 `items`，不存進待辦文字）。
 - 回收任務在**試用一開始**就產生（`autoAddRecycleTodos`，`renderGT` 開頭會呼叫），才排得進看板；`auto-quote` 仍是開始 7 天後。
 - **X 不看階段**：`trialXInfo` 與回收任務都只看「有沒有還沒回收的試用」，階段被改掉但東西還在客戶那邊一樣記 X。

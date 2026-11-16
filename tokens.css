@@ -24,6 +24,8 @@
   --red:#8F1A11;--red-l:#FBE9E5;--red-b:#E6B2A9;
   --amber:#9A5100;--amber-l:#FAEEDD;--amber-b:#E3BF8C;
   --blue:#175A99;--blue-l:#E4EDF7;--blue-b:#A7C4E3;
+  /* ── 午休區間（當日時間軸）：柔和的橘，是「時段」不是急迫度，所以不用 --amber ── */
+  --noon:#FDF0DF;--noon-line:#E9A458;--noon-ink:#8A4A00;
   /* ── 商品類別（分類，不是狀態）───────────────────────── */
   --purple-l:#EBE9FB;--purple-d:#3B3390;
   /* ── 墨與紙 ────────────────────────────────────────── */
@@ -58,6 +60,7 @@
     --red:#F08A79;--red-l:#38150F;--red-b:#5A2A22;
     --amber:#E3A23F;--amber-l:#33240E;--amber-b:#5A4420;
     --blue:#8FC0F2;--blue-l:#112636;--blue-b:#2A3F58;
+    --noon:#2B1F10;--noon-line:#A86D2C;--noon-ink:#EDB368;
     --purple-l:#1F1D38;--purple-d:#C5C0FA;
     --shadow-sm:none;--shadow:none;
     --shadow-md:0 4px 14px rgba(0,0,0,.5);--shadow-lg:0 14px 36px rgba(0,0,0,.6);

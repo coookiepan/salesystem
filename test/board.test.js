@@ -121,6 +121,37 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   assert('留在看板（不跳到客戶頁），未排裡不再有這張', doc.getElementById('panel-todos').classList.contains('on') && !shops('.bd-tray').some(x => x.startsWith('快到期店/回收')));
   assert('不再記 X', w.trialXInfo(by('b')) === null);
 
+  console.log('B1 — 當日時間軸：時段與指定時間');
+  {
+    const td = w.today(), ci = DB.clients.findIndex(c => c.id === 'c');
+    by('c').todos.push({ text: '軸甲', done: false, type: 'visit', plan: '', dueDate: '' }, { text: '軸乙', done: false, type: 'online', plan: '', dueDate: '' }, { text: '軸丙', done: false, type: 'misc', plan: '', dueDate: '' });
+    const k = n => 'c:' + ci + ':' + by('c').todos.findIndex(t => t.text === n), T = n => todo('c', n);
+    const seq = () => w.boardTasks().filter(x => x.t.plan === td && !x.t.done && /^軸/.test(x.t.text)).sort((a, b) => a.t.order - b.t.order).map(x => x.t.text + ':' + w.todoSlot(x.t)).join(' ');
+    w.placeTask(k('軸甲'), td, null); w.placeTask(k('軸乙'), td, null); w.placeTask(k('軸丙'), td, null);
+    assert('新排進來的任務預設在上午', seq() === '軸甲:am 軸乙:am 軸丙:am', seq());
+    const tl = doc.querySelector('.bd-col.sel .bd-tl');
+    assert('時間軸有四條線、三段清單、午休區間；線上只有時間沒有字', tl.querySelectorAll('.bd-mark').length === 4 && tl.querySelectorAll('[data-slot]').length === 3 && !!tl.querySelector('.bd-noon [data-slot="noon"]') && [...tl.querySelectorAll('.bd-mark')].map(m => m.textContent).join(',') === '08:30,12:00,13:00,17:30');
+    w.placeTask(k('軸乙'), td, 0, 'noon');
+    assert('拖進午休', T('軸乙').slot === 'noon' && seq() === '軸甲:am 軸丙:am 軸乙:noon', seq());
+    w.setTaskTime(k('軸甲'), '14:00');
+    assert('指定 14:00 → 移到下午並釘住', T('軸甲').time === '14:00' && seq() === '軸丙:am 軸乙:noon 軸甲:pm', seq());
+    const card = doc.querySelector('.bd-card[data-k="' + k('軸甲') + '"]');
+    assert('釘住的卡片沒有拖曳把手，改成時鐘鈕，左邊顯示時間', card.classList.contains('timed') && !card.querySelector('.bd-grip') && !!card.querySelector('.bd-pin') && card.querySelector('.bd-tick').textContent === '14:00');
+    w.setTaskTime(k('軸丙'), '13:30');
+    assert('有時間的任務之間照時間先後', seq() === '軸乙:noon 軸丙:pm 軸甲:pm', seq());
+    w.placeTask(k('軸乙'), td, 2, 'pm');
+    assert('沒指定時間的可以排在它們後面', seq() === '軸丙:pm 軸甲:pm 軸乙:pm', seq());
+    w.setTaskTime(k('軸甲'), '07:00');
+    assert('上班時間外的時間不收', T('軸甲').time === '14:00');
+    w.openBdSheet(k('軸甲'));
+    assert('面板可改時間與取消指定', doc.querySelector('#bd-time').value === '14:00' && !!doc.querySelector('#bd-sheet [data-act="untime"]'));
+    doc.querySelector('#bd-sheet [data-act="untime"]').click();
+    assert('取消指定 → 留在原段、恢復可拖', !T('軸甲').time && w.todoSlot(T('軸甲')) === 'pm' && !!doc.querySelector('.bd-card[data-k="' + k('軸甲') + '"] .bd-grip'));
+    w.placeTask(k('軸丙'), '', null);
+    assert('放回未排 → 指定時間清掉', !T('軸丙').time && !T('軸丙').plan);
+    ['軸甲', '軸乙', '軸丙'].forEach(n => { by('c').todos.splice(by('c').todos.findIndex(t => t.text === n), 1); }); w.renderGT();
+  }
+
   console.log('B1 — 看板直接刪除');
   {
     const src = (id, source) => by(id).todos.find(t => t.source === source && !t.done);
