@@ -646,6 +646,8 @@ body.bd-dragging .bd-extra{display:flex;grid-column:span 5;justify-content:cente
 .bd-tag.due{background:var(--amber-l);color:var(--amber)}
 .bd-tag.late{background:var(--red-l);color:var(--red)}
 .bd-tag.cool{background:var(--blue-l);color:var(--blue)}
+.bd-card,.bd-day{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.bd-dragging{-webkit-user-select:none;user-select:none}
 .bd-grip{touch-action:none;cursor:grab;border:0;background:none;width:40px;height:44px;border-radius:8px;display:grid;place-items:center;color:var(--text3);align-self:center}
 .bd-grip:active{cursor:grabbing;background:var(--bg3)}
 .bd-grip svg{width:18px;height:18px}
@@ -1779,7 +1781,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.15-t5';
+const APP_VERSION='v2026.11.16-t6';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=4;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -7253,15 +7255,43 @@ document.addEventListener('pointerdown',e=>{
   const card=g.closest('.bd-card'),r=card.getBoundingClientRect();
   e.preventDefault();try{g.setPointerCapture(e.pointerId);}catch(_){}
   const f=card.cloneNode(true);f.classList.add('bd-float');f.style.width=r.width+'px';f.style.left=r.left+'px';f.style.top=r.top+'px';document.body.appendChild(f);
-  BD_DRAG={k:card.dataset.k,f,dx:e.clientX-r.left,dy:e.clientY-r.top,target:null,idx:null,hover:null,timer:null};
+  BD_DRAG={k:card.dataset.k,f,dx:e.clientX-r.left,dy:e.clientY-r.top,x:e.clientX,y:e.clientY,target:null,idx:null,hover:null,timer:null,raf:0};
+  try{const sel=window.getSelection();if(sel)sel.removeAllRanges();}catch(_){}
   bdGhost();
 });
+// 拖到畫面邊緣自動捲動：手指靠近底部（底部導覽上方）往下捲、貼在日期軌正下方往上捲；越靠邊越快。
+// 捲動時手指沒動也要重算落點，所以落點判斷抽成 bdHit，由 pointermove 與捲動迴圈共用
+const BD_EDGE=90;
+function bdScrollSpeed(y){
+  const rail=document.getElementById('bd-rail'),nav=document.getElementById('global-nav');
+  const top=rail?rail.getBoundingClientRect().bottom:0;
+  const bot=nav?nav.getBoundingClientRect().top:window.innerHeight;
+  if(y>bot-BD_EDGE)return Math.ceil(Math.min(1,(y-(bot-BD_EDGE))/BD_EDGE)*18);
+  if(y>top&&y<top+BD_EDGE)return -Math.ceil(Math.min(1,(top+BD_EDGE-y)/BD_EDGE)*18);
+  return 0;
+}
+function bdAutoScroll(){
+  const d=BD_DRAG;if(!d){return;}
+  const v=bdScrollSpeed(d.y);
+  if(v){const y0=window.scrollY;window.scrollBy(0,v);if(window.scrollY!==y0)bdHit(d.x,d.y);}
+  d.raf=requestAnimationFrame(bdAutoScroll);
+}
 document.addEventListener('pointermove',e=>{
   const d=BD_DRAG;if(!d)return;
+  d.x=e.clientX;d.y=e.clientY;
   d.f.style.left=(e.clientX-d.dx)+'px';d.f.style.top=(e.clientY-d.dy)+'px';
+  if(!d.raf)d.raf=requestAnimationFrame(bdAutoScroll);
+  bdHit(e.clientX,e.clientY);
+});
+function bdHit(cx,cy){
+  const d=BD_DRAG;if(!d)return;
+  const e={clientX:cx,clientY:cy};
   bdClearMarks();
   const el=document.elementFromPoint(e.clientX,e.clientY);
-  const tile=el&&el.closest('#panel-todos [data-drop]'),list=el&&el.closest('#panel-todos [data-list]');
+  const tile=el&&el.closest('#panel-todos [data-drop]');
+  // 放在清單外圍（當天那一欄的標題或最下面的空白）也算放進那個清單——拖到最下面不必瞄準最後一張卡片
+  const box=el&&el.closest('#panel-todos .bd-col,#panel-todos .bd-tray');
+  const list=el&&(el.closest('#panel-todos [data-list]')||(box&&box.querySelector('[data-list]')));
   if(tile){
     const day=tile.dataset.drop,x=boardFind(d.k);
     d.target=day;d.idx=null;d.has=true;tile.classList.add('over');
@@ -7276,9 +7306,9 @@ document.addEventListener('pointermove',e=>{
     d.idx=day?i:null;list.classList.add('over');
     if(day){const s=document.createElement('div');s.className='bd-slot';list.insertBefore(s,cards[i]||list.querySelector('.bd-card.done')||null);}
   }else{d.has=false;d.hover=null;clearTimeout(d.timer);}
-});
+}
 function bdEndDrag(apply){
-  const d=BD_DRAG;if(!d)return;BD_DRAG=null;clearTimeout(d.timer);d.f.remove();document.body.classList.remove('bd-dragging');bdClearMarks();
+  const d=BD_DRAG;if(!d)return;BD_DRAG=null;clearTimeout(d.timer);cancelAnimationFrame(d.raf);d.f.remove();document.body.classList.remove('bd-dragging');bdClearMarks();
   if(apply&&d.has)placeTask(d.k,d.target,d.idx);else renderGT();
 }
 document.addEventListener('pointerup',()=>bdEndDrag(true));
