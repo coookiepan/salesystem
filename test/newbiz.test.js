@@ -55,4 +55,62 @@ assert.strictEqual(floorOf('臺南市東區某路1號地下1樓'), '1樓');
 assert.strictEqual(floorOf('臺南市東區某路1號'), '未標示');
 assert.strictEqual(rocToIso('115/06/01'), '2026-06-01');
 
+
+// ── 寫進試算表的列：只留我的區、非 C 級 ──
+const { toRows, sanity, lastMonthRoc } = require('../tools/newbiz/parse.js');
+const rows = toRows(recs, '11510');
+assert.deepStrictEqual(rows.map(r => r.ban), ['00000001', '00000004'], '工程行、中西區、只做網路的都不進試算表');
+assert.deepStrictEqual(Object.keys(rows[0]), ['ban', 'name', 'addr', 'district', 'kind', 'grade', 'date', 'floor', 'items', 'owner', 'ym']);
+assert.strictEqual(rows[0].date, '2026-10-21');
+assert.ok(/只解析出/.test(sanity(recs)), '筆數太少要擋下');
+const big = Array.from({ length: 60 }, (_, i) => ({ seq: i + 1, ban: String(10000000 + i), addr: '臺南市東區測試路1號', date: '115/10/01', items: [{ code: 'F501060', name: '餐館業' }] }));
+assert.strictEqual(sanity(big), '');
+big[30].seq = 99;
+assert.ok(/序號不連續/.test(sanity(big)));
+assert.strictEqual(lastMonthRoc(new Date('2026-11-05T21:10:00Z')), '11510', 'UTC 5 日 21:10＝臺灣 6 日 05:10');
+assert.strictEqual(lastMonthRoc(new Date('2027-01-05T21:10:00Z')), '11512', '跨年');
+
+// ── 後端：importNewbiz／getNewbiz／markNewbiz（從 index.html 抽出 APPS_SCRIPT_CODE，用假的試算表跑）──
+const fs = require('fs'), path = require('path');
+const code = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').match(/const APPS_SCRIPT_CODE=`([\s\S]*?)`;/)[1];
+const grid = [];   // grid[r][c]，0 起算；第 0 列是表頭
+let maxRows = 3;
+const sheet = {
+  getLastRow() { return grid.length; }, getMaxRows() { return maxRows; },
+  insertRowsAfter(_, n) { maxRows += n; }, setFrozenRows() {},
+  getRange(r, c, nr, nc) {
+    nr = nr || 1; nc = nc || 1;
+    const api = {
+      getValues() { return Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => (grid[r - 1 + i] || [])[c - 1 + j] ?? '')); },
+      setValues(v) { if (r - 1 + nr > maxRows) throw new Error('超出分頁列數'); v.forEach((row, i) => { grid[r - 1 + i] = grid[r - 1 + i] || []; row.forEach((x, j) => { grid[r - 1 + i][c - 1 + j] = x; }); }); return api; },
+      setValue(x) { return api.setValues([[x]]); },
+      setNumberFormat() { return api; },
+    };
+    return api;
+  },
+};
+let made = null;
+const SpreadsheetApp = { getActiveSpreadsheet() { return { getSheetByName(n) { return n === 'newbiz' ? made : null; }, insertSheet() { made = sheet; return sheet; } }; } };
+const Maps = { newGeocoder() { return { setLanguage() { return this; }, setRegion() { return this; },
+  geocode(a) { return /查無/.test(a) ? { status: 'ZERO_RESULTS', results: [] } : { status: 'OK', results: [{ geometry: { location: { lat: 23, lng: 120.2 }, location_type: 'ROOFTOP' }, formatted_address: a }] }; } }; } };
+const gas = new Function('SpreadsheetApp', 'Maps', code + '\n;return {importNewbiz,getNewbiz,markNewbiz,BACKEND_VER};')(SpreadsheetApp, Maps);
+assert.ok(gas.BACKEND_VER >= 5);
+const more = [rows[0], rows[1], Object.assign({}, rows[1], { ban: '00000009', name: '測試查無地址店', addr: '臺南市東區查無路9號' })];
+let r1 = gas.importNewbiz(more);
+assert.deepStrictEqual([r1.added, r1.updated, r1.geocoded, r1.noGeo, r1.total], [3, 0, 2, 1, 3]);
+assert.strictEqual(grid[0][0], '統一編號');
+assert.strictEqual(grid[1][0], '00000001', '統編開頭的 0 要留著');
+let got = gas.getNewbiz().newbiz;
+assert.strictEqual(got.length, 3);
+assert.deepStrictEqual([got[0].ban, got[0].grade, got[0].lat, got[0].lng], ['00000001', 'A', 23, 120.2]);
+assert.strictEqual(got[2].lat, null, '查無座標的回 null，前端不上圖');
+gas.markNewbiz('00000004', 'skip');
+assert.deepStrictEqual(gas.getNewbiz().newbiz.map(x => x.ban), ['00000001', '00000009'], '略過的不再回傳');
+// 重跑同一個月：不重複、不洗掉「略過」、已有座標的不重查
+r1 = gas.importNewbiz(more.map(x => Object.assign({}, x, { kind: x.ban === '00000001' ? '餐飲改' : x.kind })));
+assert.deepStrictEqual([r1.added, r1.updated, r1.geocoded, r1.total], [0, 3, 0, 3]);
+assert.strictEqual(grid[2][13], 'skip');
+assert.strictEqual(gas.getNewbiz().newbiz[0].kind, '餐飲改');
+assert.deepStrictEqual(gas.markNewbiz('99999999', 'skip'), { ok: true, missing: true });
+
 console.log('newbiz.test.js OK');

@@ -118,4 +118,29 @@ function classify(rec) {
   });
 }
 
-module.exports = { MY_DISTRICTS, parseItemText, classify, floorOf, rocToIso };
+// 要寫進試算表 newbiz 分頁的列：只留我的區、且不是 C 級的。欄位名與後端 NEWBIZ_KEYS 一致。
+function toRows(recs, ym) {
+  return recs.map(classify).filter(r => r.mine && r.grade !== 'C').map(r => ({
+    ban: r.ban, name: r.name, addr: r.addr, district: r.district, kind: r.kind, grade: r.grade,
+    date: r.dateIso, floor: r.floor, items: r.itemText, owner: r.owner, ym: String(ym),
+  }));
+}
+
+// 清冊看起來不對就丟錯，寧可排程失敗也不要寫進半套資料。回傳問題描述，沒問題回空字串。
+function sanity(recs) {
+  if (recs.length < 50) return '只解析出 ' + recs.length + ' 筆（臺南市每月通常三百筆上下）';
+  if (!recs.every((r, i) => r.seq === i + 1)) return '序號不連續，可能漏列';
+  const bad = recs.filter(r => !/^\d{8}$/.test(r.ban) || !/^臺南市/.test(r.addr) || !r.date || !r.items.length).length;
+  if (bad > recs.length * 0.02) return bad + ' 筆缺統編、地址、設立日或營業項目，清冊版面可能改了';
+  return '';
+}
+
+// 上個月的民國年月（以臺灣時間為準），例如 2026-11-06 → '11510'。
+function lastMonthRoc(now) {
+  const tw = new Date((now || new Date()).getTime() + 8 * 3600 * 1000);
+  let y = tw.getUTCFullYear(), m = tw.getUTCMonth(); // getUTCMonth 是 0 起算，剛好等於「上個月」的月份數
+  if (m === 0) { y -= 1; m = 12; }
+  return String(y - 1911) + String(m).padStart(2, '0');
+}
+
+module.exports = { MY_DISTRICTS, parseItemText, classify, floorOf, rocToIso, toRows, sanity, lastMonthRoc };

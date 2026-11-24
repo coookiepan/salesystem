@@ -424,6 +424,7 @@ sequenceDiagram
 | `getShops` | 查詢頁的公司既有客戶名單 |
 | `syncCalendar` (`events`, `from`, `to`) | Google 日曆整份對齊（後端 v4；需日曆授權，見下方「Google 日曆同步」） |
 | `geocode` | Google Geocoder 代理（地圖定位主來源，免金鑰；失敗退 Nominatim） |
+| `getNewbiz` / `importNewbiz` (`rows`) / `markNewbiz` (`ban`, `status`) | 新登記商家（後端 v5，`newbiz` 分頁）：讀名單／每月匯入（以統編 upsert＋補定位）／標記略過。見「新登記商家」 |
 
 > ⚠ 後端程式碼變動屬「需要使用者重新部署」的更新——CHANGELOG 必須標註，並附 GUIDE.md 的重新部署步驟連結。
 
@@ -519,6 +520,28 @@ sequenceDiagram
 4. 若動到 `APPS_SCRIPT_CODE`：CHANGELOG 標註「需重新部署後端」並附操作連結
 
 ---
+
+## 新登記商家（`tools/newbiz`＋地圖「新登記」圖層）
+
+把經濟部每月的商業設立登記變成地圖上可以直接處理的點。資料單向流動，各段只認下一段的介面：
+
+```
+經濟部「商業設立登記營業項目清冊」PDF（每月 5 日產出上個月；網址規則固定，月份在 subPath）
+  → .github/workflows/newbiz.yml（臺灣時間每月 6、9 日 05:10；可手動指定月份）
+      curl 下載 → pdftotext -layout → node tools/newbiz/run.js
+  → tools/newbiz/parse.js（純函式）：拆欄位 → classify（行政區／樓層／業種／優先度）→ toRows
+  → 後端 importNewbiz：以統編 upsert 到 newbiz 分頁，沒有座標的列用 Maps 定位
+  → 前端 getNewbiz → NEWBIZ（快取 duskin_newbiz）→ 地圖「新登記」圖層
+```
+
+- **只進試算表的列**：`MY_DISTRICTS`（使用者跑的區）且優先度不是 C。A＝餐飲為主；C＝工程行、無人店、只登記網路銷售、樓上且非餐飲；其餘 B。規則全在 `parse.js`，改規則後重跑該月即可（upsert）。
+- **`sanity()`**：筆數太少、序號不連續、缺欄比例過高就讓排程失敗，不寫入半套資料。
+- **定位在後端做**：匯入時一次定位好，座標存在分頁的「緯度／經度」欄，前端不做 geocode（手機、電腦一致，開圖層不用等）。單次最多 200 秒，沒做完 `run.js` 會再送同一批（最多四趟）。
+- **使用者的兩個動作**都不改登記資料：
+  - 略過 → `markNewbiz` 把「狀態」欄寫成 `skip`，走 outbox（離線可按）；`getNewbiz` 不回傳 skip 的列。
+  - 建成客戶 → `newbizToClient` 走正規建檔（待拜訪、`regNo`＝統編、座標沿用）。圖層用「客戶的 `regNo` 對得上統編」判斷已建檔，不另存對應表。
+- **公開 repo 的界線**：名單（含負責人姓名）只存在試算表；`run.js` 與 workflow 的紀錄只印筆數。測試一律用自編資料。
+- **寫入口沒有另設密碼**：與前端相同，知道 Apps Script 網址才能呼叫；網址放在 GitHub secret `NEWBIZ_ENDPOINT`。
 
 ## 工地 ↔ 主系統：轉為客戶與回執信箱
 

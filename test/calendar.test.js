@@ -32,7 +32,7 @@ const D = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d)
   const api = new Function('CalendarApp', 'Utilities', 'Session', code + '\n;return {syncCalendar, BACKEND_VER};')(CalendarApp, Utilities, Session);
   const titles = () => store.map(e => ymd(e.getAllDayStartDate()) + '|' + e.getTitle()).sort().join(',');
 
-  assert('後端版本 4（有日曆功能）', api.BACKEND_VER === 4);
+  assert('後端版本 4 以上（有日曆功能）', api.BACKEND_VER >= 4);
   let r = api.syncCalendar([{ date: D(0), title: 'A' }, { date: D(3), title: 'B' }], D(0), D(60));
   assert('第一次：自動建立專用日曆、建 2 筆', createdCal === 1 && r.created === 2 && r.deleted === 0 && titles() === [D(0) + '|A', D(3) + '|B'].sort().join(','), titles());
   r = api.syncCalendar([{ date: D(0), title: 'A' }, { date: D(3), title: 'B' }], D(0), D(60));
