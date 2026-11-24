@@ -1042,7 +1042,7 @@ body.bd-dragging{-webkit-user-select:none;user-select:none}
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="daily-date" type="date" style="width:auto" onchange="renderDaily()">
     <button class="btn btn-outline btn-sm" onclick="openReportModal()">產出報表</button>
-    <button class="btn btn-outline btn-sm" onclick="openServeModal()">公司試用表比對</button>
+    <button class="btn btn-outline btn-sm" onclick="openServeModal()">公司報表比對</button>
   </div>
   <div class="stat-grid">
     <div class="scard"><div class="snum" id="ds-v">0</div><div class="slbl">拜訪軒數</div><div class="prog"><div class="prog-f" id="dp-v" style="width:0%"></div></div><div class="prog-hint">目標 15</div></div>
@@ -1264,15 +1264,22 @@ body.bd-dragging{-webkit-user-select:none;user-select:none}
 <div id="serve-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:16px">
   <div style="background:var(--bg);max-width:960px;margin:10px auto;border-radius:var(--radius);padding:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:17px;font-weight:700">公司試用表比對</div>
+      <div style="font-size:17px;font-weight:700">公司報表比對</div>
       <button class="btn btn-outline btn-sm" onclick="closeServeModal()">關閉</button>
     </div>
     <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px">
-      選公司系統下載的「SERVE別試用顧客一覽表」（.xlsx）。只比<b>未回收</b>的試用，已回收的不列入。App 只會<b>列出落差</b>，不會自動改你的資料；每一筆由你按「照公司的」才會更新。檔案只在這台手機上讀，不會上傳。
+      <b>試用</b>：選公司系統下載的「SERVE別試用顧客一覽表」（.xlsx）。只比<b>未回收</b>的試用，已回收的不列入。App 只會<b>列出落差</b>，不會自動改你的資料；每一筆由你按「照公司的」才會更新。檔案只在這台手機上讀，不會上傳。
     </div>
     <label class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;cursor:pointer">選擇檔案<input type="file" id="serve-file" accept=".xlsx,.xls" onchange="serveImportFile(this)" style="display:none"></label>
     <div id="serve-summary" style="font-size:13px;color:var(--text2);margin:10px 0"></div>
     <div id="serve-list"></div>
+    <div style="font-size:15px;font-weight:700;margin:22px 0 6px;padding-top:14px;border-top:1px solid var(--border)">成約／解約（SERVE別新規解約明細）</div>
+    <div style="font-size:12.5px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+      選公司系統下載的「SERVE別新規解約明細」（.xlsx）。公司這份只有每家店的金額、沒有商品，所以<b>既減／解約</b>由你勾是哪幾個品項不租了；<b>成約／既增</b>請開那家店自己補品項。一樣只列落差、不會自動改。
+    </div>
+    <label class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;cursor:pointer">選擇檔案<input type="file" id="deal-file" accept=".xlsx,.xls" onchange="dealImportFile(this)" style="display:none"></label>
+    <div id="deal-summary" style="font-size:13px;color:var(--text2);margin:10px 0"></div>
+    <div id="deal-list"></div>
   </div>
 </div>
 
@@ -1309,6 +1316,11 @@ body.bd-dragging{-webkit-user-select:none;user-select:none}
         三段內容請分別貼到 RS 模板：① 推進表貼 <b>A20</b>　② 未來兩週貼 <b>A74</b>　③ 本週日報貼 <b>A7</b>。<br>
         大客戶（4W ≥ 3000）會列在每段下方的提示，請在 Excel 中按住 Ctrl 點選那幾列再上色。Q2 專案請自行手動標色。
       </div>
+
+      <div class="form-section" style="margin-bottom:6px">
+        上半部數字 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（照抄公司報表的合計，含稅；到「公司報表比對」匯入）</span>
+      </div>
+      <div id="rpt-top" style="font-size:13px;line-height:1.9;margin-bottom:14px"></div>
 
       <div class="form-section" style="margin-bottom:6px">
         ① RS 推進表 <span style="font-weight:400;font-size:12.5px;color:var(--text3)">（貼到 A20，未回收試用＋區間內有拜訪試用品項的客戶，最多 50 列）</span>
@@ -1817,7 +1829,7 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.24-n2';
+const APP_VERSION='v2026.11.24-r1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
 const APPS_SCRIPT_CODE=`const BACKEND_VER=6;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
@@ -2425,7 +2437,7 @@ const NEED_LABEL={'有':'有需求','無':'沒需求','未定':'還看不出來'
 const TIERS=[1,2,3];
 const TIER_HINT={1:'被拒絕也要追',2:'中間',3:'小店・不急'};
 const WAKE_MONTHS={1:4,2:8};   // 擱置後幾個月喚醒；三級不主動提醒
-const SHELVE_REASONS=['沒需求','嫌貴','已有同業','決策者沒見到','時機不對','報價沒回覆','其他'];
+const SHELVE_REASONS=['沒需求','嫌貴','已有同業','決策者沒見到','時機不對','報價沒回覆','解約','其他'];
 const MOODS=['','差','普','好','優'];
 // 狀態配色＝「急迫度」，不是階段。三級明度分明（red 6.6% → blue 9.8% → amber 12.8%）＋
 // 無急迫度用無彩度 --text2 ＋成約用唯一的強調綠；階段本身由文字與階段軌（stageRail）表示。
@@ -2639,14 +2651,19 @@ function parseServeRows(rows){
     cur.items.push({code,qty:num(r[col['試用數']]),amt:num(r[col['試用金額']]),amt4w:num(r[col['4W試用金額']]),recovered:serveDate(r[col['回收日']]),contract:num(r[col['契約數']]),n:num(r[col['次數']])||1});
   });
   if(!orders.length)throw new Error('表格裡沒有試用單');
+  // 表頭下一列的三個合計（含已回收），RS 報告上半部照抄：「顧客試用軒數 : 20」「顧客試用金額 : 」14060「4W試用金額 : 」22020
+  const flat=rows.slice(hi+1,hi+4).map(r=>(r||[]).map(str).filter(Boolean).join(' ')).find(t=>/顧客試用軒數/.test(t))||'';
+  const pick=re=>{const m=flat.match(re);return m?Math.round(Number(m[1])):null;};
+  const totals={shops:pick(/顧客試用軒數\s*[:：]\s*([\d.]+)/),amt:pick(/顧客試用金額\s*[:：]\s*([\d.]+)/),amt4w:pick(/4W試用金額\s*[:：]\s*([\d.]+)/)};
   // 使用者指定：只擷取「未回收」的試用；已回收的不列入比對（skipped 只給摘要顯示略過了幾張）
   const open=orders.filter(o=>o.status==='未回收');
-  return {from:pm?serveDate(pm[1]):'',to:pm?serveDate(pm[2]):'',orders:open,skipped:orders.length-open.length};
+  return {from:pm?serveDate(pm[1]):'',to:pm?serveDate(pm[2]):'',orders:open,skipped:orders.length-open.length,totals};
 }
 function serveData(){try{return JSON.parse(localStorage.getItem('duskin_serve')||'null');}catch(e){return null;}}
 function serveAmt4w(o){return (o.items||[]).reduce((a,it)=>a+(it.amt4w||0),0);}
 function normPhone(p){return String(p||'').replace(/\D/g,'');}
-function normCorp(n){return normalizeName(n).replace(/股份有限公司|有限公司|企業社|商行|\s/g,'');}
+// 公司表的店名常帶括號備註（「(預付款)」「(發票合開)」），比對時連同公司字尾一起拿掉
+function normCorp(n){return normalizeName(String(n||'').replace(/[(（][^()（）]*[)）]/g,'')).replace(/股份有限公司|有限公司|企業社|商行|\s/g,'');}
 // 找這張單對應的客戶：顧客編號（配對過的）→ 電話唯一相同 → 名稱（去掉公司字尾）唯一相同
 function serveFindClient(o){
   const cs=(DB.clients||[]).filter(Boolean);
@@ -2756,12 +2773,13 @@ function serveLink(custNo,ci){
   const other=(DB.clients||[]).find(x=>x&&x!==c&&x.custNo&&String(x.custNo)===String(custNo));
   if(other)delete other.custNo;
   c.custNo=String(custNo);c.updatedAt=Date.now();
-  saveLocal();autoSync('save',{client:c});renderServe();
+  saveLocal();autoSync('save',{client:c});renderServe();renderDeal();
   showToast('✓ 已配對：'+c.name);
 }
 // 配不上的店：打字搜尋自己的客戶（店名／地址／電話／窗口），點結果就配對。只重畫這張卡的結果區，輸入框不會失焦
-function serveSearch(custNo){
-  const q=(document.getElementById('serve-q-'+custNo)||{}).value||'',box=document.getElementById('serve-r-'+custNo);
+function serveSearch(custNo,pfx){
+  pfx=pfx||'serve';
+  const q=(document.getElementById(pfx+'-q-'+custNo)||{}).value||'',box=document.getElementById(pfx+'-r-'+custNo);
   if(!box)return;
   const k=normalizeName(q).replace(/\s/g,''),kp=normPhone(q);
   if(!k){box.innerHTML='';return;}
@@ -2778,7 +2796,7 @@ function serveCreate(custNo){
   renderServe();renderClients();
   showToast('✓ 已建立「'+c.name+'」，下面逐筆補上它的試用');
 }
-function openServeModal(){document.getElementById('serve-modal').style.display='block';renderServe();}
+function openServeModal(){document.getElementById('serve-modal').style.display='block';renderServe();renderDeal();}
 function closeServeModal(){document.getElementById('serve-modal').style.display='none';}
 async function serveImportFile(input){
   const f=input.files&&input.files[0];input.value='';
@@ -2821,6 +2839,162 @@ function renderServe(){
     sec('兩邊都有、內容不一樣',by('diff').map(i=>card('amber',escHtml(i.c.name)+'（第 '+i.t.n+' 次）',i.diffs.map(escHtml).join('<br>'),
       `<button class="btn btn-primary btn-xs" onclick="serveApply('${escHtml(i.o.no)}')">照公司的更新</button>`)))+
     sec('你這邊還在試用、公司的未回收清單沒有（公司可能已記回收，或沒 key）',by('extra').map(i=>card('blue',escHtml(i.c.name)+'（第 '+i.t.n+' 次）','試用日 '+escHtml(i.t.start)+'・'+(i.t.open?'進行中':'已回收')+'<br>'+escHtml(trialMainKey(i.t)||'（無品項）'),'')));
+}
+// ═══ 公司新規解約明細比對 ═══ 匯入公司系統的「SERVE別新規解約明細」，和本機的成約品項對照。
+// 公司表一列一筆異動，只有店家層級的金額（4 週換算營業額，含稅），沒有商品明細：
+//   區分＝新成約／既增／既減（含「同一商品既減」）／解約；表尾有新契／變更／解約／淨增四個合計。
+// 本機的對應：增加＝期間內成約的品項（contractDate）；減少＝期間內終止的品項（endDate）。一家店的增、減各比一次合計。
+// 原則同試用表：只列落差、不自動改；減少與解約由使用者選品項按「照公司的」，增加因為公司沒給品項，只帶去那家店自己補。
+function dealKind(s){s=String(s||'');return /解約/.test(s)?'cancel':/減/.test(s)?'dec':/增/.test(s)?'inc':/新/.test(s)?'new':'';}
+const DEAL_LABEL={new:'成約',inc:'既增',dec:'既減',cancel:'解約'};
+function parseDealRows(rows){
+  rows=rows||[];
+  const str=v=>String(v==null?'':v).trim();
+  const hi=rows.findIndex(r=>{const t=(r||[]).map(str);return t.includes('區分')&&t.includes('顧客編號')&&t.some(x=>/^4週換算營業額/.test(x));});
+  if(hi<0)throw new Error('這不是「SERVE別新規解約明細」：找不到「區分／顧客編號／4週換算營業額」欄');
+  const H=(rows[hi]||[]).map(str),col=n=>H.findIndex(x=>x===n||(n==='4週換算營業額'&&/^4週換算營業額/.test(x)));
+  const iK=col('區分'),iD=col('建檔日期'),iE=col('解約日期'),iNo=col('顧客編號'),iN=col('顧客名稱'),iA=col('4週換算營業額');
+  if([iD,iN].some(i=>i<0))throw new Error('表格缺少欄位：建檔日期或顧客名稱');
+  const head=rows.slice(0,hi).map(r=>(r||[]).map(str).join(' ')).join(' ');
+  const pm=head.match(/日期[：:]\s*(\d{4}\/\d{1,2}\/\d{1,2})\s*~\s*(\d{4}\/\d{1,2}\/\d{1,2})/);
+  const entries=[],totals={};
+  let grand=false;
+  rows.slice(hi+1).forEach(r=>{
+    r=(r||[]);const t=r.map(str);
+    if(t.includes('總合計'))grand=true;
+    // 合計列：標籤的右邊第一個數字。有「總合計」區塊就以它為準（多位業務員時才會和小計不同）
+    [['新契合計','new'],['變更合計','change'],['解約合計','cancel'],['淨增','net']].forEach(([lab,k])=>{
+      const i=t.indexOf(lab);if(i<0)return;
+      const v=r.slice(i+1).find(x=>str(x)!==''&&!isNaN(Number(x)));
+      if(v!==undefined&&(grand||totals[k]===undefined))totals[k]=Math.round(Number(v));
+    });
+    const kind=dealKind(t[iK]),no=t[iNo];
+    if(!kind||!/^\d{4,}$/.test(no))return;
+    entries.push({kind,raw:t[iK],date:serveDate(r[iD]),endDate:iE>=0?serveDate(r[iE]):'',custNo:no,name:t[iN],amt:Math.round(Number(r[iA])||0)});
+  });
+  if(!entries.length&&totals.net===undefined)throw new Error('表格裡沒有任何異動');
+  return {from:pm?serveDate(pm[1]):'',to:pm?serveDate(pm[2]):'',entries,totals};
+}
+function dealData(){try{return JSON.parse(localStorage.getItem('duskin_deal')||'null');}catch(e){return null;}}
+// 本機在期間內的增與減（含稅 4W）
+function dealMine(c,from,to){
+  const inR=d=>!!d&&d>=from&&d<=to,sum=l=>l.reduce((a,it)=>a+itemFW4(it),0);
+  const all=((c&&c.contractedItems)||[]).filter(it=>it&&it.product);
+  return {add:sum(all.filter(it=>inR(it.contractDate))),end:sum(all.filter(it=>inR(it.endDate)))};
+}
+// kind：nomatch 配不上店｜noadd 公司有成約／既增、你沒記｜adddiff 增加的金額不同｜noend 公司有既減／解約、你沒記｜enddiff 減少的金額不同
+//       ｜extraadd 你記了成約、公司沒有｜extraend 你記了終止、公司沒有
+function dealDiff(data){
+  const out={issues:[],okShops:0,shops:0};
+  if(!data||!data.entries)return out;
+  const groups=new Map();
+  data.entries.forEach(e=>{
+    if(!groups.has(e.custNo))groups.set(e.custNo,{custNo:e.custNo,name:e.name,add:0,end:0,addDate:'',endDate:'',cancel:false,labels:[]});
+    const g=groups.get(e.custNo);
+    if(e.kind==='new'||e.kind==='inc'){g.add+=e.amt;if(!g.addDate||e.date<g.addDate)g.addDate=e.date;}
+    else{g.end+=Math.abs(e.amt);const d=e.endDate||e.date;if(!g.endDate||d>g.endDate)g.endDate=d;if(e.kind==='cancel')g.cancel=true;}
+    g.labels.push(DEAL_LABEL[e.kind]+' '+(e.amt>0?'+':'')+e.amt);
+  });
+  out.shops=groups.size;
+  const seen=new Map(),near=(a,b)=>Math.abs(a-b)<=1;
+  groups.forEach(g=>{
+    const c=serveFindClient({custNo:g.custNo,name:g.name,phone:''});
+    if(!c){out.issues.push({kind:'nomatch',g,cands:serveCandidates({name:g.name})});return;}
+    seen.set(c,g);
+    const m=dealMine(c,data.from,data.to),before=out.issues.length;
+    if(g.add>0&&!m.add)out.issues.push({kind:'noadd',c,g,m});
+    else if(g.add>0&&!near(g.add,m.add))out.issues.push({kind:'adddiff',c,g,m});
+    if(g.end>0&&!m.end)out.issues.push({kind:'noend',c,g,m});
+    else if(g.end>0&&!near(g.end,m.end))out.issues.push({kind:'enddiff',c,g,m});
+    if(!g.add&&m.add)out.issues.push({kind:'extraadd',c,m});
+    if(!g.end&&m.end)out.issues.push({kind:'extraend',c,m});
+    if(out.issues.length===before)out.okShops++;
+  });
+  (DB.clients||[]).forEach(c=>{
+    if(!c||seen.has(c))return;
+    const m=dealMine(c,data.from,data.to);
+    if(m.add)out.issues.push({kind:'extraadd',c,m});
+    if(m.end)out.issues.push({kind:'extraend',c,m});
+  });
+  return out;
+}
+// 「照公司的」減少：把勾選的成約品項（連配件）填上終止日＝公司的日期。all=true 是解約，全部終止並轉擱置。
+function dealEnd(custNo,all){
+  const data=dealData();const is=dealDiff(data).issues.find(i=>i.kind==='noend'&&i.g.custNo===String(custNo));
+  if(!is)return;
+  const c=is.c,g=is.g,mains=liveContracted(c).filter(it=>it.product&&!it.bundledTo);
+  const picked=all?mains:mains.filter((it,k)=>{const el=document.getElementById('deal-ck-'+g.custNo+'-'+k);return el&&el.checked;});
+  if(!picked.length){showToast('先勾選是哪幾個品項不租了');return;}
+  const date=g.endDate||today();
+  (c.contractedItems||[]).forEach(it=>{if(it&&!it.endDate&&(picked.includes(it)||picked.some(p=>it.bundledTo===p.product)))it.endDate=date;});
+  const cancelled=cancelIfAllEnded(c);
+  syncHandoffTodo(c);
+  c.custNo=g.custNo;c.updatedAt=Date.now();
+  saveLocal();autoSync('save',{client:c});
+  renderDeal();renderClients();
+  showToast('✓ 已照公司的'+(cancelled?'記為解約（轉擱置）':'終止 '+picked.length+' 個品項')+'：'+c.name);
+}
+function dealCreate(custNo){
+  const data=dealData();const e=data&&data.entries.find(x=>x.custNo===String(custNo));if(!e)return;
+  const c={id:genId(),name:e.name,contact:'',phone:'',regNo:'',addr:'',type:'',segment:'街邊店',status:STATUS.PLAN,custNo:e.custNo,
+    nextdate:'',env:'',note:'',trials:[],contractedItems:[],todos:[],visits:[],updatedAt:Date.now()};
+  DB.clients.push(c);saveLocal();autoSync('save',{client:c});
+  renderDeal();renderClients();
+  showToast('✓ 已建立「'+c.name+'」，請開這家店補上成約品項');
+}
+function dealOpenClient(ci){closeServeModal();openCD(ci);}
+async function dealImportFile(input){
+  const f=input.files&&input.files[0];input.value='';
+  if(!f)return;
+  try{
+    const X=await loadXLSX();
+    const wb=X.read(await f.arrayBuffer(),{type:'array'});
+    const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+    const data=parseDealRows(rows);
+    data.at=Date.now();data.file=f.name;
+    localStorage.setItem('duskin_deal',JSON.stringify(data));
+    renderDeal();
+    showToast('✓ 已讀入 '+data.entries.length+' 筆成約／解約異動');
+  }catch(e){logErr('dealImport',e);appAlert('讀不了這個檔案：'+(e.message||e),'公司新規解約明細');}
+}
+function renderDeal(){
+  const sum=document.getElementById('deal-summary'),list=document.getElementById('deal-list');
+  if(!sum||!list)return;
+  const data=dealData();
+  if(!data){sum.textContent='還沒匯入過。';list.innerHTML='';return;}
+  const r=dealDiff(data),t=data.totals||{},n=v=>v===undefined?'—':'$'+Number(v).toLocaleString();
+  sum.innerHTML='公司表（'+escHtml(data.from||'?')+' ～ '+escHtml(data.to||'?')+'，'+fmtDate(new Date(data.at||0))+' 匯入）：<b class="num">'+data.entries.length+'</b> 筆異動、<b class="num">'+r.shops+'</b> 家。'+
+    '新契 <b class="num">'+n(t.new)+'</b>・變更 <b class="num">'+n(t.change)+'</b>・解約 <b class="num">'+n(t.cancel)+'</b>・淨增 <b class="num">'+n(t.net)+'</b>（含稅）。'+
+    '<br>落差 <b class="num">'+r.issues.length+'</b> 筆；完全一致 <b class="num">'+r.okShops+'</b> 家。';
+  if(!r.issues.length){list.innerHTML='<div class="empty">兩邊完全一致 ✓</div>';return;}
+  const card=(tone,title,body,btns)=>`<div class="card" style="border-left:4px solid var(--${tone});margin-bottom:10px"><div style="font-weight:700;margin-bottom:4px">${title}</div><div style="font-size:13px;color:var(--text2);line-height:1.7">${body}</div>${btns?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${btns}</div>`:''}</div>`;
+  const sec=(title,items)=>items.length?`<div class="gt-sec">${title} <span class="gt-count">${items.length}</span></div>`+items.join(''):'';
+  const by=k=>r.issues.filter(i=>i.kind===k),ci=c=>DB.clients.indexOf(c),$=v=>'$'+Number(v).toLocaleString();
+  const open=c=>`<button class="btn btn-outline btn-xs" onclick="dealOpenClient(${ci(c)})">開這家店</button>`;
+  list.innerHTML=
+    sec('配不上店（先指定是哪一家）',by('nomatch').map(i=>{
+      const no=escHtml(i.g.custNo);
+      return card('amber',escHtml(i.g.name),'公司顧客編號 '+no+'・'+i.g.labels.map(escHtml).join('、'),
+        i.cands.map(c=>`<button class="btn btn-outline btn-xs" onclick="serveLink('${no}',${ci(c)})">就是「${escHtml(c.name)}」</button>`).join('')+
+        `<button class="btn btn-outline btn-xs" onclick="dealCreate('${no}')">建立新客戶</button>`+
+        `<div style="flex-basis:100%"><input id="deal-q-${no}" placeholder="搜尋你的客戶（店名／地址／電話／窗口）" oninput="serveSearch('${no}','deal')" autocomplete="off"><div id="deal-r-${no}" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div></div>`);
+    }))+
+    sec('公司有既減／解約、你還掛著',by('noend').map(i=>{
+      const no=escHtml(i.g.custNo),mains=liveContracted(i.c).filter(it=>it.product&&!it.bundledTo);
+      const hit=mains.filter(it=>Math.abs(itemFW4(it)-i.g.end)<=1);   // 只有一個品項金額剛好等於公司的減少額 → 先幫你勾好
+      const body=(i.g.cancel?'公司記為<b>解約</b>':'公司記為<b>既減</b>')+' '+$(i.g.end)+'（'+escHtml(i.g.endDate)+'）'+
+        (mains.length?'<br>你目前掛著的成約：'+(i.g.cancel?mains.map(it=>escHtml(it.product)+' ×'+(it.qty||1)+' '+$(itemFW4(it))).join('、')
+          :mains.map((it,k)=>`<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;min-height:40px"><input type="checkbox" id="deal-ck-${no}-${k}"${hit.length===1&&hit[0]===it?' checked':''} style="width:auto"> ${escHtml(it.product)} ×${it.qty||1} ${$(itemFW4(it))}</label>`).join(''))
+          :'<br>你這家沒有成約品項可以終止，請開這家店確認。');
+      return card('red',escHtml(i.c.name),body,(mains.length?(i.g.cancel
+        ?`<button class="btn btn-primary btn-xs" onclick="dealEnd('${no}',true)">照公司的：解約（全部終止、轉擱置）</button>`
+        :`<button class="btn btn-primary btn-xs" onclick="dealEnd('${no}',false)">照公司的：終止勾選的品項</button>`):'')+open(i.c));
+    }))+
+    sec('公司有成約／既增、你沒記',by('noadd').map(i=>card('red',escHtml(i.c.name),i.g.labels.map(escHtml).join('、')+'（'+escHtml(i.g.addDate)+'）<br>公司這份表沒有商品明細，請開這家店把成約品項和成交價補上，成約日填 '+escHtml(i.g.addDate)+'。',open(i.c))))+
+    sec('金額不一樣',by('adddiff').map(i=>card('amber',escHtml(i.c.name),'期間內成約／既增：公司 '+$(i.g.add)+'／你 '+$(i.m.add)+'<br>常見原因是成交價沒填（沒填會用原價算）。',open(i.c)))
+      .concat(by('enddiff').map(i=>card('amber',escHtml(i.c.name),'期間內既減／解約：公司 '+$(i.g.end)+'／你 '+$(i.m.end),open(i.c)))))+
+    sec('你記了、公司這份表沒有（公司可能還沒 key，或日期不在這段期間）',by('extraadd').map(i=>card('blue',escHtml(i.c.name),'你記的期間內成約 '+$(i.m.add),open(i.c)))
+      .concat(by('extraend').map(i=>card('blue',escHtml(i.c.name),'你記的期間內終止 '+$(i.m.end),open(i.c)))));
 }
 // ═══ Google 日曆同步 ═══ 把「有日期的下一步」整份對齊到專用日曆（後端 syncCalendar：缺的補、多的刪）。
 // 標題用「評價｜店名：事項」，日曆與小工具裡同一天的事項就會照評價排；逾期的移到今天並標（逾期）。
@@ -4598,8 +4772,18 @@ function itemFW4(it){
 // - 有成約品項 → 成約合計
 // - 否則 → 試用品項合計
 // 不再使用 c.fw4 作為 fallback（c.fw4 僅為快取，saveClient 時自動更新）
+// 成約品項的「終止日」it.endDate：有值＝這個品項已經不租了（既減）；主商品全部終止＝解約。
+// 終止的品項留在 c.contractedItems 當紀錄（週報的既減／解約列靠它），但「現在的成約」一律只看還沒終止的。
+function liveContracted(c){return ((c&&c.contractedItems)||[]).filter(it=>it&&!it.endDate);}
+// 主商品全部終止 → 視為解約：轉擱置、理由「解約」、擱置日＝最後一個終止日。回傳是否有轉。
+function cancelIfAllEnded(c){
+  const mains=((c&&c.contractedItems)||[]).filter(it=>it&&it.product&&!it.bundledTo);
+  if(!c||c.status!==STATUS.DEAL||!mains.length||mains.some(it=>!it.endDate))return false;
+  shelveClient(c,'解約',mains.map(it=>it.endDate).sort().pop());
+  return true;
+}
 function calcFW4(c){
-  const k=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+  const k=liveContracted(c).reduce((s,it)=>s+itemFW4(it),0);
   if(k>0)return k;
   return trialItemsOf(c).reduce((s,it)=>s+itemFW4(it),0);
 }
@@ -5798,7 +5982,7 @@ function renderClients(){
         ${xinfo?`<span style="color:${xinfo.level>=2?'var(--red)':xinfo.level>=1?'var(--amber)':'var(--text3)'}">試用第 ${xinfo.days} 天</span>`:''}
         ${dd?`<span>成約日：${dd}</span>`:''}
         ${td?`<span>${tdInfo.real?'試用日':'首次'}：${td}</span>`:''}
-        ${(() => {const ct=currentTrial(c);const t=ct?(ct.items||[]).filter(it=>it.product&&!it.bundledTo).length:0;const k=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo).length;const n=trialsOf(c).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'第 '+ct.n+' 次試用 '+t+' 品項':''}${n>1?'（共 '+n+' 次）':''}</span>`:'';})()}
+        ${(() => {const ct=currentTrial(c);const t=ct?(ct.items||[]).filter(it=>it.product&&!it.bundledTo).length:0;const k=liveContracted(c).filter(it=>it.product&&!it.bundledTo).length;const n=trialsOf(c).length;return (t||k)?`<span>${k?'成約 '+k+' · ':''}${t?'第 '+ct.n+' 次試用 '+t+' 品項':''}${n>1?'（共 '+n+' 次）':''}</span>`:'';})()}
         ${prod?`<span>提案：${escHtml(prod)}</span>`:''}
         ${c.nextdate?`<span>下次：${c.nextdate}</span>`:''}
         ${lastV?`<span>最後：${lastV.date} ${MOODS[lastV.mood]||''}</span>`:''}
@@ -6044,14 +6228,23 @@ function renderContracted(){
     const p=getProd(it.product);
     const isAcc=!!it.bundledTo;
     const amt=isAcc?'':'$'+itemFW4(it).toLocaleString();
-    return `<div class="ti-row${isAcc?' ti-acc':''}"><div class="ti-top">
+    return `<div class="ti-row${isAcc?' ti-acc':''}"${it.endDate?' style="opacity:.6"':''}><div class="ti-top">
       ${isAcc?'<span class="ti-acc-mark">配件</span>':''}
       <span style="flex:1;font-size:13px">${escHtml(it.product)} ${p?'· '+escHtml(p.desc):''} ×${it.qty||1}</span>
       <span style="font-size:13px;color:var(--green-d);font-weight:600">${amt}</span>
-      ${!isAcc?`<button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
-    </div></div>`;
+      ${!isAcc&&!it.endDate?`<button class="btn btn-outline btn-xs" onclick="endContracted(${i})">終止</button><button onclick="removeContracted(${i})" title="改回試用" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">×</button>`:''}
+    </div>${!isAcc&&it.endDate?`<div style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--text2);margin-top:4px">已終止 <input type="date" value="${escHtml(it.endDate)}" onchange="setContractEnd(${i},this.value)" style="width:auto"><button class="btn btn-outline btn-xs" onclick="setContractEnd(${i},'')">復原</button></div>`:''}</div>`;
   }).join('');
 }
+
+// 終止一個成約品項（連同它的配件）：填終止日＝今天，可再改日期；date 傳空字串＝復原。
+// 主商品全部終止時，存檔會自動轉擱置（理由：解約），見 cancelIfAllEnded。
+function setContractEnd(i,date){
+  const main=(S.cfContracted||[])[i];if(!main)return;
+  S.cfContracted.forEach(it=>{if(it===main||it.bundledTo===main.product){if(date)it.endDate=date;else delete it.endDate;}});
+  renderContracted();updProd();
+}
+function endContracted(i){setContractEnd(i,today());}
 
 // 刪除主商品：連同其 bundled 配件一起刪
 function removeMain(i){
@@ -6213,9 +6406,10 @@ async function saveClient(){
     if(c.status!==STATUS.DEAL||c.handoff!=='blocked')c.handoffReason='';
     if(prevC&&prevC.handoffFrom)c.handoffFrom=prevC.handoffFrom;
     if(prevC&&prevC.handoff==='blocked'&&c.handoff==='')c.handoffFrom=today();
+    const cancelled=cancelIfAllEnded(c);   // 成約品項全部終止 → 解約轉擱置（擱置日＝終止日）
     syncHandoffTodo(c);
     if(c.status===STATUS.SHELVED){
-      c.shelvedAt=(prevC&&prevC.status===STATUS.SHELVED&&prevC.shelvedAt)||today();
+      c.shelvedAt=(prevC&&prevC.status===STATUS.SHELVED&&prevC.shelvedAt)||(cancelled&&c.shelvedAt)||today();
       if(!c.wakeDate||(prevC&&prevC.tier!==c.tier))c.wakeDate=wakeDateFor(c);
       c.nextdate='';
     }else c.wakeDate='';
@@ -6283,7 +6477,7 @@ function openCD(i){
   S.curIdx=i;const c=DB.clients[i];
   const fw=calcFW4(c);const prod=autoProd(trialItemsOf(c))||'-';
   // 預估 4W 的來源：若成約合計 > 0 走成約，否則走試用
-  const fwContractSum=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+  const fwContractSum=liveContracted(c).reduce((s,it)=>s+itemFW4(it),0);
   const fwSrc=fwContractSum>0?'（來自成約）':trialItemsOf(c).length?'（來自試用）':'';
   // 顯示/隱藏「在地圖上查看」按鈕
   const cdMapBtn=document.getElementById('cd-map-btn');
@@ -6345,11 +6539,13 @@ function renderCDTrials(c){
   cnt.textContent=ts.length?ts.length+'／'+TRIAL_MAX+' 次'+(ts.length>TRIAL_MAX?'（已超過）':ts.length===TRIAL_MAX?'（已達上限）':''):'尚未試用（上限 '+TRIAL_MAX+' 次）';
   cnt.className='trial-count'+(ts.length>=TRIAL_MAX?' max':'');
   let html='';
-  const mainsCon=(c.contractedItems||[]).filter(it=>it.product&&!it.bundledTo);
+  const mainsCon=liveContracted(c).filter(it=>it.product&&!it.bundledTo);
+  const endedCon=(c.contractedItems||[]).filter(it=>it&&it.product&&!it.bundledTo&&it.endDate);
+  if(endedCon.length)html+='<div style="font-size:12.5px;color:var(--text3);margin-bottom:8px">已終止：'+endedCon.map(it=>escHtml(it.product)+' ×'+(it.qty||1)+'（'+escHtml(it.endDate)+'）').join('、')+(mainsCon.length?'':`　<button class="btn btn-outline btn-xs" onclick="openCDItems(${currentTrial(c)?currentTrial(c).n:0})">編輯成約</button>`)+'</div>';
   if(mainsCon.length){
     html+='<div class="trial-items" style="margin-bottom:10px">'+mainsCon.map(it=>{
       const f=itemFW4(it);
-      const accs=(c.contractedItems||[]).filter(x=>x.bundledTo===it.product&&x.product);
+      const accs=liveContracted(c).filter(x=>x.bundledTo===it.product&&x.product);
       return`<span class="trial-chip" style="background:var(--green-l);border-color:var(--green-b)"><span style="color:var(--green-d);font-weight:600">成約</span><b>${escHtml(it.product)}</b> ×${it.qty||1}<span style="color:var(--green-d);font-variant-numeric:tabular-nums">4W $${f.toLocaleString()}</span>${accs.length?'<span style="color:var(--text3);font-size:12.5px">(含 '+accs.map(a=>escHtml(a.product)).join('、')+')</span>':''}</span>`;
     }).join('')+`<button class="btn btn-outline btn-xs" onclick="openCDItems(${currentTrial(c)?currentTrial(c).n:0})">編輯成約</button></div>`;
   }
@@ -6573,6 +6769,7 @@ function saveCDItems(){
     }
     c.contractedItems=JSON.parse(JSON.stringify(S.cfContracted||[]));
     if(S.cdmStatusOverride)c.status=S.cdmStatusOverride;
+    if(cancelIfAllEnded(c))showToast('成約品項全部終止 → 已轉擱置（解約）');
     syncHandoffTodo(c);
     c.updatedAt=Date.now();
     saveLocal();
@@ -6949,6 +7146,18 @@ function rptVipHint(list){
   return `大客戶（4W≥${RPT_VIP_THRESHOLD}，建議標色）：第 ${list.map(x=>x.row).join(', ')} 列（${list.map(x=>x.name).join('、')}）`;
 }
 
+// RS 報告上半部的數字：照抄公司兩份報表的合計（含稅），不是用本機資料算的——這樣一定對得上公司。
+function renderRptTop(){
+  const el=document.getElementById('rpt-top');if(!el)return;
+  const d=dealData(),s=serveData(),n=v=>(v===undefined||v===null)?'—':Number(v).toLocaleString();
+  const src=x=>escHtml((x.from||'?')+' ～ '+(x.to||'?'))+'，'+fmtDate(new Date(x.at||0))+' 匯入';
+  el.innerHTML=
+    (d&&d.totals?'<div><b>月實績</b>　新契 <b class="num">'+n(d.totals.new)+'</b>・變更 <b class="num">'+n(d.totals.change)+'</b>・解約 <b class="num">'+n(d.totals.cancel)+'</b>・淨增 <b class="num">'+n(d.totals.net)+'</b><span style="color:var(--text3)">（公司新規解約明細 '+src(d)+'）</span></div>'
+      :'<div style="color:var(--text3)">月實績：還沒匯入「SERVE別新規解約明細」</div>')+
+    (s&&s.totals&&s.totals.shops!=null?'<div><b>試用</b>　軒數 <b class="num">'+n(s.totals.shops)+'</b>・試用金額 <b class="num">'+n(s.totals.amt)+'</b>・4W 試用金額 <b class="num">'+n(s.totals.amt4w)+'</b><span style="color:var(--text3)">（公司試用表 '+src(s)+'）</span></div>'
+      :'<div style="color:var(--text3)">試用軒數／金額：還沒匯入「SERVE別試用顧客一覽表」（或是舊版匯入的，重新匯入一次就有）</div>');
+}
+
 function genReport(){
   const from=document.getElementById('rpt-from').value;
   const to=document.getElementById('rpt-to').value;
@@ -6961,11 +7170,20 @@ function genReport(){
   //   月份範圍：startMonth, startMonth+1, ..., startMonth+5（不跨年循環）
   // ═════════════════════════════════════════════
   // 區間內成約的店也要列（公司看的是「這段期間推進出什麼結果」）；金額用除稅後（÷1.05），試用中的維持含稅
-  const dealAmt=c=>Math.round((c.contractedItems||[]).filter(it=>it&&it.product&&it.contractDate&&it.contractDate>=from&&it.contractDate<=to).reduce((x,it)=>x+itemFW4(it),0)/RPT_TAX);
+  // 一家店在區間內的異動：增加（成約日在區間內）與減少（終止日在區間內）各一列，用詞照公司：
+  //   之前沒有成約過 → 「成約」，否則「既增」；減完還有在租的 → 「既減」，全部終止 → 「解約」。減少是負數。
+  const inRange=d=>!!d&&d>=from&&d<=to, sumFw=l=>l.reduce((x,it)=>x+itemFW4(it),0);
+  const dealEvents=c=>{
+    const all=(c.contractedItems||[]).filter(it=>it&&it.product);
+    const add=all.filter(it=>inRange(it.contractDate)), end=all.filter(it=>inRange(it.endDate)), ev=[];
+    if(sumFw(add)>0) ev.push({label:all.some(it=>!it.contractDate||it.contractDate<from)?'既增':'成約', amt:Math.round(sumFw(add)/RPT_TAX), items:add, date:add.map(it=>it.contractDate).sort()[0]});
+    if(sumFw(end)>0) ev.push({label:all.some(it=>!it.bundledTo&&(!it.endDate||it.endDate>to))?'既減':'解約', amt:-Math.round(sumFw(end)/RPT_TAX), items:end, date:end.map(it=>it.endDate).sort()[0]});
+    return ev;
+  };
   const picked=DB.clients.filter(c=>{
+    if(dealEvents(c).length) return true;   // 有成約／既增／既減／解約的一定列（解約後已轉擱置也要列）
     // 擱置的客戶視為已無試用品，不出現在推進表
     if(c.status===STATUS.SHELVED) return false;
-    if(c.status===STATUS.DEAL&&dealAmt(c)>0) return true;
     const a=inPipeline(c);
     const mains=openTrialItems(c).filter(it=>it.product&&!it.bundledTo);   // 未回收的試用才算「有試用品項」
     const hasMain=mains.length>0;
@@ -6981,16 +7199,18 @@ function genReport(){
   });
   const rows4w=[];
   const vip4w=[];
-  picked.forEach((c,i)=>{
-    const deal=c.status===STATUS.DEAL&&dealAmt(c)>0;
-    const fw=deal?dealAmt(c):calcReportAmt(c);
-    const prod=rptProd(deal?c.contractedItems:openTrialItems(c));
-    const mon=rptAmountMonth(c,from,to);
+  const lines=[];   // 一家店可能不只一列（同一期間又既增又既減）
+  picked.forEach(c=>{
+    const ev=dealEvents(c);
+    if(ev.length) ev.forEach(e=>lines.push({c,fw:e.amt,prod:rptProd(e.items),mon:parseInt(e.date.split('-')[1],10),note:e.label}));
+    else lines.push({c,fw:calcReportAmt(c),prod:rptProd(openTrialItems(c)),mon:rptAmountMonth(c,from,to),note:(c.note||'').replace(/[\t\n\r]/g,' ')});
+  });
+  lines.forEach(({c,fw,prod,mon,note},i)=>{
     // 6 個月份欄：找出 mon 對應 startMonth..+5 的相對位置（0~5），其餘留空
     // Fallback：若區間內沒拜訪/成約紀錄（mon=null，常見於還在試用／已報價
     // 但本期間沒新動作的客戶），改填到「報表結束日月份」，讓金額不至於漏掉
     const monthCells=['','','','','',''];
-    if(fw>0){
+    if(fw!==0){
       const targetMon = mon!==null ? mon : parseInt(to.split('-')[1],10);
       const idx=targetMon-startMonth;
       if(idx>=0&&idx<=5) monthCells[idx]=String(fw);
@@ -6998,7 +7218,7 @@ function genReport(){
     // 14 欄：NO, name, '', contact, '', prod, '', H, I, J, K, L, M, note
     const cols=[String(i+1), c.name, '', c.contact||'', '', prod, '',
                 ...monthCells,
-                deal?'成約':(c.note||'').replace(/[\t\n\r]/g,' ')];
+                note];
     rows4w.push(cols.join('\t'));
     if(fw>=RPT_VIP_THRESHOLD) vip4w.push({row:i+1,name:c.name});
   });
@@ -7006,6 +7226,7 @@ function genReport(){
   document.getElementById('rpt-4w-cnt').textContent=
     `共 ${rows4w.length} 筆${rows4w.length>50?'（超過模板 50 列上限，請刪減後再貼）':''}`;
   document.getElementById('rpt-4w-vip').textContent=rptVipHint(vip4w);
+  renderRptTop();
 
   // ═════════════════════════════════════════════
   // ② 未來兩週拜訪規劃（A74:N108，14 欄，最多 35 列）
@@ -7939,7 +8160,7 @@ function calcAdminMetrics(clients){
     }else if(c.status===STATUS.DEAL&&c.handoff!=='done'){
       contractShop++;
       // 成約金額：成約品項以 itemFW4 加總（quoted 優先，否則原價）
-      contractAmount+=(c.contractedItems||[]).reduce((s,it)=>s+itemFW4(it),0);
+      contractAmount+=liveContracted(c).reduce((s,it)=>s+itemFW4(it),0);
     }
   });
   const totalEngaged=trialShop+contractShop;
@@ -8138,7 +8359,7 @@ function filterAdminRepList(){
       <tbody>
         ${filtered.map(({c,i})=>{
           const trialAmt=openTrialItems(c).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
-          const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
+          const dealAmt=liveContracted(c).reduce((sum,it)=>sum+itemFW4(it),0);
           const visitCnt=(c.visits||[]).filter(v=>v.date).length;
           return `<tr onclick="adminSelectClient(${i})" style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:6px 8px;font-weight:500">${escHtml(c.name||'(未命名)')}</td>
@@ -8158,7 +8379,7 @@ function filterAdminRepList(){
 function renderAdminClientDetailHTML(s,idx){
   const c=s.clients[idx];if(!c)return '<div>找不到客戶</div>';
   const trialAmt=openTrialItems(c).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
-  const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
+  const dealAmt=liveContracted(c).reduce((sum,it)=>sum+itemFW4(it),0);
   const visits=(c.visits||[]).slice().sort((a,b)=>(a.date||'')<(b.date||'')?1:-1);
   const moods=['','差','普','好','優'];
   const visitsHtml=visits.length?visits.map(v=>{
@@ -8228,7 +8449,7 @@ function exportAdminRepCSV(){
   const rows=[headers];
   (s.clients||[]).forEach(c=>{
     const trialAmt=openTrialItems(c).reduce((sum,it)=>sum+displayFw4(it.product,it.qty||1,'2W'),0);
-    const dealAmt=(c.contractedItems||[]).reduce((sum,it)=>sum+itemFW4(it),0);
+    const dealAmt=liveContracted(c).reduce((sum,it)=>sum+itemFW4(it),0);
     const visits=(c.visits||[]).filter(v=>v.date);
     const lastVisit=visits.map(v=>v.date).sort().reverse()[0]||'';
     const trialSummary=trialItemsOf(c).filter(it=>!it.bundledTo&&it.product).map(it=>it.product+'×'+(it.qty||1)).join('；')+(trialsOf(c).length?'（第 '+trialsOf(c).length+' 次）':'');
