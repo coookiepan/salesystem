@@ -123,6 +123,7 @@ function toRows(recs, ym) {
   return recs.map(classify).filter(r => r.mine && r.grade !== 'C').map(r => ({
     ban: r.ban, name: r.name, addr: r.addr, district: r.district, kind: r.kind, grade: r.grade,
     date: r.dateIso, floor: r.floor, items: r.itemText, owner: r.owner, ym: String(ym),
+    capital: r.capital, // 登記資本額（元）；分店等沒填的是 null
   }));
 }
 

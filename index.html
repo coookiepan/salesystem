@@ -1817,9 +1817,9 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.24-n1';
+const APP_VERSION='v2026.11.24-n2';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
-const APPS_SCRIPT_CODE=`const BACKEND_VER=5;   // 前端以 ping 比對，過舊會提示重新部署
+const APPS_SCRIPT_CODE=`const BACKEND_VER=6;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -2077,7 +2077,7 @@ function authorizeCalendar(){return CalendarApp.getDefaultCalendar().getName();}
 // 來源：經濟部每月「商業設立登記營業項目清冊」。GitHub Actions 每月解析後呼叫 importNewbiz 寫入，
 // 前端地圖「新登記」圖層用 getNewbiz 讀。一列一家，以統一編號為鍵。
 // 「狀態」欄只由使用者按「略過」寫入（skip）；匯入只更新登記資料，不會動狀態。
-const NEWBIZ_HEAD=['統一編號','商業名稱','地址','行政區','業種','優先度','設立日期','樓層','營業項目','負責人','登記月份','緯度','經度','狀態'];
+const NEWBIZ_HEAD=['統一編號','商業名稱','地址','行政區','業種','優先度','設立日期','樓層','營業項目','負責人','登記月份','緯度','經度','狀態','資本額'];
 const NEWBIZ_KEYS=['ban','name','addr','district','kind','grade','date','floor','items','owner','ym'];
 function getNewbizSheet(){
   const ss=SpreadsheetApp.getActiveSpreadsheet();
@@ -2097,6 +2097,7 @@ function getNewbiz(){
     NEWBIZ_KEYS.forEach(function(k,i){o[k]=String(r[i]==null?'':r[i]).trim();});
     o.lat=typeof r[11]==='number'?r[11]:null;
     o.lng=typeof r[12]==='number'?r[12]:null;
+    o.capital=typeof r[14]==='number'?r[14]:null;
     out.push(o);
   });
   return{ok:true,newbiz:out};
@@ -2110,11 +2111,13 @@ function importNewbiz(rows){
   let added=0,updated=0;
   list.forEach(function(x){
     const vals=NEWBIZ_KEYS.map(function(k){return String(x[k]==null?'':x[k]);});
+    const cap=typeof x.capital==='number'?x.capital:'';
     const i=at[vals[0]];
-    if(i==null){at[vals[0]]=data.length;data.push(vals.concat(['','','']));added++;return;}
+    if(i==null){at[vals[0]]=data.length;data.push(vals.concat(['','','',cap]));added++;return;}
     const old=data[i];
     if(String(old[2])!==vals[2]){old[11]='';old[12]='';} // 地址變了 → 重新定位
     for(let c=0;c<vals.length;c++)old[c]=vals[c];
+    old[14]=cap;
     updated++;
   });
   // 補定位：沒有座標的列逐筆查。Apps Script 單次執行上限 6 分鐘，這裡最多用 200 秒；
@@ -2132,6 +2135,7 @@ function importNewbiz(rows){
     if(short>0)sheet.insertRowsAfter(sheet.getMaxRows(),short);
     sheet.getRange(2,1,data.length,11).setNumberFormat('@'); // 統編開頭的 0、日期都照文字存
     sheet.getRange(2,14,data.length,1).setNumberFormat('@');
+    sheet.getRange(1,1,1,NEWBIZ_HEAD.length).setValues([NEWBIZ_HEAD]); // 表頭跟著程式走（之後加欄不用手動補）
     sheet.getRange(2,1,data.length,NEWBIZ_HEAD.length).setValues(data);
   }
   return{ok:true,added:added,updated:updated,geocoded:geocoded,noGeo:noGeo,total:data.length};
@@ -5305,6 +5309,7 @@ function buildNewbizPopup(n){
   return '<div style="font-size:13px;min-width:200px"><b>'+escHtml(n.name)+'</b>'+
     '<div style="color:var(--text3);font-size:12.5px;margin:2px 0">新登記　'+escHtml(n.date||'')+' 設立</div>'+
     '<div>'+escHtml(n.kind||'')+(n.floor&&n.floor!=='未標示'?'　'+escHtml(n.floor):'')+(n.owner?'　負責人 '+escHtml(n.owner):'')+'</div>'+
+    (typeof n.capital==='number'?'<div>登記資本額 <span style="font-family:var(--font-num)">'+n.capital.toLocaleString()+'</span> 元</div>':'')+
     (n.items?'<div style="color:var(--text2);font-size:12.5px">'+escHtml(n.items.length>60?n.items.slice(0,60)+'…':n.items)+'</div>':'')+
     (n.addr?'<div style="color:var(--text2)">'+escHtml(n.addr)+'</div>':'')+
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+
@@ -5322,7 +5327,7 @@ function newbizToClient(ban){
   const c={id:genId(),name:n.name,contact:n.owner||'',phone:'',
     addr:n.addr||'',type:typeOpts().indexOf(type)>=0?type:'',segment:'街邊店',
     status:STATUS.PLAN,regNo:ban,nextdate:'',env:'',
-    note:['（新登記 '+(n.date||'')+' 設立）',n.items||''].filter(Boolean).join('　'),
+    note:['（新登記 '+(n.date||'')+' 設立）',typeof n.capital==='number'?'資本額 '+n.capital.toLocaleString()+' 元':'',n.items||''].filter(Boolean).join('　'),
     trials:[],contractedItems:[],todos:[],visits:[],
     lat:hasGeo?n.lat:null,lng:hasGeo?n.lng:null,
     geocodeSource:hasGeo?'google':null,geocodedAt:hasGeo?Date.now():null,

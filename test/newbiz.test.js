@@ -60,7 +60,8 @@ assert.strictEqual(rocToIso('115/06/01'), '2026-06-01');
 const { toRows, sanity, lastMonthRoc } = require('../tools/newbiz/parse.js');
 const rows = toRows(recs, '11510');
 assert.deepStrictEqual(rows.map(r => r.ban), ['00000001', '00000004'], '工程行、中西區、只做網路的都不進試算表');
-assert.deepStrictEqual(Object.keys(rows[0]), ['ban', 'name', 'addr', 'district', 'kind', 'grade', 'date', 'floor', 'items', 'owner', 'ym']);
+assert.deepStrictEqual(Object.keys(rows[0]), ['ban', 'name', 'addr', 'district', 'kind', 'grade', 'date', 'floor', 'items', 'owner', 'ym', 'capital']);
+assert.deepStrictEqual([rows[0].capital, rows[1].capital], [30000, null], '資本額帶數字；沒填的是 null');
 assert.strictEqual(rows[0].date, '2026-10-21');
 assert.ok(/只解析出/.test(sanity(recs)), '筆數太少要擋下');
 const big = Array.from({ length: 60 }, (_, i) => ({ seq: i + 1, ban: String(10000000 + i), addr: '臺南市東區測試路1號', date: '115/10/01', items: [{ code: 'F501060', name: '餐館業' }] }));
@@ -94,7 +95,7 @@ const SpreadsheetApp = { getActiveSpreadsheet() { return { getSheetByName(n) { r
 const Maps = { newGeocoder() { return { setLanguage() { return this; }, setRegion() { return this; },
   geocode(a) { return /查無/.test(a) ? { status: 'ZERO_RESULTS', results: [] } : { status: 'OK', results: [{ geometry: { location: { lat: 23, lng: 120.2 }, location_type: 'ROOFTOP' }, formatted_address: a }] }; } }; } };
 const gas = new Function('SpreadsheetApp', 'Maps', code + '\n;return {importNewbiz,getNewbiz,markNewbiz,BACKEND_VER};')(SpreadsheetApp, Maps);
-assert.ok(gas.BACKEND_VER >= 5);
+assert.ok(gas.BACKEND_VER >= 6);
 const more = [rows[0], rows[1], Object.assign({}, rows[1], { ban: '00000009', name: '測試查無地址店', addr: '臺南市東區查無路9號' })];
 let r1 = gas.importNewbiz(more);
 assert.deepStrictEqual([r1.added, r1.updated, r1.geocoded, r1.noGeo, r1.total], [3, 0, 2, 1, 3]);
@@ -104,12 +105,14 @@ let got = gas.getNewbiz().newbiz;
 assert.strictEqual(got.length, 3);
 assert.deepStrictEqual([got[0].ban, got[0].grade, got[0].lat, got[0].lng], ['00000001', 'A', 23, 120.2]);
 assert.strictEqual(got[2].lat, null, '查無座標的回 null，前端不上圖');
+assert.deepStrictEqual([got[0].capital, got[1].capital, grid[0][14], grid[2][14]], [30000, null, '資本額', ''], '資本額存在最後一欄；沒填留空');
 gas.markNewbiz('00000004', 'skip');
 assert.deepStrictEqual(gas.getNewbiz().newbiz.map(x => x.ban), ['00000001', '00000009'], '略過的不再回傳');
 // 重跑同一個月：不重複、不洗掉「略過」、已有座標的不重查
 r1 = gas.importNewbiz(more.map(x => Object.assign({}, x, { kind: x.ban === '00000001' ? '餐飲改' : x.kind })));
 assert.deepStrictEqual([r1.added, r1.updated, r1.geocoded, r1.total], [0, 3, 0, 3]);
 assert.strictEqual(grid[2][13], 'skip');
+assert.strictEqual(grid[1][14], 30000, '重跑後資本額還在');
 assert.strictEqual(gas.getNewbiz().newbiz[0].kind, '餐飲改');
 assert.deepStrictEqual(gas.markNewbiz('99999999', 'skip'), { ok: true, missing: true });
 
