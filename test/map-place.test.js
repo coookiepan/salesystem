@@ -159,6 +159,37 @@ const w = dom.window;
   w.toggleMapLayer('shops', w.document.getElementById('map-layer-shops')); await wait(30);
   assert('關掉圖層 → 聚合群組移除', w.eval('MAP_STATE.shopCluster') === null);
 
+  console.log('P1 — 新登記圖層（雲端 newbiz 名單：上圖、略過、建成客戶）');
+  const sent = [];
+  w.fetch = async (u, o) => {
+    const b = JSON.parse(o.body); sent.push(b);
+    if (b.action === 'getNewbiz') return { ok: true, json: async () => ({ ok: true, newbiz: [
+      { ban: '11111111', name: '新開餐館', addr: '臺南市東區測試路1號1樓', district: '東區', kind: '餐飲', grade: 'A', date: '2026-10-02', floor: '1樓', items: '餐館業', owner: '王小明', ym: '11510', lat: 22.99, lng: 120.22 },
+      { ban: '22222222', name: '新開寵物店', addr: '臺南市永康區測試路2號', district: '永康區', kind: '寵物', grade: 'B', date: '2026-10-05', floor: '未標示', items: '寵物食品及其用品零售業', owner: '', ym: '11510', lat: 23.02, lng: 120.25 },
+      { ban: '33333333', name: '還沒定位的店', addr: '臺南市東區測試路3號', district: '東區', kind: '零售', grade: 'B', date: '2026-10-06', floor: '未標示', items: '', owner: '', ym: '11510', lat: null, lng: null }
+    ] }) };
+    return { ok: true, json: async () => ({ ok: true }) };
+  };
+  w.eval("SHEET_URL='https://example.test/exec'");
+  const before = w.eval('MAP_STATE.markers.length');
+  w.toggleMapLayer('newbiz', w.document.getElementById('map-layer-newbiz')); await wait(60);
+  assert('開新登記圖層 → 向雲端要名單、有座標的兩家進聚合', sent.some(b => b.action === 'getNewbiz') && w.eval('MAP_STATE.newbizCluster&&MAP_STATE.newbizCluster._n') === 2);
+  assert('名單有快取（離線也看得到）', JSON.parse(store['duskin_newbiz']).length === 3);
+  const pop = w.eval('buildNewbizPopup(NEWBIZ[0])');
+  assert('點圖釘看得到業種、設立日與三個動作', /餐飲/.test(pop) && /2026-10-02/.test(pop) && /導航/.test(pop) && /建成客戶/.test(pop) && /略過/.test(pop));
+  w.newbizSkip('22222222'); await wait(60);
+  assert('略過 → 從圖上消失並送回雲端', w.eval('MAP_STATE.newbizCluster._n') === 1 && sent.some(b => b.action === 'markNewbiz' && b.ban === '22222222' && b.status === 'skip'));
+  w.newbizToClient('11111111'); await wait(60);
+  const nc = w.eval('DB.clients.find(c=>c.regNo==="11111111")');
+  assert('建成客戶 → 待拜訪、帶統編與座標、類別對到餐飲', !!nc && nc.status === w.eval('STATUS.PLAN') && nc.lat === 22.99 && nc.type === '餐飲' && nc.contact === '王小明');
+  assert('建檔後新登記點消失（換成客戶點）', w.eval('MAP_STATE.newbizCluster._n') === 0);
+  w.newbizToClient('11111111'); await wait(20);
+  assert('同一家不會重複建檔', w.eval('DB.clients.filter(c=>c.regNo==="11111111").length') === 1);
+  w.fetch = async () => ({ ok: true, json: async () => ({ error: 'Unknown action' }) });
+  let alerted = ''; w.appAlert = m => { alerted = m; };
+  await w.loadNewbiz();
+  assert('後端是舊版 → 明講要重新部署', /舊版/.test(alerted));
+
   console.log(failed ? 'P1 FAILED ✗ (' + failed + ')' : 'P1 PASSED ✅');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('  ✗ exception:', e); process.exit(1); });

@@ -1,0 +1,39 @@
+name: 新登記商家（每月匯入）
+
+# 經濟部每月 5 日產出上個月的「商業設立登記營業項目清冊」。
+# 這裡在臺灣時間每月 6 日與 9 日 05:10 各跑一次（重跑不會重複，9 日那次是保險），
+# 下載臺南市那一份 → 解析 → 只留使用者跑的區、非 C 級 → 寫進試算表 newbiz 分頁。
+# 規則在 tools/newbiz/parse.js；名單內容不進 repo、也不印在紀錄裡。
+on:
+  schedule:
+    - cron: '10 21 5,8 * *'
+  workflow_dispatch:
+    inputs:
+      months:
+        description: '要匯入的民國年月，空白分隔（例：11506 11507）；留空＝上個月'
+        required: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 安裝 pdftotext
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+      - name: 下載、解析、寫入試算表
+        env:
+          NEWBIZ_ENDPOINT: ${{ secrets.NEWBIZ_ENDPOINT }}
+          MONTHS: ${{ inputs.months }}
+        run: |
+          months="${MONTHS:-$(node tools/newbiz/run.js --last-month)}"
+          for ym in $months; do
+            [[ "$ym" =~ ^[0-9]{5}$ ]] || { echo "月份格式不對：$ym"; exit 1; }
+            url="https://serv.gcis.nat.gov.tw/moeadsBF/cmpy/reportAction.do?method=report&reportClass=bmsItem&subPath=${ym}&fileName=376610000Asetup${ym}.pdf"
+            curl -sS -f -L -m 120 --retry 2 -A "Mozilla/5.0" -o list.pdf "$url"
+            file -b list.pdf | grep -q '^PDF' || { echo "✗ ${ym} 的清冊還沒出來（下載到的不是 PDF）"; exit 1; }
+            pdftotext -layout list.pdf list.txt
+            node tools/newbiz/run.js "$ym" list.txt
+          done

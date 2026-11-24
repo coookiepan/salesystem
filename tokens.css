@@ -35,7 +35,7 @@
   --surface-hover:#F7F4ED;
   --track:#DED9CB;              /* 量尺空軌 */
   --mark-bg:#F7E6A8;--mark-fg:#4A3A05;   /* 搜尋關鍵字高亮 */
-  --pin-shop:#2F6B5C;--pin-site:#A8632B; /* 地圖圖釘分類：既有客戶／工地 */
+  --pin-shop:#2F6B5C;--pin-site:#A8632B;--pin-new:#6B4FA0; /* 地圖圖釘分類：既有客戶／工地／新登記 */
   --pin-fallback:#5E726A;        /* getComputedStyle 取不到時的唯一退路 */
   /* ── 形狀與動態 ────────────────────────────────────── */
   --r-sm:8px;--r:12px;--r-lg:18px;
@@ -66,6 +66,6 @@
     --shadow-md:0 4px 14px rgba(0,0,0,.5);--shadow-lg:0 14px 36px rgba(0,0,0,.6);
     --ring:0 0 0 3px rgba(23,184,122,.30);
     --mark-bg:#5C4F14;--mark-fg:#FFE99A;
-    --pin-shop:#3E8C77;--pin-site:#C7833F;--pin-fallback:#7D8B85;
+    --pin-shop:#3E8C77;--pin-site:#C7833F;--pin-new:#9A82D0;--pin-fallback:#7D8B85;
   }
 }
