@@ -237,7 +237,17 @@ profile: { office, dept, contact, mobile, phone, fax, email, address,
 - **落差** `serveDiff(data)`：`nomatch`／`missing`（公司有你沒記）／`diff`（`serveCompare`：試用日、回收預定日、回收狀態、主商品、整單 4W 合計）／`extra`（期間內你還在試用、公司未回收清單沒有）。公司單與本機試用以試用日配對，容許 ±3 天。
 - **主商品以本機商品主檔為準**（`serveIsMain`：`note` 不是配件／口味）。公司把芳香機的錢記在口味那行、機台記 0，本機相反，所以品項只比主商品、金額比整張單合計。
 - **寫入** `serveApply(no)`：只動那一筆試用（日期、品項、改回進行中），同代號保留原本的議價與週期；補進來的依試用日重排並重編 `n`，待辦的 `trialN` 跟著換；因此變成還在試用的店會轉為試用並補一筆拜訪紀錄。
-- **週報金額規則**（使用者指定）：`genReport()` 推進表現在會列區間內成約的店，金額＝成約品項 4W 合計 ÷ `RPT_TAX`(1.05)、進度說明「成約」；試用中的維持含稅。**解約尚未建模**（等公司成約／解約報表樣本）。
+- **表頭合計**：`parseServeRows` 另外回傳 `totals`（顧客試用軒數／試用金額／4W 試用金額，含已回收），給週報「上半部數字」照抄。
+- **週報金額規則**（使用者指定）：成約／既增／既減／解約用 4W 合計 ÷ `RPT_TAX`(1.05)，試用中的維持含稅。
+
+### 成約品項終止日與公司新規解約明細比對（`deal*`）
+
+- **終止日** `it.endDate`（成約品項上，`YYYY-MM-DD`）：有值＝這個品項不租了。終止的品項**留在** `c.contractedItems` 當紀錄，「現在的成約」一律經 `liveContracted(c)`（金額 `calcFW4`、客戶卡與詳情、長官儀表板）。配件跟著主商品一起終止（`setContractEnd`）。
+- **解約** `cancelIfAllEnded(c)`：成約客戶的主商品全部終止 → `shelveClient(c,'解約',最後終止日)`。兩條存檔路徑（客戶表單、詳情的編輯成約）與 `dealEnd` 都會呼叫。使用者指定：解約自動轉擱置。
+- **公司表** 「SERVE別新規解約明細」：一列一筆異動，只有店家層級的 4 週換算營業額（**含稅**，使用者確認），沒有商品明細。`parseDealRows(rows)` 以「區分＋顧客編號＋4週換算營業額」找表頭；`dealKind` 把區分歸成 `new`／`inc`／`dec`（含「同一商品既減」）／`cancel`；表尾 `totals`＝新契／變更／解約／淨增（有「總合計」區塊以它為準）。結果存本機 `localStorage.duskin_deal`。
+- **落差** `dealDiff(data)`：一家店的增（`contractDate` 在期間內）與減（`endDate` 在期間內）各比一次 4W 合計（`dealMine`，容許 ±1）。`nomatch`／`noadd`／`adddiff`／`noend`／`enddiff`／`extraadd`／`extraend`。配對沿用 `serveFindClient`（公司表沒有電話，只靠顧客編號與店名；`normCorp` 會去掉括號備註）。
+- **寫入只有減少這一邊** `dealEnd(custNo,all)`：既減由使用者勾品項（唯一一個金額相符的會預先勾好），解約全部終止。增加因為公司沒給品項，只提供「開這家店」。
+- **週報** `genReport()` 的 `dealEvents(c)`：增加一列（之前沒成約過→「成約」，否則「既增」）、減少一列（還有在租的→「既減」，否則「解約」，負數）；已轉擱置的解約店也會列。`renderRptTop()` 把兩份公司報表的合計原樣顯示在最上面（含稅、不經本機計算）。
 
 ### Google 日曆同步（提醒走出 App）
 
