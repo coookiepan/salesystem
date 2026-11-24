@@ -434,6 +434,7 @@ sequenceDiagram
 | `getShops` | 查詢頁的公司既有客戶名單 |
 | `syncCalendar` (`events`, `from`, `to`) | Google 日曆整份對齊（後端 v4；需日曆授權，見下方「Google 日曆同步」） |
 | `geocode` | Google Geocoder 代理（地圖定位主來源，免金鑰；失敗退 Nominatim） |
+| `getLeads` / `markLead` (`id`, `status`) | 新線索（後端 v7，`leads` 分頁）：讀未處理的線索並補編號／標記 done・skip。見「新線索」 |
 | `getNewbiz` / `importNewbiz` (`rows`) / `markNewbiz` (`ban`, `status`) | 新登記商家（後端 v5，`newbiz` 分頁）：讀名單／每月匯入（以統編 upsert＋補定位）／標記略過。見「新登記商家」 |
 
 > ⚠ 後端程式碼變動屬「需要使用者重新部署」的更新——CHANGELOG 必須標註，並附 GUIDE.md 的重新部署步驟連結。
@@ -553,6 +554,25 @@ sequenceDiagram
   - 建成客戶 → `newbizToClient` 走正規建檔（待拜訪、`regNo`＝統編、座標沿用）。圖層用「客戶的 `regNo` 對得上統編」判斷已建檔，不另存對應表。
 - **公開 repo 的界線**：名單（含負責人姓名）只存在試算表；`run.js` 與 workflow 的紀錄只印筆數。測試一律用自編資料。
 - **寫入口沒有另設密碼**：與前端相同，知道 Apps Script 網址才能呼叫；網址放在 GitHub secret `NEWBIZ_ENDPOINT`。
+
+## 新線索（`leads` 分頁＋待辦頁「新線索」）
+
+Claude 的排程工作（claude.ai 專案裡的「每日簡報」等）篩到新店家後，要能變成客戶卡與待辦。做法是**線索收件匣**：排程只往自己的分頁加列，客戶名單仍由 App 走正規建檔——雜訊不會直接灌進客戶名單，也不會跟 outbox 同步互蓋。
+
+```
+Claude 排程（Google Sheets 連接器）→ leads 分頁最後面加列（只填 店名…加入日期）
+  → 後端 getLeads：補「編號」（UUID，所以取鎖），回傳狀態空白的列
+  → 前端 LEADS（快取 duskin_leads）→ 待辦頁 #lead-box（renderLeads）
+  → 建成客戶 leadToClient：待拜訪＋todos:[初訪／到場／未排]，markLead done
+     略過 leadSkip：markLead skip
+```
+
+- **欄位**（`LEAD_HEAD`）：編號、店名、地址、行政區、類型、來源、連結、說明、預計開幕、加入日期、狀態。排程不填編號與狀態。試算表把日期字串轉成日期格式時，`leadCell()` 轉回 `yyyy-MM-dd`。
+- **處理過的列不刪**：`done`／`skip` 的列留著，排程每次先讀整個分頁（加上 clients、newbiz）比對，報過的不再加。
+- **何時讀**：啟動後、回到前景且距上次超過 30 分鐘、手動「從雲端拉取」之後。後端是舊版（`Unknown action`）或離線時安靜不顯示，不跳提示。
+- **建成客戶**：類型在 `typeOpts()` 裡才帶入；`工廠` → `segment` 工廠，其餘街邊店；沒有統編也沒有座標（定位走一般客戶的補定位）。同名客戶（忽略空白）已存在就不建，只把線索標 done。「初訪」是一般使用者待辦（沒有 `source`、沒有期限），使用者自己拖到某一天。
+- **兩個動作都走 outbox**；`openLeads()` 會扣掉佇列裡已標記的，離線按完不會又冒出來。
+- **公開 repo 的界線**：線索內容只在試算表；測試用自編資料。排程的提示詞在 claude.ai 專案，不在 repo。
 
 ## 工地 ↔ 主系統：轉為客戶與回執信箱
 

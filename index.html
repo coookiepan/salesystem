@@ -696,6 +696,13 @@ body.bd-dragging{-webkit-user-select:none;user-select:none}
 .bd-tray .bd-card,.bd-more .bd-card{background:var(--bg2);grid-template-columns:1fr auto;padding-left:14px}
 .bd-sortnote{font-size:12.5px;color:var(--text3);margin:-2px 0 10px}
 .bd-link{border:0;background:none;font:inherit;font-size:12.5px;color:var(--green-d);font-weight:700;text-decoration:underline;cursor:pointer;padding:6px 2px}
+.lead-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:4px 14px;margin-bottom:14px}
+.lead-box summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--text);padding:10px 0;min-height:44px}
+.lead-box summary small{font-size:12.5px;font-weight:400;color:var(--text3);margin-left:8px}
+.lead-card{border-top:1px solid var(--border);padding:12px 0;font-size:14px}
+.lead-meta{font-size:12.5px;color:var(--text3);margin-top:2px}
+.lead-note{font-size:13px;color:var(--text2);margin-top:4px}
+.lead-act{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-top:8px}
 .bd-more{margin-top:14px}
 .bd-more summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--text2);padding:8px 0}
 .bd-when{font-size:12.5px;color:var(--text3);font-weight:600;margin-top:4px}
@@ -1389,6 +1396,7 @@ body.bd-dragging{-webkit-user-select:none;user-select:none}
     <button class="pill" onclick="openBatchQuote()">批次報價單</button>
     <button id="gt-done-toggle" class="pill" onclick="GT_SHOW_DONE=!GT_SHOW_DONE;renderGT()">已完成</button>
   </div>
+  <div id="lead-box"></div>
   <div id="gt-list"></div>
 </div>
 
@@ -1829,9 +1837,9 @@ https://script.google.com/macros/s/.../exec"></textarea>
 // ═══════════════════════════════════════════════════════════
 // APPS SCRIPT CODE
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION='v2026.11.24-r1';
+const APP_VERSION='v2026.11.24-k1';
 const REQUIRED_BACKEND_VER=3; // 低於此版本的後端會在測試連線時提示重新部署
-const APPS_SCRIPT_CODE=`const BACKEND_VER=6;   // 前端以 ping 比對，過舊會提示重新部署
+const APPS_SCRIPT_CODE=`const BACKEND_VER=7;   // 前端以 ping 比對，過舊會提示重新部署
 const SHEET_NAME='clients';
 const INV_SHEET_NAME='inventory';
 const PROD_SHEET_NAME='products';
@@ -1847,7 +1855,7 @@ function handleRequest(e){
     const body=e.postData?JSON.parse(e.postData.contents):{};
     // H1 並發鎖：寫入類動作序列化，避免兩位使用者同時寫同一份試算表時，
     // 「找列→寫列」交錯造成 lost update 或 appendRow 撞列。讀取不需鎖。
-    const WRITE_ACTIONS={save:1,delete:1,deleteByName:1,saveInventory:1,saveProducts:1,syncCalendar:1,importNewbiz:1,markNewbiz:1};
+    const WRITE_ACTIONS={save:1,delete:1,deleteByName:1,saveInventory:1,saveProducts:1,syncCalendar:1,importNewbiz:1,markNewbiz:1,getLeads:1,markLead:1};
     if(WRITE_ACTIONS[action]){
       lock=LockService.getScriptLock();
       if(!lock.tryLock(20000)){
@@ -1870,6 +1878,8 @@ function handleRequest(e){
       case 'getNewbiz':     result=getNewbiz();break;
       case 'importNewbiz':  result=importNewbiz(body.rows);break;
       case 'markNewbiz':    result=markNewbiz(body.ban,body.status);break;
+      case 'getLeads':      result=getLeads();break;
+      case 'markLead':      result=markLead(body.id,body.status);break;
       case 'getSnapshot':   result=getSnapshot();break;
       case 'ping':          result={ok:true,ver:BACKEND_VER};break;
       case 'geocode':       result=geocodeAddr(body.addr);break;
@@ -2159,6 +2169,52 @@ function markNewbiz(ban,status){
   for(let i=0;i<data.length;i++){
     if(String(data[i][0]).trim()===key){
       sheet.getRange(i+2,14).setNumberFormat('@').setValue(status==='skip'?'skip':'');
+      return{ok:true};
+    }
+  }
+  return{ok:true,missing:true}; // 列已不在（被手動刪掉）也算完成，別讓待推送佇列卡住
+}
+// ═══ 新線索（leads 分頁）═══
+// Claude 的排程工作（每日簡報等）把篩到的新店家一列一家加在這個分頁的最後面，只填「店名」到「加入日期」；
+// 「編號」由 getLeads 補（所以 getLeads 要取鎖），「狀態」只由使用者在 App 按「建成客戶」（done）或「略過」（skip）寫入。
+// 處理過的列留著不刪：排程靠它知道哪些店已經報過，不會重複加。
+const LEAD_HEAD=['編號','店名','地址','行政區','類型','來源','連結','說明','預計開幕','加入日期','狀態'];
+const LEAD_KEYS=['id','name','addr','district','type','source','url','note','open','added'];
+function getLeadSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let sheet=ss.getSheetByName('leads');
+  if(!sheet){sheet=ss.insertSheet('leads');sheet.getRange(1,1,1,LEAD_HEAD.length).setValues([LEAD_HEAD]);sheet.setFrozenRows(1);}
+  return sheet;
+}
+function readLeadRows(sheet){
+  const last=sheet.getLastRow();
+  return last<2?[]:sheet.getRange(2,1,last-1,LEAD_HEAD.length).getValues();
+}
+// 試算表會把「2026-11-24」自動變成日期格式 → 一律轉回 yyyy-MM-dd 文字
+function leadCell(v){
+  if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd');
+  return String(v==null?'':v).trim();
+}
+function getLeads(){
+  const sheet=getLeadSheet();
+  const out=[];
+  readLeadRows(sheet).forEach(function(r,i){
+    if(!leadCell(r[1]))return;
+    if(!leadCell(r[0])){r[0]=Utilities.getUuid();sheet.getRange(i+2,1).setNumberFormat('@').setValue(r[0]);}
+    if(leadCell(r[10]))return;
+    const o={};
+    LEAD_KEYS.forEach(function(k,j){o[k]=leadCell(r[j]);});
+    out.push(o);
+  });
+  return{ok:true,leads:out};
+}
+function markLead(id,status){
+  const key=String(id||'').trim();
+  const sheet=getLeadSheet();
+  const data=readLeadRows(sheet);
+  for(let i=0;i<data.length;i++){
+    if(key&&leadCell(data[i][0])===key){
+      sheet.getRange(i+2,11).setNumberFormat('@').setValue(status==='done'?'done':'skip');
       return{ok:true};
     }
   }
@@ -3687,6 +3743,7 @@ async function syncFromSheet(silent){
     saveLocal();renderClients();renderProducts();setSyncBar('ok');
     renderVerBadge();
     dismissPullBanner();
+    loadLeads();
     if(!silent){
       if(skipped)appAlert('已從雲端拉取 '+DB.clients.length+' 筆資料。\n\n有 '+skipped.length+' 列資料異常已跳過（試算表列號：'+skipped.join('、')+'），請檢查雲端該列 JSON。','拉取完成');
       else showToast('✓ 已從雲端拉取 '+DB.clients.length+' 筆資料');
@@ -5528,6 +5585,77 @@ function newbizSkip(ban){
   autoSync('markNewbiz',{ban,status:'skip'});
   try{if(MAP_STATE.view==='map')renderMapMarkers();}catch(e){}
   showToast('已略過，之後不再顯示');
+}
+
+// ═══ 新線索（Claude 排程篩到的新店家；雲端 leads 分頁，後端 BACKEND_VER≥7）═══
+// 排程只往 leads 分頁加列，客戶名單由這裡把關：使用者按「建成客戶」才走正規建檔（待拜訪＋一張未排的「初訪」），
+// 按「略過」就不再出現。兩個動作都走待推送佇列，離線也能按。後端還是舊版時安靜不顯示。
+let LEADS=[];
+try{LEADS=JSON.parse(localStorage.getItem('duskin_leads')||'[]')||[];}catch(e){}
+let LEADS_AT=0;
+const LEADS_EVERY=30*60*1000;
+async function loadLeads(){
+  if(!SHEET_URL)return;
+  LEADS_AT=Date.now();
+  try{
+    const res=await api({action:'getLeads'});
+    LEADS=res.leads||[];
+    try{localStorage.setItem('duskin_leads',JSON.stringify(LEADS));}catch(e){}
+    renderLeads();
+  }catch(e){}
+}
+function openLeads(){
+  const marked=new Set(OUTBOX.filter(o=>o.action==='markLead').map(o=>o.payload.id));
+  return LEADS.filter(l=>l&&l.id&&l.name&&!marked.has(l.id));
+}
+function leadDrop(id,status){
+  LEADS=LEADS.filter(l=>l&&l.id!==id);
+  try{localStorage.setItem('duskin_leads',JSON.stringify(LEADS));}catch(e){}
+  autoSync('markLead',{id,status});
+  renderLeads();
+}
+function leadToClient(id){
+  const l=LEADS.find(x=>x&&x.id===id);
+  if(!l){showToast('找不到這筆線索');return;}
+  const same=s=>String(s||'').replace(/\s/g,'');
+  if(DB.clients.some(c=>c&&same(c.name)===same(l.name))){leadDrop(id,'done');showToast('「'+l.name+'」已經在客戶名單裡，線索已收掉');return;}
+  const c={id:genId(),name:l.name,contact:'',phone:'',
+    addr:l.addr||'',type:typeOpts().indexOf(l.type)>=0?l.type:'',segment:l.type==='工廠'?'工廠':'街邊店',
+    status:STATUS.PLAN,regNo:'',nextdate:'',env:'',
+    note:['（線索 '+(l.added||'')+(l.source?'　'+l.source:'')+'）',l.open?'預計開幕 '+l.open:'',l.note||'',l.url||''].filter(Boolean).join('　'),
+    trials:[],contractedItems:[],visits:[],
+    todos:[{text:'初訪',type:'visit',plan:'',dueDate:'',done:false}],
+    lat:null,lng:null,geocodeSource:null,geocodedAt:null,
+    updatedAt:Date.now()};
+  DB.clients.push(c);saveLocal();autoSync('save',{client:c});
+  leadDrop(id,'done');
+  renderClients();renderGT();
+  showToast('✓ 已建成客戶：'+c.name+'（待拜訪），「初訪」在未排');
+}
+function leadSkip(id){
+  if(!LEADS.some(x=>x&&x.id===id))return;
+  leadDrop(id,'skip');
+  showToast('已略過，之後不再顯示');
+}
+function renderLeads(){
+  const box=document.getElementById('lead-box');if(!box)return;
+  const list=openLeads();
+  if(!list.length){box.innerHTML='';return;}
+  const wasOpen=!!(box.firstElementChild&&box.firstElementChild.open);
+  box.innerHTML='<details class="lead-box"'+(wasOpen?' open':'')+'><summary>新線索 <span class="num">'+list.length+'</span><small>Claude 篩到的新店家，建成客戶或略過</small></summary>'+
+    list.map(l=>{
+      const id=escHtml(l.id).replace(/'/g,'');
+      const meta=[l.district,l.type,l.open?'預計開幕 '+l.open:''].filter(Boolean).join('・');
+      const url=/^https?:\/\//i.test(l.url||'')?l.url:'';
+      return '<div class="lead-card"><b>'+escHtml(l.name)+'</b>'+
+        (meta?'<div class="lead-meta">'+escHtml(meta)+'</div>':'')+
+        (l.note?'<div class="lead-note">'+escHtml(l.note)+'</div>':'')+
+        (l.addr?'<div class="lead-meta">'+escHtml(l.addr)+'</div>':'')+
+        '<div class="lead-act">'+
+        (url?'<a class="btn btn-xs btn-outline" target="_blank" rel="noopener" href="'+escHtml(url)+'">'+escHtml(l.source||'來源')+'</a>':(l.source?'<span class="lead-meta">'+escHtml(l.source)+'</span>':''))+
+        '<button class="btn btn-xs btn-outline" onclick="leadSkip(\''+id+'\')">略過</button>'+
+        '<button class="btn btn-xs btn-primary" onclick="leadToClient(\''+id+'\')">建成客戶</button></div></div>';
+    }).join('')+'</details>';
 }
 
 function renderMapMarkers(){
@@ -8697,7 +8825,8 @@ autoAddRecycleTodos();validateClients();wakeShelved();syncAllHandoffTodos();sett
 renderCalStatus();scheduleCalSync();
 const checkFollowups=()=>checkQuoteFollowups().catch(()=>{}).then(()=>checkHandoffRechecks()).catch(()=>{});
 setTimeout(()=>{checkFollowups().then(()=>openFill());},800);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(settleTodos())renderGT();checkFollowups();}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(settleTodos())renderGT();checkFollowups();if(Date.now()-LEADS_AT>LEADS_EVERY)loadLeads();}});
+renderLeads();setTimeout(loadLeads,1500);
 // ═══ 開啟位置：預設就是待辦；底部導覽與連結可用 #clients / #daily / #new / #map … 指定 ═══
 (function(){
   const h=(location.hash||'').replace('#','');
