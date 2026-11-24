@@ -19,8 +19,6 @@ jobs:
             code=$(curl -sS -L -m 120 --retry 2 -A "Mozilla/5.0" -o "pdf/item${ym}.pdf" -w "%{http_code}" "$url" || echo ERR)
             echo "${ym} http=${code} bytes=$(stat -c %s pdf/item${ym}.pdf 2>/dev/null) type=$(file -b pdf/item${ym}.pdf 2>/dev/null | cut -c1-40)"
           done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: newbiz-pdf
-          path: pdf/
-          retention-days: 1
+      - name: 傳回檔案（測試用，跑完即刪除這次執行紀錄）
+        run: |
+          for f in pdf/*.pdf; do echo "@@BEGIN $f"; base64 -w 3000 "$f"; echo "@@END $f"; done
